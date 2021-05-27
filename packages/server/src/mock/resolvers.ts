@@ -2,7 +2,7 @@ import BigInt from 'apollo-type-bigint';
 
 import { blocks } from './data';
 
-export const createResolvers = () => {
+export const createResolvers = (config) => {
 
   return {
     BigInt: new BigInt('bigInt'),

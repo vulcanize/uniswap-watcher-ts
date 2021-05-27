@@ -5,9 +5,9 @@ import * as typeDefs from './erc20.graphql';
 import { createResolvers as createMockResolvers } from './mock/resolvers';
 import { createResolvers } from './resolvers';
 
-const resolvers = process.env.MOCK ? createMockResolvers() : createResolvers();
+export const createSchema = (config) => {
+  const resolvers = process.env.MOCK ? createMockResolvers(config) : createResolvers(config);
 
-export const createSchema = () => {
   return makeExecutableSchema({
     typeDefs,
     resolvers

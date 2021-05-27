@@ -1,25 +1,60 @@
+import assert from 'assert';
 import express, { Application, Request, Response } from 'express';
 import { graphqlHTTP } from 'express-graphql';
+import fs from 'fs-extra';
+import path from 'path';
+import toml from 'toml';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers'
 
 import { createSchema } from './gql';
 
-const app: Application = express();
+export const createServer = async () => {
+  const argv = yargs(hideBin(process.argv))
+    .option('f', {
+      alias: 'config-file',
+      demandOption: true,
+      describe: 'configuration file path (toml)',
+      type: 'string'
+    })
+    .argv
 
-// TODO: Accept CLI param for host and port.
-const port: number = 3001;
+  const configFile = argv['configFile'];
+  const configFilePath = path.resolve(configFile);
+  const fileExists = await fs.exists(configFilePath);
+  if (!fileExists) {
+    throw new Error(`Config file not found: ${configFilePath}`);
+  }
 
-app.use(
-  '/graphql',
-  graphqlHTTP({
-    schema: createSchema(),
-    graphiql: true,
-  }),
-);
+  var config = toml.parse(await fs.readFile(configFilePath));
 
-app.get('/', (req: Request, res: Response) => {
-  res.send('ERC20 Watcher');
-});
+  assert(config.server, 'Missing server config');
 
-app.listen(port, () => {
-  console.log(`Server is listening on port ${port}`);
+  const { host, port } = config.server;
+
+  const app: Application = express();
+
+  app.use(
+    '/graphql',
+    graphqlHTTP({
+      schema: createSchema(config),
+      graphiql: true,
+    }),
+  );
+
+  app.get('/', (req: Request, res: Response) => {
+    res.send('ERC20 Watcher');
+  });
+
+  app.listen(port, host, () => {
+    console.log(`Server is listening on host ${host} port ${port}`);
+  });
+
+  return app;
+};
+
+createServer().then(() => {
+  console.log('Starting server...');
+}).catch(err => {
+  console.error(err);
 });
