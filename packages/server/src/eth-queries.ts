@@ -23,3 +23,8 @@ query getLogs($blockHash: Bytes32!, $contract: Address!) {
   }
 }
 `;
+
+export default {
+  getStorageAt,
+  getLogs
+};

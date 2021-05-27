@@ -2,8 +2,10 @@ import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import { GraphQLClient } from 'graphql-request';
 import { ethers } from 'ethers';
+import level from 'level';
+import canonicalStringify from 'canonical-json';
 
-import { getStorageAt, getLogs } from './eth-queries';
+import ethQueries from './eth-queries';
 import { getMappingSlot } from './storage';
 
 // Event slots.
@@ -33,12 +35,56 @@ const toAddress = (topic) => {
   );
 };
 
+const dbKey = keyObj => ethers.utils.keccak256(Buffer.from(canonicalStringify(keyObj)));
+
+const dbPut = async (db, keyObj, value) => {
+  await db.put(dbKey(keyObj), value);
+};
+
+const dbGet = async (db, keyObj) => {
+  const key = dbKey(keyObj);
+
+  try {
+    const value = await db.get(key);
+
+    return [value, true];
+  } catch (err) {
+    if (err.notFound) {
+      return [undefined, false]
+    }
+  }
+};
+
+
+const getCachedOrFetch = async (db, client, queryName, vars) => {
+  const keyObj = {
+    queryName,
+    vars
+  };
+
+  // Check if request cached in db.
+  const [value, found] = await dbGet(db, keyObj);
+  if (found) {
+    return value;
+  }
+
+  // Not cached, need to perform an upstream GQL query.
+  const result = await client.request(ethQueries[queryName], vars);
+
+  // Cache the result and return it.
+  await dbPut(db, keyObj, result);
+
+  return result;
+};
+
 export const createResolvers = (config) => {
 
   const { upstream } = config;
   assert(upstream, 'Missing upstream config');
   const { gqlEndpoint } = upstream;
   assert(upstream, 'Missing upstream gqlEndpoint');
+
+  const db = level('requests.db', { valueEncoding: 'json' });
 
   const client = new GraphQLClient(gqlEndpoint);
 
@@ -68,7 +114,7 @@ export const createResolvers = (config) => {
           slot
         };
 
-        const result = await client.request(getStorageAt, vars);
+        const result = await getCachedOrFetch(db, client, 'getStorageAt', vars);
         console.log(JSON.stringify(result, null, 2));
 
         const { getStorageAt: { value, cid, ipldBlock }} = result;
@@ -101,7 +147,7 @@ export const createResolvers = (config) => {
           slot
         };
 
-        const result = await client.request(getStorageAt, vars);
+        const result = await getCachedOrFetch(db, client, 'getStorageAt', vars);
         console.log(JSON.stringify(result, null, 2));
 
         const { getStorageAt: { value, cid, ipldBlock }} = result;
@@ -131,7 +177,7 @@ export const createResolvers = (config) => {
           contract: token
         };
 
-        const result = await client.request(getLogs, vars);
+        const result = await getCachedOrFetch(db, client, 'getLogs', vars);
         console.log(JSON.stringify(result, null, 2));
 
         // TODO: Cache result.
