@@ -1,9 +1,8 @@
 import BigInt from 'apollo-type-bigint';
 
-import { blocks } from './data';
+import { blocks } from './mock/data';
 
 export const createResolvers = () => {
-
   return {
     BigInt: new BigInt('bigInt'),
 

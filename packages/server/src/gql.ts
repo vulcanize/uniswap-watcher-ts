@@ -2,12 +2,14 @@ import 'graphql-import-node';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 
 import * as typeDefs from './erc20.graphql';
-import mockResolvers from './mock/resolvers';
+import { createResolvers as createMockResolvers } from './mock/resolvers';
+import { createResolvers } from './resolvers';
 
-// TODO: Create resolvers backed by erc20 watcher.
-const resolvers = process.env.MOCK ? mockResolvers : {};
+const resolvers = process.env.MOCK ? createMockResolvers() : createResolvers();
 
-export const schema = makeExecutableSchema({
-  typeDefs,
-  resolvers
-});
+export const createSchema = () => {
+  return makeExecutableSchema({
+    typeDefs,
+    resolvers
+  });
+};
