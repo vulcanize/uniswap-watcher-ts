@@ -1,8 +1,7 @@
 import BigInt from 'apollo-type-bigint';
-import { ethers } from 'ethers';
 
 import { EthLoader } from './eth-loader';
-import { getMappingSlot } from './storage';
+import { getMappingSlot, topictoAddress } from './utils';
 
 // Event slots.
 // TODO: Read from storage layout file.
@@ -21,14 +20,6 @@ const ERC20_EVENT_NAME_TOPICS = {
 const GQL_EVENT_TYPE = {
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef": "TransferEvent",
   "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925": "ApprovalEvent"
-};
-
-const toAddress = (topic) => {
-  return ethers.utils.getAddress(
-    ethers.utils.hexZeroPad(
-      ethers.utils.hexStripZeros(topic), 20
-    )
-  );
 };
 
 export const createResolvers = (config) => {
@@ -126,24 +117,24 @@ export const createResolvers = (config) => {
         return result.getLogs
           .filter(e => !name || ERC20_EVENT_NAME_TOPICS[name] === e.topics[0])
           .map(e => {
-            let [topic0, topic1, topic2] = e.topics;
+            const [topic0, topic1, topic2] = e.topics;
 
             const eventName = GQL_EVENT_TYPE[topic0];
-            topic1 = toAddress(topic1);
-            topic2 = toAddress(topic2);
+            const address1 = topictoAddress(topic1);
+            const address2 = topictoAddress(topic2);
 
             const eventFields = { value : e.data };
 
 
             switch (eventName) {
               case 'TransferEvent': {
-                eventFields['from'] = topic1;
-                eventFields['to'] = topic2;
+                eventFields['from'] = address1;
+                eventFields['to'] = address2;
                 break;
               };
               case 'ApprovalEvent': {
-                eventFields['owner'] = topic1;
-                eventFields['spender'] = topic2;
+                eventFields['owner'] = address1;
+                eventFields['spender'] = address2;
                 break;
               };
             }

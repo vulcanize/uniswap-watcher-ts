@@ -14,3 +14,11 @@ export const getMappingSlot = (mappingSlot, key) => {
 };
 
 export const getStorageLeafKey = (slot) => ethers.utils.keccak256(slot);
+
+export const topictoAddress = (topic) => {
+  return ethers.utils.getAddress(
+    ethers.utils.hexZeroPad(
+      ethers.utils.hexStripZeros(topic), 20
+    )
+  );
+};
