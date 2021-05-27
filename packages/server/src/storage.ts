@@ -14,7 +14,3 @@ export const getMappingSlot = (mappingSlot, key) => {
 };
 
 export const getStorageLeafKey = (slot) => ethers.utils.keccak256(slot);
-
-// const slot = getMappingSlot("0x00", '0xDC7d7A8920C8Eecc098da5B7522a5F31509b5Bfc');
-// console.log("slot", slot);
-// console.log("storage leaf key", getStorageLeafKey(slot));
