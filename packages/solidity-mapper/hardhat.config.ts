@@ -15,7 +15,23 @@ task("accounts", "Prints the list of accounts", async (args, hre) => {
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
-  solidity: "0.7.3",
+  solidity: {
+    version: "0.7.3",
+    settings: {
+      outputSelection: {
+        "*": {
+          "*": [
+            "abi", "storageLayout",
+            "metadata", "evm.bytecode", // Enable the metadata and bytecode outputs of every single contract.
+            "evm.bytecode.sourceMap" // Enable the source map output of every single contract.
+          ],
+          "": [
+            "ast" // Enable the AST output of every single file.
+          ]
+        }
+      },
+    }
+  }
 };
 
 export default config;
