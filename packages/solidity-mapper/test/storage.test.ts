@@ -25,4 +25,20 @@ describe("Storage", function() {
     const storageValue = await getStorageValue(hre, "TestUnsignedIntegers", "uint1", unsignedIntegers.address);
     expect(storageValue).to.equal(value);
   });
+
+  it("get value for boolean type", async function() {
+    const Booleans = await hre.ethers.getContractFactory("TestBooleans");
+    const booleans = await Booleans.deploy();
+    await booleans.deployed();
+
+    let value = true
+    await booleans.setBool1(value);
+    let storageValue = await getStorageValue(hre, "TestBooleans", "bool1", booleans.address)
+    expect(storageValue).to.equal(value)
+
+    value = false
+    await booleans.setBool2(value);
+    storageValue = await getStorageValue(hre, "TestBooleans", "bool2", booleans.address)
+    expect(storageValue).to.equal(value)
+  });
 });
