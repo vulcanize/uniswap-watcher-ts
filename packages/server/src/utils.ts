@@ -5,8 +5,8 @@ export const padKey = input =>
   leftPad(ethers.utils.hexlify(input).replace('0x', ''), 64, '0');
 
 export const getMappingSlot = (mappingSlot, key) => {
-  const mappingSlotPadded = padKey(mappingSlot)
-  const keyPadded = padKey(key)
+  const mappingSlotPadded = padKey(mappingSlot);
+  const keyPadded = padKey(key);
   const fullKey = keyPadded.concat(mappingSlotPadded);
   const slot = ethers.utils.keccak256(`0x${fullKey}`);
 

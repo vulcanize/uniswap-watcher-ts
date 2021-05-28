@@ -1,6 +1,6 @@
 import BigInt from 'apollo-type-bigint';
 
-import { EthLoader } from './eth-loader';
+import { EthClient } from './eth-client';
 import { getMappingSlot, topictoAddress } from './utils';
 
 // Event slots.
@@ -24,7 +24,7 @@ const GQL_EVENT_TYPE = {
 
 export const createResolvers = (config) => {
 
-  const ethLoader = new EthLoader(config);
+  const ethClient = new EthClient(config);
 
   return {
     BigInt: new BigInt('bigInt'),
@@ -52,7 +52,7 @@ export const createResolvers = (config) => {
           slot
         };
 
-        const result = await ethLoader.get('getStorageAt', vars);
+        const result = await ethClient.get('getStorageAt', vars);
         console.log(JSON.stringify(result, null, 2));
 
         const { getStorageAt: { value, cid, ipldBlock }} = result;
@@ -63,9 +63,12 @@ export const createResolvers = (config) => {
             // TODO: Return proof only if requested.
             data: JSON.stringify({
               blockHash,
-              storage: {
-                cid,
-                ipldBlock
+              account: {
+                address: token,
+                storage: {
+                  cid,
+                  ipldBlock
+                }
               }
             })
           }
@@ -83,7 +86,7 @@ export const createResolvers = (config) => {
           slot
         };
 
-        const result = await ethLoader.get('getStorageAt', vars);
+        const result = await ethClient.get('getStorageAt', vars);
         console.log(JSON.stringify(result, null, 2));
 
         const { getStorageAt: { value, cid, ipldBlock }} = result;
@@ -94,9 +97,12 @@ export const createResolvers = (config) => {
             // TODO: Return proof only if requested.
             data: JSON.stringify({
               blockHash,
-              storage: {
-                cid,
-                ipldBlock
+              account: {
+                address: token,
+                storage: {
+                  cid,
+                  ipldBlock
+                }
               }
             })
           }
@@ -111,7 +117,7 @@ export const createResolvers = (config) => {
           contract: token
         };
 
-        const result = await ethLoader.get('getLogs', vars);
+        const result = await ethClient.get('getLogs', vars);
         console.log(JSON.stringify(result, null, 2));
 
         return result.getLogs
