@@ -21,8 +21,12 @@ export class EthClient {
     this._cache = cache;
   }
 
-  async get(query, vars) {
-    return this._getCachedOrFetch(query, vars);
+  async getStorageAt(vars) {
+    return this._getCachedOrFetch('getStorageAt', vars);
+  }
+
+  async getLogs(vars) {
+    return this._getCachedOrFetch('getLogs', vars);
   }
 
   async _getCachedOrFetch(queryName, vars) {

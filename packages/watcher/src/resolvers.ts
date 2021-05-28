@@ -63,7 +63,7 @@ export const createResolvers = async (config) => {
           slot
         };
 
-        const result = await ethClient.get('getStorageAt', vars);
+        const result = await ethClient.getStorageAt(vars);
         log(JSON.stringify(result, null, 2));
 
         const { getStorageAt: { value, cid, ipldBlock }} = result;
@@ -97,7 +97,7 @@ export const createResolvers = async (config) => {
           slot
         };
 
-        const result = await ethClient.get('getStorageAt', vars);
+        const result = await ethClient.getStorageAt(vars);
         log(JSON.stringify(result, null, 2));
 
         const { getStorageAt: { value, cid, ipldBlock }} = result;
@@ -128,7 +128,7 @@ export const createResolvers = async (config) => {
           contract: token
         };
 
-        const result = await ethClient.get('getLogs', vars);
+        const result = await ethClient.getLogs(vars);
         log(JSON.stringify(result, null, 2));
 
         return result.getLogs
