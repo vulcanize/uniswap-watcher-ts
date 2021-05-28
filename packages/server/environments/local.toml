@@ -7,5 +7,6 @@
   gqlEndpoint = "http://127.0.0.1:8083/graphql"
 
   [upstream.cache]
+    name = "requests"
     enabled = true
     deleteOnStart = false

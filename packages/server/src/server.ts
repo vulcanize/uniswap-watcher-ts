@@ -34,10 +34,12 @@ export const createServer = async () => {
 
   const app: Application = express();
 
+  const schema = await createSchema(config);
+
   app.use(
     '/graphql',
     graphqlHTTP({
-      schema: createSchema(config),
+      schema,
       graphiql: true,
     }),
   );

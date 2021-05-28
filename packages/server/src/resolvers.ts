@@ -1,6 +1,8 @@
+import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 
 import { EthClient } from './eth-client';
+import { getCache } from './cache';
 import { getMappingSlot, topictoAddress } from './utils';
 
 // Event slots.
@@ -22,9 +24,17 @@ const GQL_EVENT_TYPE = {
   "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925": "ApprovalEvent"
 };
 
-export const createResolvers = (config) => {
 
-  const ethClient = new EthClient(config);
+export const createResolvers = async (config) => {
+
+  const { upstream } = config;
+  assert(upstream, 'Missing upstream config');
+
+  const { gqlEndpoint, cache: cacheConfig } = upstream;
+  assert(upstream, 'Missing upstream gqlEndpoint');
+
+  const cache = await getCache(cacheConfig);
+  const ethClient = new EthClient({ gqlEndpoint, cache });
 
   return {
     BigInt: new BigInt('bigInt'),
