@@ -2,9 +2,8 @@ import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 
-import { EthClient } from './eth-client';
-import { getCache } from './cache';
-import { getMappingSlot, topictoAddress } from './utils';
+import { getCache } from '@vulcanize/cache';
+import { EthClient, getMappingSlot, topictoAddress } from '@vulcanize/ipld-eth-client';
 
 // Event slots.
 // TODO: Read from storage layout file.
@@ -25,7 +24,7 @@ const GQL_EVENT_TYPE = {
   "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925": "ApprovalEvent"
 };
 
-const log = debug('watcher:resolver');
+const log = debug('vulcanize:resolver');
 
 export const createResolvers = async (config) => {
 

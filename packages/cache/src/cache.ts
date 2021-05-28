@@ -6,7 +6,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import debug from 'debug';
 
-const log = debug('watcher:cache');
+const log = debug('vulcanize:cache');
 
 export const getCache = async (config) => {
   let cache;

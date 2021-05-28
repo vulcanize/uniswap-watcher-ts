@@ -10,7 +10,7 @@ import debug from 'debug';
 
 import { createSchema } from './gql';
 
-const log = debug('watcher:server');
+const log = debug('vulcanize:server');
 
 export const createServer = async () => {
   const argv = yargs(hideBin(process.argv))
