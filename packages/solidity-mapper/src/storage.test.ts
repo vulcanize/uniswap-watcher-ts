@@ -1,9 +1,10 @@
 import { Contract } from "@ethersproject/contracts";
 import { expect } from "chai";
 import hre from "hardhat";
+import "@nomiclabs/hardhat-ethers";
 
-import { getStorageValue, StorageLayout } from "../src";
-import { getStorageLayout, getStorageAt } from "./utils";
+import { getStorageValue, StorageLayout } from "./storage";
+import { getStorageLayout, getStorageAt } from "../test/utils";
 
 describe("Storage", function() {
   it("get value for integer type", async function() {
@@ -15,7 +16,7 @@ describe("Storage", function() {
     // if (storageLayout)
     let value = 12;
     await integers.setInt1(value);
-    let storageValue = await getStorageValue("int1", integers.address, storageLayout, getStorageAt);
+    let storageValue = await getStorageValue(integers.address, storageLayout, getStorageAt, "int1");
     expect(storageValue).to.equal(value);
   });
 
@@ -27,7 +28,7 @@ describe("Storage", function() {
 
     const value = 123;
     await unsignedIntegers.setUint1(value);
-    const storageValue = await getStorageValue("uint1", unsignedIntegers.address, storageLayout, getStorageAt);
+    const storageValue = await getStorageValue(unsignedIntegers.address, storageLayout, getStorageAt, "uint1");
     expect(storageValue).to.equal(value);
   });
 
@@ -39,12 +40,12 @@ describe("Storage", function() {
 
     let value = true
     await booleans.setBool1(value);
-    let storageValue = await getStorageValue("bool1", booleans.address, storageLayout, getStorageAt);
+    let storageValue = await getStorageValue(booleans.address, storageLayout, getStorageAt, "bool1");
     expect(storageValue).to.equal(value)
 
     value = false
     await booleans.setBool2(value);
-    storageValue = await getStorageValue("bool2", booleans.address, storageLayout, getStorageAt)
+    storageValue = await getStorageValue(booleans.address, storageLayout, getStorageAt, "bool2")
     expect(storageValue).to.equal(value)
   });
 
@@ -56,7 +57,7 @@ describe("Storage", function() {
 
     const [signer] = await hre.ethers.getSigners();
     await address.setAddress1(signer.address);
-    const storageValue = await getStorageValue("address1", address.address, storageLayout, getStorageAt);
+    const storageValue = await getStorageValue(address.address, storageLayout, getStorageAt, "address1");
     expect(storageValue).to.be.a('string');
     expect(String(storageValue).toLowerCase()).to.equal(signer.address.toLowerCase());
   });
@@ -74,14 +75,14 @@ describe("Storage", function() {
     it("get value for string length less than 32 bytes", async function() {
       const value = 'Hello world.'
       await strings.setString1(value);
-      const storageValue = await getStorageValue("string1", strings.address, storageLayout, getStorageAt);
+      const storageValue = await getStorageValue(strings.address, storageLayout, getStorageAt, "string1");
       expect(storageValue).to.equal(value);
     });
 
     it("get value for string length more than 32 bytes", async function() {
       const value = 'This sentence is more than 32 bytes long.'
       await strings.setString2(value);
-      const storageValue = await getStorageValue("string2", strings.address, storageLayout, getStorageAt);
+      const storageValue = await getStorageValue(strings.address, storageLayout, getStorageAt, "string2");
       expect(storageValue).to.equal(value);
     });
   })
