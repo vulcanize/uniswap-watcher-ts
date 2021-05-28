@@ -52,4 +52,28 @@ describe("Storage", function() {
     const storageValue = await getStorageValue(hre, "TestAddress", "address1", address.address)
     expect(storageValue.toLowerCase()).to.equal(signer.address.toLowerCase())
   });
+
+  describe("string type", function () {
+    let strings
+
+    before(async () => {
+      const Strings = await hre.ethers.getContractFactory("TestStrings");
+      strings = await Strings.deploy();
+      await strings.deployed();
+    })
+
+    it("get value for string length less than 32 bytes", async function() {
+      const value = 'Hello world.'
+      await strings.setString1(value);
+      const storageValue = await getStorageValue(hre, "TestStrings", "string1", strings.address);
+      expect(storageValue).to.equal(value);
+    });
+
+    it("get value for string length more than 32 bytes", async function() {
+      const value = 'This sentence is more than 32 bytes long.'
+      await strings.setString2(value);
+      const storageValue = await getStorageValue(hre, "TestStrings", "string2", strings.address);
+      expect(storageValue).to.equal(value);
+    });
+  })
 });
