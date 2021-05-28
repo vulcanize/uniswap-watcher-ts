@@ -41,4 +41,15 @@ describe("Storage", function() {
     storageValue = await getStorageValue(hre, "TestBooleans", "bool2", booleans.address)
     expect(storageValue).to.equal(value)
   });
+
+  it("get value for address type", async function() {
+    const Address = await hre.ethers.getContractFactory("TestAddress");
+    const address = await Address.deploy();
+    await address.deployed();
+
+    const [signer] = await hre.ethers.getSigners();
+    await address.setAddress1(signer.address);
+    const storageValue = await getStorageValue(hre, "TestAddress", "address1", address.address)
+    expect(storageValue.toLowerCase()).to.equal(signer.address.toLowerCase())
+  });
 });
