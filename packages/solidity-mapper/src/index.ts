@@ -1,1 +1,1 @@
-export { getStorageValue } from './lib/storage';
+export { getStorageValue, StorageLayout, GetStorageAt } from './lib/storage';

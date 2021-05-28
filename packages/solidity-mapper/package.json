@@ -19,6 +19,7 @@
   },
   "scripts": {
     "deploy": "hardhat run scripts/deploy.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "hardhat test"
   }
 }
