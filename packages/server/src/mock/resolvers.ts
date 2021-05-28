@@ -1,6 +1,9 @@
+import debug from 'debug';
 import BigInt from 'apollo-type-bigint';
 
 import { blocks } from './data';
+
+const log = debug('test');
 
 export const createResolvers = async (config) => {
 
@@ -20,7 +23,7 @@ export const createResolvers = async (config) => {
     Query: {
 
       balanceOf: (_, { blockHash, token, owner }) => {
-        console.log('balanceOf', blockHash, token, owner);
+        log('balanceOf', blockHash, token, owner);
 
         return {
           value: blocks[blockHash][token].balanceOf[owner],
@@ -29,7 +32,7 @@ export const createResolvers = async (config) => {
       },
 
       allowance: (_, { blockHash, token, owner, spender }) => {
-        console.log('allowance', blockHash, token, owner, spender);
+        log('allowance', blockHash, token, owner, spender);
 
         return {
           value: blocks[blockHash][token].allowance[owner][spender],
@@ -38,7 +41,7 @@ export const createResolvers = async (config) => {
       },
 
       events: (_, { blockHash, token, name }) => {
-        console.log('events', blockHash, token, name);
+        log('events', blockHash, token, name);
         return blocks[blockHash][token].events
           .filter(e => !name || name === e.name)
           .map(e => ({ 'event': e }));

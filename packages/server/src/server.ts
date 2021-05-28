@@ -6,8 +6,11 @@ import path from 'path';
 import toml from 'toml';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers'
+import debug from 'debug';
 
 import { createSchema } from './gql';
+
+const log = debug('watcher:server');
 
 export const createServer = async () => {
   const argv = yargs(hideBin(process.argv))
@@ -27,6 +30,7 @@ export const createServer = async () => {
   }
 
   var config = toml.parse(await fs.readFile(configFilePath));
+  log("config", JSON.stringify(config, null, 2));
 
   assert(config.server, 'Missing server config');
 
@@ -49,14 +53,14 @@ export const createServer = async () => {
   });
 
   app.listen(port, host, () => {
-    console.log(`Server is listening on host ${host} port ${port}`);
+    log(`Server is listening on host ${host} port ${port}`);
   });
 
   return app;
 };
 
 createServer().then(() => {
-  console.log('Starting server...');
+  log('Starting server...');
 }).catch(err => {
-  console.error(err);
+  log(err);
 });

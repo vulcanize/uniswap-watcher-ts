@@ -1,5 +1,6 @@
 import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
+import debug from 'debug';
 
 import { EthClient } from './eth-client';
 import { getCache } from './cache';
@@ -24,6 +25,7 @@ const GQL_EVENT_TYPE = {
   "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925": "ApprovalEvent"
 };
 
+const log = debug('watcher:resolver');
 
 export const createResolvers = async (config) => {
 
@@ -52,7 +54,7 @@ export const createResolvers = async (config) => {
     Query: {
 
       balanceOf: async (_, { blockHash, token, owner }) => {
-        console.log('balanceOf', blockHash, token, owner);
+        log('balanceOf', blockHash, token, owner);
 
         const slot = getMappingSlot(ERC20_BALANCE_OF_SLOT, owner);
 
@@ -63,7 +65,7 @@ export const createResolvers = async (config) => {
         };
 
         const result = await ethClient.get('getStorageAt', vars);
-        console.log(JSON.stringify(result, null, 2));
+        log(JSON.stringify(result, null, 2));
 
         const { getStorageAt: { value, cid, ipldBlock }} = result;
 
@@ -86,7 +88,7 @@ export const createResolvers = async (config) => {
       },
 
       allowance: async (_, { blockHash, token, owner, spender }) => {
-        console.log('allowance', blockHash, token, owner, spender);
+        log('allowance', blockHash, token, owner, spender);
 
         const slot = getMappingSlot(getMappingSlot(ERC20_ALLOWANCE_SLOT, owner), spender);
 
@@ -97,7 +99,7 @@ export const createResolvers = async (config) => {
         };
 
         const result = await ethClient.get('getStorageAt', vars);
-        console.log(JSON.stringify(result, null, 2));
+        log(JSON.stringify(result, null, 2));
 
         const { getStorageAt: { value, cid, ipldBlock }} = result;
 
@@ -120,7 +122,7 @@ export const createResolvers = async (config) => {
       },
 
       events: async (_, { blockHash, token, name }) => {
-        console.log('events', blockHash, token, name);
+        log('events', blockHash, token, name);
 
         const vars = {
           blockHash,
@@ -128,7 +130,7 @@ export const createResolvers = async (config) => {
         };
 
         const result = await ethClient.get('getLogs', vars);
-        console.log(JSON.stringify(result, null, 2));
+        log(JSON.stringify(result, null, 2));
 
         return result.getLogs
           .filter(e => !name || ERC20_EVENT_NAME_TOPICS[name] === e.topics[0])

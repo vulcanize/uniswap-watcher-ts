@@ -4,13 +4,16 @@ import { ethers } from 'ethers';
 import level from 'level';
 import fs from 'fs-extra';
 import path from 'path';
+import debug from 'debug';
+
+const log = debug('watcher:cache');
 
 export const getCache = async (config) => {
   let cache;
 
   // Cache is optional.
   if (config) {
-    console.log("cache", JSON.stringify(config, null, 2));
+    log("config", JSON.stringify(config, null, 2));
 
     const { name, enabled, deleteOnStart } = config;
 
@@ -56,11 +59,11 @@ export class Cache {
     try {
       const value = await this._db.get(key);
 
-      console.log(`${this._name}: cache hit ${key}`);
+      log(`${this._name}: cache hit ${key}`);
 
       return [value, true];
     } catch (err) {
-      console.log(`${this._name}: cache miss ${key}`);
+      log(`${this._name}: cache miss ${key}`);
 
       if (err.notFound) {
         return [undefined, false]
