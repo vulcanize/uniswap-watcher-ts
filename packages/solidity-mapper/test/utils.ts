@@ -1,5 +1,5 @@
 import { ContractInterface } from '@ethersproject/contracts';
-import { artifacts, ethers } from 'hardhat'
+import { artifacts, ethers } from 'hardhat';
 import { CompilerOutput, CompilerOutputBytecode } from 'hardhat/types';
 
 import { StorageLayout, GetStorageAt } from '../src';
@@ -28,23 +28,23 @@ interface StorageCompilerOutput extends CompilerOutput {
  * Get storage layout of specified contract.
  * @param contractName
  */
-export const getStorageLayout = async (contractName: string) => {
+export const getStorageLayout = async (contractName: string): Promise<StorageLayout> => {
   const artifact = await artifacts.readArtifact(contractName);
-  const buildInfo = await artifacts.getBuildInfo(`${artifact.sourceName}:${artifact.contractName}`)
+  const buildInfo = await artifacts.getBuildInfo(`${artifact.sourceName}:${artifact.contractName}`);
 
   if (!buildInfo) {
     throw new Error('storageLayout not present in compiler output.');
   }
 
-  const output: StorageCompilerOutput = buildInfo.output
+  const output: StorageCompilerOutput = buildInfo.output;
   const { storageLayout } = output.contracts[artifact.sourceName][artifact.contractName];
 
   if (!storageLayout) {
-    throw new Error(`Contract hasn't been compiled.`);
+    throw new Error('Contract hasn\'t been compiled.');
   }
 
   return storageLayout;
-}
+};
 
 /**
  * Get storage value in hardhat environment using ethers.
@@ -55,4 +55,4 @@ export const getStorageAt: GetStorageAt = async (address, position) => {
   const value = await ethers.provider.getStorageAt(address, position);
 
   return value;
-}
+};

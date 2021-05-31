@@ -1,5 +1,5 @@
-import { JsonFragment } from "@ethersproject/abi"
-import { utils } from "ethers";
+import { JsonFragment } from '@ethersproject/abi';
+import { utils } from 'ethers';
 
 interface EventNameTopics {
   [eventName: string]: string
@@ -22,5 +22,5 @@ export const getEventNameTopics = (abi: JsonFragment[]): EventNameTopics => {
     }
 
     return acc;
-  }, {})
-}
+  }, {});
+};
