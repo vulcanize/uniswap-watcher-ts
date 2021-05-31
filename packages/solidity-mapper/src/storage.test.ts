@@ -153,4 +153,21 @@ describe('Get value from storage', function () {
       expect(storageValue).to.equal(value);
     });
   });
+
+  it('get value for contract type', async function () {
+    const contracts = ['TestContractTypes', 'TestAddress'];
+
+    const contractPromises = contracts.map(async (contractName) => {
+      const Contract = await hre.ethers.getContractFactory(contractName);
+      const contract = await Contract.deploy();
+      return contract.deployed();
+    });
+
+    const [testContractTypes, testAddress] = await Promise.all(contractPromises);
+    const storageLayout = await getStorageLayout('TestContractTypes');
+
+    await testContractTypes.setAddressContract1(testAddress.address);
+    const storageValue = await getStorageValue(testContractTypes.address, storageLayout, getStorageAt, 'addressContract1');
+    expect(storageValue).to.equal(testAddress.address.toLowerCase());
+  });
 });

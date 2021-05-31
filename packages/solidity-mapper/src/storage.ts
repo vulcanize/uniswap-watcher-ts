@@ -63,18 +63,17 @@ export const getStorageValue = async (address: string, storageLayout: StorageLay
     case 'inplace': {
       const valueArray = await getInplaceArray(address, slot, offset, numberOfBytes, getStorageAt);
 
-      // Parse value for address type.
-      if (['address', 'address payable'].some(type => type === label)) {
-        return utils.hexlify(valueArray);
-      }
-
       // Parse value for boolean type.
       if (label === 'bool') {
         return !BigNumber.from(valueArray).isZero();
       }
 
       // Parse value for uint/int type.
-      return BigNumber.from(valueArray).toNumber();
+      if (label.match(/u?int[0-9]+/)) {
+        return BigNumber.from(valueArray).toNumber();
+      }
+
+      return utils.hexlify(valueArray);
     }
 
     // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#bytes-and-string
