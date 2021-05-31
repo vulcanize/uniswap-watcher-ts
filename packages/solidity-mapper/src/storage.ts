@@ -1,5 +1,4 @@
 import { utils, BigNumber } from 'ethers';
-import { ethers } from 'hardhat';
 
 interface Storage {
   slot: string;
@@ -15,7 +14,7 @@ interface Type {
 }
 
 export interface StorageLayout {
-  storage: [Storage];
+  storage: Storage[];
   types: { [type: string]: Type; }
 }
 
@@ -41,7 +40,7 @@ export const getStorageInfo = (storageLayout: StorageLayout, variableName: strin
 
   return {
     ...targetState,
-    slot: ethers.utils.hexlify(ethers.BigNumber.from(targetState.slot)),
+    slot: utils.hexlify(BigNumber.from(targetState.slot)),
     types
   }
 }

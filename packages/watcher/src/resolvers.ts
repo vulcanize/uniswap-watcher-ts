@@ -8,11 +8,6 @@ import { getStorageInfo } from '@vulcanize/solidity-mapper';
 
 import { storageLayout } from './artifacts/ERC20.json';
 
-// Event slots.
-// TODO: Read from storage layout file.
-const ERC20_BALANCE_OF_SLOT = "0x00";
-const ERC20_ALLOWANCE_SLOT = "0x01";
-
 // Event signatures.
 // TODO: Generate from ABI.
 const ERC20_EVENT_NAME_TOPICS = {
@@ -94,7 +89,7 @@ export const createResolvers = async (config) => {
         log('allowance', blockHash, token, owner, spender);
 
         const { slot: allowancesSlot } = getStorageInfo(storageLayout, '_allowances')
-        const slot = getMappingSlot(getMappingSlot(ERC20_ALLOWANCE_SLOT, owner), spender);
+        const slot = getMappingSlot(getMappingSlot(allowancesSlot, owner), spender);
 
         const vars = {
           blockHash,
