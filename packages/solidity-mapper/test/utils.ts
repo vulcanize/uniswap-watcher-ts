@@ -1,3 +1,4 @@
+import { ContractInterface } from '@ethersproject/contracts';
 import { artifacts, ethers } from 'hardhat'
 import { CompilerOutput, CompilerOutputBytecode } from 'hardhat/types';
 
@@ -9,7 +10,7 @@ interface StorageCompilerOutput extends CompilerOutput {
   contracts: {
     [sourceName: string]: {
       [contractName: string]: {
-        abi: any;
+        abi: ContractInterface;
         evm: {
           bytecode: CompilerOutputBytecode;
           deployedBytecode: CompilerOutputBytecode;

@@ -3,10 +3,78 @@ import { expect } from "chai";
 import hre from "hardhat";
 import "@nomiclabs/hardhat-ethers";
 
-import { getStorageValue, StorageLayout } from "./storage";
+import { getStorageInfo, getStorageValue, StorageLayout } from "./storage";
 import { getStorageLayout, getStorageAt } from "../test/utils";
 
-describe("Storage", function() {
+
+const TEST_DATA = [
+  {
+    name: 'TestBooleans',
+    variable: 'bool1',
+    output: {
+      label: "bool1",
+      offset: 0,
+      slot: "0x00",
+      type: "t_bool"
+    }
+  },
+  {
+    name: 'TestIntegers',
+    variable: 'int2',
+    output: {
+      slot: '0x00',
+      offset: 1,
+      type: 't_int16',
+      label: 'int2'
+    }
+  },
+  {
+    name: 'TestUnsignedIntegers',
+    variable: 'uint3',
+    output: {
+      label: "uint3",
+      offset: 0,
+      slot: "0x01",
+      type: "t_uint256"
+    }
+  },
+  {
+    name: 'TestAddress',
+    variable: 'address1',
+    output: {
+      label: "address1",
+      offset: 0,
+      slot: "0x00",
+      type: "t_address"
+    }
+  },
+  {
+    name: 'TestStrings',
+    variable: 'string2',
+    output: {
+      label: "string2",
+      offset: 0,
+      slot: "0x01",
+      type: "t_string_storage"
+    }
+  }
+];
+
+it("get storage information", async function() {
+  const testPromises = TEST_DATA.map(async ({ name, variable, output }) => {
+    const Contract = await hre.ethers.getContractFactory(name);
+    const contract = await Contract.deploy();
+    await contract.deployed();
+    const storageLayout = await getStorageLayout(name);
+
+    const storageInfo = getStorageInfo(storageLayout, variable);
+    expect(storageInfo).to.include(output);
+  })
+
+  await Promise.all(testPromises);
+})
+
+describe("Get value from storage", function() {
   it("get value for integer type", async function() {
     const Integers = await hre.ethers.getContractFactory("TestIntegers");
     const integers = await Integers.deploy();
