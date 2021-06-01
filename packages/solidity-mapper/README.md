@@ -22,8 +22,8 @@ $ yarn test
 * [ ] Fixed Point Numbers
 * [x] Address
 * [x] Contract Types
-* [ ] Fixed-size byte arrays
-* [ ] Enums
+* [x] Fixed-size byte arrays
+* [x] Enums
 * [ ] Function Types
 * [ ] Arrays
 * [ ] Structs

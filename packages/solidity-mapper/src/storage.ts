@@ -69,7 +69,7 @@ export const getStorageValue = async (address: string, storageLayout: StorageLay
       }
 
       // Parse value for uint/int type.
-      if (label.match(/u?int[0-9]+/)) {
+      if (label.match(/^enum|u?int[0-9]+/)) {
         return BigNumber.from(valueArray).toNumber();
       }
 
@@ -98,7 +98,6 @@ export const getStorageValue = async (address: string, storageLayout: StorageLay
  */
 const getInplaceArray = async (address: string, slot: string, offset: number, numberOfBytes: string, getStorageAt: GetStorageAt) => {
   const value = await getStorageAt(address, slot);
-  console.log(value);
   const uintArray = utils.arrayify(value);
 
   // Get value according to offset.

@@ -181,4 +181,16 @@ describe('Get value from storage', function () {
     const storageValue = await getStorageValue(testBytes.address, storageLayout, getStorageAt, 'bytesTen');
     expect(storageValue).to.equal(value);
   });
+
+  it('get value for enum types', async function () {
+    const TestEnums = await ethers.getContractFactory('TestEnums');
+    const testEnums = await TestEnums.deploy();
+    await testEnums.deployed();
+    const storageLayout = await getStorageLayout('TestEnums');
+
+    const value = 1;
+    await testEnums.setChoicesEnum1(value);
+    const storageValue = await getStorageValue(testEnums.address, storageLayout, getStorageAt, 'choicesEnum1');
+    expect(storageValue).to.equal(value);
+  });
 });
