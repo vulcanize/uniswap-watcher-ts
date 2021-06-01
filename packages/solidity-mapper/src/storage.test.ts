@@ -1,6 +1,6 @@
 import { Contract } from '@ethersproject/contracts';
 import { expect } from 'chai';
-import hre from 'hardhat';
+import { ethers } from 'hardhat';
 import '@nomiclabs/hardhat-ethers';
 
 import { getStorageInfo, getStorageValue, StorageLayout } from './storage';
@@ -61,7 +61,7 @@ const TEST_DATA = [
 
 it('get storage information', async function () {
   const testPromises = TEST_DATA.map(async ({ name, variable, output }) => {
-    const Contract = await hre.ethers.getContractFactory(name);
+    const Contract = await ethers.getContractFactory(name);
     const contract = await Contract.deploy();
     await contract.deployed();
     const storageLayout = await getStorageLayout(name);
@@ -75,12 +75,11 @@ it('get storage information', async function () {
 
 describe('Get value from storage', function () {
   it('get value for integer type', async function () {
-    const Integers = await hre.ethers.getContractFactory('TestIntegers');
+    const Integers = await ethers.getContractFactory('TestIntegers');
     const integers = await Integers.deploy();
     await integers.deployed();
     const storageLayout = await getStorageLayout('TestIntegers');
 
-    // if (storageLayout)
     const value = 12;
     await integers.setInt1(value);
     const storageValue = await getStorageValue(integers.address, storageLayout, getStorageAt, 'int1');
@@ -88,7 +87,7 @@ describe('Get value from storage', function () {
   });
 
   it('get value for unsigned integer type', async function () {
-    const UnsignedIntegers = await hre.ethers.getContractFactory('TestUnsignedIntegers');
+    const UnsignedIntegers = await ethers.getContractFactory('TestUnsignedIntegers');
     const unsignedIntegers = await UnsignedIntegers.deploy();
     await unsignedIntegers.deployed();
     const storageLayout = await getStorageLayout('TestUnsignedIntegers');
@@ -100,7 +99,7 @@ describe('Get value from storage', function () {
   });
 
   it('get value for boolean type', async function () {
-    const Booleans = await hre.ethers.getContractFactory('TestBooleans');
+    const Booleans = await ethers.getContractFactory('TestBooleans');
     const booleans = await Booleans.deploy();
     await booleans.deployed();
     const storageLayout = await getStorageLayout('TestBooleans');
@@ -117,12 +116,12 @@ describe('Get value from storage', function () {
   });
 
   it('get value for address type', async function () {
-    const Address = await hre.ethers.getContractFactory('TestAddress');
+    const Address = await ethers.getContractFactory('TestAddress');
     const address = await Address.deploy();
     await address.deployed();
     const storageLayout = await getStorageLayout('TestAddress');
 
-    const [signer] = await hre.ethers.getSigners();
+    const [signer] = await ethers.getSigners();
     await address.setAddress1(signer.address);
     const storageValue = await getStorageValue(address.address, storageLayout, getStorageAt, 'address1');
     expect(storageValue).to.be.a('string');
@@ -133,7 +132,7 @@ describe('Get value from storage', function () {
     let strings: Contract, storageLayout: StorageLayout;
 
     before(async () => {
-      const Strings = await hre.ethers.getContractFactory('TestStrings');
+      const Strings = await ethers.getContractFactory('TestStrings');
       strings = await Strings.deploy();
       await strings.deployed();
       storageLayout = await getStorageLayout('TestStrings');
@@ -158,7 +157,7 @@ describe('Get value from storage', function () {
     const contracts = ['TestContractTypes', 'TestAddress'];
 
     const contractPromises = contracts.map(async (contractName) => {
-      const Contract = await hre.ethers.getContractFactory(contractName);
+      const Contract = await ethers.getContractFactory(contractName);
       const contract = await Contract.deploy();
       return contract.deployed();
     });
@@ -169,5 +168,17 @@ describe('Get value from storage', function () {
     await testContractTypes.setAddressContract1(testAddress.address);
     const storageValue = await getStorageValue(testContractTypes.address, storageLayout, getStorageAt, 'addressContract1');
     expect(storageValue).to.equal(testAddress.address.toLowerCase());
+  });
+
+  it('get value for fixed size byte arrays', async function () {
+    const TestBytes = await ethers.getContractFactory('TestBytes');
+    const testBytes = await TestBytes.deploy();
+    await testBytes.deployed();
+    const storageLayout = await getStorageLayout('TestBytes');
+
+    const value = ethers.utils.hexlify(ethers.utils.randomBytes(10));
+    await testBytes.setBytesTen(value);
+    const storageValue = await getStorageValue(testBytes.address, storageLayout, getStorageAt, 'bytesTen');
+    expect(storageValue).to.equal(value);
   });
 });

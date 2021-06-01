@@ -98,6 +98,7 @@ export const getStorageValue = async (address: string, storageLayout: StorageLay
  */
 const getInplaceArray = async (address: string, slot: string, offset: number, numberOfBytes: string, getStorageAt: GetStorageAt) => {
   const value = await getStorageAt(address, slot);
+  console.log(value);
   const uintArray = utils.arrayify(value);
 
   // Get value according to offset.
