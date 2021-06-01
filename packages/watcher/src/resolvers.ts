@@ -44,6 +44,11 @@ export const createResolvers = async (config) => {
 
     Query: {
 
+      totalSupply: (_, { blockHash, token }) => {
+        log('totalSupply', blockHash, token);
+        return indexer.totalSupply(blockHash, token);
+      },
+
       balanceOf: async (_, { blockHash, token, owner }) => {
         log('balanceOf', blockHash, token, owner);
         return indexer.getBalanceOf(blockHash, token, owner);

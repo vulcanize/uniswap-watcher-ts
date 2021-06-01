@@ -22,6 +22,21 @@ export class Indexer {
     this._ethClient = ethClient;
   }
 
+  async totalSupply(blockHash, token) {
+    const { slot } = getStorageInfo(storageLayout, '_totalSupply');
+
+    const vars = {
+      blockHash,
+      contract: token,
+      slot
+    };
+
+    const result = await this._ethClient.getStorageAt(vars);
+    log(JSON.stringify(result, null, 2));
+
+    return result;
+  }
+
   async getBalanceOf(blockHash, token, owner) {
     const { slot: balancesSlot } = getStorageInfo(storageLayout, '_balances');
     const slot = getMappingSlot(balancesSlot, owner);
@@ -35,24 +50,7 @@ export class Indexer {
     const result = await this._ethClient.getStorageAt(vars);
     log(JSON.stringify(result, null, 2));
 
-    const { value, cid, ipldBlock } = result;
-
-    return {
-      value,
-      proof: {
-        // TODO: Return proof only if requested.
-        data: JSON.stringify({
-          blockHash,
-          account: {
-            address: token,
-            storage: {
-              cid,
-              ipldBlock
-            }
-          }
-        })
-      }
-    }
+    return result;
   }
 
   async getAllowance(blockHash, token, owner, spender) {
@@ -68,24 +66,7 @@ export class Indexer {
     const result = await this._ethClient.getStorageAt(vars);
     log(JSON.stringify(result, null, 2));
 
-    const { value, cid, ipldBlock } = result;
-
-    return {
-      value,
-      proof: {
-        // TODO: Return proof only if requested.
-        data: JSON.stringify({
-          blockHash,
-          account: {
-            address: token,
-            storage: {
-              cid,
-              ipldBlock
-            }
-          }
-        })
-      }
-    }
+    return result;
   }
 
   async getEvents(blockHash, token, name) {
