@@ -69,6 +69,45 @@ export class Indexer {
     return result;
   }
 
+  async name(blockHash, token) {
+    const { slot } = getStorageInfo(storageLayout, '_name');
+
+    const vars = {
+      blockHash,
+      contract: token,
+      slot
+    };
+
+    // TODO: Integrate with storage-mapper to get string value (currently hex encoded).
+    const result = await this._ethClient.getStorageAt(vars);
+    log(JSON.stringify(result, null, 2));
+
+    return result;
+  }
+
+  async symbol(blockHash, token) {
+    const { slot } = getStorageInfo(storageLayout, '_symbol');
+
+    const vars = {
+      blockHash,
+      contract: token,
+      slot
+    };
+
+    // TODO: Integrate with storage-mapper to get string value (currently hex encoded).
+    const result = await this._ethClient.getStorageAt(vars);
+    log(JSON.stringify(result, null, 2));
+
+    return result;
+  }
+
+  async decimals(blockHash, token) {
+    // Not a state variable, uses hardcoded return value in contract function.
+    // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol#L86
+
+    throw new Error('Not implemented.');
+  }
+
   async getEvents(blockHash, token, name) {
     const vars = {
       blockHash,
