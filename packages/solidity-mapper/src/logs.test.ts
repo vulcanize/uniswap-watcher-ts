@@ -11,6 +11,8 @@ const TEST_DATA = [
   {
     name: 'TestEvents',
     output: {
+      // Signature of event is a keccak256 hash of event name and input argument types.
+      // keccak256('Event1(string,string)')
       Event1: '0xead5fc99a8133dbf3f4e87d1ada4e5a4cf65170fad6445d34042e643f6a30b79'
     }
   }
