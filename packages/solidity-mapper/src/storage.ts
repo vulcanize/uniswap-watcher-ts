@@ -52,87 +52,99 @@ export const getStorageInfo = (storageLayout: StorageLayout, variableName: strin
  * @param getStorageAt
  * @param variableName
  */
-export const getStorageValue = async (address: string, storageLayout: StorageLayout, getStorageAt: GetStorageAt, variableName: string): Promise<number | string | boolean | undefined> => {
+export const getStorageValue = async (address: string, storageLayout: StorageLayout, getStorageAt: GetStorageAt, variableName: string): Promise<number | string | boolean> => {
   const { slot, offset, type, types } = getStorageInfo(storageLayout, variableName);
   const { encoding, numberOfBytes, label } = types[type];
+  let storageValue: string;
 
   // Get value according to encoding i.e. how the data is encoded in storage.
   // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#json-output
   switch (encoding) {
     // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#layout-of-state-variables-in-storage
-    case 'inplace': {
-      const valueArray = await getInplaceArray(address, slot, offset, numberOfBytes, getStorageAt);
-
-      // Parse value for boolean type.
-      if (label === 'bool') {
-        return !BigNumber.from(valueArray).isZero();
-      }
-
-      // Parse value for uint/int type.
-      if (label.match(/^enum|u?int[0-9]+/)) {
-        return BigNumber.from(valueArray).toNumber();
-      }
-
-      return utils.hexlify(valueArray);
-    }
+    case 'inplace':
+      storageValue = await getInplaceValue(address, slot, offset, numberOfBytes, getStorageAt);
+      break;
 
     // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#bytes-and-string
-    case 'bytes': {
-      const valueArray = await getBytesArray(address, slot, getStorageAt);
-
-      return utils.toUtf8String(valueArray);
-    }
+    case 'bytes':
+      storageValue = await getBytesValue(address, slot, getStorageAt);
+      break;
 
     default:
-      break;
+      throw new Error(`Encoding ${encoding} not implmented.`);
   }
+
+  return getValueByLabel(storageValue, label);
 };
 
 /**
- * Function to get array value for inplace encoding.
+ * Get value according to type described by the label.
+ * @param storageValue
+ * @param label
+ */
+export const getValueByLabel = (storageValue: string, label: string): number | string | boolean => {
+  // Parse value for boolean type.
+  if (label === 'bool') {
+    return !BigNumber.from(storageValue).isZero();
+  }
+
+  // Parse value for uint/int type or enum type.
+  if (label.match(/^enum|u?int[0-9]+/)) {
+    return BigNumber.from(storageValue).toNumber();
+  }
+
+  // Parse value for string type.
+  if (label.includes('string')) {
+    return utils.toUtf8String(storageValue);
+  }
+
+  return storageValue;
+};
+
+/**
+ * Function to get value for inplace encoding.
  * @param address
  * @param slot
  * @param offset
  * @param numberOfBytes
  * @param getStorageAt
  */
-const getInplaceArray = async (address: string, slot: string, offset: number, numberOfBytes: string, getStorageAt: GetStorageAt) => {
+const getInplaceValue = async (address: string, slot: string, offset: number, numberOfBytes: string, getStorageAt: GetStorageAt) => {
   const value = await getStorageAt(address, slot);
-  const uintArray = utils.arrayify(value);
+  const valueLength = utils.hexDataLength(value);
 
   // Get value according to offset.
-  const start = uintArray.length - (offset + Number(numberOfBytes));
-  const end = uintArray.length - offset;
-  const offsetArray = uintArray.slice(start, end);
+  const start = valueLength - (offset + Number(numberOfBytes));
+  const end = valueLength - offset;
 
-  return offsetArray;
+  return utils.hexDataSlice(value, start, end);
 };
 
 /**
- * Function to get array value for bytes encoding.
+ * Function to get value for bytes encoding.
  * @param address
  * @param slot
  * @param getStorageAt
  */
-const getBytesArray = async (address: string, slot: string, getStorageAt: GetStorageAt) => {
+const getBytesValue = async (address: string, slot: string, getStorageAt: GetStorageAt) => {
   const value = await getStorageAt(address, slot);
-  const uintArray = utils.arrayify(value);
   let length = 0;
 
   // Get length of bytes stored.
-  if (BigNumber.from(uintArray[0]).isZero()) {
+  if (BigNumber.from(utils.hexDataSlice(value, 0, 1)).isZero()) {
     // If first byte is not set, get length directly from the zero padded byte array.
     const slotValue = BigNumber.from(value);
     length = slotValue.sub(1).div(2).toNumber();
   } else {
     // If first byte is set the length is lesser than 32 bytes.
     // Length of the value can be computed from the last byte.
-    length = BigNumber.from(uintArray[uintArray.length - 1]).div(2).toNumber();
+    const lastByteHex = utils.hexDataSlice(value, 31, 32);
+    length = BigNumber.from(lastByteHex).div(2).toNumber();
   }
 
   // Get value from the byte array directly if length is less than 32.
   if (length < 32) {
-    return uintArray.slice(0, length);
+    return utils.hexDataSlice(value, 0, length);
   }
 
   // Array to hold multiple bytes32 data.
@@ -150,5 +162,5 @@ const getBytesArray = async (address: string, slot: string, getStorageAt: GetSto
   }
 
   // Slice trailing bytes according to length of value.
-  return utils.concat(values).slice(0, length);
+  return utils.hexDataSlice(utils.hexConcat(values), 0, length);
 };

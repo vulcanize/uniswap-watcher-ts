@@ -3,7 +3,7 @@ import debug from 'debug';
 import { Connection } from "typeorm";
 import { invert } from "lodash";
 import { EthClient, getMappingSlot, topictoAddress } from "@vulcanize/ipld-eth-client";
-import { getStorageInfo, getEventNameTopics } from '@vulcanize/solidity-mapper';
+import { getStorageInfo, getEventNameTopics, getValueByLabel } from '@vulcanize/solidity-mapper';
 
 import { storageLayout, abi } from './artifacts/ERC20.json';
 
@@ -70,7 +70,8 @@ export class Indexer {
   }
 
   async name(blockHash, token) {
-    const { slot } = getStorageInfo(storageLayout, '_name');
+    const { slot, type, types } = getStorageInfo(storageLayout, '_name');
+    const { label } = types[type];
 
     const vars = {
       blockHash,
@@ -78,8 +79,8 @@ export class Indexer {
       slot
     };
 
-    // TODO: Integrate with storage-mapper to get string value (currently hex encoded).
-    const result = await this._ethClient.getStorageAt(vars);
+    let result = await this._ethClient.getStorageAt(vars);
+    result = this._formatResult(result, label)
     log(JSON.stringify(result, null, 2));
 
     return result;
@@ -162,5 +163,10 @@ export class Indexer {
           }
         }
       });
+  }
+
+  _formatResult(result, label) {
+    result.value = getValueByLabel(result.value, label)
+    return result
   }
 }
