@@ -59,7 +59,7 @@ export class Indexer {
     log(JSON.stringify(result, null, 2));
 
     const { value, proof } = result;
-    await this._db.createBalance({ blockHash, token, owner, value, proof: JSON.stringify(proof) });
+    await this._db.saveBalance({ blockHash, token, owner, value, proof: JSON.stringify(proof) });
 
     return result;
   }
@@ -86,7 +86,7 @@ export class Indexer {
     log(JSON.stringify(result, null, 2));
 
     const { value, proof } = result;
-    await this._db.createAllowance({ blockHash, token, owner, spender, value, proof: JSON.stringify(proof) });
+    await this._db.saveAllowance({ blockHash, token, owner, spender, value, proof: JSON.stringify(proof) });
 
     return result;
   }
@@ -127,6 +127,12 @@ export class Indexer {
   }
 
   async getEvents(blockHash, token, name) {
+    const didSyncEvents = await this._db.didSyncEvents({ blockHash, token });
+    if (!didSyncEvents) {
+      // Sync events first and make a note in the event sync progress table.
+      await this._syncEvents({ blockHash, token })
+    }
+
     const vars = {
       blockHash,
       contract: token
@@ -180,5 +186,21 @@ export class Indexer {
           }
         }
       });
+  }
+
+  async _syncEvents({ blockHash, token }) {
+    const logs = await this._ethClient.getLogs({ blockHash, contract: token });
+    log(JSON.stringify(logs, null, 2));
+
+    const erc20EventNameTopics = getEventNameTopics(abi);
+
+    const dbEvents = logs.map(log => {
+      const { topics, data, cid, ipldBlock } = log;
+
+    });
+
+    // In a transaction:
+    // (1) Save all the events in the database.
+    // (2) Add an entry to the event progress table.
   }
 }
