@@ -1,24 +1,24 @@
 import assert from "assert";
 import debug from 'debug';
-import { Connection } from "typeorm";
 import { invert } from "lodash";
 import { EthClient, getMappingSlot, topictoAddress } from "@vulcanize/ipld-eth-client";
 import { getStorageInfo, getEventNameTopics, getStorageValue } from '@vulcanize/solidity-mapper';
 
+import { Database } from './database';
 import { storageLayout, abi } from './artifacts/ERC20.json';
 
 const log = debug('vulcanize:indexer');
 
 export class Indexer {
 
-  _db: Connection
+  _db: Database
   _ethClient: EthClient
 
-  constructor(db, ethClient) {
-    assert(db);
+  constructor(connection, ethClient) {
+    assert(connection);
     assert(ethClient);
 
-    this._db = db;
+    this._db = new Database(connection);
     this._ethClient = ethClient;
   }
 
@@ -38,6 +38,14 @@ export class Indexer {
   }
 
   async getBalanceOf(blockHash, token, owner) {
+    const entity = await this._db.getBalance({ blockHash, token, owner });
+    if (entity) {
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      }
+    }
+
     const { slot: balancesSlot } = getStorageInfo(storageLayout, '_balances');
     const slot = getMappingSlot(balancesSlot, owner);
 
@@ -50,10 +58,21 @@ export class Indexer {
     const result = await this._ethClient.getStorageAt(vars);
     log(JSON.stringify(result, null, 2));
 
+    const { value, proof } = result;
+    await this._db.createBalance({ blockHash, token, owner, value, proof: JSON.stringify(proof) });
+
     return result;
   }
 
   async getAllowance(blockHash, token, owner, spender) {
+    const entity = await this._db.getAllowance({ blockHash, token, owner, spender });
+    if (entity) {
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      }
+    }
+
     const { slot: allowancesSlot } = getStorageInfo(storageLayout, '_allowances');
     const slot = getMappingSlot(getMappingSlot(allowancesSlot, owner), spender);
 
@@ -65,6 +84,9 @@ export class Indexer {
 
     const result = await this._ethClient.getStorageAt(vars);
     log(JSON.stringify(result, null, 2));
+
+    const { value, proof } = result;
+    await this._db.createAllowance({ blockHash, token, owner, spender, value, proof: JSON.stringify(proof) });
 
     return result;
   }

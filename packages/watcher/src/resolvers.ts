@@ -15,6 +15,7 @@ const log = debug('vulcanize:resolver');
 
 export const createResolvers = async (config) => {
 
+  // TODO: Read db connection settings from toml file, move defaults out of config.
   const ormConfig = JSON.parse(await fs.readFile(path.join(process.cwd(), "ormconfig.json")));
   const db = await createConnection(ormConfig);
 
