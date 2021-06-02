@@ -5,7 +5,7 @@ contract TestEnums {
     // Variables of this enum type will need 1 byte for storage.
     enum Choices { Choice0, Choice1, Choice2, Choice3 }
 
-    // Variables are packed together in a slot as they occupy less than 32 bytes together.
+    // Enum type variables are packed together in a slot as they occupy less than 32 bytes together.
     Choices choicesEnum1;
     Choices choicesEnum2;
 

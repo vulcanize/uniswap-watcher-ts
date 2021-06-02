@@ -2,16 +2,16 @@
 pragma solidity ^0.7.0;
 
 contract TestFixedArrays {
-    // Variable will use 5 consecutive slots as size of 1 element is 32 bytes.
+    // Fixed size array variable will use 5 consecutive slots as size of 1 element is 32 bytes.
     uint[5] uintArray;
 
-    // Variable will use 10 consecutive slots as size of 1 element is 32 bytes.
+    // Fixed size array variable will use 10 consecutive slots as size of 1 element is 32 bytes.
     int[10] intArray;
 
-    // Variable will use 1 slot as size of one element is 1 byte.
+    // Fixed size array variable will use 1 slot as size of one element is 1 byte.
     int8[2] int8Array;
 
-    // Variable will use the next consecutive slot as it is of array type.
+    // Fixed size array variable will use the next consecutive slot as it is of array type.
     // https://docs.soliditylang.org/en/v0.7.4/internals/layout_in_storage.html#layout-of-state-variables-in-storage
     uint128[5] uint128Array;
 

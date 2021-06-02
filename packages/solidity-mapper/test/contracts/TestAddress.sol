@@ -5,7 +5,7 @@ contract TestAddress {
     // Address type need 20 bytes for storage.
     address address1;
 
-    // Variable uses the next slot as there is not enough space in previous slot.
+    // Address type uses the next slot as there is not enough space in previous slot.
     address payable address2;
 
     // Set variable address1.

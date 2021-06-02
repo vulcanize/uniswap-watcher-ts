@@ -162,31 +162,6 @@ describe('Get value from storage', function () {
     expect(String(storageValue).toLowerCase()).to.equal(signer.address.toLowerCase());
   });
 
-  describe('string type', function () {
-    let strings: Contract, storageLayout: StorageLayout;
-
-    before(async () => {
-      const Strings = await ethers.getContractFactory('TestStrings');
-      strings = await Strings.deploy();
-      await strings.deployed();
-      storageLayout = await getStorageLayout('TestStrings');
-    });
-
-    it('get value for string length less than 32 bytes', async function () {
-      const value = 'Hello world.';
-      await strings.setString1(value);
-      const storageValue = await getStorageValue(strings.address, storageLayout, getStorageAt, 'string1');
-      expect(storageValue).to.equal(value);
-    });
-
-    it('get value for string length more than 32 bytes', async function () {
-      const value = 'This sentence is more than 32 bytes long.';
-      await strings.setString2(value);
-      const storageValue = await getStorageValue(strings.address, storageLayout, getStorageAt, 'string2');
-      expect(storageValue).to.equal(value);
-    });
-  });
-
   it('get value for contract type', async function () {
     const contracts = ['TestContractTypes', 'TestAddress'];
 
@@ -243,5 +218,30 @@ describe('Get value from storage', function () {
     await testEnums.setChoicesEnum1(value);
     const storageValue = await getStorageValue(testEnums.address, storageLayout, getStorageAt, 'choicesEnum1');
     expect(storageValue).to.equal(value);
+  });
+
+  describe('string type', function () {
+    let strings: Contract, storageLayout: StorageLayout;
+
+    before(async () => {
+      const Strings = await ethers.getContractFactory('TestStrings');
+      strings = await Strings.deploy();
+      await strings.deployed();
+      storageLayout = await getStorageLayout('TestStrings');
+    });
+
+    it('get value for string length less than 32 bytes', async function () {
+      const value = 'Hello world.';
+      await strings.setString1(value);
+      const storageValue = await getStorageValue(strings.address, storageLayout, getStorageAt, 'string1');
+      expect(storageValue).to.equal(value);
+    });
+
+    it('get value for string length more than 32 bytes', async function () {
+      const value = 'This sentence is more than 32 bytes long.';
+      await strings.setString2(value);
+      const storageValue = await getStorageValue(strings.address, storageLayout, getStorageAt, 'string2');
+      expect(storageValue).to.equal(value);
+    });
   });
 });

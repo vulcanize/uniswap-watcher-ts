@@ -26,6 +26,9 @@ $ yarn test
 * [x] Enums
 * [ ] Function Types
 * [ ] Arrays
+* [ ] Dynamically-sized byte array
+  * [ ] Bytes
+  * [x] String
 * [ ] Structs
 * [ ] Mapping Types
 
