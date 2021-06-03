@@ -8,7 +8,7 @@ import debug from 'debug';
 
 const log = debug('vulcanize:cache');
 
-export const getCache = async (config) => {
+export const getCache = async (config): Promise<undefined | Cache> => {
   let cache;
 
   // Cache is optional.
@@ -48,11 +48,11 @@ export class Cache {
     this._db = level(dirPath, { valueEncoding: 'json' });
   }
 
-  key (obj) {
+  key (obj): string {
     return this._cacheKey(obj);
   }
 
-  async get (obj) {
+  async get (obj): Promise<[any, boolean] | undefined> {
     const key = this._cacheKey(obj);
 
     try {
@@ -70,11 +70,11 @@ export class Cache {
     }
   }
 
-  async put (obj, value) {
+  async put (obj, value): Promise<void> {
     await this._db.put(this._cacheKey(obj), value);
   }
 
-  _cacheKey (obj) {
+  _cacheKey (obj): string {
     return ethers.utils.keccak256(Buffer.from(canonicalStringify(obj)));
   }
 }
