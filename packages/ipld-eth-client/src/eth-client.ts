@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { GraphQLClient } from 'graphql-request';
 
-import { Cache } from '@vulcanize/cache';
+// import { Cache } from '@vulcanize/cache';
 
 import ethQueries from './eth-queries';
 import { padKey } from './utils';
@@ -10,7 +10,8 @@ export class EthClient {
 
   _config: any;
   _client: any;
-  _cache: Cache;
+  // _cache: Cache;
+  _cache: any;
 
   constructor(config) {
     this._config = config;
