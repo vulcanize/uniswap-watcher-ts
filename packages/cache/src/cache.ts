@@ -13,7 +13,7 @@ export const getCache = async (config) => {
 
   // Cache is optional.
   if (config) {
-    log("config", JSON.stringify(config, null, 2));
+    log('config', JSON.stringify(config, null, 2));
 
     const { name, enabled, deleteOnStart } = config;
 
@@ -37,23 +37,22 @@ export const getCache = async (config) => {
 };
 
 export class Cache {
-
   _db: any;
   _name: string;
 
-  constructor(name, dirPath) {
+  constructor (name, dirPath) {
     assert(name);
     assert(dirPath);
 
     this._name = name;
-    this._db = level(dirPath, { valueEncoding: 'json' });;
+    this._db = level(dirPath, { valueEncoding: 'json' });
   }
 
-  key(obj) {
+  key (obj) {
     return this._cacheKey(obj);
   }
 
-  async get(obj) {
+  async get (obj) {
     const key = this._cacheKey(obj);
 
     try {
@@ -66,16 +65,16 @@ export class Cache {
       log(`${this._name}: cache miss ${key}`);
 
       if (err.notFound) {
-        return [undefined, false]
+        return [undefined, false];
       }
     }
   }
 
-  async put(obj, value) {
+  async put (obj, value) {
     await this._db.put(this._cacheKey(obj), value);
   }
 
-  _cacheKey(obj) {
+  _cacheKey (obj) {
     return ethers.utils.keccak256(Buffer.from(canonicalStringify(obj)));
   }
 }
