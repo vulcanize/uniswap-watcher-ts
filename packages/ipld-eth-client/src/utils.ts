@@ -10,7 +10,7 @@ export const getMappingSlot = (mappingSlot, key) => {
   const fullKey = keyPadded.concat(mappingSlotPadded);
   const slot = ethers.utils.keccak256(`0x${fullKey}`);
 
-  return slot
+  return slot;
 };
 
 export const getStorageLeafKey = (slot) => ethers.utils.keccak256(slot);

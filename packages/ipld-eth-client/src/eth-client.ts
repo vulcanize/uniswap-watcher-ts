@@ -7,13 +7,12 @@ import ethQueries from './eth-queries';
 import { padKey } from './utils';
 
 export class EthClient {
-
   _config: any;
   _client: any;
   // _cache: Cache;
   _cache: any;
 
-  constructor(config) {
+  constructor (config) {
     this._config = config;
 
     const { gqlEndpoint, cache } = config;
@@ -23,7 +22,7 @@ export class EthClient {
     this._cache = cache;
   }
 
-  async getStorageAt({ blockHash, contract, slot }) {
+  async getStorageAt ({ blockHash, contract, slot }) {
     slot = `0x${padKey(slot)}`;
 
     const result = await this._getCachedOrFetch('getStorageAt', { blockHash, contract, slot });
@@ -47,14 +46,14 @@ export class EthClient {
     };
   }
 
-  async getLogs(vars) {
+  async getLogs (vars) {
     const result = await this._getCachedOrFetch('getLogs', vars);
     const { getLogs: logs } = result;
 
     return logs;
   }
 
-  async _getCachedOrFetch(queryName, vars) {
+  async _getCachedOrFetch (queryName, vars) {
     const keyObj = {
       queryName,
       vars
