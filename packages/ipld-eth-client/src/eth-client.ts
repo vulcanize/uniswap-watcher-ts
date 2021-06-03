@@ -31,7 +31,7 @@ export class EthClient {
     this._cache = cache;
   }
 
-  async getStorageAt ({ blockHash, contract, slot }) {
+  async getStorageAt ({ blockHash, contract, slot }: { blockHash: string, contract: string, slot: string }): Promise<{ value: string, proof: { data: string } }> {
     slot = `0x${padKey(slot)}`;
 
     const result = await this._getCachedOrFetch('getStorageAt', { blockHash, contract, slot });
@@ -55,14 +55,14 @@ export class EthClient {
     };
   }
 
-  async getLogs (vars: Vars) {
+  async getLogs (vars: Vars): Promise<any> {
     const result = await this._getCachedOrFetch('getLogs', vars);
     const { getLogs: logs } = result;
 
     return logs;
   }
 
-  async _getCachedOrFetch (queryName: string, vars: Vars) {
+  async _getCachedOrFetch (queryName: string, vars: Vars): Promise<any> {
     const keyObj = {
       queryName,
       vars
