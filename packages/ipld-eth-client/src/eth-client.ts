@@ -6,12 +6,22 @@ import { Cache } from '@vulcanize/cache';
 import ethQueries from './eth-queries';
 import { padKey } from './utils';
 
+interface Config {
+  gqlEndpoint: string;
+  cache: Cache;
+}
+
+interface Vars {
+  blockHash: string;
+  contract: string;
+}
+
 export class EthClient {
-  _config: { gqlEndpoint: string, cache: Cache };
+  _config: Config;
   _client: GraphQLClient;
   _cache: Cache;
 
-  constructor (config) {
+  constructor (config: Config) {
     this._config = config;
 
     const { gqlEndpoint, cache } = config;
@@ -45,14 +55,14 @@ export class EthClient {
     };
   }
 
-  async getLogs (vars) {
+  async getLogs (vars: Vars) {
     const result = await this._getCachedOrFetch('getLogs', vars);
     const { getLogs: logs } = result;
 
     return logs;
   }
 
-  async _getCachedOrFetch (queryName, vars) {
+  async _getCachedOrFetch (queryName: string, vars: Vars) {
     const keyObj = {
       queryName,
       vars
