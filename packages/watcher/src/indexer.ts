@@ -1,11 +1,11 @@
 import assert from "assert";
 import debug from 'debug';
 import { invert } from "lodash";
+
 import { EthClient, getMappingSlot, topictoAddress } from "@vulcanize/ipld-eth-client";
-import { getStorageInfo, getEventNameTopics, getStorageValue } from '@vulcanize/solidity-mapper';
+import { getStorageInfo, getEventNameTopics, getStorageValue, GetStorageAt } from '@vulcanize/solidity-mapper';
 
 import { Database } from './database';
-import { storageLayout, abi } from './artifacts/ERC20.json';
 
 const log = debug('vulcanize:indexer');
 
@@ -13,17 +13,31 @@ export class Indexer {
 
   _db: Database
   _ethClient: EthClient
+  _getStorageAt: GetStorageAt
 
-  constructor(connection, ethClient) {
+  _abi: any
+  _storageLayout: any
+
+  constructor(connection, ethClient, artifacts) {
     assert(connection);
     assert(ethClient);
+    assert(artifacts);
+
+    const { abi, storageLayout } = artifacts;
+
+    assert(abi);
+    assert(storageLayout);
 
     this._db = new Database(connection);
     this._ethClient = ethClient;
+    this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
+
+    this._abi = abi;
+    this._storageLayout = storageLayout;
   }
 
   async totalSupply(blockHash, token) {
-    const { slot } = getStorageInfo(storageLayout, '_totalSupply');
+    const { slot } = getStorageInfo(this._storageLayout, '_totalSupply');
 
     const vars = {
       blockHash,
@@ -31,13 +45,13 @@ export class Indexer {
       slot
     };
 
-    const result = await this._ethClient.getStorageAt(vars);
+    const result = await this._getStorageAt(vars);
     log(JSON.stringify(result, null, 2));
 
     return result;
   }
 
-  async getBalanceOf(blockHash, token, owner) {
+  async balanceOf(blockHash, token, owner) {
     const entity = await this._db.getBalance({ blockHash, token, owner });
     if (entity) {
       return {
@@ -46,7 +60,7 @@ export class Indexer {
       }
     }
 
-    const { slot: balancesSlot } = getStorageInfo(storageLayout, '_balances');
+    const { slot: balancesSlot } = getStorageInfo(this._storageLayout, '_balances');
     const slot = getMappingSlot(balancesSlot, owner);
 
     const vars = {
@@ -55,7 +69,7 @@ export class Indexer {
       slot
     };
 
-    const result = await this._ethClient.getStorageAt(vars);
+    const result = await this._getStorageAt(vars);
     log(JSON.stringify(result, null, 2));
 
     const { value, proof } = result;
@@ -64,7 +78,7 @@ export class Indexer {
     return result;
   }
 
-  async getAllowance(blockHash, token, owner, spender) {
+  async allowance(blockHash, token, owner, spender) {
     const entity = await this._db.getAllowance({ blockHash, token, owner, spender });
     if (entity) {
       return {
@@ -73,7 +87,7 @@ export class Indexer {
       }
     }
 
-    const { slot: allowancesSlot } = getStorageInfo(storageLayout, '_allowances');
+    const { slot: allowancesSlot } = getStorageInfo(this._storageLayout, '_allowances');
     const slot = getMappingSlot(getMappingSlot(allowancesSlot, owner), spender);
 
     const vars = {
@@ -82,7 +96,7 @@ export class Indexer {
       slot
     };
 
-    const result = await this._ethClient.getStorageAt(vars);
+    const result = await this._getStorageAt(vars);
     log(JSON.stringify(result, null, 2));
 
     const { value, proof } = result;
@@ -93,8 +107,8 @@ export class Indexer {
 
   async name(blockHash, token) {
     const result = await getStorageValue(
-      storageLayout,
-      this._ethClient.getStorageAt.bind(this._ethClient),
+      this._storageLayout,
+      this._getStorageAt,
       blockHash,
       token,
       '_name'
@@ -107,8 +121,8 @@ export class Indexer {
 
   async symbol(blockHash, token) {
     const result = await getStorageValue(
-      storageLayout,
-      this._ethClient.getStorageAt.bind(this._ethClient),
+      this._storageLayout,
+      this._getStorageAt,
       blockHash,
       token,
       '_symbol'
@@ -141,7 +155,7 @@ export class Indexer {
     const logs = await this._ethClient.getLogs(vars);
     log(JSON.stringify(logs, null, 2));
 
-    const erc20EventNameTopics = getEventNameTopics(abi);
+    const erc20EventNameTopics = getEventNameTopics(this._abi);
     const gqlEventType = invert(erc20EventNameTopics);
 
     return logs
@@ -192,7 +206,7 @@ export class Indexer {
     const logs = await this._ethClient.getLogs({ blockHash, contract: token });
     log(JSON.stringify(logs, null, 2));
 
-    const erc20EventNameTopics = getEventNameTopics(abi);
+    const erc20EventNameTopics = getEventNameTopics(this._abi);
 
     const dbEvents = logs.map(log => {
       const { topics, data, cid, ipldBlock } = log;

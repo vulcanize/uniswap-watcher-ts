@@ -9,6 +9,7 @@ import { createConnection } from "typeorm";
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
+import artifacts from './artifacts/ERC20.json';
 import { Indexer } from './indexer';
 
 const log = debug('vulcanize:resolver');
@@ -28,7 +29,7 @@ export const createResolvers = async (config) => {
   const cache = await getCache(cacheConfig);
   const ethClient = new EthClient({ gqlEndpoint, cache });
 
-  const indexer = new Indexer(db, ethClient);
+  const indexer = new Indexer(db, ethClient, artifacts);
 
   return {
     BigInt: new BigInt('bigInt'),
@@ -52,12 +53,12 @@ export const createResolvers = async (config) => {
 
       balanceOf: async (_, { blockHash, token, owner }) => {
         log('balanceOf', blockHash, token, owner);
-        return indexer.getBalanceOf(blockHash, token, owner);
+        return indexer.balanceOf(blockHash, token, owner);
       },
 
       allowance: async (_, { blockHash, token, owner, spender }) => {
         log('allowance', blockHash, token, owner, spender);
-        return indexer.getAllowance(blockHash, token, owner, spender);
+        return indexer.allowance(blockHash, token, owner, spender);
       },
 
       name: (_, { blockHash, token }) => {
