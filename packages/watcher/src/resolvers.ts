@@ -16,12 +16,31 @@ const log = debug('vulcanize:resolver');
 
 export const createResolvers = async (config) => {
 
-  // TODO: Read db connection settings from toml file, move defaults out of config.
-  const ormConfig = JSON.parse(await fs.readFile(path.join(process.cwd(), "ormconfig.json")));
+  const { upstream, database } = config;
+
+  assert(database, 'Missing database config');
+
+  const ormConfig = {
+    ...database,
+    entities: [
+      "src/entity/**/*.ts"
+    ],
+    migrations: [
+      "src/migration/**/*.ts"
+    ],
+    subscribers: [
+      "src/subscriber/**/*.ts"
+    ],
+    cli: {
+      entitiesDir: "src/entity",
+      migrationsDir: "src/migration",
+      subscribersDir: "src/subscriber"
+    }
+  };
+
   const db = new Database(ormConfig);
   await db.init();
 
-  const { upstream } = config;
   assert(upstream, 'Missing upstream config');
 
   const { gqlEndpoint, cache: cacheConfig } = upstream;

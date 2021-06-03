@@ -56,7 +56,7 @@ export class Database {
     return repo.save(entity);
   }
 
-  // Returns try if events have already been synced for the (block, token) combination.
+  // Returns true if events have already been synced for the (block, token) combination.
   async didSyncEvents({ blockHash, token }) {
     const numRows = await this._conn.getRepository(EventSyncProgress)
       .createQueryBuilder()
