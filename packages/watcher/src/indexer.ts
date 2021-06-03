@@ -18,8 +18,8 @@ export class Indexer {
   _abi: any
   _storageLayout: any
 
-  constructor(connection, ethClient, artifacts) {
-    assert(connection);
+  constructor(db, ethClient, artifacts) {
+    assert(db);
     assert(ethClient);
     assert(artifacts);
 
@@ -28,7 +28,7 @@ export class Indexer {
     assert(abi);
     assert(storageLayout);
 
-    this._db = new Database(connection);
+    this._db = db;
     this._ethClient = ethClient;
     this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
 
@@ -134,63 +134,49 @@ export class Indexer {
   async getEvents(blockHash, token, name) {
     const didSyncEvents = await this._db.didSyncEvents({ blockHash, token });
     if (!didSyncEvents) {
-      // Sync events first and make a note in the event sync progress table.
-      await this._syncEvents({ blockHash, token })
+      // Fetch and save events first and make a note in the event sync progress table.
+      await this._fetchAndSaveEvents({ blockHash, token });
+      log(`synced events for block ${blockHash} contract ${token}`);
     }
 
-    const vars = {
-      blockHash,
-      contract: token
-    };
+    assert(await this._db.didSyncEvents({ blockHash, token }));
 
-    const logs = await this._ethClient.getLogs(vars);
-    log(JSON.stringify(logs, null, 2));
+    const events = await this._db.getEvents({ blockHash, token });
 
-    const erc20EventNameTopics = getEventNameTopics(this._abi);
-    const gqlEventType = invert(erc20EventNameTopics);
-
-    return logs
-      .filter(e => !name || erc20EventNameTopics[name] === e.topics[0])
+    const result = events
+      // TODO: Filter using db WHERE condition when name is not empty.
+      .filter(event => !name || name === event.eventName)
       .map(e => {
-        const [topic0, topic1, topic2] = e.topics;
+        const eventFields = {};
 
-        const eventName = gqlEventType[topic0];
-        const address1 = topictoAddress(topic1);
-        const address2 = topictoAddress(topic2);
-
-        const eventFields = { value: e.data };
-
-
-        switch (eventName) {
+        switch (e.eventName) {
           case 'Transfer': {
-            eventFields['from'] = address1;
-            eventFields['to'] = address2;
+            eventFields['from'] = e.transferFrom;
+            eventFields['to'] = e.transferTo;
+            eventFields['value'] = e.transferValue;
             break;
           };
           case 'Approval': {
-            eventFields['owner'] = address1;
-            eventFields['spender'] = address2;
+            eventFields['owner'] = e.approvalOwner;
+            eventFields['spender'] = e.approvalSpender;
+            eventFields['value'] = e.approvalValue;
             break;
           };
         }
 
         return {
           event: {
-            __typename: `${eventName}Event`,
+            __typename: `${e.eventName}Event`,
             ...eventFields
           },
-          proof: {
-            // TODO: Return proof only if requested.
-            data: JSON.stringify({
-              blockHash,
-              receipt: {
-                cid: e.cid,
-                ipldBlock: e.ipldBlock
-              }
-            })
-          }
+          // TODO: Return proof only if requested.
+          proof: JSON.parse(e.proof)
         }
       });
+
+    log(JSON.stringify(result, null, 2));
+
+    return result;
   }
 
   // TODO: Move into base/class or framework package.
@@ -204,19 +190,56 @@ export class Indexer {
     );
   }
 
-  async _syncEvents({ blockHash, token }) {
+  async _fetchAndSaveEvents({ blockHash, token }) {
     const logs = await this._ethClient.getLogs({ blockHash, contract: token });
     log(JSON.stringify(logs, null, 2));
 
-    const erc20EventNameTopics = getEventNameTopics(this._abi);
+    const eventNameToTopic = getEventNameTopics(this._abi);
+    const logTopicToEventName = invert(eventNameToTopic);
 
     const dbEvents = logs.map(log => {
-      const { topics, data, cid, ipldBlock } = log;
+      const { topics, data: value, cid, ipldBlock } = log;
 
+      const [topic0, topic1, topic2] = topics;
+
+      const eventName = logTopicToEventName[topic0];
+      const address1 = topictoAddress(topic1);
+      const address2 = topictoAddress(topic2);
+
+      const event = {
+        blockHash,
+        token,
+        eventName,
+
+        proof: JSON.stringify({
+          data: JSON.stringify({
+            blockHash,
+            receipt: {
+              cid,
+              ipldBlock
+            }
+          })
+        }),
+      };
+
+      switch (eventName) {
+        case 'Transfer': {
+          event['transferFrom'] = address1;
+          event['transferTo'] = address2;
+          event['transferValue'] = value;
+          break;
+        };
+        case 'Approval': {
+          event['approvalOwner'] = address1;
+          event['approvalSpender'] = address2;
+          event['approvalValue'] = value;
+          break;
+        };
+      }
+
+      return event;
     });
 
-    // In a transaction:
-    // (1) Save all the events in the database.
-    // (2) Add an entry to the event progress table.
+    await this._db.saveEvents({ blockHash, token, events: dbEvents });
   }
 }

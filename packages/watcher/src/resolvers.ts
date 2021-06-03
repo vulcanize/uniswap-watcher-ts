@@ -4,13 +4,13 @@ import debug from 'debug';
 import fs from 'fs-extra';
 import path from 'path';
 import "reflect-metadata";
-import { createConnection } from "typeorm";
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import artifacts from './artifacts/ERC20.json';
 import { Indexer } from './indexer';
+import { Database } from './database';
 
 const log = debug('vulcanize:resolver');
 
@@ -18,7 +18,8 @@ export const createResolvers = async (config) => {
 
   // TODO: Read db connection settings from toml file, move defaults out of config.
   const ormConfig = JSON.parse(await fs.readFile(path.join(process.cwd(), "ormconfig.json")));
-  const db = await createConnection(ormConfig);
+  const db = new Database(ormConfig);
+  await db.init();
 
   const { upstream } = config;
   assert(upstream, 'Missing upstream config');

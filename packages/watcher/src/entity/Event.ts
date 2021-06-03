@@ -1,8 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, Index } from "typeorm";
 
 @Entity()
-// There MUST be a unique entry for a particular (block, token, receipt idx, log idx) tuple.
-@Index(["blockHash", "receiptIndex", "logIndex"], { unique: true })
+// Index to query all events for a contract efficiently.
+@Index(["blockHash", "token"])
 // Index to query 'Transfer' events efficiently.
 @Index(["blockHash", "token", "eventName", "transferFrom", "transferTo"])
 // Index to query 'Approval' events efficiently.
@@ -14,14 +14,6 @@ export class Event {
 
   @Column("varchar", { length: 66 })
   blockHash: string;
-
-  @Column("numeric")
-  // The index of the receipt inside the block, that this log/event is contained in.
-  receiptIndex: number;
-
-  // The index of the log/event inside the receipt, since a receipt can have multiple logs.
-  @Column("numeric")
-  logIndex: number;
 
   @Column("varchar", { length: 42 })
   token: string;
