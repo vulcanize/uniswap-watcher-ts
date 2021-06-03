@@ -37,6 +37,7 @@ export class Indexer {
   }
 
   async totalSupply(blockHash, token) {
+    // TODO: Use getStorageValue when it supports uint256 values.
     const { slot } = getStorageInfo(this._storageLayout, '_totalSupply');
 
     const vars = {
@@ -60,6 +61,7 @@ export class Indexer {
       }
     }
 
+    // TODO: Use getStorageValue when it supports mappings.
     const { slot: balancesSlot } = getStorageInfo(this._storageLayout, '_balances');
     const slot = getMappingSlot(balancesSlot, owner);
 
@@ -87,6 +89,7 @@ export class Indexer {
       }
     }
 
+    // TODO: Use getStorageValue when it supports nested mappings.
     const { slot: allowancesSlot } = getStorageInfo(this._storageLayout, '_allowances');
     const slot = getMappingSlot(getMappingSlot(allowancesSlot, owner), spender);
 
@@ -106,13 +109,7 @@ export class Indexer {
   }
 
   async name(blockHash, token) {
-    const result = await getStorageValue(
-      this._storageLayout,
-      this._getStorageAt,
-      blockHash,
-      token,
-      '_name'
-    )
+    const result = await this._getStorageValue(blockHash, token, '_name');
 
     log(JSON.stringify(result, null, 2));
 
@@ -120,13 +117,7 @@ export class Indexer {
   }
 
   async symbol(blockHash, token) {
-    const result = await getStorageValue(
-      this._storageLayout,
-      this._getStorageAt,
-      blockHash,
-      token,
-      '_symbol'
-    )
+    const result = await this._getStorageValue(blockHash, token, '_symbol');
 
     log(JSON.stringify(result, null, 2));
 
@@ -200,6 +191,17 @@ export class Indexer {
           }
         }
       });
+  }
+
+  // TODO: Move into base/class or framework package.
+  async _getStorageValue(blockHash, token, variable) {
+    return getStorageValue(
+      this._storageLayout,
+      this._getStorageAt,
+      blockHash,
+      token,
+      variable
+    );
   }
 
   async _syncEvents({ blockHash, token }) {
