@@ -11,6 +11,7 @@ interface Type {
   encoding: string;
   numberOfBytes: string;
   label: string;
+  base?: string;
 }
 
 export interface StorageLayout {
@@ -56,30 +57,67 @@ export const getStorageInfo = (storageLayout: StorageLayout, variableName: strin
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const getStorageValue = async (storageLayout: StorageLayout, getStorageAt: GetStorageAt, blockHash: string, address: string, variableName: string): Promise<{ value: any, proof: { data: string } }> => {
   const { slot, offset, type, types } = getStorageInfo(storageLayout, variableName);
-  const { encoding, numberOfBytes, label: typeLabel } = types[type];
-  let value: string, proof: { data: string };
 
-  // Get value according to encoding i.e. how the data is encoded in storage.
-  // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#json-output
-  switch (encoding) {
-    // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#layout-of-state-variables-in-storage
-    case 'inplace':
-      ({ value, proof } = await getInplaceValue(blockHash, address, slot, offset, numberOfBytes, getStorageAt));
-      break;
+  /**
+   * Function to fetch value according to type and encoding.
+   * @param slot
+   * @param offset
+   * @param type
+   */
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const fetchEncodingValue = async (slot: string, offset: number, type: string): Promise<{ value: any, proof: { data: string } }> => {
+    const { encoding, numberOfBytes, label: typeLabel, base } = types[type];
+    const [isArray, arraySize] = typeLabel.match(/\[([0-9]*)\]/) || [false];
+    let value: string, proof: { data: string };
 
-    // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#bytes-and-string
-    case 'bytes':
-      ({ value, proof } = await getBytesValue(blockHash, address, slot, getStorageAt));
-      break;
+    // If variable is array type.
+    if (isArray && base) {
+      const resultArray = [];
+      const proofs = [];
+      const { numberOfBytes: baseNumberOfBytes } = types[base];
 
-    default:
-      throw new Error(`Encoding ${encoding} not implemented.`);
-  }
+      // TODO: Get values in single call and parse according to type.
+      // Loop over elements of array and get value.
+      for (let i = 0; i < Number(baseNumberOfBytes) * Number(arraySize); i = i + Number(baseNumberOfBytes)) {
+        const arraySlot = BigNumber.from(slot).add(Math.floor(i / 32)).toHexString();
+        const slotOffset = i % 32;
+        const { value, proof } = await fetchEncodingValue(arraySlot, slotOffset, base);
+        resultArray.push(value);
+        proofs.push(JSON.parse(proof.data));
+      }
 
-  return {
-    value: getValueByType(value, typeLabel),
-    proof
+      return {
+        value: resultArray,
+        proof: {
+          data: JSON.stringify(proofs)
+        }
+      };
+    }
+
+    // Get value according to encoding i.e. how the data is encoded in storage.
+    // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#json-output
+    switch (encoding) {
+      // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#layout-of-state-variables-in-storage
+      case 'inplace':
+        ({ value, proof } = await getInplaceValue(blockHash, address, slot, offset, numberOfBytes, getStorageAt));
+        break;
+
+      // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#bytes-and-string
+      case 'bytes':
+        ({ value, proof } = await getBytesValue(blockHash, address, slot, getStorageAt));
+        break;
+
+      default:
+        throw new Error(`Encoding ${encoding} not implemented.`);
+    }
+
+    return {
+      value: getValueByType(value, typeLabel),
+      proof
+    };
   };
+
+  return fetchEncodingValue(slot, offset, type);
 };
 
 /**
@@ -87,7 +125,6 @@ export const getStorageValue = async (storageLayout: StorageLayout, getStorageAt
  * @param storageValue
  * @param typeLabel
  */
-// getStorageByType
 export const getValueByType = (storageValue: string, typeLabel: string): number | string | boolean => {
   // Parse value for boolean type.
   if (typeLabel === 'bool') {
@@ -160,10 +197,10 @@ const getBytesValue = async (blockHash: string, address: string, slot: string, g
   }
 
   // Array to hold multiple bytes32 data.
-  const values = [];
   const proofs = [
     JSON.parse(proof.data)
   ];
+  const hexStringArray = [];
 
   // Compute zero padded hexstring to calculate hashed position of storage.
   // https://github.com/ethers-io/ethers.js/issues/1079#issuecomment-703056242
@@ -178,13 +215,13 @@ const getBytesValue = async (blockHash: string, address: string, slot: string, g
       slot: BigNumber.from(position).add(i).toHexString()
     });
 
-    values.push(value);
+    hexStringArray.push(value);
     proofs.push(JSON.parse(proof.data));
   }
 
   // Slice trailing bytes according to length of value.
   return {
-    value: utils.hexDataSlice(utils.hexConcat(values), 0, length),
+    value: utils.hexDataSlice(utils.hexConcat(hexStringArray), 0, length),
     proof: {
       data: JSON.stringify(proofs)
     }

@@ -266,4 +266,43 @@ describe('Get value from storage', function () {
       expect(value).to.equal(expectedValue);
     });
   });
+
+  it('get value for fixed size arrays using single slot', async function () {
+    const TestFixedArrays = await ethers.getContractFactory('TestFixedArrays');
+    const testFixedArrays = await TestFixedArrays.deploy();
+    await testFixedArrays.deployed();
+    const storageLayout = await getStorageLayout('TestFixedArrays');
+
+    let expectedValue: Array<number|boolean> = [true, false];
+
+    await testFixedArrays.setBoolArray(expectedValue);
+    let blockHash = await getBlockHash();
+    let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testFixedArrays.address, 'boolArray');
+    expect(value).to.eql(expectedValue);
+
+    expectedValue = [1, 2, 3, 4, 5];
+    await testFixedArrays.setUint16Array(expectedValue);
+    blockHash = await getBlockHash();
+    ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testFixedArrays.address, 'uint16Array'));
+    expect(value).to.eql(expectedValue);
+  });
+
+  it('get value for fixed size arrays using multiple slots', async function () {
+    const TestFixedArrays = await ethers.getContractFactory('TestFixedArrays');
+    const testFixedArrays = await TestFixedArrays.deploy();
+    await testFixedArrays.deployed();
+    const storageLayout = await getStorageLayout('TestFixedArrays');
+
+    const expectedValue = [1, 2, 3, 4, 5];
+
+    await testFixedArrays.setInt128Array(expectedValue);
+    let blockHash = await getBlockHash();
+    let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testFixedArrays.address, 'int128Array');
+    expect(value).to.eql(expectedValue);
+
+    await testFixedArrays.setUintArray(expectedValue);
+    blockHash = await getBlockHash();
+    ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testFixedArrays.address, 'uintArray'));
+    expect(value).to.eql(expectedValue);
+  });
 });
