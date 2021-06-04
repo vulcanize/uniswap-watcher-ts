@@ -12,7 +12,7 @@ import { createSchema } from './gql';
 
 const log = debug('vulcanize:server');
 
-export const createServer = async () => {
+export const createServer = async (): Promise<Application> => {
   const argv = yargs(hideBin(process.argv))
     .option('f', {
       alias: 'config-file',
