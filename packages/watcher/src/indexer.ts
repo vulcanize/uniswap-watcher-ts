@@ -1,8 +1,8 @@
-import assert from "assert";
+import assert from 'assert';
 import debug from 'debug';
-import { invert } from "lodash";
+import { invert } from 'lodash';
 
-import { EthClient, getMappingSlot, topictoAddress } from "@vulcanize/ipld-eth-client";
+import { EthClient, getMappingSlot, topictoAddress } from '@vulcanize/ipld-eth-client';
 import { getStorageInfo, getEventNameTopics, getStorageValue, GetStorageAt } from '@vulcanize/solidity-mapper';
 
 import { Database } from './database';
@@ -10,7 +10,6 @@ import { Database } from './database';
 const log = debug('vulcanize:indexer');
 
 export class Indexer {
-
   _db: Database
   _ethClient: EthClient
   _getStorageAt: GetStorageAt
@@ -18,7 +17,7 @@ export class Indexer {
   _abi: any
   _storageLayout: any
 
-  constructor(db, ethClient, artifacts) {
+  constructor (db, ethClient, artifacts) {
     assert(db);
     assert(ethClient);
     assert(artifacts);
@@ -36,7 +35,7 @@ export class Indexer {
     this._storageLayout = storageLayout;
   }
 
-  async totalSupply(blockHash, token) {
+  async totalSupply (blockHash, token) {
     // TODO: Use getStorageValue when it supports uint256 values.
     const { slot } = getStorageInfo(this._storageLayout, '_totalSupply');
 
@@ -52,13 +51,13 @@ export class Indexer {
     return result;
   }
 
-  async balanceOf(blockHash, token, owner) {
+  async balanceOf (blockHash, token, owner) {
     const entity = await this._db.getBalance({ blockHash, token, owner });
     if (entity) {
       return {
         value: entity.value,
         proof: JSON.parse(entity.proof)
-      }
+      };
     }
 
     // TODO: Use getStorageValue when it supports mappings.
@@ -80,13 +79,13 @@ export class Indexer {
     return result;
   }
 
-  async allowance(blockHash, token, owner, spender) {
+  async allowance (blockHash, token, owner, spender) {
     const entity = await this._db.getAllowance({ blockHash, token, owner, spender });
     if (entity) {
       return {
         value: entity.value,
         proof: JSON.parse(entity.proof)
-      }
+      };
     }
 
     // TODO: Use getStorageValue when it supports nested mappings.
@@ -108,7 +107,7 @@ export class Indexer {
     return result;
   }
 
-  async name(blockHash, token) {
+  async name (blockHash, token) {
     const result = await this._getStorageValue(blockHash, token, '_name');
 
     log(JSON.stringify(result, null, 2));
@@ -116,7 +115,7 @@ export class Indexer {
     return result;
   }
 
-  async symbol(blockHash, token) {
+  async symbol (blockHash, token) {
     const result = await this._getStorageValue(blockHash, token, '_symbol');
 
     log(JSON.stringify(result, null, 2));
@@ -124,14 +123,14 @@ export class Indexer {
     return result;
   }
 
-  async decimals(blockHash, token) {
+  async decimals (blockHash, token) {
     // Not a state variable, uses hardcoded return value in contract function.
     // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol#L86
 
     throw new Error('Not implemented.');
   }
 
-  async getEvents(blockHash, token, name) {
+  async getEvents (blockHash, token, name) {
     const didSyncEvents = await this._db.didSyncEvents({ blockHash, token });
     if (!didSyncEvents) {
       // Fetch and save events first and make a note in the event sync progress table.
@@ -151,17 +150,17 @@ export class Indexer {
 
         switch (e.eventName) {
           case 'Transfer': {
-            eventFields['from'] = e.transferFrom;
-            eventFields['to'] = e.transferTo;
-            eventFields['value'] = e.transferValue;
+            eventFields.from = e.transferFrom;
+            eventFields.to = e.transferTo;
+            eventFields.value = e.transferValue;
             break;
-          };
+          }
           case 'Approval': {
-            eventFields['owner'] = e.approvalOwner;
-            eventFields['spender'] = e.approvalSpender;
-            eventFields['value'] = e.approvalValue;
+            eventFields.owner = e.approvalOwner;
+            eventFields.spender = e.approvalSpender;
+            eventFields.value = e.approvalValue;
             break;
-          };
+          }
         }
 
         return {
@@ -171,7 +170,7 @@ export class Indexer {
           },
           // TODO: Return proof only if requested.
           proof: JSON.parse(e.proof)
-        }
+        };
       });
 
     log(JSON.stringify(result, null, 2));
@@ -180,7 +179,7 @@ export class Indexer {
   }
 
   // TODO: Move into base/class or framework package.
-  async _getStorageValue(blockHash, token, variable) {
+  async _getStorageValue (blockHash, token, variable) {
     return getStorageValue(
       this._storageLayout,
       this._getStorageAt,
@@ -190,7 +189,7 @@ export class Indexer {
     );
   }
 
-  async _fetchAndSaveEvents({ blockHash, token }) {
+  async _fetchAndSaveEvents ({ blockHash, token }) {
     const logs = await this._ethClient.getLogs({ blockHash, contract: token });
     log(JSON.stringify(logs, null, 2));
 
@@ -219,22 +218,22 @@ export class Indexer {
               ipldBlock
             }
           })
-        }),
+        })
       };
 
       switch (eventName) {
         case 'Transfer': {
-          event['transferFrom'] = address1;
-          event['transferTo'] = address2;
-          event['transferValue'] = BigInt(value);
+          event.transferFrom = address1;
+          event.transferTo = address2;
+          event.transferValue = BigInt(value);
           break;
-        };
+        }
         case 'Approval': {
-          event['approvalOwner'] = address1;
-          event['approvalSpender'] = address2;
-          event['approvalValue'] = BigInt(value);
+          event.approvalOwner = address1;
+          event.approvalSpender = address2;
+          event.approvalValue = BigInt(value);
           break;
-        };
+        }
       }
 
       return event;

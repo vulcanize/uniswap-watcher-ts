@@ -6,7 +6,6 @@ import { blocks } from './data';
 const log = debug('test');
 
 export const createResolvers = async (config) => {
-
   return {
     BigInt: new BigInt('bigInt'),
 
@@ -28,7 +27,7 @@ export const createResolvers = async (config) => {
         return {
           value: blocks[blockHash][token].totalSupply,
           proof: { data: '' }
-        }
+        };
       },
 
       balanceOf: (_, { blockHash, token, owner }) => {
@@ -37,7 +36,7 @@ export const createResolvers = async (config) => {
         return {
           value: blocks[blockHash][token].balanceOf[owner],
           proof: { data: '' }
-        }
+        };
       },
 
       allowance: (_, { blockHash, token, owner, spender }) => {
@@ -46,7 +45,7 @@ export const createResolvers = async (config) => {
         return {
           value: blocks[blockHash][token].allowance[owner][spender],
           proof: { data: '' }
-        }
+        };
       },
 
       name: (_, { blockHash, token }) => {
@@ -55,7 +54,7 @@ export const createResolvers = async (config) => {
         return {
           value: blocks[blockHash][token].name,
           proof: { data: '' }
-        }
+        };
       },
 
       symbol: (_, { blockHash, token }) => {
@@ -64,7 +63,7 @@ export const createResolvers = async (config) => {
         return {
           value: blocks[blockHash][token].symbol,
           proof: { data: '' }
-        }
+        };
       },
 
       decimals: (_, { blockHash, token }) => {
@@ -73,14 +72,14 @@ export const createResolvers = async (config) => {
         return {
           value: blocks[blockHash][token].decimals,
           proof: { data: '' }
-        }
+        };
       },
 
       events: (_, { blockHash, token, name }) => {
         log('events', blockHash, token, name);
         return blocks[blockHash][token].events
           .filter(e => !name || name === e.name)
-          .map(e => ({ 'event': e }));
+          .map(e => ({ event: e }));
       }
     }
   };

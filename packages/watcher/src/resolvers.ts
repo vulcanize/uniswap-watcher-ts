@@ -3,7 +3,7 @@ import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 import fs from 'fs-extra';
 import path from 'path';
-import "reflect-metadata";
+import 'reflect-metadata';
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
@@ -15,7 +15,6 @@ import { Database } from './database';
 const log = debug('vulcanize:resolver');
 
 export const createResolvers = async (config) => {
-
   const { upstream, database } = config;
 
   assert(database, 'Missing database config');
@@ -23,18 +22,18 @@ export const createResolvers = async (config) => {
   const ormConfig = {
     ...database,
     entities: [
-      "src/entity/**/*.ts"
+      'src/entity/**/*.ts'
     ],
     migrations: [
-      "src/migration/**/*.ts"
+      'src/migration/**/*.ts'
     ],
     subscribers: [
-      "src/subscriber/**/*.ts"
+      'src/subscriber/**/*.ts'
     ],
     cli: {
-      entitiesDir: "src/entity",
-      migrationsDir: "src/migration",
-      subscribersDir: "src/subscriber"
+      entitiesDir: 'src/entity',
+      migrationsDir: 'src/migration',
+      subscribersDir: 'src/subscriber'
     }
   };
 
