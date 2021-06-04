@@ -14,6 +14,7 @@ interface Config {
 interface Vars {
   blockHash: string;
   contract: string;
+  slot?: string;
 }
 
 export class EthClient {
@@ -62,7 +63,7 @@ export class EthClient {
     return logs;
   }
 
-  async _getCachedOrFetch (queryName: string, vars: Vars): Promise<any> {
+  async _getCachedOrFetch (queryName: keyof typeof ethQueries, vars: Vars): Promise<any> {
     const keyObj = {
       queryName,
       vars
@@ -70,7 +71,7 @@ export class EthClient {
 
     // Check if request cached in db, if cache is enabled.
     if (this._cache) {
-      const [value, found] = await this._cache.get(keyObj);
+      const [value, found] = await this._cache.get(keyObj) || [undefined, false];
       if (found) {
         return value;
       }
