@@ -1,7 +1,6 @@
 import assert from 'assert';
 import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
-import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
 import { Allowance } from './entity/Allowance';
 import { Balance } from './entity/Balance';
@@ -10,7 +9,7 @@ import { EventSyncProgress } from './entity/EventProgress';
 
 export class Database {
   _config: ConnectionOptions
-  _conn: Connection | undefined
+  _conn!: Connection
 
   constructor (config: ConnectionOptions) {
     assert(config);
@@ -26,7 +25,11 @@ export class Database {
     });
   }
 
-  async getBalance ({ blockHash, token, owner }: { blockHash: string, token: string, owner: string }): Promise<Balance> {
+  async getBalance ({ blockHash, token, owner }: { blockHash: string, token: string, owner: string }): Promise<Balance | undefined> {
+    if (!this._conn) {
+      return;
+    }
+
     return this._conn.getRepository(Balance)
       .createQueryBuilder('balance')
       .where('block_hash = :blockHash AND token = :token AND owner = :owner', {
@@ -37,7 +40,11 @@ export class Database {
       .getOne();
   }
 
-  async getAllowance ({ blockHash, token, owner, spender }: { blockHash: string, token: string, owner: string, spender: string }): Promise<Allowance> {
+  async getAllowance ({ blockHash, token, owner, spender }: { blockHash: string, token: string, owner: string, spender: string }): Promise<Allowance | undefined> {
+    if (!this._conn) {
+      return;
+    }
+
     return this._conn.getRepository(Allowance)
       .createQueryBuilder('allowance')
       .where('block_hash = :blockHash AND token = :token AND owner = :owner AND spender = :spender', {
@@ -49,20 +56,32 @@ export class Database {
       .getOne();
   }
 
-  async saveBalance ({ blockHash, token, owner, value, proof }: DeepPartial<Balance>): Promise<Balance> {
+  async saveBalance ({ blockHash, token, owner, value, proof }: DeepPartial<Balance>): Promise<Balance | undefined> {
+    if (!this._conn) {
+      return;
+    }
+
     const repo = this._conn.getRepository(Balance);
     const entity = repo.create({ blockHash, token, owner, value, proof });
     return repo.save(entity);
   }
 
-  async saveAllowance ({ blockHash, token, owner, spender, value, proof }: DeepPartial<Allowance>): Promise<Allowance> {
+  async saveAllowance ({ blockHash, token, owner, spender, value, proof }: DeepPartial<Allowance>): Promise<Allowance | undefined> {
+    if (!this._conn) {
+      return;
+    }
+
     const repo = this._conn.getRepository(Allowance);
     const entity = repo.create({ blockHash, token, owner, spender, value, proof });
     return repo.save(entity);
   }
 
   // Returns true if events have already been synced for the (block, token) combination.
-  async didSyncEvents ({ blockHash, token }: { blockHash: string, token: string }): Promise<boolean> {
+  async didSyncEvents ({ blockHash, token }: { blockHash: string, token: string }): Promise<boolean | undefined> {
+    if (!this._conn) {
+      return;
+    }
+
     const numRows = await this._conn.getRepository(EventSyncProgress)
       .createQueryBuilder()
       .where('block_hash = :blockHash AND token = :token', {
@@ -84,7 +103,11 @@ export class Database {
       .getMany();
   }
 
-  async getEventsByName ({ blockHash, token, eventName }: { blockHash: string, token: string, eventName: string }): Promise<Event[]> {
+  async getEventsByName ({ blockHash, token, eventName }: { blockHash: string, token: string, eventName: string }): Promise<Event[] | undefined> {
+    if (!this._conn) {
+      return;
+    }
+
     return this._conn.getRepository(Event)
       .createQueryBuilder('event')
       .where('block_hash = :blockHash AND token = :token AND :eventName = :eventName', {
@@ -95,7 +118,11 @@ export class Database {
       .getMany();
   }
 
-  async saveEvents ({ blockHash, token, events }: { blockHash: string, token: string, events: QueryDeepPartialEntity<Event>[] }): Promise<void> {
+  async saveEvents ({ blockHash, token, events }: { blockHash: string, token: string, events: DeepPartial<Event>[] }): Promise<void> {
+    if (!this._conn) {
+      return;
+    }
+
     // TODO: Using the same connection doesn't work when > 1 inserts are attempted at the same time (e.g. simultaneous GQL requests).
 
     // In a transaction:

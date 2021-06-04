@@ -8,7 +8,7 @@ import { getCache, Config as CacheConfig } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import artifacts from './artifacts/ERC20.json';
-import { Indexer } from './indexer';
+import { Indexer, ValueResult } from './indexer';
 import { Database } from './database';
 
 export interface Config {
@@ -25,7 +25,7 @@ export interface Config {
 
 const log = debug('vulcanize:resolver');
 
-export const createResolvers = async (config: Config) => {
+export const createResolvers = async (config: Config): Promise<any> => {
   const { upstream, database } = config;
 
   assert(database, 'Missing database config');
@@ -57,6 +57,8 @@ export const createResolvers = async (config: Config) => {
   assert(upstream, 'Missing upstream gqlEndpoint');
 
   const cache = await getCache(cacheConfig);
+  assert(cache, 'Missing cache');
+
   const ethClient = new EthClient({ gqlEndpoint, cache });
 
   const indexer = new Indexer(db, ethClient, artifacts);
@@ -65,7 +67,7 @@ export const createResolvers = async (config: Config) => {
     BigInt: new BigInt('bigInt'),
 
     TokenEvent: {
-      __resolveType: (obj) => {
+      __resolveType: (obj: any) => {
         if (obj.owner) {
           return 'ApprovalEvent';
         }
@@ -76,37 +78,37 @@ export const createResolvers = async (config: Config) => {
 
     Query: {
 
-      totalSupply: (_, { blockHash, token }) => {
+      totalSupply: (_: any, { blockHash, token }: { blockHash: string, token: string }): Promise<ValueResult> => {
         log('totalSupply', blockHash, token);
         return indexer.totalSupply(blockHash, token);
       },
 
-      balanceOf: async (_, { blockHash, token, owner }) => {
+      balanceOf: async (_: any, { blockHash, token, owner }: { blockHash: string, token: string, owner: string }) => {
         log('balanceOf', blockHash, token, owner);
         return indexer.balanceOf(blockHash, token, owner);
       },
 
-      allowance: async (_, { blockHash, token, owner, spender }) => {
+      allowance: async (_: any, { blockHash, token, owner, spender }: { blockHash: string, token: string, owner: string, spender: string }) => {
         log('allowance', blockHash, token, owner, spender);
         return indexer.allowance(blockHash, token, owner, spender);
       },
 
-      name: (_, { blockHash, token }) => {
+      name: (_: any, { blockHash, token }: { blockHash: string, token: string }) => {
         log('name', blockHash, token);
         return indexer.name(blockHash, token);
       },
 
-      symbol: (_, { blockHash, token }) => {
+      symbol: (_: any, { blockHash, token }: { blockHash: string, token: string }) => {
         log('symbol', blockHash, token);
         return indexer.symbol(blockHash, token);
       },
 
-      decimals: (_, { blockHash, token }) => {
+      decimals: (_: any, { blockHash, token }: { blockHash: string, token: string }) => {
         log('decimals', blockHash, token);
-        return indexer.decimals(blockHash, token);
+        return indexer.decimals();
       },
 
-      events: async (_, { blockHash, token, name }) => {
+      events: async (_: any, { blockHash, token, name }: { blockHash: string, token: string, name: string }) => {
         log('events', blockHash, token, name);
         return indexer.getEvents(blockHash, token, name);
       }

@@ -16,7 +16,12 @@ import {
 
 import { blocks, tokens as tokenInfo } from './data';
 
-const testCases = {
+const testCases: {
+  balanceOf: any[],
+  allowance: any[],
+  events: any[],
+  tokens: any[]
+} = {
   balanceOf: [],
   allowance: [],
   events: [],
@@ -143,10 +148,10 @@ describe('server', () => {
       const testCase = tests[i];
       const result = await client.request(queryEvents, testCase);
 
-      const resultEvents = result.events.map(record => record.event);
+      const resultEvents = result.events.map((record: any) => record.event);
       expect(resultEvents.length).to.equal(testCase.events.length);
 
-      resultEvents.forEach((resultEvent, index) => {
+      resultEvents.forEach((resultEvent: any, index: number) => {
         const { name, ...testCaseEvent } = testCase.events[index];
 
         if (name === 'Transfer') {

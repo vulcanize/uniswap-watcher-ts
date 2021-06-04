@@ -9,37 +9,37 @@ import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 @Index(['blockHash', 'token', 'eventName', 'approvalOwner', 'approvalSpender'])
 export class Event {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column('varchar', { length: 66 })
-  blockHash: string;
+  blockHash!: string;
 
   @Column('varchar', { length: 42 })
-  token: string;
+  token!: string;
 
   @Column('varchar', { length: 256 })
-  eventName: string;
+  eventName!: string;
 
   @Column('text')
-  proof: string;
+  proof!: string;
 
   // Transfer event columns.
   @Column('varchar', { length: 42, nullable: true })
-  transferFrom: string;
+  transferFrom!: string;
 
   @Column('varchar', { length: 42, nullable: true })
-  transferTo: string;
+  transferTo!: string;
 
   @Column('numeric', { nullable: true })
-  transferValue: number;
+  transferValue!: BigInt;
 
   // Approval event columns.
   @Column('varchar', { length: 42, nullable: true })
-  approvalOwner: string;
+  approvalOwner!: string;
 
   @Column('varchar', { length: 42, nullable: true })
-  approvalSpender: string;
+  approvalSpender!: string;
 
   @Column('numeric', { nullable: true })
-  approvalValue: number;
+  approvalValue!: BigInt;
 }

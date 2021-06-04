@@ -4,20 +4,20 @@ import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 @Index(['blockHash', 'token', 'owner'], { unique: true })
 export class Balance {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column('varchar', { length: 66 })
-  blockHash: string;
+  blockHash!: string;
 
   @Column('varchar', { length: 42 })
-  token: string;
+  token!: string;
 
   @Column('varchar', { length: 42 })
-  owner: string;
+  owner!: string;
 
   @Column('numeric')
-  value: number;
+  value!: BigInt;
 
   @Column('text')
-  proof: string;
+  proof!: string;
 }

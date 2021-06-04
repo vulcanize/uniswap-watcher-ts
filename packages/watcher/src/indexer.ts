@@ -1,22 +1,24 @@
 import assert from 'assert';
 import debug from 'debug';
 import { invert } from 'lodash';
-import { ContractInterface } from '@ethersproject/contracts';
+import { JsonFragment } from '@ethersproject/abi';
+import { DeepPartial } from 'typeorm';
 
 import { EthClient, getMappingSlot, topictoAddress } from '@vulcanize/ipld-eth-client';
 import { getStorageInfo, getEventNameTopics, getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
 
 import { Database } from './database';
+import { Event } from './entity/Event';
 
 const log = debug('vulcanize:indexer');
 
 interface Artifacts {
-  abi: ContractInterface;
+  abi: JsonFragment[];
   storageLayout: StorageLayout;
 }
 
-interface ValueResult {
-  value: string | number;
+export interface ValueResult {
+  value: string | BigInt;
   proof: {
     data: string;
   }
@@ -28,7 +30,7 @@ type EventsResult = Array<{
     to?: string;
     owner?: string;
     spender?: string;
-    value?: string;
+    value?: BigInt;
     __typename: string;
   }
   proof: string;
@@ -39,7 +41,7 @@ export class Indexer {
   _ethClient: EthClient
   _getStorageAt: GetStorageAt
 
-  _abi: ContractInterface
+  _abi: JsonFragment[]
   _storageLayout: StorageLayout
 
   constructor (db: Database, ethClient: EthClient, artifacts: Artifacts) {
@@ -171,7 +173,13 @@ export class Indexer {
       // TODO: Filter using db WHERE condition when name is not empty.
       .filter(event => !name || name === event.eventName)
       .map(e => {
-        const eventFields = {};
+        const eventFields: {
+          from?: string,
+          to?: string,
+          value?: BigInt,
+          owner?: string,
+          spender?: string,
+        } = {};
 
         switch (e.eventName) {
           case 'Transfer': {
@@ -221,7 +229,7 @@ export class Indexer {
     const eventNameToTopic = getEventNameTopics(this._abi);
     const logTopicToEventName = invert(eventNameToTopic);
 
-    const dbEvents = logs.map(log => {
+    const dbEvents = logs.map((log: any) => {
       const { topics, data: value, cid, ipldBlock } = log;
 
       const [topic0, topic1, topic2] = topics;
@@ -230,7 +238,7 @@ export class Indexer {
       const address1 = topictoAddress(topic1);
       const address2 = topictoAddress(topic2);
 
-      const event = {
+      const event: DeepPartial<Event> = {
         blockHash,
         token,
         eventName,

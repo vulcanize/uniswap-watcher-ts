@@ -13,7 +13,7 @@ import { createSchema } from './gql';
 const log = debug('vulcanize:server');
 
 export const createServer = async (): Promise<Application> => {
-  const argv = yargs(hideBin(process.argv))
+  const argv = await yargs(hideBin(process.argv))
     .option('f', {
       alias: 'config-file',
       demandOption: true,
@@ -22,7 +22,7 @@ export const createServer = async (): Promise<Application> => {
     })
     .argv;
 
-  const configFile = argv.configFile;
+  const configFile = argv.f;
   const configFilePath = path.resolve(configFile);
   const fileExists = await fs.pathExists(configFilePath);
   if (!fileExists) {
