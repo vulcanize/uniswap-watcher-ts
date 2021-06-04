@@ -11,6 +11,11 @@
     "chai": "^4.3.4",
     "mocha": "^8.4.0",
     "ts-node": "^9.1.1",
-    "typescript": "^4.2.4"
+    "typescript": "^4.2.4",
+    "lerna": "^4.0.0"
+  },
+  "scripts": {
+    "test": "lerna run test --stream --no-bail",
+    "lint": "lerna run lint --stream"
   }
 }
