@@ -1,23 +1,29 @@
 import assert from 'assert';
 import debug from 'debug';
 import { invert } from 'lodash';
+import { ContractInterface } from '@ethersproject/contracts';
 
 import { EthClient, getMappingSlot, topictoAddress } from '@vulcanize/ipld-eth-client';
-import { getStorageInfo, getEventNameTopics, getStorageValue, GetStorageAt } from '@vulcanize/solidity-mapper';
+import { getStorageInfo, getEventNameTopics, getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
 
 import { Database } from './database';
 
 const log = debug('vulcanize:indexer');
+
+interface Artifacts {
+  abi: ContractInterface,
+  storageLayout: StorageLayout
+}
 
 export class Indexer {
   _db: Database
   _ethClient: EthClient
   _getStorageAt: GetStorageAt
 
-  _abi: any
-  _storageLayout: any
+  _abi: ContractInterface
+  _storageLayout: StorageLayout
 
-  constructor (db, ethClient, artifacts) {
+  constructor (db: Database, ethClient: EthClient, artifacts: Artifacts) {
     assert(db);
     assert(ethClient);
     assert(artifacts);
@@ -35,7 +41,7 @@ export class Indexer {
     this._storageLayout = storageLayout;
   }
 
-  async totalSupply (blockHash, token) {
+  async totalSupply (blockHash: string, token: string) {
     // TODO: Use getStorageValue when it supports uint256 values.
     const { slot } = getStorageInfo(this._storageLayout, '_totalSupply');
 
@@ -51,7 +57,7 @@ export class Indexer {
     return result;
   }
 
-  async balanceOf (blockHash, token, owner) {
+  async balanceOf (blockHash: string, token: string, owner: string) {
     const entity = await this._db.getBalance({ blockHash, token, owner });
     if (entity) {
       return {
@@ -79,7 +85,7 @@ export class Indexer {
     return result;
   }
 
-  async allowance (blockHash, token, owner, spender) {
+  async allowance (blockHash: string, token: string, owner: string, spender: string) {
     const entity = await this._db.getAllowance({ blockHash, token, owner, spender });
     if (entity) {
       return {
@@ -107,7 +113,7 @@ export class Indexer {
     return result;
   }
 
-  async name (blockHash, token) {
+  async name (blockHash: string, token: string) {
     const result = await this._getStorageValue(blockHash, token, '_name');
 
     log(JSON.stringify(result, null, 2));
@@ -115,7 +121,7 @@ export class Indexer {
     return result;
   }
 
-  async symbol (blockHash, token) {
+  async symbol (blockHash: string, token: string) {
     const result = await this._getStorageValue(blockHash, token, '_symbol');
 
     log(JSON.stringify(result, null, 2));
@@ -123,14 +129,14 @@ export class Indexer {
     return result;
   }
 
-  async decimals (blockHash, token) {
+  async decimals () {
     // Not a state variable, uses hardcoded return value in contract function.
     // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol#L86
 
     throw new Error('Not implemented.');
   }
 
-  async getEvents (blockHash, token, name) {
+  async getEvents (blockHash: string, token: string, name: string) {
     const didSyncEvents = await this._db.didSyncEvents({ blockHash, token });
     if (!didSyncEvents) {
       // Fetch and save events first and make a note in the event sync progress table.
@@ -179,7 +185,7 @@ export class Indexer {
   }
 
   // TODO: Move into base/class or framework package.
-  async _getStorageValue (blockHash, token, variable) {
+  async _getStorageValue (blockHash: string, token: string, variable: string) {
     return getStorageValue(
       this._storageLayout,
       this._getStorageAt,
@@ -189,7 +195,7 @@ export class Indexer {
     );
   }
 
-  async _fetchAndSaveEvents ({ blockHash, token }) {
+  async _fetchAndSaveEvents ({ blockHash, token }: { blockHash: string, token: string }) {
     const logs = await this._ethClient.getLogs({ blockHash, contract: token });
     log(JSON.stringify(logs, null, 2));
 

@@ -5,7 +5,7 @@ import { blocks } from './data';
 
 const log = debug('test');
 
-export const createResolvers = async (config) => {
+export const createResolvers = async () => {
   return {
     BigInt: new BigInt('bigInt'),
 

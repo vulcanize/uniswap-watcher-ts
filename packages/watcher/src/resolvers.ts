@@ -1,25 +1,36 @@
 import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
-import fs from 'fs-extra';
-import path from 'path';
 import 'reflect-metadata';
+import { ConnectionOptions } from 'typeorm';
 
-import { getCache } from '@vulcanize/cache';
+import { getCache, Config as CacheConfig } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import artifacts from './artifacts/ERC20.json';
 import { Indexer } from './indexer';
 import { Database } from './database';
 
+export interface Config {
+  server: {
+    host: string;
+    port: string;
+  };
+  database: ConnectionOptions;
+  upstream: {
+    gqlEndpoint: string;
+    cache: CacheConfig
+  }
+}
+
 const log = debug('vulcanize:resolver');
 
-export const createResolvers = async (config) => {
+export const createResolvers = async (config: Config) => {
   const { upstream, database } = config;
 
   assert(database, 'Missing database config');
 
-  const ormConfig = {
+  const ormConfig: ConnectionOptions = {
     ...database,
     entities: [
       'src/entity/**/*.ts'
