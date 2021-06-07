@@ -37,10 +37,9 @@ export class EthClient {
     assert(gqlSubscriptionEndpoint, 'Missing gql subscription endpoint');
 
     // https://www.apollographql.com/docs/react/data/subscriptions/
-
     const subscriptionClient = new SubscriptionClient(gqlSubscriptionEndpoint, {
-      reconnect: true,
-    }, ws)
+      reconnect: true
+    }, ws);
 
     const httpLink = new HttpLink({
       uri: gqlEndpoint,
@@ -58,7 +57,7 @@ export class EthClient {
         );
       },
       wsLink,
-      httpLink,
+      httpLink
     );
 
     this._client = new ApolloClient({
@@ -100,6 +99,18 @@ export class EthClient {
     return logs;
   }
 
+  async watchLogs (onNext: (value: any) => void): Promise<ZenObservable.Subscription> {
+    const observable = await this._client.subscribe({
+      query: ethQueries.subscribeLogs
+    });
+
+    return observable.subscribe({
+      next (data) {
+        onNext(data);
+      }
+    });
+  }
+
   async _getCachedOrFetch (queryName: keyof typeof ethQueries, vars: Vars): Promise<any> {
     const keyObj = {
       queryName,
@@ -114,9 +125,8 @@ export class EthClient {
       }
     }
 
-    // Not cached or cache disabled, need to perform an upstream GQL query.
-    const { data: result } = await this._client.query({ query: ethQueries[queryName], variables: vars })
-    // const result = await this._client.request(ethQueries[queryName], vars);
+    // Result not cached or cache disabled, need to perform an upstream GQL query.
+    const { data: result } = await this._client.query({ query: ethQueries[queryName], variables: vars });
 
     // Cache the result and return it, if cache is enabled.
     if (this._cache) {

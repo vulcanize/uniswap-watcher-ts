@@ -10,6 +10,7 @@ import { EthClient } from '@vulcanize/ipld-eth-client';
 import artifacts from './artifacts/ERC20.json';
 import { Indexer, ValueResult } from './indexer';
 import { Database } from './database';
+import { EventWatcher } from './events';
 
 export interface Config {
   server: {
@@ -63,6 +64,9 @@ export const createResolvers = async (config: Config): Promise<any> => {
   const ethClient = new EthClient({ gqlEndpoint, gqlSubscriptionEndpoint, cache });
 
   const indexer = new Indexer(db, ethClient, artifacts);
+
+  const eventWatcher = new EventWatcher(ethClient, indexer);
+  await eventWatcher.start();
 
   return {
     BigInt: new BigInt('bigInt'),
