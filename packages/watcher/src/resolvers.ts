@@ -19,6 +19,7 @@ export interface Config {
   database: ConnectionOptions;
   upstream: {
     gqlEndpoint: string;
+    gqlSubscriptionEndpoint: string;
     cache: CacheConfig
   }
 }
@@ -53,13 +54,13 @@ export const createResolvers = async (config: Config): Promise<any> => {
 
   assert(upstream, 'Missing upstream config');
 
-  const { gqlEndpoint, cache: cacheConfig } = upstream;
-  assert(upstream, 'Missing upstream gqlEndpoint');
+  const { gqlEndpoint, gqlSubscriptionEndpoint, cache: cacheConfig } = upstream;
+  assert(gqlEndpoint, 'Missing upstream gqlEndpoint');
+  assert(gqlSubscriptionEndpoint, 'Missing upstream gqlSubscriptionEndpoint');
 
   const cache = await getCache(cacheConfig);
-  assert(cache, 'Missing cache');
 
-  const ethClient = new EthClient({ gqlEndpoint, cache });
+  const ethClient = new EthClient({ gqlEndpoint, gqlSubscriptionEndpoint, cache });
 
   const indexer = new Indexer(db, ethClient, artifacts);
 

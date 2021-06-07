@@ -1,4 +1,4 @@
-import { gql } from 'graphql-request';
+import { gql } from '@apollo/client/core';
 
 export const getStorageAt = gql`
 query getStorageAt($blockHash: Bytes32!, $contract: Address!, $slot: Bytes32!) {
