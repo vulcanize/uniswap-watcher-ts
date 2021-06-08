@@ -100,24 +100,34 @@ export class Database {
   }
 
   async saveEvents ({ blockHash, token, events }: { blockHash: string, token: string, events: DeepPartial<Event>[] }): Promise<void> {
-    // TODO: Using the same connection doesn't work when > 1 inserts are attempted at the same time (e.g. simultaneous GQL requests).
-
     // In a transaction:
     // (1) Save all the events in the database.
     // (2) Add an entry to the event progress table.
 
     await this._conn.transaction(async (tx) => {
-      // Bulk insert events.
-      await tx.createQueryBuilder()
-        .insert()
-        .into(Event)
-        .values(events)
-        .execute();
-
-      // Update event sync progress.
       const repo = tx.getRepository(EventSyncProgress);
-      const progress = repo.create({ blockHash, token });
-      await repo.save(progress);
+
+      // Check sync progress inside the transaction.
+      const numRows = await repo
+        .createQueryBuilder()
+        .where('block_hash = :blockHash AND token = :token', {
+          blockHash,
+          token
+        })
+        .getCount();
+
+      if (numRows === 0) {
+        // Bulk insert events.
+        await tx.createQueryBuilder()
+          .insert()
+          .into(Event)
+          .values(events)
+          .execute();
+
+        // Update event sync progress.
+        const progress = repo.create({ blockHash, token });
+        await repo.save(progress);
+      }
     });
   }
 
