@@ -169,6 +169,7 @@ const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, ad
  * @param key
  */
 export const getMappingSlot = (mappingSlot: string, key: string): string => {
+  // https://github.com/ethers-io/ethers.js/issues/1079#issuecomment-703056242
   const mappingSlotPadded = utils.hexZeroPad(BigNumber.from(mappingSlot).toHexString(), 32);
   const keyPadded = utils.hexZeroPad(key, 32);
 

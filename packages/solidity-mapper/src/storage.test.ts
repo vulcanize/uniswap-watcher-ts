@@ -309,4 +309,18 @@ describe('Get value from storage', () => {
     ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testFixedArrays.address, 'uintArray'));
     expect(value).to.eql(expectedValue.map(el => BigInt(el)));
   });
+
+  it('get value for basic mapping type', async () => {
+    const TestMappingTypes = await ethers.getContractFactory('TestMappingTypes');
+    const testMappingTypes = await TestMappingTypes.deploy();
+    await testMappingTypes.deployed();
+    const storageLayout = await getStorageLayout('TestMappingTypes');
+
+    const expectedValue = 123;
+    const [, signer1] = await ethers.getSigners();
+    await testMappingTypes.connect(signer1).setAddressUintMap(expectedValue);
+    const blockHash = await getBlockHash();
+    const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressUintMap', signer1.address);
+    expect(value).to.equal(BigInt(expectedValue));
+  });
 });
