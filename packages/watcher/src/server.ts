@@ -1,14 +1,12 @@
 import assert from 'assert';
+import 'reflect-metadata';
 import express, { Application, Request, Response } from 'express';
 import { graphqlHTTP } from 'express-graphql';
-import fs from 'fs-extra';
-import path from 'path';
-import toml from 'toml';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
-import JSONbig from 'json-bigint';
 
+import { getConfig } from './config';
 import { createSchema } from './gql';
 
 const log = debug('vulcanize:server');
@@ -23,15 +21,7 @@ export const createServer = async (): Promise<Application> => {
     })
     .argv;
 
-  const configFile = argv.f;
-  const configFilePath = path.resolve(configFile);
-  const fileExists = await fs.pathExists(configFilePath);
-  if (!fileExists) {
-    throw new Error(`Config file not found: ${configFilePath}`);
-  }
-
-  const config = toml.parse(await fs.readFile(configFilePath, 'utf8'));
-  log('config', JSONbig.stringify(config, null, 2));
+  const config = await getConfig(argv.f);
 
   assert(config.server, 'Missing server config');
 

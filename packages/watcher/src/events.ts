@@ -31,14 +31,16 @@ export class EventWatcher {
       // Check if this log is for a contract we care about.
       const { logContracts } = receipt;
       if (logContracts && logContracts.length) {
-        const [token] = logContracts;
-        const isWatchedContract = await this._indexer.isWatchedContract(token);
-        if (isWatchedContract) {
-          const { ethTransactionCidByTxId: { ethHeaderCidByHeaderId: { blockHash } } } = receipt;
-          await this._indexer.getEvents(blockHash, token, null);
+        for (let logIndex = 0; logIndex < logContracts.length; logIndex++) {
+          const contractAddress = logContracts[logIndex];
+          const isWatchedContract = await this._indexer.isWatchedContract(contractAddress);
+          if (isWatchedContract) {
+            const { ethTransactionCidByTxId: { ethHeaderCidByHeaderId: { blockHash } } } = receipt;
+            await this._indexer.getEvents(blockHash, contractAddress, null);
 
-          // Trigger other indexer methods based on event topic.
-          await this._indexer.processEvent(blockHash, token, receipt);
+            // Trigger other indexer methods based on event topic.
+            await this._indexer.processEvent(blockHash, contractAddress, receipt, logIndex);
+          }
         }
       }
     });

@@ -155,15 +155,15 @@ export class Indexer {
     throw new Error('Not implemented.');
   }
 
-  async processEvent (blockHash: string, token: string, receipt: any): Promise<void> {
+  async processEvent (blockHash: string, token: string, receipt: any, logIndex: number): Promise<void> {
     const topics = [];
 
     // We only care about the event type for now.
     const data = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-    topics.push(receipt.topic0S[0]);
-    topics.push(receipt.topic1S[0]);
-    topics.push(receipt.topic2S[0]);
+    topics.push(receipt.topic0S[logIndex]);
+    topics.push(receipt.topic1S[logIndex]);
+    topics.push(receipt.topic2S[logIndex]);
 
     const { name: eventName, args } = this._contract.parseLog({ topics, data });
     log(`process event ${eventName} ${args}`);
@@ -246,9 +246,7 @@ export class Indexer {
   async isWatchedContract (address : string): Promise<boolean> {
     assert(address);
 
-    // TODO: Check a 'watched contracts' table.
-
-    return true;
+    return this._db.isWatchedContract(address);
   }
 
   // TODO: Move into base/class or framework package.

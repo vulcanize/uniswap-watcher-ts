@@ -1,56 +1,24 @@
 import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
-import 'reflect-metadata';
-import { ConnectionOptions } from 'typeorm';
 
-import { getCache, Config as CacheConfig } from '@vulcanize/cache';
+import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import artifacts from './artifacts/ERC20.json';
 import { Indexer, ValueResult } from './indexer';
 import { Database } from './database';
 import { EventWatcher } from './events';
-
-export interface Config {
-  server: {
-    host: string;
-    port: string;
-  };
-  database: ConnectionOptions;
-  upstream: {
-    gqlEndpoint: string;
-    gqlSubscriptionEndpoint: string;
-    cache: CacheConfig
-  }
-}
+import { Config } from './config';
 
 const log = debug('vulcanize:resolver');
 
 export const createResolvers = async (config: Config): Promise<any> => {
-  const { upstream, database } = config;
+  const { upstream, database: dbConfig } = config;
 
-  assert(database, 'Missing database config');
+  assert(dbConfig, 'Missing database config');
 
-  const ormConfig: ConnectionOptions = {
-    ...database,
-    entities: [
-      'src/entity/**/*.ts'
-    ],
-    migrations: [
-      'src/migration/**/*.ts'
-    ],
-    subscribers: [
-      'src/subscriber/**/*.ts'
-    ],
-    cli: {
-      entitiesDir: 'src/entity',
-      migrationsDir: 'src/migration',
-      subscribersDir: 'src/subscriber'
-    }
-  };
-
-  const db = new Database(ormConfig);
+  const db = new Database(dbConfig);
   await db.init();
 
   assert(upstream, 'Missing upstream config');
