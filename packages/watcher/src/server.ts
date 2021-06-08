@@ -6,6 +6,13 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 
+import { getCache } from '@vulcanize/cache';
+import { EthClient } from '@vulcanize/ipld-eth-client';
+
+import artifacts from './artifacts/ERC20.json';
+import { Indexer } from './indexer';
+import { Database } from './database';
+import { EventWatcher } from './events';
 import { getConfig } from './config';
 import { createSchema } from './gql';
 
@@ -27,9 +34,30 @@ export const createServer = async (): Promise<Application> => {
 
   const { host, port } = config.server;
 
-  const app: Application = express();
+  const { upstream, database: dbConfig } = config;
 
-  const schema = await createSchema(config);
+  assert(dbConfig, 'Missing database config');
+
+  const db = new Database(dbConfig);
+  await db.init();
+
+  assert(upstream, 'Missing upstream config');
+  const { gqlEndpoint, gqlSubscriptionEndpoint, cache: cacheConfig } = upstream;
+  assert(gqlEndpoint, 'Missing upstream gqlEndpoint');
+  assert(gqlSubscriptionEndpoint, 'Missing upstream gqlSubscriptionEndpoint');
+
+  const cache = await getCache(cacheConfig);
+
+  const ethClient = new EthClient({ gqlEndpoint, gqlSubscriptionEndpoint, cache });
+
+  const indexer = new Indexer(db, ethClient, artifacts);
+
+  const eventWatcher = new EventWatcher(ethClient, indexer);
+  await eventWatcher.start();
+
+  const schema = await createSchema(indexer);
+
+  const app: Application = express();
 
   app.use(
     '/graphql',

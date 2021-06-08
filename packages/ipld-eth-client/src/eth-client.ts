@@ -1,4 +1,5 @@
 import assert from 'assert';
+import debug from 'debug';
 import fetch from 'cross-fetch';
 import { SubscriptionClient } from 'subscriptions-transport-ws';
 import ws from 'ws';
@@ -10,6 +11,8 @@ import { Cache } from '@vulcanize/cache';
 
 import ethQueries from './eth-queries';
 import { padKey } from './utils';
+
+const log = debug('vulcanize:eth-client');
 
 interface Config {
   gqlEndpoint: string;
@@ -38,8 +41,17 @@ export class EthClient {
 
     // https://www.apollographql.com/docs/react/data/subscriptions/
     const subscriptionClient = new SubscriptionClient(gqlSubscriptionEndpoint, {
-      reconnect: true
+      reconnect: true,
+      connectionCallback: (error: Error[]) => {
+        if (error) {
+          log('subscription client connection', error[0].message);
+        }
+      }
     }, ws);
+
+    subscriptionClient.onError(error => {
+      log('subscription client error', error.message);
+    });
 
     const httpLink = new HttpLink({
       uri: gqlEndpoint,
