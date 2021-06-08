@@ -6,8 +6,8 @@ import { DeepPartial } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
 
-import { EthClient, getMappingSlot, topictoAddress } from '@vulcanize/ipld-eth-client';
-import { getStorageInfo, getEventNameTopics, getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
+import { EthClient, topictoAddress } from '@vulcanize/ipld-eth-client';
+import { getEventNameTopics, getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
 
 import { Database } from './database';
 import { Event } from './entity/Event';
@@ -104,17 +104,8 @@ export class Indexer {
       };
     }
 
-    // TODO: Use getStorageValue when it supports nested mappings.
-    const { slot: allowancesSlot } = getStorageInfo(this._storageLayout, '_allowances');
-    const slot = getMappingSlot(getMappingSlot(allowancesSlot, owner), spender);
+    const result = await this._getStorageValue(blockHash, token, '_allowances', owner, spender);
 
-    const vars = {
-      blockHash,
-      contract: token,
-      slot
-    };
-
-    const result = await this._getStorageAt(vars);
     log(JSONbig.stringify(result, null, 2));
 
     const { value, proof } = result;

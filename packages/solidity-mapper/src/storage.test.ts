@@ -310,17 +310,32 @@ describe('Get value from storage', () => {
     expect(value).to.eql(expectedValue.map(el => BigInt(el)));
   });
 
-  it('get value for basic mapping type', async () => {
-    const TestMappingTypes = await ethers.getContractFactory('TestMappingTypes');
-    const testMappingTypes = await TestMappingTypes.deploy();
-    await testMappingTypes.deployed();
-    const storageLayout = await getStorageLayout('TestMappingTypes');
+  describe('mapping type', () => {
+    let testMappingTypes: Contract, storageLayout: StorageLayout;
 
-    const expectedValue = 123;
-    const [, signer1] = await ethers.getSigners();
-    await testMappingTypes.connect(signer1).setAddressUintMap(expectedValue);
-    const blockHash = await getBlockHash();
-    const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressUintMap', signer1.address);
-    expect(value).to.equal(BigInt(expectedValue));
+    before(async () => {
+      const TestMappingTypes = await ethers.getContractFactory('TestMappingTypes');
+      testMappingTypes = await TestMappingTypes.deploy();
+      await testMappingTypes.deployed();
+      storageLayout = await getStorageLayout('TestMappingTypes');
+    });
+
+    it('get value for basic mapping type', async () => {
+      const expectedValue = 123;
+      const [, signer1] = await ethers.getSigners();
+      await testMappingTypes.connect(signer1).setAddressUintMap(expectedValue);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressUintMap', signer1.address);
+      expect(value).to.equal(BigInt(expectedValue));
+    });
+
+    it('get value for nested mapping type', async () => {
+      const expectedValue = 123;
+      const [, signer1, signer2] = await ethers.getSigners();
+      await testMappingTypes.connect(signer1).setNestedAddressUintMap(signer2.address, expectedValue);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressUintMap', signer1.address, signer2.address);
+      expect(value).to.equal(BigInt(expectedValue));
+    });
   });
 });

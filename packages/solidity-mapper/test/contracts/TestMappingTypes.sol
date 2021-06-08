@@ -13,4 +13,9 @@ contract TestMappingTypes {
     function setAddressUintMap(uint value) external {
         addressUintMap[msg.sender] = value;
     }
+
+    // Set variable nestedAddressUintMap.
+    function setNestedAddressUintMap(address addressValue, uint uintValue) external {
+        nestedAddressUintMap[msg.sender][addressValue] = uintValue;
+    }
 }
