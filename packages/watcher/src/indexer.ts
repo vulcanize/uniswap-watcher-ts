@@ -5,6 +5,7 @@ import { JsonFragment } from '@ethersproject/abi';
 import { DeepPartial } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
+import { PubSub } from 'apollo-server-express';
 
 import { EthClient, topictoAddress } from '@vulcanize/ipld-eth-client';
 import { getEventNameTopics, getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
@@ -41,15 +42,17 @@ type EventsResult = Array<{
 export class Indexer {
   _db: Database
   _ethClient: EthClient
+  _pubsub: PubSub
   _getStorageAt: GetStorageAt
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
 
-  constructor (db: Database, ethClient: EthClient, artifacts: Artifacts) {
+  constructor (db: Database, ethClient: EthClient, pubsub: PubSub, artifacts: Artifacts) {
     assert(db);
     assert(ethClient);
+    assert(pubsub);
     assert(artifacts);
 
     const { abi, storageLayout } = artifacts;
@@ -59,12 +62,17 @@ export class Indexer {
 
     this._db = db;
     this._ethClient = ethClient;
+    this._pubsub = pubsub;
     this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
 
     this._abi = abi;
     this._storageLayout = storageLayout;
 
     this._contract = new ethers.utils.Interface(this._abi);
+  }
+
+  getEventIterator (): AsyncIterator<any> {
+    return this._pubsub.asyncIterator(['event']);
   }
 
   async totalSupply (blockHash: string, token: string): Promise<ValueResult> {
@@ -169,6 +177,19 @@ export class Indexer {
         break;
       }
     }
+
+    // Also trigger downstream event watcher.
+    // TODO: Optimize this fetching of events.
+    const events = await this.getEvents(blockHash, token, null);
+    const event = events[logIndex];
+
+    await this._pubsub.publish('event', {
+      onTokenEvent: {
+        blockHash,
+        token,
+        event
+      }
+    });
   }
 
   async getEvents (blockHash: string, token: string, name: string | null): Promise<EventsResult> {
