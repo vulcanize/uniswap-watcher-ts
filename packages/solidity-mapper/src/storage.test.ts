@@ -310,17 +310,17 @@ describe('Get value from storage', () => {
     expect(value).to.eql(expectedValue.map(el => BigInt(el)));
   });
 
-  describe('mapping type', () => {
+  describe('basic mapping type', () => {
     let testMappingTypes: Contract, storageLayout: StorageLayout;
 
     before(async () => {
-      const TestMappingTypes = await ethers.getContractFactory('TestMappingTypes');
+      const TestMappingTypes = await ethers.getContractFactory('TestBasicMapping');
       testMappingTypes = await TestMappingTypes.deploy();
       await testMappingTypes.deployed();
-      storageLayout = await getStorageLayout('TestMappingTypes');
+      storageLayout = await getStorageLayout('TestBasicMapping');
     });
 
-    it('get value for basic mapping type', async () => {
+    it('get value for mapping with address type keys', async () => {
       const expectedValue = 123;
       const [, signer1] = await ethers.getSigners();
       await testMappingTypes.connect(signer1).setAddressUintMap(expectedValue);
@@ -329,13 +329,40 @@ describe('Get value from storage', () => {
       expect(value).to.equal(BigInt(expectedValue));
     });
 
-    it('get value for nested mapping type', async () => {
+    it('get value for mapping with boolean type keys', async () => {
       const expectedValue = 123;
-      const [, signer1, signer2] = await ethers.getSigners();
-      await testMappingTypes.connect(signer1).setNestedAddressUintMap(signer2.address, expectedValue);
+      const mapKey = true;
+      await testMappingTypes.setBoolIntMap(mapKey, expectedValue);
       const blockHash = await getBlockHash();
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressUintMap', signer1.address, signer2.address);
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'boolIntMap', mapKey);
       expect(value).to.equal(BigInt(expectedValue));
     });
+
+    it('get value for mapping with signed integer type keys', async () => {
+      const TestIntegersContract = await ethers.getContractFactory('TestIntegers');
+      const testIntegersContract = await TestIntegersContract.deploy();
+      await testIntegersContract.deployed();
+
+      const mapKey = 123;
+      await testMappingTypes.setIntContractMap(mapKey, testIntegersContract.address);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'intContractMap', mapKey);
+      console.log('value', value);
+      expect(value).to.equal(testIntegersContract.address.toLowerCase());
+    });
+  });
+
+  it('get value for nested mapping type', async () => {
+    const TestMappingTypes = await ethers.getContractFactory('TestNestedMapping');
+    const testMappingTypes = await TestMappingTypes.deploy();
+    await testMappingTypes.deployed();
+    const storageLayout = await getStorageLayout('TestNestedMapping');
+
+    const expectedValue = 123;
+    const [, signer1, signer2] = await ethers.getSigners();
+    await testMappingTypes.connect(signer1).setNestedAddressUintMap(signer2.address, expectedValue);
+    const blockHash = await getBlockHash();
+    const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'nestedAddressUintMap', signer1.address, signer2.address);
+    expect(value).to.equal(BigInt(expectedValue));
   });
 });
