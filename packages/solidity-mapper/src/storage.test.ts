@@ -347,8 +347,34 @@ describe('Get value from storage', () => {
       await testMappingTypes.setIntContractMap(mapKey, testIntegersContract.address);
       const blockHash = await getBlockHash();
       const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'intContractMap', mapKey);
-      console.log('value', value);
       expect(value).to.equal(testIntegersContract.address.toLowerCase());
+    });
+
+    it('get value for mapping with unsigned integer type keys', async () => {
+      const expectedValue = ethers.utils.hexlify(ethers.utils.randomBytes(16));
+      const mapKey = 123;
+      await testMappingTypes.setUintBytesMap(mapKey, expectedValue);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'uintBytesMap', mapKey);
+      expect(value).to.equal(expectedValue);
+    });
+
+    it('get value for mapping with enum type keys', async () => {
+      const mapKey = 1;
+      const expectedValue = 123;
+      await testMappingTypes.setEnumIntMap(mapKey, expectedValue);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'enumIntMap', mapKey);
+      expect(value).to.equal(BigInt(expectedValue));
+    });
+
+    it('get value for mapping with string type keys', async () => {
+      const mapKey = 'abc';
+      const expectedValue = 123;
+      await testMappingTypes.setStringIntMap(mapKey, expectedValue);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'stringIntMap', mapKey);
+      expect(value).to.equal(BigInt(expectedValue));
     });
   });
 

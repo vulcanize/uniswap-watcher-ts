@@ -14,6 +14,7 @@ interface Types {
     label: string;
     base?: string;
     value?: string;
+    key?: string;
   };
 }
 
@@ -99,7 +100,7 @@ export const getValueByType = (storageValue: string, typeLabel: string): bigint 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, address: string, types: Types, storageInfo: { slot: string, offset: number, type: string }, mappingKeys: Array<string | boolean | number>): Promise<{ value: any, proof: { data: string } }> => {
   const { slot, offset, type } = storageInfo;
-  const { encoding, numberOfBytes, label: typeLabel, base, value: mappingValueType } = types[type];
+  const { encoding, numberOfBytes, label: typeLabel, base, value: mappingValueType, key: mappingKeyType } = types[type];
 
   const [isArray, arraySize] = typeLabel.match(/\[([0-9]*)\]/) || [false];
   let value: string, proof: { data: string };
@@ -142,9 +143,10 @@ const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, ad
       break;
 
     case 'mapping': {
-      const mappingSlot = await getMappingSlot(slot, mappingKeys[0]);
+      if (mappingValueType && mappingKeyType) {
+        const { encoding: mapKeyEncoding } = types[mappingKeyType];
+        const mappingSlot = await getMappingSlot(slot, mapKeyEncoding, mappingKeys[0]);
 
-      if (mappingValueType) {
         return getDecodedValue(getStorageAt, blockHash, address, types, { slot: mappingSlot, offset: 0, type: mappingValueType }, mappingKeys.slice(1));
       } else {
         throw new Error(`Mapping value type not specified for ${mappingKeys[0]}`);
@@ -168,14 +170,16 @@ const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, ad
  * @param mappingSlot
  * @param key
  */
-export const getMappingSlot = (mappingSlot: string, key: string | boolean | number): string => {
+export const getMappingSlot = (mappingSlot: string, keyEncoding: string, key: string | boolean | number): string => {
   if (typeof key === 'boolean') {
     key = key ? 1 : 0;
   }
 
   // https://github.com/ethers-io/ethers.js/issues/1079#issuecomment-703056242
-  const mappingSlotPadded = utils.hexZeroPad(BigNumber.from(mappingSlot).toHexString(), 32);
-  const keyPadded = utils.hexZeroPad(utils.hexlify(key), 32);
+  const mappingSlotPadded = utils.hexZeroPad(mappingSlot, 32);
+  const keyPadded = keyEncoding === 'bytes'
+    ? utils.toUtf8Bytes(String(key))
+    : utils.hexZeroPad(utils.hexlify(key), 32);
 
   const fullKey = utils.concat([
     keyPadded,
