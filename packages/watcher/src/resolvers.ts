@@ -59,7 +59,7 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
       },
 
       events: async (_: any, { blockHash, token, name }: { blockHash: string, token: string, name: string }) => {
-        log('events', blockHash, token, name);
+        log('events', blockHash, token, name || '');
         return indexer.getEvents(blockHash, token, name);
       }
     }
