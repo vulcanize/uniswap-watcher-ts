@@ -18,6 +18,8 @@ interface Types {
   };
 }
 
+type MappingKey = string | boolean | number;
+
 export interface StorageLayout {
   storage: Storage[];
   types: Types
@@ -59,7 +61,7 @@ export const getStorageInfo = (storageLayout: StorageLayout, variableName: strin
  * @param variableName
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export const getStorageValue = async (storageLayout: StorageLayout, getStorageAt: GetStorageAt, blockHash: string, address: string, variableName: string, ...mappingKeys: Array<string | boolean | number>): Promise<{ value: any, proof: { data: string } }> => {
+export const getStorageValue = async (storageLayout: StorageLayout, getStorageAt: GetStorageAt, blockHash: string, address: string, variableName: string, ...mappingKeys: Array<MappingKey>): Promise<{ value: any, proof: { data: string } }> => {
   const { slot, offset, type, types } = getStorageInfo(storageLayout, variableName);
 
   return getDecodedValue(getStorageAt, blockHash, address, types, { slot, offset, type }, mappingKeys);
@@ -98,7 +100,7 @@ export const getValueByType = (storageValue: string, typeLabel: string): bigint 
  * @param storageInfo
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, address: string, types: Types, storageInfo: { slot: string, offset: number, type: string }, mappingKeys: Array<string | boolean | number>): Promise<{ value: any, proof: { data: string } }> => {
+const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, address: string, types: Types, storageInfo: { slot: string, offset: number, type: string }, mappingKeys: Array<MappingKey>): Promise<{ value: any, proof: { data: string } }> => {
   const { slot, offset, type } = storageInfo;
   const { encoding, numberOfBytes, label: typeLabel, base, value: mappingValueType, key: mappingKeyType } = types[type];
 
@@ -169,17 +171,20 @@ const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, ad
  * @param mappingSlot
  * @param key
  */
-export const getMappingSlot = (mappingSlot: string, types: Types, keyType: string, key: string | boolean | number): string => {
+export const getMappingSlot = (mappingSlot: string, types: Types, keyType: string, key: MappingKey): string => {
   const { encoding, label: typeLabel } = types[keyType];
 
+  // If key is boolean type convert to 1 or 0 which is the way value is stored in memory.
   if (typeLabel === 'bool') {
     key = key ? 1 : 0;
   }
 
+  // If key is string convert to hex string representation.
   if (typeLabel.includes('string') && typeof key === 'string') {
     key = utils.hexlify(utils.toUtf8Bytes(key));
   }
 
+  // If key is still boolean type the argument passed as key is invalid.
   if (typeof key === 'boolean') {
     throw new Error('Invalid key.');
   }
@@ -191,6 +196,7 @@ export const getMappingSlot = (mappingSlot: string, types: Types, keyType: strin
     ? utils.hexlify(key)
     : utils.hexZeroPad(utils.hexlify(key), 32);
 
+  // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#mappings-and-dynamic-arrays
   const fullKey = utils.concat([
     keyPadded,
     mappingSlotPadded

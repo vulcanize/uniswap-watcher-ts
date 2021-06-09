@@ -60,7 +60,7 @@ $ yarn test
     * [ ] Fixed-size byte array keys
     * [x] Dynamically-sized byte array keys
     * [ ] Reference Type Mapping values
-    * [ ] Nested Mapping
+    * [x] Nested Mapping
 
 ## Observations
 

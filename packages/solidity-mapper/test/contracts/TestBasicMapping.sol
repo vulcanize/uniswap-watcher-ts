@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
 
-import "./TestIntegers.sol";
-
 contract TestBasicMapping {
     // Mapping type variable occupies one single slot but the actual elements are stored at a different storage slot that is computed using a Keccak-256 hash.
     // https://docs.soliditylang.org/en/v0.8.4/internals/layout_in_storage.html#mappings-and-dynamic-arrays
@@ -12,7 +10,7 @@ contract TestBasicMapping {
     mapping(bool => int) public boolIntMap;
 
     // Mapping with int128 keys and contract type values.
-    mapping(int128 => TestIntegers) public intContractMap;
+    mapping(int128 => address) public intAddressMap;
 
     // Mapping with uint32 keys and fixed-size byte array values.
     mapping(uint32 => bytes16) public uintBytesMap;
@@ -42,12 +40,12 @@ contract TestBasicMapping {
         boolIntMap[key] = value;
     }
 
-    // Set variable boolIntMap.
-    function setIntContractMap(int128 key, TestIntegers value) external {
-        intContractMap[key] = value;
+    // Set variable intAddressMap.
+    function setIntAddressMap(int128 key, address value) external {
+        intAddressMap[key] = value;
     }
 
-    // Set variable boolIntMap.
+    // Set variable uintBytesMap.
     function setUintBytesMap(uint32 key, bytes16 value) external {
         uintBytesMap[key] = value;
     }
