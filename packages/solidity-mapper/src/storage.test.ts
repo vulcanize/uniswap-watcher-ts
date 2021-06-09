@@ -359,6 +359,15 @@ describe('Get value from storage', () => {
       expect(value).to.equal(expectedValue);
     });
 
+    it.skip('get value for mapping with fixed-size byte array keys', async () => {
+      const mapKey = ethers.utils.hexlify(ethers.utils.randomBytes(8));
+      const [, signer1] = await ethers.getSigners();
+      await testMappingTypes.setBytesAddressMap(mapKey, signer1.address);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'bytesAddressMap', mapKey);
+      expect(value).to.equal(signer1.address);
+    });
+
     it('get value for mapping with enum type keys', async () => {
       const mapKey = 1;
       const expectedValue = 123;
@@ -374,6 +383,15 @@ describe('Get value from storage', () => {
       await testMappingTypes.setStringIntMap(mapKey, expectedValue);
       const blockHash = await getBlockHash();
       const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'stringIntMap', mapKey);
+      expect(value).to.equal(BigInt(expectedValue));
+    });
+
+    it('get value for mapping with dynamically-sized byte array as keys', async () => {
+      const mapKey = ethers.utils.hexlify(ethers.utils.randomBytes(64));
+      const expectedValue = 123;
+      await testMappingTypes.setBytesUintMap(mapKey, expectedValue);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'bytesUintMap', mapKey);
       expect(value).to.equal(BigInt(expectedValue));
     });
   });

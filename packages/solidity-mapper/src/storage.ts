@@ -144,8 +144,7 @@ const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, ad
 
     case 'mapping': {
       if (mappingValueType && mappingKeyType) {
-        const { encoding: mapKeyEncoding } = types[mappingKeyType];
-        const mappingSlot = await getMappingSlot(slot, mapKeyEncoding, mappingKeys[0]);
+        const mappingSlot = await getMappingSlot(slot, types, mappingKeyType, mappingKeys[0]);
 
         return getDecodedValue(getStorageAt, blockHash, address, types, { slot: mappingSlot, offset: 0, type: mappingValueType }, mappingKeys.slice(1));
       } else {
@@ -170,15 +169,26 @@ const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, ad
  * @param mappingSlot
  * @param key
  */
-export const getMappingSlot = (mappingSlot: string, keyEncoding: string, key: string | boolean | number): string => {
-  if (typeof key === 'boolean') {
+export const getMappingSlot = (mappingSlot: string, types: Types, keyType: string, key: string | boolean | number): string => {
+  const { encoding, label: typeLabel } = types[keyType];
+
+  if (typeLabel === 'bool') {
     key = key ? 1 : 0;
+  }
+
+  if (typeLabel.includes('string') && typeof key === 'string') {
+    key = utils.hexlify(utils.toUtf8Bytes(key));
+  }
+
+  if (typeof key === 'boolean') {
+    throw new Error('Invalid key.');
   }
 
   // https://github.com/ethers-io/ethers.js/issues/1079#issuecomment-703056242
   const mappingSlotPadded = utils.hexZeroPad(mappingSlot, 32);
-  const keyPadded = keyEncoding === 'bytes'
-    ? utils.toUtf8Bytes(String(key))
+
+  const keyPadded = encoding === 'bytes'
+    ? utils.hexlify(key)
     : utils.hexZeroPad(utils.hexlify(key), 32);
 
   const fullKey = utils.concat([
