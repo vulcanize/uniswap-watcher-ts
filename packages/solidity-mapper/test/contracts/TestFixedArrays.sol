@@ -15,6 +15,10 @@ contract TestFixedArrays {
     // https://docs.soliditylang.org/en/v0.7.4/internals/layout_in_storage.html#layout-of-state-variables-in-storage
     uint16[5] uint16Array;
 
+    address[4] addressArray;
+
+    bytes10[5] bytesArray;
+
     // Set varaible boolArray.
     function setBoolArray(bool[2] calldata value) external {
         boolArray = value;
@@ -30,8 +34,18 @@ contract TestFixedArrays {
         uint16Array = value;
     }
 
-    // Set varaible uint128Array.
+    // Set varaible int128Array.
     function setInt128Array(int128[5] calldata value) external {
         int128Array = value;
+    }
+
+    // Set varaible addressArray.
+    function setAddressArray(address[4] calldata value) external {
+        addressArray = value;
+    }
+
+    // Set varaible bytesArray.
+    function setBytesArray(bytes10[5] calldata value) external {
+        bytesArray = value;
     }
 }

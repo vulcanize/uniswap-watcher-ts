@@ -31,7 +31,7 @@ $ yarn test
     * [ ] Fixed size arrays
       * [x] Integer Type
       * [x] Boolean Type
-      * [ ] Address Type
+      * [x] Address Type
       * [ ] Fixed-size byte arrays
       * [ ] Enum type
       * [ ] Dynamically-sized byte array
