@@ -310,6 +310,42 @@ describe('Get value from storage', () => {
     expect(value).to.eql(expectedValue.map(el => BigInt(el)));
   });
 
+  describe('structs type', () => {
+    let testStructs: Contract, storageLayout: StorageLayout;
+
+    before(async () => {
+      const TestStructs = await ethers.getContractFactory('TestStructs');
+      testStructs = await TestStructs.deploy();
+      await testStructs.deployed();
+      storageLayout = await getStorageLayout('TestStructs');
+    });
+
+    it('get value for struct using a single slot', async () => {
+      const expectedValue = {
+        int1: BigInt(123),
+        uint1: BigInt(4)
+      };
+
+      await testStructs.setSingleSlotStruct(expectedValue.int1, expectedValue.uint1);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testStructs.address, 'singleSlotStruct');
+      expect(value).to.eql(expectedValue);
+    });
+
+    it('get value for struct using multiple slots', async () => {
+      const expectedValue = {
+        uint1: BigInt(123),
+        bool1: false,
+        int1: BigInt(456)
+      };
+
+      await testStructs.setMultipleSlotStruct(expectedValue.uint1, expectedValue.bool1, expectedValue.int1);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testStructs.address, 'multipleSlotStruct');
+      expect(value).to.eql(expectedValue);
+    });
+  });
+
   describe('basic mapping type', () => {
     let testMappingTypes: Contract, storageLayout: StorageLayout;
 
