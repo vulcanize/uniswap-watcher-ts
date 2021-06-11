@@ -19,32 +19,32 @@ contract TestFixedArrays {
 
     bytes10[5] bytesArray;
 
-    // Set varaible boolArray.
+    // Set variable boolArray.
     function setBoolArray(bool[2] calldata value) external {
         boolArray = value;
     }
 
-    // Set varaible uintArray.
+    // Set variable uintArray.
     function setUintArray(uint[5] calldata value) external {
         uintArray = value;
     }
 
-    // Set varaible uint16Array.
+    // Set variable uint16Array.
     function setUint16Array(uint16[5] calldata value) external {
         uint16Array = value;
     }
 
-    // Set varaible int128Array.
+    // Set variable int128Array.
     function setInt128Array(int128[5] calldata value) external {
         int128Array = value;
     }
 
-    // Set varaible addressArray.
+    // Set variable addressArray.
     function setAddressArray(address[4] calldata value) external {
         addressArray = value;
     }
 
-    // Set varaible bytesArray.
+    // Set variable bytesArray.
     function setBytesArray(bytes10[5] calldata value) external {
         bytesArray = value;
     }

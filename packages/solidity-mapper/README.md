@@ -28,6 +28,8 @@ $ yarn test
   * [ ] Function Types
 * [ ] Reference Types
   * [ ] Arrays
+    * [x] Get all elements in array
+    * [ ] Get element in array by index
     * [ ] Fixed size arrays
       * [x] Integer Type
       * [x] Boolean Type

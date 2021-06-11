@@ -125,6 +125,8 @@ const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, ad
       const slotOffset = i % 32;
       ({ value, proof } = await getDecodedValue(getStorageAt, blockHash, address, types, { slot: arraySlot, offset: slotOffset, type: base }, []));
       resultArray.push(value);
+
+      // Each element in array gets its own proof even if it is packed.
       proofs.push(JSON.parse(proof.data));
     }
 
