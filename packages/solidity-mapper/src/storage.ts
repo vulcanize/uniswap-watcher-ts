@@ -185,6 +185,8 @@ const getDecodedValue = async (getStorageAt: GetStorageAt, blockHash: string, ad
       } else {
         throw new Error(`Mapping value type not specified for ${mappingKeys[0]}`);
       }
+
+      break;
     }
 
     default:
