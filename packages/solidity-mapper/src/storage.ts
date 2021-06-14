@@ -169,7 +169,7 @@ export const getMappingSlot = (types: Types, mappingSlot: string, keyType: strin
   }
 
   // If key is string convert to hex string representation.
-  if (typeLabel.includes('string') && typeof key === 'string') {
+  if (typeLabel === 'string' && typeof key === 'string') {
     key = utils.hexlify(utils.toUtf8Bytes(key));
   }
 

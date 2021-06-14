@@ -542,40 +542,95 @@ describe('Get value from storage', () => {
 
   describe('structs with reference type members', () => {
     let testReferenceStructs: Contract, storageLayout: StorageLayout;
+    let fixedArrayStruct: {[key: string]: any};
+
+    const stringStruct = {
+      string1: 'string1',
+      uint1: BigInt(123),
+      string2: 'string2'
+    };
 
     before(async () => {
       const TestReferenceStructs = await ethers.getContractFactory('TestReferenceStructs');
       testReferenceStructs = await TestReferenceStructs.deploy();
       await testReferenceStructs.deployed();
       storageLayout = await getStorageLayout('TestReferenceStructs');
-    });
 
-    it('get value for struct with fixed-size array members', async () => {
       const signers = await ethers.getSigners();
 
-      const expectedValue = {
+      fixedArrayStruct = {
         int1: BigInt(123),
         uintArray: [1, 2, 3, 4].map(el => BigInt(el)),
         addressArray: signers.slice(0, 3).map(signer => signer.address.toLowerCase())
       };
+    });
 
-      await testReferenceStructs.setFixedArrayStruct(expectedValue.int1, expectedValue.uintArray, expectedValue.addressArray);
+    // Get all members of a struct.
+    it('get value for struct with fixed-size array members', async () => {
+      await testReferenceStructs.setFixedArrayStruct(fixedArrayStruct.int1, fixedArrayStruct.uintArray, fixedArrayStruct.addressArray);
       const blockHash = await getBlockHash();
       const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'fixedArrayStruct');
-      expect(value).to.eql(expectedValue);
+      expect(value).to.eql(fixedArrayStruct);
     });
 
     it('get value for struct with string type members', async () => {
-      const expectedValue = {
-        string1: 'string1',
-        uint1: BigInt(123),
-        string2: 'string2'
-      };
-
-      await testReferenceStructs.setStringStruct(expectedValue.string1, expectedValue.uint1, expectedValue.string2);
+      await testReferenceStructs.setStringStruct(stringStruct.string1, stringStruct.uint1, stringStruct.string2);
       const blockHash = await getBlockHash();
       const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'stringStruct');
-      expect(value).to.eql(expectedValue);
+      expect(value).to.eql(stringStruct);
+    });
+
+    // Get value of a member in a struct
+    it('get value of fixed-size array member in a struct', async () => {
+      const member = 'uintArray';
+      await testReferenceStructs.setFixedArrayStruct(fixedArrayStruct.int1, fixedArrayStruct.uintArray, fixedArrayStruct.addressArray);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'fixedArrayStruct', member);
+      expect(value).to.eql(fixedArrayStruct[member]);
+    });
+
+    it('get value of string member in a struct', async () => {
+      const member = 'string2';
+      await testReferenceStructs.setStringStruct(stringStruct.string1, stringStruct.uint1, stringStruct.string2);
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'stringStruct', member);
+      expect(value).to.eql(stringStruct[member]);
+    });
+
+    it.skip('get value of mapping type member in a struct', async () => {
+      const [signer1, signer2] = await ethers.getSigners();
+
+      const valueMappingStruct: { [key: string]: any } = {
+        uintAddressMap: new Map(),
+        uint1: 123,
+        addressIntMap: new Map()
+      };
+
+      const mappingKey = 456;
+      valueMappingStruct.uintAddressMap.set(mappingKey, signer1.address.toLowerCase());
+      valueMappingStruct.addressIntMap.set(signer2.address, 789);
+      let member = 'uintAddressMap';
+
+      await testReferenceStructs.setValueMappingStruct(mappingKey, valueMappingStruct.uintAddressMap.get(mappingKey), valueMappingStruct.uint1, signer2.address, valueMappingStruct.addressIntMap.get(signer2.address));
+      let blockHash = await getBlockHash();
+      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'valueMappingStruct', member, mappingKey);
+      expect(value).to.equal(valueMappingStruct[member].get(mappingKey));
+
+      const referenceMappingStruct: { [key: string]: any } = {
+        bytesAddressMap: new Map(),
+        stringUintMap: new Map()
+      };
+
+      const bytesKey = ethers.utils.hexlify(ethers.utils.randomBytes(40));
+      const stringKey = 'abc';
+      referenceMappingStruct.bytesAddressMap.set(bytesKey, signer1.address.toLowerCase());
+      referenceMappingStruct.stringUintMap.set(stringKey, 123);
+      member = 'stringAddressMap';
+
+      await testReferenceStructs.setReferenceMappingStruct(bytesKey, referenceMappingStruct.bytesAddressMap.get(bytesKey), stringKey, referenceMappingStruct.stringUintMap.get(stringKey));
+      blockHash = await getBlockHash();
+      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'referenceMappingStruct', member, stringKey));
+      expect(value).to.equal(referenceMappingStruct[member].get(stringKey));
     });
   });
 

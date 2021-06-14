@@ -53,4 +53,10 @@ contract TestReferenceStructs {
         valueMappingStruct.uint1 = uint1Value;
         valueMappingStruct.addressIntMap[addressIntKey] = addressIntValue;
     }
+
+    // Set variable referenceMappingStruct.
+    function setReferenceMappingStruct(bytes calldata bytesAddressKey, address bytesAddressValue, string calldata stringUintKey, uint stringUintValue) external {
+        referenceMappingStruct.bytesAddressMap[bytesAddressKey] = bytesAddressValue;
+        referenceMappingStruct.stringUintMap[stringUintKey] = stringUintValue;
+    }
 }
