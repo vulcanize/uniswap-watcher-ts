@@ -691,7 +691,7 @@ describe('Get value from storage', () => {
       expect(value).to.eql(stringStruct[member]);
     });
 
-    it.skip('get value of mapping type member in a struct', async () => {
+    it('get value of mapping type member in a struct', async () => {
       const [signer1, signer2] = await ethers.getSigners();
 
       const valueMappingStruct: { [key: string]: any } = {
@@ -718,8 +718,8 @@ describe('Get value from storage', () => {
       const bytesKey = ethers.utils.hexlify(ethers.utils.randomBytes(40));
       const stringKey = 'abc';
       referenceMappingStruct.bytesAddressMap.set(bytesKey, signer1.address.toLowerCase());
-      referenceMappingStruct.stringUintMap.set(stringKey, 123);
-      member = 'stringAddressMap';
+      referenceMappingStruct.stringUintMap.set(stringKey, BigInt(123));
+      member = 'stringUintMap';
 
       await testReferenceStructs.setReferenceMappingStruct(bytesKey, referenceMappingStruct.bytesAddressMap.get(bytesKey), stringKey, referenceMappingStruct.stringUintMap.get(stringKey));
       blockHash = await getBlockHash();
@@ -876,6 +876,23 @@ describe('Get value from storage', () => {
       const structMember = 'int1';
       ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'fixedBytesStructMap', mapKey, structMember));
       expect(value).to.equal(expectedValue[structMember]);
+    });
+
+    it('get value for mapping of address type keys and struct type values', async () => {
+      const [signer1, signer2] = await ethers.getSigners();
+
+      const expectedValue = {
+        uint1: BigInt(123),
+        int1: BigInt(456),
+        bool1: true,
+        address1: signer1.address.toLowerCase()
+      };
+
+      const mapKey = signer2.address;
+      await testMappingTypes.setAddressStructMap(mapKey, expectedValue);
+      const blockHash = await getBlockHash();
+      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressStructMap', mapKey);
+      expect(value).to.eql(expectedValue);
     });
   });
 
