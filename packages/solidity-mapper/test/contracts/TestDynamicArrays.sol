@@ -10,6 +10,14 @@ contract TestDynamicArrays {
 
     bool[] boolArray;
 
+    address[] addressArray;
+
+    bytes10[] fixedBytesArray;
+
+    enum Choices { Choice0, Choice1, Choice2, Choice3 }
+
+    Choices[] enumArray;
+
     // Set variable intArray.
     function setIntArray(int[] calldata value) external {
         intArray = value;
@@ -23,5 +31,20 @@ contract TestDynamicArrays {
     // Set variable boolArray.
     function setBoolArray(bool[] calldata value) external {
         boolArray = value;
+    }
+
+    // Set variable addressArray.
+    function setAddressArray(address[] calldata value) external {
+        addressArray = value;
+    }
+
+    // Set variable fixedBytesArray.
+    function setFixedBytesArray(bytes10[] calldata value) external {
+        fixedBytesArray = value;
+    }
+
+    // Set variable enumArray.
+    function setEnumArray(Choices[] calldata value) external {
+        enumArray = value;
     }
 }
