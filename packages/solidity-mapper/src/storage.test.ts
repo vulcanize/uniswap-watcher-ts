@@ -417,6 +417,48 @@ describe('Get value from storage', () => {
     });
   });
 
+  describe('dynamic sized arrays', () => {
+    let testDynamicArrays: Contract, storageLayout: StorageLayout;
+    const uint128Array = [10, 20, 30, 40, 50];
+    const boolArray = [true, false, false, true, false];
+
+    before(async () => {
+      const TestFixedArrays = await ethers.getContractFactory('TestDynamicArrays');
+      testDynamicArrays = await TestFixedArrays.deploy();
+      await testDynamicArrays.deployed();
+      storageLayout = await getStorageLayout('TestDynamicArrays');
+    });
+
+    // Get all elements of array.
+    it('get value for dynamic sized array of boolean type', async () => {
+      await testDynamicArrays.setBoolArray(boolArray);
+      const blockHash = await getBlockHash();
+      let { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testDynamicArrays.address, 'boolArray');
+      expect(value).to.eql(boolArray);
+      const proofData = JSON.parse(proof.data);
+      expect(proofData.length).to.equal(boolArray.length);
+
+      // Get value by index
+      const arrayIndex = 2;
+      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testDynamicArrays.address, 'boolArray', arrayIndex));
+      expect(value).to.equal(boolArray[arrayIndex]);
+    });
+
+    it('get value for dynamic sized array of unsigned integer type', async () => {
+      await testDynamicArrays.setUintArray(uint128Array);
+      const blockHash = await getBlockHash();
+      let { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testDynamicArrays.address, 'uintArray');
+      expect(value).to.eql(uint128Array.map(el => BigInt(el)));
+      const proofData = JSON.parse(proof.data);
+      expect(proofData.length).to.equal(uint128Array.length);
+
+      // Get value by index
+      const arrayIndex = 3;
+      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testDynamicArrays.address, 'uintArray', arrayIndex));
+      expect(value).to.equal(BigInt(uint128Array[arrayIndex]));
+    });
+  });
+
   describe('nested arrays', () => {
     let testNestedArrays: Contract, storageLayout: StorageLayout;
     const nestedStructArray: Array<Array<{[key: string]: any}>> = [];

@@ -40,8 +40,8 @@ $ yarn test
       * [x] Struct Type
       * [ ] Mapping Type
     * [ ] Dynamically-sized arrays
-      * [ ] Integer Type
-      * [ ] Boolean Type
+      * [x] Integer Type
+      * [x] Boolean Type
       * [ ] Address Type
       * [ ] Fixed-size byte arrays
       * [ ] Enum Type
