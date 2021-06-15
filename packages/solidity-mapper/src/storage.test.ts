@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Contract } from '@ethersproject/contracts';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
@@ -416,9 +417,63 @@ describe('Get value from storage', () => {
     });
   });
 
+  describe('nested arrays', () => {
+    let testNestedArrays: Contract, storageLayout: StorageLayout;
+    const nestedStructArray: Array<Array<{[key: string]: any}>> = [];
+
+    before(async () => {
+      const TestNestedArrays = await ethers.getContractFactory('TestNestedArrays');
+      testNestedArrays = await TestNestedArrays.deploy();
+      await testNestedArrays.deployed();
+      storageLayout = await getStorageLayout('TestNestedArrays');
+
+      const signers = await ethers.getSigners();
+
+      // Set value for nestedStructArray.
+      for (let i = 0; i < 5; i++) {
+        nestedStructArray[i] = [];
+
+        for (let j = 0; j < 3; j++) {
+          const value = {
+            uint1: BigInt((i + j) * 100),
+            address1: signers[(i + j) % 5].address.toLowerCase()
+          };
+
+          nestedStructArray[i][j] = value;
+
+          // Set value in contract.
+          await testNestedArrays.setNestedStructArray(i, j, value);
+        }
+      }
+    });
+
+    // Get all elements of array.
+    it('get value for fixed size nested array of struct type', async () => {
+      const blockHash = await getBlockHash();
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedStructArray');
+      expect(value).to.eql(nestedStructArray);
+      const proofData = JSON.parse(proof.data);
+      expect(proofData.length).to.equal(nestedStructArray.length);
+      expect(proofData[0].length).to.equal(nestedStructArray[0].length);
+      expect(proofData[0]).to.have.all.keys(Object.keys(nestedStructArray[0]));
+    });
+
+    // Get element of array by index.
+    it('get value of fixed size struct type nested array by index', async () => {
+      const arrayIndex = 2;
+      const nestedArrayIndex = 1;
+      const blockHash = await getBlockHash();
+      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedStructArray', arrayIndex, nestedArrayIndex);
+      expect(value).to.eql(nestedStructArray[arrayIndex][nestedArrayIndex]);
+
+      const structMember = 'address1';
+      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedStructArray', arrayIndex, nestedArrayIndex, structMember));
+      expect(value).to.equal(nestedStructArray[arrayIndex][nestedArrayIndex][structMember]);
+    });
+  });
+
   describe('structs with value type members', () => {
     let testValueStructs: Contract, storageLayout: StorageLayout;
-    /* eslint-disable @typescript-eslint/no-explicit-any */
     let addressStruct: { [key: string]: any }, contractStruct: { [key: string]: any };
 
     const singleSlotStruct = {
@@ -710,6 +765,7 @@ describe('Get value from storage', () => {
       let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'valueMappingStruct', member, mappingKey);
       expect(value).to.equal(valueMappingStruct[member].get(mappingKey));
 
+      // Get value for structs with mapping of reference type keys.
       const referenceMappingStruct: { [key: string]: any } = {
         bytesAddressMap: new Map(),
         stringUintMap: new Map()
@@ -891,7 +947,7 @@ describe('Get value from storage', () => {
       const mapKey = signer2.address;
       await testMappingTypes.setAddressStructMap(mapKey, expectedValue);
       const blockHash = await getBlockHash();
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressStructMap', mapKey);
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressStructMap', mapKey);
       expect(value).to.eql(expectedValue);
     });
   });
