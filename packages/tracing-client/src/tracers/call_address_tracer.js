@@ -36,6 +36,12 @@
 	  // "0x000026b86Ac8B3c08ADDEeacd7ee19e807D94742": true
 	},
 
+    // Cache of values computed to NOT be valid addresses.
+    cacheNotAnAccount: {},
+
+    // Cache of values known to be an address in the global state/db.
+    cacheExistingAccounts: {},
+
 	isAddress: function(log, db, value) {
 		// More than 40 chars or too small in length, so not an address.
 		if (value.length > 40 || value.length < this.minVanityAddressLength) {
@@ -45,13 +51,19 @@
 		var address = toAddress(value);
 		var addressAsHex = toHex(address);
 
+        if (this.cacheNotAnAccount[addressAsHex]) {
+          return { isAddress: false };
+        }
+
 		// Check list of known exclusions.
 		if (this.excludedAddresses.indexOf(addressAsHex) != -1) {
+          this.cacheNotAnAccount[addressAsHex] = true;
 		  return { isAddress: false };
 		}
 
 		// Address exists in db, so definitely an address.
-		if (db.exists(address)) {
+		if (this.cacheExistingAccounts[addressAsHex] || db.exists(address)) {
+          this.cacheExistingAccounts[addressAsHex] = true;
 		  return { isAddress: true, address: addressAsHex, confidence: 1 };
 		}
 
@@ -71,6 +83,7 @@
 		  return { isAddress: true, address: addressAsHex, confidence: 0.60 };
 		}
 
+        this.cacheNotAnAccount[addressAsHex] = true;
 		return { isAddress: false };
 	},
 
@@ -217,15 +230,15 @@
 			this.callstack[left-1].calls.push(call);
 		}
 
-		var topOfStack = log.stack.peek(0).toString(16);
-		var result = this.isAddress(log, db, topOfStack);
-		if (result.isAddress) {
-			var call = this.callstack[this.callstack.length - 1];
-			if (!call.addresses) {
-				call.addresses = {};
-			}
-			call.addresses[result.address] = result.confidence;
-		}
+    var topOfStack = log.stack.peek(0).toString(16);
+    var result = this.isAddress(log, db, topOfStack);
+    if (result.isAddress) {
+      var call = this.callstack[this.callstack.length - 1];
+      if (!call.addresses) {
+        call.addresses = {};
+      }
+      call.addresses[result.address] = result.confidence;
+    }
 	},
 
 	// fault is invoked when the actual execution of an opcode fails.
