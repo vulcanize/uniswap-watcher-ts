@@ -26,7 +26,12 @@ import { getTxTrace } from '../tracing';
     },
     tracerFile: {
       type: 'string',
-      "describe": 'File with custom tracing JS code'
+      describe: 'File with custom tracing JS code'
+    },
+    timeout: {
+      type: 'string',
+      default: "10s",
+      describe: 'Trace execution timeout'
     }
   }).argv;
 
@@ -37,7 +42,7 @@ import { getTxTrace } from '../tracing';
     tracer = fs.readFileSync(tracerFile).toString("utf-8");
   }
 
-  const result = await getTxTrace(argv.providerUrl, argv.txHash, tracer);
+  const result = await getTxTrace(argv.providerUrl, argv.txHash, tracer, argv.timeout);
 
   console.log(JSON.stringify(result, null, 2));
 })();

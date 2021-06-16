@@ -15,8 +15,8 @@
   data: {},
 
   isAddress: function(log, db, value) {
-    // More than 40 chars, so not an address.
-    if (value.length > 40) {
+    // More than 40 chars or too small in length, so not an address.
+    if (value.length > 40 || value.length < this.minVanityAddressLength) {
       return { isAddress: false };
     }
 
