@@ -36,9 +36,6 @@
 		// "0x000026b86Ac8B3c08ADDEeacd7ee19e807D94742": true
 	},
 
-	// Cache of values computed to NOT be valid addresses.
-	cacheNotAnAccount: {},
-
 	// Cache of values known to be an address in the global state/db.
 	cacheExistingAccounts: {},
 
@@ -51,13 +48,8 @@
 		var address = toAddress(value);
 		var addressAsHex = toHex(address);
 
-		if (this.cacheNotAnAccount[addressAsHex]) {
-			return { isAddress: false };
-		}
-
 		// Check list of known exclusions.
 		if (this.excludedAddresses.indexOf(addressAsHex) != -1) {
-			this.cacheNotAnAccount[addressAsHex] = true;
 			return { isAddress: false };
 		}
 
@@ -83,7 +75,6 @@
 			return { isAddress: true, address: addressAsHex, confidence: 0.60 };
 		}
 
-		this.cacheNotAnAccount[addressAsHex] = true;
 		return { isAddress: false };
 	},
 
