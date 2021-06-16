@@ -1,7 +1,7 @@
 import fs from 'fs';
 import yargs from 'yargs';
 
-import { getTxTrace } from '../tracing';
+import { getCallTrace } from '../tracing';
 
 (async () => {
   const argv = await yargs.parserConfiguration({
@@ -14,11 +14,17 @@ import { getTxTrace } from '../tracing';
       default: 'http://localhost:8545',
       describe: 'ETH JSON-RPC provider URL'
     },
-    txHash: {
+    block: {
+        type: 'string',
+        require: true,
+        demandOption: true,
+        describe: 'Block hash or number'
+    },
+    txFile: {
       type: 'string',
       require: true,
       demandOption: true,
-      describe: 'Transaction hash'
+      describe: 'File with tx data for call tracing'
     },
     tracer: {
       type: 'string',
@@ -37,7 +43,9 @@ import { getTxTrace } from '../tracing';
     tracer = fs.readFileSync(tracerFile).toString("utf-8");
   }
 
-  const result = await getTxTrace(argv.providerUrl, argv.txHash, tracer);
+  const txData = JSON.parse(fs.readFileSync(argv.txFile).toString("utf-8"));
+
+  const result = await getCallTrace(argv.providerUrl, argv.block, txData, tracer);
 
   console.log(JSON.stringify(result, null, 2));
 })();
