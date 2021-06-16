@@ -68,6 +68,7 @@ npx ts-node src/cli/get-tx-trace.ts --txHash 0xab6b8315187d3333f2cad87eb861203c8
   "0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828": 1
 }
 
+npx ts-node src/cli/get-tx-trace.ts --txHash 0xab6b8315187d3333f2cad87eb861203c856b6cb997b0d58f2d96b6ea1a42c258 --tracerFile src/tracers/call_address_tracer.js --timeout 20s
 
 # https://etherscan.io/tx/0xa3446df7ce6e26dd510aea009790769f3379fbeb5671e9fa4e5091854e2cf36a
 # Note: 5 internal transactions, too many false positives.
