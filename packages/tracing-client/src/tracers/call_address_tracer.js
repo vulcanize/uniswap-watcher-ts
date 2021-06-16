@@ -26,45 +26,45 @@
 	minVanityAddressLength: 35,
 
 	excludedAddresses: [
-	  "0x0000000000000000000000000000000000000000",
-	  "0xffffffffffffffffffffffffffffffffffffffff"
+		"0x0000000000000000000000000000000000000000",
+		"0xffffffffffffffffffffffffffffffffffffffff"
 	],
 
 	// Known vanity addresses. Empty by default, but can replace this object when making dynamic requests.
 	// Burner addresses go here too.
 	knownVanityAddresses: {
-	  // "0x000026b86Ac8B3c08ADDEeacd7ee19e807D94742": true
+		// "0x000026b86Ac8B3c08ADDEeacd7ee19e807D94742": true
 	},
 
-    // Cache of values computed to NOT be valid addresses.
-    cacheNotAnAccount: {},
+	// Cache of values computed to NOT be valid addresses.
+	cacheNotAnAccount: {},
 
-    // Cache of values known to be an address in the global state/db.
-    cacheExistingAccounts: {},
+	// Cache of values known to be an address in the global state/db.
+	cacheExistingAccounts: {},
 
 	isAddress: function(log, db, value) {
 		// More than 40 chars or too small in length, so not an address.
 		if (value.length > 40 || value.length < this.minVanityAddressLength) {
-		  return { isAddress: false };
+			return { isAddress: false };
 		}
 
 		var address = toAddress(value);
 		var addressAsHex = toHex(address);
 
-        if (this.cacheNotAnAccount[addressAsHex]) {
-          return { isAddress: false };
-        }
+		if (this.cacheNotAnAccount[addressAsHex]) {
+			return { isAddress: false };
+		}
 
 		// Check list of known exclusions.
 		if (this.excludedAddresses.indexOf(addressAsHex) != -1) {
-          this.cacheNotAnAccount[addressAsHex] = true;
-		  return { isAddress: false };
+			this.cacheNotAnAccount[addressAsHex] = true;
+			return { isAddress: false };
 		}
 
 		// Address exists in db, so definitely an address.
 		if (this.cacheExistingAccounts[addressAsHex] || db.exists(address)) {
-          this.cacheExistingAccounts[addressAsHex] = true;
-		  return { isAddress: true, address: addressAsHex, confidence: 1 };
+			this.cacheExistingAccounts[addressAsHex] = true;
+			return { isAddress: true, address: addressAsHex, confidence: 1 };
 		}
 
 		// May still be a valid address (e.g. for ERC20 transfer).
@@ -80,10 +80,10 @@
 		// But we use a min length of addresses, otherwise there are too many false positives.
 		// Also use a known vanity address list to override the normal logic.
 		if (this.knownVanityAddresses[addressAsHex] || (log.op.isPush() && value.length > this.minVanityAddressLength)) {
-		  return { isAddress: true, address: addressAsHex, confidence: 0.60 };
+			return { isAddress: true, address: addressAsHex, confidence: 0.60 };
 		}
 
-        this.cacheNotAnAccount[addressAsHex] = true;
+		this.cacheNotAnAccount[addressAsHex] = true;
 		return { isAddress: false };
 	},
 
@@ -230,15 +230,15 @@
 			this.callstack[left-1].calls.push(call);
 		}
 
-    var topOfStack = log.stack.peek(0).toString(16);
-    var result = this.isAddress(log, db, topOfStack);
-    if (result.isAddress) {
-      var call = this.callstack[this.callstack.length - 1];
-      if (!call.addresses) {
-        call.addresses = {};
-      }
-      call.addresses[result.address] = result.confidence;
-    }
+		var topOfStack = log.stack.peek(0).toString(16);
+		var result = this.isAddress(log, db, topOfStack);
+		if (result.isAddress) {
+			var call = this.callstack[this.callstack.length - 1];
+			if (!call.addresses) {
+			call.addresses = {};
+			}
+			call.addresses[result.address] = result.confidence;
+		}
 	},
 
 	// fault is invoked when the actual execution of an opcode fails.
