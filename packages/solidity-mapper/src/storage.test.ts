@@ -275,6 +275,7 @@ describe('Get value from storage', () => {
     const int128Array = [100, 200, 300, 400, 500];
     const uint16Array = [10, 20, 30, 40, 50];
     const boolArray = [true, false];
+    const enumArray = [1, 0, 2, 1, 3, 2];
     let addressArray: string[] = [];
 
     before(async () => {
@@ -341,6 +342,15 @@ describe('Get value from storage', () => {
       expect(value).to.eql(expectedValue);
       const proofData = JSON.parse(proof.data);
       expect(proofData.length).to.equal(expectedValue.length);
+    });
+
+    it('get value for fixed size arrays of enum type', async () => {
+      await testFixedArrays.setEnumArray(enumArray);
+      const blockHash = await getBlockHash();
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testFixedArrays.address, 'enumArray');
+      expect(value).to.eql(enumArray.map(el => BigInt(el)));
+      const proofData = JSON.parse(proof.data);
+      expect(proofData.length).to.equal(enumArray.length);
     });
 
     it('get value for fixed size array of struct type', async () => {
@@ -414,6 +424,13 @@ describe('Get value from storage', () => {
       const structMember = 'uint1';
       ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testFixedArrays.address, 'structArray', arrayIndex, structMember));
       expect(value).to.eql(expectedValue[structMember]);
+    });
+
+    it('get value of enum type array by index', async () => {
+      const arrayIndex = 3;
+      const blockHash = await getBlockHash();
+      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testFixedArrays.address, 'enumArray', arrayIndex);
+      expect(value).to.eql(BigInt(enumArray[arrayIndex]));
     });
   });
 

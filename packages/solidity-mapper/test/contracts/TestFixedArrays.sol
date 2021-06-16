@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.6;
+
+// https://docs.soliditylang.org/en/v0.8.5/layout-of-source-files.html#abi-coder-pragma
 pragma abicoder v2;
 
 contract TestFixedArrays {
@@ -19,6 +21,10 @@ contract TestFixedArrays {
     address[4] addressArray;
 
     bytes10[5] bytesArray;
+
+    enum Choices { Choice0, Choice1, Choice2, Choice3 }
+
+    Choices[6] enumArray;
 
     struct TestStruct {
         uint32 uint1;
@@ -61,5 +67,10 @@ contract TestFixedArrays {
     // Set variable structArray.
     function setStructArray(TestStruct calldata value, uint index) external {
         structArray[index] = value;
+    }
+
+    // Set variable enumArray.
+    function setEnumArray(Choices[6] calldata value) external {
+        enumArray = value;
     }
 }

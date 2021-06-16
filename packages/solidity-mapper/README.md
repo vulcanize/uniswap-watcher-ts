@@ -35,7 +35,7 @@ $ yarn test
       * [x] Boolean Type
       * [x] Address Type
       * [ ] Fixed-size byte arrays
-      * [ ] Enum type
+      * [x] Enum type
       * [ ] Dynamically-sized byte array
       * [x] Struct Type
       * [ ] Mapping Type
@@ -60,9 +60,10 @@ $ yarn test
     * [x] Get value of a single member in struct
     * [ ] Reference Types
       * [x] Struct type members (nested)
-      * [ ] Array type members
-      * [ ] Bytes and string type members
-      * [ ] Mapping type members
+      * [x] Fixed size Array members
+      * [ ] Dynamically sized Array members
+      * [x] Bytes and string type members
+      * [x] Mapping type members
   * [ ] Mapping Types
     * [x] Value Type keys
     * [ ] Fixed-size byte array keys
