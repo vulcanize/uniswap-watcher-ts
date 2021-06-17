@@ -38,7 +38,7 @@ createdb erc20-watcher
 Run the watcher:
 
 ```bash
-cd packages/watcher
+cd packages/erc20-watcher
 yarn run server
 ```
 
@@ -47,12 +47,12 @@ GQL console: http://localhost:3001/graphql
 To run tests (GQL queries) against the mock server:
 
 ```
-cd packages/watcher
+cd packages/erc20-watcher
 yarn run server:mock
 ```
 
 ```bash
-cd packages/watcher
+cd packages/erc20-watcher
 yarn test
 ```
 
