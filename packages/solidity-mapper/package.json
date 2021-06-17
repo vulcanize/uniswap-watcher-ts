@@ -29,7 +29,10 @@
   "scripts": {
     "build": "tsc",
     "test": "hardhat test",
+    "test:live": "hardhat --network private test",
     "lint": "eslint ."
   },
-  "dependencies": {}
+  "dependencies": {
+    "dotenv": "^10.0.0"
+  }
 }

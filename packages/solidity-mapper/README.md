@@ -10,10 +10,19 @@ Get value of state variable from storage for a solidity contract.
 
 ## Instructions
 
-Run the tests using the following command
-```bash
-$ yarn test
-```
+* Create environment variable file
+  ```bash
+  $ cp .env.example .env
+  ```
+
+* Run the tests using the following command
+  ```bash
+  $ yarn test
+
+  # For testing on private network.
+  # Set ETH_RPC_URL in .env
+  $ yarn test:live
+  ```
 
 ## Different Types
 

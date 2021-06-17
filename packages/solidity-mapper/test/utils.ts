@@ -68,3 +68,13 @@ export const getStorageAt: GetStorageAt = async ({ blockHash, contract, slot }) 
     }
   };
 };
+
+/**
+ * Generate array of dummy addresses of specified length.
+ * @param length
+ */
+export const generateDummyAddresses = (length: number): Array<string> => {
+  return Array.from({ length }, () => {
+    return ethers.utils.hexlify(ethers.utils.randomBytes(20));
+  });
+};
