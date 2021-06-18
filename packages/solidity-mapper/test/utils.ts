@@ -1,4 +1,5 @@
 import { ContractInterface } from '@ethersproject/contracts';
+import '@nomiclabs/hardhat-ethers';
 import { artifacts, ethers } from 'hardhat';
 import { CompilerOutput, CompilerOutputBytecode } from 'hardhat/types';
 
