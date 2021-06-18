@@ -5,8 +5,10 @@ import '@nomiclabs/hardhat-ethers';
 import { ethers } from 'hardhat';
 import { ContractTransaction } from 'ethers';
 
+import { EthClient } from '@vulcanize/ipld-eth-client';
+
 import { getStorageInfo, getStorageValue, StorageLayout } from './storage';
-import { getStorageLayout, getStorageAt, generateDummyAddresses } from '../test/utils';
+import { getStorageLayout, getStorageAt as rpcGetStorageAt, generateDummyAddresses } from '../test/utils';
 
 const TEST_DATA = [
   {
@@ -81,6 +83,21 @@ describe('Get value from storage', () => {
     const { hash } = await ethers.provider.getBlock(blockNumber);
     return hash;
   };
+
+  let getStorageAt = rpcGetStorageAt;
+
+  // Check if running test against ipld graphql endpoint.
+  if (process.env.IPLD_GQL) {
+    // Set ipld-eth-client.
+    const ethClient = new EthClient({
+      gqlEndpoint: process.env.GQL_ENDPOINT || '',
+      gqlSubscriptionEndpoint: process.env.GQL_ENDPOINT || '',
+      cache: undefined
+    });
+
+    // Use ipld graphql endpoint to get storage value.
+    getStorageAt = ethClient.getStorageAt.bind(ethClient);
+  }
 
   describe('signed integer type', () => {
     let integers: Contract, storageLayout: StorageLayout;
