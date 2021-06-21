@@ -2,7 +2,7 @@ import assert from 'assert';
 import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
-import { Address } from './entity/Address';
+import { Account } from './entity/Address';
 import { Trace } from './entity/Trace';
 
 export class Database {
@@ -28,7 +28,7 @@ export class Database {
   }
 
   async isWatchedAddress (address: string): Promise<boolean> {
-    const numRows = await this._conn.getRepository(Address)
+    const numRows = await this._conn.getRepository(Account)
       .createQueryBuilder()
       .where('address = :address', { address })
       .getCount();
@@ -38,7 +38,7 @@ export class Database {
 
   async saveAddress (address: string, startingBlock: number): Promise<void> {
     await this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Address);
+      const repo = tx.getRepository(Account);
 
       const numRows = await repo
         .createQueryBuilder()
@@ -46,7 +46,7 @@ export class Database {
         .getCount();
 
       if (numRows === 0) {
-        const entity = repo.create({ address, startingBlock: BigInt(startingBlock) });
+        const entity = repo.create({ address, startingBlock });
         await repo.save(entity);
       }
     });
@@ -63,5 +63,10 @@ export class Database {
     const repo = this._conn.getRepository(Trace);
     const entity = repo.create({ txHash, blockNumber, blockHash, trace });
     return repo.save(entity);
+  }
+
+  async saveTraceEntity (trace: Trace): Promise<Trace> {
+    const repo = this._conn.getRepository(Trace);
+    return repo.save(trace);
   }
 }

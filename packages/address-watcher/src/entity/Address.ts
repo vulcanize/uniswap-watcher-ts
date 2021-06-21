@@ -1,14 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToMany, JoinTable } from 'typeorm';
+import { Trace } from './Trace';
 
 @Entity()
-@Index(['address'], { unique: true })
-export class Address {
-  @PrimaryGeneratedColumn()
-  id!: number;
-
-  @Column('varchar', { length: 42 })
+export class Account {
+  @PrimaryColumn('varchar', { length: 42 })
   address!: string;
 
   @Column('numeric')
-  startingBlock!: bigint;
+  startingBlock!: number;
+
+  @ManyToMany(() => Trace, trace => trace.accounts)
+  @JoinTable()
+  appearances: Trace[];
 }
