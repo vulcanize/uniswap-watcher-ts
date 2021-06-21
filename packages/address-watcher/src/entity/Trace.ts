@@ -1,9 +1,10 @@
 import { Entity, PrimaryColumn, Column, Index, ManyToMany } from 'typeorm';
 
-import { Account } from './Address';
+import { Account } from './Account';
 
 @Entity()
 @Index(['txHash'], { unique: true })
+@Index(['blockNumber'])
 export class Trace {
   @PrimaryColumn('varchar', { length: 66 })
   txHash!: string;

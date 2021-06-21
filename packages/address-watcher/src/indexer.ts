@@ -10,7 +10,7 @@ import { TracingClient } from '@vulcanize/tracing-client';
 
 import { Database } from './database';
 import { Trace } from './entity/Trace';
-import { Account } from './entity/Address';
+import { Account } from './entity/Account';
 
 const log = debug('vulcanize:indexer');
 
@@ -58,7 +58,7 @@ export class Indexer {
 
   async watchAddress (address: string, startingBlock: number): Promise<boolean> {
     // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
-    await this._db.saveAddress(ethers.utils.getAddress(address), startingBlock);
+    await this._db.saveAccount(ethers.utils.getAddress(address), startingBlock);
 
     return true;
   }
@@ -89,6 +89,10 @@ export class Indexer {
       blockHash: entity.blockHash,
       trace: entity.trace
     };
+  }
+
+  async getAppearances (address: string, fromBlockNumber: number, toBlockNumber: number): Promise<Trace[]> {
+    return this._db.getAppearances(address, fromBlockNumber, toBlockNumber);
   }
 
   async indexAppearances (trace: Trace): Promise<Trace> {

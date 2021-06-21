@@ -2,7 +2,7 @@ import assert from 'assert';
 import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
-import { Account } from './entity/Address';
+import { Account } from './entity/Account';
 import { Trace } from './entity/Trace';
 
 export class Database {
@@ -36,7 +36,7 @@ export class Database {
     return numRows > 0;
   }
 
-  async saveAddress (address: string, startingBlock: number): Promise<void> {
+  async saveAccount (address: string, startingBlock: number): Promise<void> {
     await this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Account);
 
@@ -50,6 +50,13 @@ export class Database {
         await repo.save(entity);
       }
     });
+  }
+
+  async getAccount (address: string): Promise<Account | undefined> {
+    return this._conn.getRepository(Account)
+      .createQueryBuilder()
+      .where('address = :address', { address })
+      .getOne();
   }
 
   async getTrace (txHash: string): Promise<Trace | undefined> {
@@ -68,5 +75,14 @@ export class Database {
   async saveTraceEntity (trace: Trace): Promise<Trace> {
     const repo = this._conn.getRepository(Trace);
     return repo.save(trace);
+  }
+
+  async getAppearances (address: string, fromBlockNumber: number, toBlockNumber: number): Promise<Trace[]> {
+    return this._conn.getRepository(Trace)
+      .createQueryBuilder('trace')
+      .leftJoinAndSelect('trace.accounts', 'account')
+      .where('address = :address AND block_number >= :fromBlockNumber AND block_number <= :toBlockNumber', { address, fromBlockNumber, toBlockNumber })
+      .orderBy({ block_number: 'ASC' })
+      .getMany();
   }
 }
