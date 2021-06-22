@@ -1219,6 +1219,10 @@ describe('Get value from storage', () => {
       expect(value).to.eql(singleSlotStruct);
       const proofData = JSON.parse(proof.data);
       expect(proofData).to.have.all.keys('int1', 'uint1');
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testValueStructs.address, proofData);
+      }
     });
 
     it('get value for struct using multiple slots', async () => {
@@ -1226,6 +1230,10 @@ describe('Get value from storage', () => {
       expect(value).to.eql(multipleSlotStruct);
       const proofData = JSON.parse(proof.data);
       expect(proofData).to.have.all.keys(Object.keys(multipleSlotStruct));
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testValueStructs.address, proofData);
+      }
     });
 
     it('get value for struct with address type members', async () => {
@@ -1233,6 +1241,10 @@ describe('Get value from storage', () => {
       expect(value).to.eql(addressStruct);
       const proofData = JSON.parse(proof.data);
       expect(proofData).to.have.all.keys(Object.keys(addressStruct));
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testValueStructs.address, proofData);
+      }
     });
 
     it('get value for struct with contract type members', async () => {
@@ -1240,6 +1252,10 @@ describe('Get value from storage', () => {
       expect(value).to.eql(contractStruct);
       const proofData = JSON.parse(proof.data);
       expect(proofData).to.have.all.keys(Object.keys(contractStruct));
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testValueStructs.address, proofData);
+      }
     });
 
     it('get value for struct with fixed-sized byte array members', async () => {
@@ -1247,6 +1263,10 @@ describe('Get value from storage', () => {
       expect(value).to.eql(fixedBytesStruct);
       const proofData = JSON.parse(proof.data);
       expect(proofData).to.have.all.keys('uint1', 'bytesTen', 'bytesTwenty');
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testValueStructs.address, proofData);
+      }
     });
 
     it('get value for struct with enum type members', async () => {
@@ -1254,61 +1274,105 @@ describe('Get value from storage', () => {
       expect(value).to.eql(enumStruct);
       const proofData = JSON.parse(proof.data);
       expect(proofData).to.have.all.keys('uint1', 'choice1', 'choice2');
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testValueStructs.address, proofData);
+      }
     });
 
     // Get value of a member in a struct
     it('get value of signed integer type member in a struct', async () => {
       const member = 'int1';
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'singleSlotStruct', member);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'singleSlotStruct', member);
       expect(value).to.equal(singleSlotStruct[member]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testValueStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of unsigned integer type member in a struct', async () => {
       const member = 'uint1';
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'singleSlotStruct', member);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'singleSlotStruct', member);
       expect(value).to.equal(singleSlotStruct[member]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testValueStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of boolean type member in a struct', async () => {
       let member = 'bool1';
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'multipleSlotStruct', member);
+      let { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'multipleSlotStruct', member);
       expect(value).to.equal(multipleSlotStruct[member]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testValueStructs.address, JSON.parse(proof.data));
+      }
 
       member = 'int1';
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'multipleSlotStruct', member));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'multipleSlotStruct', member));
       expect(value).to.equal(multipleSlotStruct[member]);
 
+      if (isIpldGql) {
+        assertProofData(blockHash, testValueStructs.address, JSON.parse(proof.data));
+      }
+
       member = 'uint1';
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'multipleSlotStruct', member));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'multipleSlotStruct', member));
       expect(value).to.equal(multipleSlotStruct[member]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testValueStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of address type member in a struct', async () => {
       let member = 'address1';
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'addressStruct', member);
+      let { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'addressStruct', member);
       expect(value).to.equal(addressStruct[member]);
 
+      if (isIpldGql) {
+        assertProofData(blockHash, testValueStructs.address, JSON.parse(proof.data));
+      }
+
       member = 'uint1';
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'addressStruct', member));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'addressStruct', member));
       expect(value).to.equal(addressStruct[member]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testValueStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of contract type member in a struct', async () => {
       const member = 'testContract';
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'contractStruct', member);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'contractStruct', member);
       expect(value).to.equal(contractStruct[member]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testValueStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of fixed byte array member in a struct', async () => {
       const member = 'bytesTen';
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'fixedBytesStruct', member);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'fixedBytesStruct', member);
       expect(value).to.equal(fixedBytesStruct[member]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testValueStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of enum type member in a struct', async () => {
       const member = 'choice2';
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'enumStruct', member);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testValueStructs.address, 'enumStruct', member);
       expect(value).to.equal(enumStruct[member]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testValueStructs.address, JSON.parse(proof.data));
+      }
     });
   });
 
@@ -1389,53 +1453,89 @@ describe('Get value from storage', () => {
 
     // Get all members of a struct.
     it('get value for struct with fixed-size array members', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'fixedArrayStruct');
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'fixedArrayStruct');
       expect(value).to.eql(fixedArrayStruct);
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for struct with dynamically sized byte members', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'bytesStruct');
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'bytesStruct');
       expect(value).to.eql(bytesStruct);
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for struct with string type members', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'stringStruct');
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'stringStruct');
       expect(value).to.eql(stringStruct);
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for struct with dynamic array members', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'dynamicArrayStruct');
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'dynamicArrayStruct');
       expect(value).to.eql(dynamicArrayStruct);
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for nested struct with struct type members', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'nestedStruct');
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'nestedStruct');
       expect(value).to.eql(nestedStruct);
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
 
     // Get value of a member in a struct
     it('get value of fixed-size array member in a struct', async () => {
       const member = 'uintArray';
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'fixedArrayStruct', member);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'fixedArrayStruct', member);
       expect(value).to.eql(fixedArrayStruct[member]);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of bytes member in a struct', async () => {
       const member = 'byteArray';
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'bytesStruct', member);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'bytesStruct', member);
       expect(value).to.equal(bytesStruct[member]);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of string member in a struct', async () => {
       const member = 'string2';
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'stringStruct', member);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'stringStruct', member);
       expect(value).to.eql(stringStruct[member]);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of dynamic array member in a struct', async () => {
       const member = 'uintArray';
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'dynamicArrayStruct', member);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'dynamicArrayStruct', member);
       expect(value).to.eql(dynamicArrayStruct[member]);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of mapping type member in a struct', async () => {
@@ -1443,30 +1543,50 @@ describe('Get value from storage', () => {
       let member = 'uintAddressMap';
       let [mappingKey, expectedValue] = valueMappingStruct[member].entries().next().value;
 
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'valueMappingStruct', member, mappingKey);
+      let { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'valueMappingStruct', member, mappingKey);
       expect(value).to.equal(expectedValue);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
 
       // Get value for structs with mapping of reference type keys.
       member = 'stringUintMap';
       [mappingKey, expectedValue] = referenceMappingStruct[member].entries().next().value;
 
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'referenceMappingStruct', member, mappingKey));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'referenceMappingStruct', member, mappingKey));
       expect(value).to.equal(expectedValue);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of nested struct member', async () => {
       const member = 'bytesStruct';
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'nestedStruct', member);
+      let { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'nestedStruct', member);
       expect(value).to.eql(nestedStruct[member]);
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
 
       // Get value inside the nested struct member.
       let nestedMember = 'address1';
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'nestedStruct', member, nestedMember));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'nestedStruct', member, nestedMember));
       expect(value).to.eql(nestedStruct[member][nestedMember]);
 
+      if (isIpldGql) {
+        assertProofData(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
+
       nestedMember = 'byteArray';
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'nestedStruct', member, nestedMember));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testReferenceStructs.address, 'nestedStruct', member, nestedMember));
       expect(value).to.eql(nestedStruct[member][nestedMember]);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testReferenceStructs.address, JSON.parse(proof.data));
+      }
     });
   });
 
