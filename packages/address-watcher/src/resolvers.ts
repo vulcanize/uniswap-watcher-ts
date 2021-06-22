@@ -1,5 +1,6 @@
 import assert from 'assert';
 import debug from 'debug';
+import { withFilter } from 'apollo-server-express';
 
 import { Indexer } from './indexer';
 
@@ -22,7 +23,12 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
   return {
     Subscription: {
       onAddressEvent: {
-        subscribe: () => indexer.getEventIterator()
+        subscribe: withFilter(
+          () => indexer.getAddressEventIterator(),
+          (payload: any, variables: any) => {
+            return payload.onAddressEvent.address === variables.address;
+          }
+        )
       }
     },
 
@@ -41,7 +47,15 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
 
       traceTx: async (_: any, { txHash }: { txHash: string }): Promise<any> => {
         log('traceTx', txHash);
-        return indexer.traceTxAndIndexAppearances(txHash);
+
+        const { blockHash, blockNumber, trace } = await indexer.traceTxAndIndexAppearances(txHash);
+
+        return {
+          txHash,
+          blockNumber,
+          blockHash,
+          trace
+        };
       }
     }
   };
