@@ -81,25 +81,15 @@ const TEST_DATA = [
   }
 ];
 
-it('get storage information', async () => {
-  const testPromises = TEST_DATA.map(async ({ name, variable, output }) => {
-    const storageLayout = await getStorageLayout(name);
-
-    const storageInfo = getStorageInfo(storageLayout, variable);
-    expect(storageInfo).to.include(output);
-  });
-
-  await Promise.all(testPromises);
-});
+const isIpldGql = process.env.IPLD_GQL === 'true';
 
 type Contracts = {[key: string]: { contract: Contract, storageLayout: StorageLayout }}
 
 describe('Get value from storage', () => {
   let getStorageAt = rpcGetStorageAt;
-  let isIpldGql = false;
 
   // Check if running test against ipld graphql endpoint.
-  if (process.env.IPLD_GQL) {
+  if (isIpldGql) {
     // Set ipld-eth-client.
     const ethClient = new EthClient({
       gqlEndpoint: process.env.GQL_ENDPOINT || '',
@@ -109,7 +99,6 @@ describe('Get value from storage', () => {
 
     // Use ipld graphql endpoint to get storage value.
     getStorageAt = ethClient.getStorageAt.bind(ethClient);
-    isIpldGql = true;
   }
 
   let contracts: Contracts, blockHash: string;
@@ -155,6 +144,17 @@ describe('Get value from storage', () => {
 
     await Promise.all(transactions.map(transaction => transaction.wait()));
     blockHash = await getBlockHash();
+  });
+
+  it('get storage information', async () => {
+    const testPromises = TEST_DATA.map(async ({ name, variable, output }) => {
+      const storageLayout = await getStorageLayout(name);
+
+      const storageInfo = getStorageInfo(storageLayout, variable);
+      expect(storageInfo).to.include(output);
+    });
+
+    await Promise.all(testPromises);
   });
 
   it('get value for boolean type', async () => {
@@ -225,16 +225,28 @@ describe('Get value from storage', () => {
     });
 
     it('get value for integer type variables packed together', async () => {
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, integers.address, 'int1');
+      let { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, integers.address, 'int1');
       expect(value).to.equal(BigInt(int1Value));
 
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, integers.address, 'int2'));
+      if (isIpldGql) {
+        assertProofData(blockHash, integers.address, proofData);
+      }
+
+      ({ value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, integers.address, 'int2'));
       expect(value).to.equal(BigInt(int2Value));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, integers.address, proofData);
+      }
     });
 
     it('get value for integer type variables using single slot', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, integers.address, 'int3');
+      const { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, integers.address, 'int3');
       expect(value).to.equal(BigInt(int3Value));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, integers.address, proofData);
+      }
     });
   });
 
@@ -258,16 +270,28 @@ describe('Get value from storage', () => {
     });
 
     it('get value for unsigned integer type variables packed together', async () => {
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, unsignedIntegers.address, 'uint1');
+      let { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, unsignedIntegers.address, 'uint1');
       expect(value).to.equal(BigInt(uint1Value));
 
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, unsignedIntegers.address, 'uint2'));
+      if (isIpldGql) {
+        assertProofData(blockHash, unsignedIntegers.address, proofData);
+      }
+
+      ({ value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, unsignedIntegers.address, 'uint2'));
       expect(value).to.equal(BigInt(uint2Value));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, unsignedIntegers.address, proofData);
+      }
     });
 
     it('get value for unsigned integer type variables using single slot', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, unsignedIntegers.address, 'uint3');
+      const { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, unsignedIntegers.address, 'uint3');
       expect(value).to.equal(BigInt(uint3Value));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, unsignedIntegers.address, proofData);
+      }
     });
   });
 
@@ -295,16 +319,28 @@ describe('Get value from storage', () => {
     });
 
     it('get value for fixed size byte arrays packed together', async () => {
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBytes.address, 'bytesTen');
+      let { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBytes.address, 'bytesTen');
       expect(value).to.equal(bytesTenValue);
 
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBytes.address, 'bytesTwenty'));
+      if (isIpldGql) {
+        assertProofData(blockHash, testBytes.address, proofData);
+      }
+
+      ({ value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBytes.address, 'bytesTwenty'));
       expect(value).to.equal(bytesTwentyValue);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testBytes.address, proofData);
+      }
     });
 
     it('get value for fixed size byte arrays using single slot', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBytes.address, 'bytesThirty');
+      const { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBytes.address, 'bytesThirty');
       expect(value).to.equal(bytesThirtyValue);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testBytes.address, proofData);
+      }
     });
 
     // Dynamically sized byte array.
