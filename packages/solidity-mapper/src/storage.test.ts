@@ -1657,83 +1657,139 @@ describe('Get value from storage', () => {
     // Tests for value type keys.
     it('get value for mapping with address type keys', async () => {
       const [mapKey, expectedValue] = addressUintMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressUintMap', mapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressUintMap', mapKey);
       expect(value).to.equal(BigInt(expectedValue));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for mapping with boolean type keys', async () => {
       const [mapKey, expectedValue] = boolIntMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'boolIntMap', mapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'boolIntMap', mapKey);
       expect(value).to.equal(BigInt(expectedValue));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for mapping with signed integer type keys', async () => {
       const [mapKey, expectedValue] = intAddressMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'intAddressMap', mapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'intAddressMap', mapKey);
       expect(value).to.equal(expectedValue);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for mapping with unsigned integer type keys', async () => {
       const [mapKey, expectedValue] = uintBytesMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'uintBytesMap', mapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'uintBytesMap', mapKey);
       expect(value).to.equal(expectedValue);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     // TODO: Fix getting value for mapping with keys as fixed-size byte array
     // Zero value is returned if using fixed-sized byte array keys of length less than 32 bytes
     // Type Bytes32 works whereas types like bytes16, bytes24 do not work.
     it.skip('get value for mapping with fixed-size byte array keys', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'bytesAddressMap', bytesAddressMapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'bytesAddressMap', bytesAddressMapKey);
       expect(value).to.equal(bytesAddressMap.get(bytesAddressMapKey));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for mapping with enum type keys', async () => {
       const [mapKey, expectedValue] = enumIntMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'enumIntMap', mapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'enumIntMap', mapKey);
       expect(value).to.equal(BigInt(expectedValue));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     // Tests for reference type keys.
     it('get value for mapping with string type keys', async () => {
       const [mapKey, expectedValue] = stringIntMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'stringIntMap', mapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'stringIntMap', mapKey);
       expect(value).to.equal(BigInt(expectedValue));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for mapping with dynamically-sized byte array as keys', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'bytesUintMap', bytesUintMapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'bytesUintMap', bytesUintMapKey);
       expect(value).to.equal(BigInt(bytesUintMap.get(bytesUintMapKey)));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     // Tests for reference type values.
     it('get value for mapping with struct type values', async () => {
       const mapKey = intStructMap.keys().next().value;
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'intStructMap', mapKey);
+      let { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'intStructMap', mapKey);
       expect(value).to.eql(structMapValue);
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
 
       // Get value of specified struct member in mapping.
       let structMember = 'bool1';
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'intStructMap', mapKey, structMember));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'intStructMap', mapKey, structMember));
       expect(value).to.equal(structMapValue[structMember]);
 
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
+
       structMember = 'address1';
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'intStructMap', mapKey, structMember));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'intStructMap', mapKey, structMember));
       expect(value).to.equal(structMapValue[structMember]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for mapping of fixed size bytes keys and struct type values', async () => {
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'fixedBytesStructMap', fixedBytesStructKey);
+      let { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'fixedBytesStructMap', fixedBytesStructKey);
       expect(value).to.eql(structMapValue);
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
 
       // Get value of specified struct member in mapping.
       const structMember = 'int1';
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'fixedBytesStructMap', fixedBytesStructKey, structMember));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'fixedBytesStructMap', fixedBytesStructKey, structMember));
       expect(value).to.equal(structMapValue[structMember]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for mapping of address type keys and struct type values', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressStructMap', addressStructMapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressStructMap', addressStructMapKey);
       expect(value).to.eql(structMapValue);
+
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for mapping of unsigned integer keys and fixed-size array values', async () => {
@@ -1742,6 +1798,10 @@ describe('Get value from storage', () => {
       expect(value).to.eql(expectedValue);
       const proofData = JSON.parse(proof.data);
       expect(proofData.length).to.equal(expectedValue.length);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testMappingTypes.address, proofData);
+      }
     });
 
     it('get value for mapping of signed integer keys and dynamically-sized array values', async () => {
@@ -1750,17 +1810,29 @@ describe('Get value from storage', () => {
       expect(value).to.eql(expectedValue.map(BigInt));
       const proofData = JSON.parse(proof.data);
       expect(proofData.length).to.equal(expectedValue.length);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testMappingTypes.address, proofData);
+      }
     });
 
     it('get value for mapping of address keys and dynamic byte array values', async () => {
       const [mapKey, expectedValue] = addressBytesMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressBytesMap', mapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'addressBytesMap', mapKey);
       expect(value).to.eql(expectedValue);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for mapping of fixed size byte array keys and string type values', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'bytesStringMap', bytesStringMapKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testMappingTypes.address, 'bytesStringMap', bytesStringMapKey);
       expect(value).to.eql(bytesStringMap.get(bytesStringMapKey));
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testMappingTypes.address, JSON.parse(proof.data));
+      }
     });
   });
 
@@ -1770,7 +1842,7 @@ describe('Get value from storage', () => {
     const nestedAddressUintMap = new Map();
 
     const intAddressBoolMap = new Map([[123, new Map()]]);
-    intAddressBoolMap.get(123)?.set(address1, false);
+    intAddressBoolMap.get(123)?.set(address1, true);
 
     const uintStringIntMap = new Map([[456, new Map()]]);
     uintStringIntMap.get(456)?.set('abc', 123);
@@ -1809,44 +1881,68 @@ describe('Get value from storage', () => {
     it('get value for nested mapping with address type keys', async () => {
       const [mapKey, nestedMap] = nestedAddressUintMap.entries().next().value;
       const [nestedKey, expectedValue] = nestedMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'nestedAddressUintMap', mapKey, nestedKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'nestedAddressUintMap', mapKey, nestedKey);
       expect(value).to.equal(BigInt(expectedValue));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedMapping.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for nested mapping with signed integer type keys', async () => {
       const [mapKey, nestedMap] = intAddressBoolMap.entries().next().value;
       const [nestedKey, expectedValue] = nestedMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'intAddressBoolMap', mapKey, nestedKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'intAddressBoolMap', mapKey, nestedKey);
       expect(value).to.equal(expectedValue);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedMapping.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for nested mapping with unsigned integer type keys', async () => {
       const [mapKey, nestedMap] = uintStringIntMap.entries().next().value;
       const [nestedKey, expectedValue] = nestedMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'uintStringIntMap', mapKey, nestedKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'uintStringIntMap', mapKey, nestedKey);
       expect(value).to.equal(BigInt(expectedValue));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedMapping.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for nested mapping with dynamically-sized byte array as keys', async () => {
       const [mapKey, nestedMap] = bytesIntAddressMap.entries().next().value;
       const [nestedKey, expectedValue] = nestedMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'bytesIntAddressMap', mapKey, nestedKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'bytesIntAddressMap', mapKey, nestedKey);
       expect(value).to.equal(expectedValue);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedMapping.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for nested mapping with string type keys', async () => {
       const [mapKey, nestedMap] = stringAddressIntMap.entries().next().value;
       const [nestedKey, expectedValue] = nestedMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'stringAddressIntMap', mapKey, nestedKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'stringAddressIntMap', mapKey, nestedKey);
       expect(value).to.equal(BigInt(expectedValue));
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedMapping.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value for double nested mapping with address type keys', async () => {
       const [mapKey, nestedMap] = doubleNestedAddressMap.entries().next().value;
       const [nestedKey, doubleNestedMap] = nestedMap.entries().next().value;
       const [doubleNestedKey, expectedValue] = doubleNestedMap.entries().next().value;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'doubleNestedAddressMap', mapKey, nestedKey, doubleNestedKey);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedMapping.address, 'doubleNestedAddressMap', mapKey, nestedKey, doubleNestedKey);
       expect(value).to.equal(expectedValue);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedMapping.address, JSON.parse(proof.data));
+      }
     });
   });
 });
