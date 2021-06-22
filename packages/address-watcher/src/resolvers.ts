@@ -1,6 +1,7 @@
 import assert from 'assert';
 import debug from 'debug';
 import { withFilter } from 'apollo-server-express';
+import { ethers } from 'ethers';
 
 import { Indexer } from './indexer';
 
@@ -26,7 +27,7 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
         subscribe: withFilter(
           () => indexer.getAddressEventIterator(),
           (payload: any, variables: any) => {
-            return payload.onAddressEvent.address === variables.address;
+            return payload.onAddressEvent.address === ethers.utils.getAddress(variables.address);
           }
         )
       }
@@ -34,6 +35,8 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
 
     Mutation: {
       watchAddress: (_: any, { address, startingBlock = 1 }: WatchAddressParams): Promise<boolean> => {
+        address = ethers.utils.getAddress(address);
+
         log('watchAddress', address, startingBlock);
         return indexer.watchAddress(address, startingBlock);
       }
@@ -41,6 +44,8 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
 
     Query: {
       appearances: async (_: any, { address, fromBlockNumber, toBlockNumber }: AppearanceParams): Promise<any> => {
+        address = ethers.utils.getAddress(address);
+
         log('appearances', address, fromBlockNumber, toBlockNumber);
         return indexer.getAppearances(address, fromBlockNumber, toBlockNumber);
       },

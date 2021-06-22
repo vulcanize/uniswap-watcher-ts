@@ -2,12 +2,12 @@ import assert from 'assert';
 import debug from 'debug';
 import { ethers } from 'ethers';
 import { PubSub } from 'apollo-server-express';
-import _ from 'lodash';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { GetStorageAt } from '@vulcanize/solidity-mapper';
 import { TracingClient } from '@vulcanize/tracing-client';
 
+import { addressesInTrace } from './util';
 import { Database } from './database';
 import { Trace } from './entity/Trace';
 import { Account } from './entity/Account';
@@ -15,18 +15,6 @@ import { Account } from './entity/Account';
 const log = debug('vulcanize:indexer');
 
 const AddressEvent = 'address_event';
-
-const addressesIn = (obj: any): any => {
-  if (!obj) {
-    return [];
-  }
-
-  if (_.isArray(obj)) {
-    return _.map(obj, addressesIn);
-  }
-
-  return [obj.from, obj.to, ...addressesIn(obj.calls)];
-};
 
 export class Indexer {
   _db: Database
@@ -131,9 +119,9 @@ export class Indexer {
     const traceObj = JSON.parse(trace.trace);
 
     // TODO: Check if tx has failed?
-    const addresses = _.uniq(_.compact(_.flattenDeep(addressesIn(traceObj)))).sort();
+    const addresses = addressesInTrace(traceObj);
 
-    trace.accounts = _.map(addresses, address => {
+    trace.accounts = addresses.map((address: string) => {
       assert(address);
 
       const account = new Account();
