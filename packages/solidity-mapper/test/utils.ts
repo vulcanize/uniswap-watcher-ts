@@ -1,7 +1,9 @@
+/* eslint-disable no-unused-expressions */
 import { ContractInterface } from '@ethersproject/contracts';
 import '@nomiclabs/hardhat-ethers';
 import { artifacts, ethers } from 'hardhat';
 import { CompilerOutput, CompilerOutputBytecode } from 'hardhat/types';
+import { expect } from 'chai';
 
 import { StorageLayout, GetStorageAt } from '../src';
 
@@ -78,4 +80,34 @@ export const generateDummyAddresses = (length: number): Array<string> => {
   return Array.from({ length }, () => {
     return ethers.utils.hexlify(ethers.utils.randomBytes(20));
   });
+};
+
+/**
+ * Get latest blockHash.
+ */
+export const getBlockHash = async (): Promise<string> => {
+  const blockNumber = await ethers.provider.getBlockNumber();
+  const { hash } = await ethers.provider.getBlock(blockNumber);
+  return hash;
+};
+
+/**
+ * Assert proof data returned from ipld graphql server.
+ * @param blockHash
+ * @param address
+ * @param proofData
+ */
+export const assertProofData = (blockHash: string, address: string, proofData: string): void => {
+  const {
+    blockHash: proofBlockHash,
+    account: {
+      address: proofAddress,
+      storage
+    }
+  } = JSON.parse(proofData);
+
+  expect(proofBlockHash).to.equal(blockHash);
+  expect(proofAddress).to.equal(address);
+  expect(storage.cid).to.not.be.empty;
+  expect(storage.ipldBlock).to.not.be.empty;
 };

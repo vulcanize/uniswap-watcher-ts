@@ -8,7 +8,7 @@ import { ContractTransaction } from 'ethers';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { getStorageInfo, getStorageValue, StorageLayout } from './storage';
-import { getStorageLayout, getStorageAt as rpcGetStorageAt, generateDummyAddresses } from '../test/utils';
+import { getStorageLayout, getStorageAt as rpcGetStorageAt, generateDummyAddresses, getBlockHash, assertProofData } from '../test/utils';
 
 const CONTRACTS = [
   'TestIntegers',
@@ -95,13 +95,8 @@ it('get storage information', async () => {
 type Contracts = {[key: string]: { contract: Contract, storageLayout: StorageLayout }}
 
 describe('Get value from storage', () => {
-  const getBlockHash = async () => {
-    const blockNumber = await ethers.provider.getBlockNumber();
-    const { hash } = await ethers.provider.getBlock(blockNumber);
-    return hash;
-  };
-
   let getStorageAt = rpcGetStorageAt;
+  let isIpldGql = false;
 
   // Check if running test against ipld graphql endpoint.
   if (process.env.IPLD_GQL) {
@@ -114,6 +109,7 @@ describe('Get value from storage', () => {
 
     // Use ipld graphql endpoint to get storage value.
     getStorageAt = ethClient.getStorageAt.bind(ethClient);
+    isIpldGql = true;
   }
 
   let contracts: Contracts, blockHash: string;
@@ -163,30 +159,50 @@ describe('Get value from storage', () => {
 
   it('get value for boolean type', async () => {
     const { storageLayout } = contracts.TestBooleans;
-    let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBooleans.address, 'bool1');
+    let { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBooleans.address, 'bool1');
     expect(value).to.equal(bool1Value);
 
-    ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBooleans.address, 'bool2'));
+    if (isIpldGql) {
+      assertProofData(blockHash, testBooleans.address, proofData);
+    }
+
+    ({ value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBooleans.address, 'bool2'));
     expect(value).to.equal(bool2Value);
+
+    if (isIpldGql) {
+      assertProofData(blockHash, testBooleans.address, proofData);
+    }
   });
 
   it('get value for address type', async () => {
     const { storageLayout } = contracts.TestAddress;
-    const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testAddress.address, 'address1');
+    const { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, testAddress.address, 'address1');
     expect(value).to.be.a('string');
     expect(String(value).toLowerCase()).to.equal(address1Value);
+
+    if (isIpldGql) {
+      assertProofData(blockHash, testAddress.address, proofData);
+    }
   });
 
   it('get value for contract type', async () => {
     const { storageLayout } = contracts.TestContractTypes;
-    const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testContractTypes.address, 'addressContract1');
+    const { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, testContractTypes.address, 'addressContract1');
     expect(value).to.equal(testAddress.address.toLowerCase());
+
+    if (isIpldGql) {
+      assertProofData(blockHash, testContractTypes.address, proofData);
+    }
   });
 
   it('get value for enum types', async () => {
     const { storageLayout } = contracts.TestEnums;
-    const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testEnums.address, 'choicesEnum1');
+    const { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, testEnums.address, 'choicesEnum1');
     expect(value).to.equal(BigInt(enumValue));
+
+    if (isIpldGql) {
+      assertProofData(blockHash, testEnums.address, proofData);
+    }
   });
 
   describe('signed integer type', () => {
