@@ -8,7 +8,7 @@ import { ContractTransaction } from 'ethers';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { getStorageInfo, getStorageValue, StorageLayout } from './storage';
-import { getStorageLayout, getStorageAt as rpcGetStorageAt, generateDummyAddresses, getBlockHash, assertProofData } from '../test/utils';
+import { getStorageLayout, getStorageAt as rpcGetStorageAt, generateDummyAddresses, getBlockHash, assertProofData, assertDynamicBytesProof } from '../test/utils';
 
 const CONTRACTS = [
   'TestIntegers',
@@ -345,13 +345,21 @@ describe('Get value from storage', () => {
 
     // Dynamically sized byte array.
     it('get value for dynamic byte array of length less than 32 bytes', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBytes.address, 'bytesArray1');
+      const { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBytes.address, 'bytesArray1');
       expect(value).to.equal(bytesArray1);
+
+      if (isIpldGql) {
+        assertDynamicBytesProof(blockHash, testBytes.address, proofData);
+      }
     });
 
     it('get value for dynamic byte array of length more than 32 bytes', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBytes.address, 'bytesArray2');
+      const { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, testBytes.address, 'bytesArray2');
       expect(value).to.equal(bytesArray2);
+
+      if (isIpldGql) {
+        assertDynamicBytesProof(blockHash, testBytes.address, proofData);
+      }
     });
   });
 
@@ -374,14 +382,22 @@ describe('Get value from storage', () => {
 
     // Test for string of size less than 32 bytes which use only one slot.
     it('get value for string length less than 32 bytes', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, strings.address, 'string1');
+      const { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, strings.address, 'string1');
       expect(value).to.equal(string1Value);
+
+      if (isIpldGql) {
+        assertDynamicBytesProof(blockHash, strings.address, proofData);
+      }
     });
 
     // Test for string of size 32 bytes or more which use multiple slots.
     it('get value for string length more than 32 bytes', async () => {
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, strings.address, 'string2');
+      const { value, proof: { data: proofData } } = await getStorageValue(storageLayout, getStorageAt, blockHash, strings.address, 'string2');
       expect(value).to.equal(string2Value);
+
+      if (isIpldGql) {
+        assertDynamicBytesProof(blockHash, strings.address, proofData);
+      }
     });
   });
 

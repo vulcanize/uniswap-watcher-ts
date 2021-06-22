@@ -111,3 +111,15 @@ export const assertProofData = (blockHash: string, address: string, proofData: s
   expect(storage.cid).to.not.be.empty;
   expect(storage.ipldBlock).to.not.be.empty;
 };
+
+/**
+ * Assert proof data for dynamic byte arrays and strings.
+ * @param blockHash
+ * @param address
+ * @param proofData
+ */
+export const assertDynamicBytesProof = (blockHash: string, address: string, proofData: string): void => {
+  const proofArray = JSON.parse(proofData);
+  expect(proofArray).to.not.be.empty;
+  assertProofData(blockHash, address, JSON.stringify(proofArray[0]));
+};
