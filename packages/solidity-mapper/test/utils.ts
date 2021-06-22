@@ -154,9 +154,7 @@ export const assertProofArray = (blockHash: string, address: string, proofArray:
  * @param proofStruct
  */
 export const assertProofStruct = (blockHash: string, address: string, proofStruct: {[key: string]: any}): void => {
-  Object.values(proofStruct).forEach(proof => {
-    const proofData = JSON.parse(proof.data);
-
+  Object.values(proofStruct).forEach(proofData => {
     if (isArray(proofData)) {
       assertProofArray(blockHash, address, proofData);
       return;

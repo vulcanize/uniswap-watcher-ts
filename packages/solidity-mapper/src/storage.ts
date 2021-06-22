@@ -298,7 +298,7 @@ const getStructureValue = async (getStorageAt: GetStorageAt, blockHash: string, 
   return members.reduce((acc, member, index) => {
     acc.value[member.label] = results[index].value;
     const proofData = JSON.parse(acc.proof.data);
-    proofData[member.label] = results[index].proof;
+    proofData[member.label] = JSON.parse(results[index].proof.data);
     acc.proof.data = JSON.stringify(proofData);
     return acc;
   }, initialValue);

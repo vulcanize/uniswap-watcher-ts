@@ -998,7 +998,7 @@ describe('Get value from storage', () => {
 
         for (let j = 0; j < 3; j++) {
           const value = {
-            uint1: BigInt((i + j) * 100),
+            uint1: BigInt((i + j + 1) * 100),
             address1: addresses[(i + j) % 5]
           };
 
@@ -1035,6 +1035,10 @@ describe('Get value from storage', () => {
       expect(proofData.length).to.equal(nestedStructArray.length);
       expect(proofData[0].length).to.equal(nestedStructArray[0].length);
       expect(proofData[0]).to.have.all.keys(Object.keys(nestedStructArray[0]));
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testNestedArrays.address, proofData);
+      }
     });
 
     it('get value for fixed size nested array of address type', async () => {
@@ -1043,6 +1047,10 @@ describe('Get value from storage', () => {
       const proofData = JSON.parse(proof.data);
       expect(proofData.length).to.equal(nestedAddressArray.length);
       expect(proofData[0].length).to.equal(nestedAddressArray[0].length);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testNestedArrays.address, proofData);
+      }
     });
 
     it('get value for nested fixed dynamic array of integer type', async () => {
@@ -1051,6 +1059,10 @@ describe('Get value from storage', () => {
       const proofData = JSON.parse(proof.data);
       expect(proofData.length).to.equal(nestedFixedDynamicArray.length);
       expect(proofData[0].length).to.equal(nestedFixedDynamicArray[0].length);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testNestedArrays.address, proofData);
+      }
     });
 
     it('get value for nested dynamic fixed array of integer type', async () => {
@@ -1059,6 +1071,10 @@ describe('Get value from storage', () => {
       const proofData = JSON.parse(proof.data);
       expect(proofData.length).to.equal(nestedDynamicArray.length);
       expect(proofData[0].length).to.equal(nestedDynamicArray[0].length);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testNestedArrays.address, proofData);
+      }
     });
 
     it('get value for nested dynamic array of integer type', async () => {
@@ -1067,45 +1083,73 @@ describe('Get value from storage', () => {
       const proofData = JSON.parse(proof.data);
       expect(proofData.length).to.equal(nestedDynamicArray.length);
       expect(proofData[0].length).to.equal(nestedDynamicArray[0].length);
+
+      if (isIpldGql) {
+        assertProofArray(blockHash, testNestedArrays.address, proofData);
+      }
     });
 
     // Get element of array by index.
     it('get value of fixed size struct type nested array by index', async () => {
       const arrayIndex = 2;
       const nestedArrayIndex = 1;
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedStructArray', arrayIndex, nestedArrayIndex);
+      let { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedStructArray', arrayIndex, nestedArrayIndex);
       expect(value).to.eql(nestedStructArray[arrayIndex][nestedArrayIndex]);
 
+      if (isIpldGql) {
+        assertProofStruct(blockHash, testNestedArrays.address, JSON.parse(proof.data));
+      }
+
       const structMember = 'address1';
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedStructArray', arrayIndex, nestedArrayIndex, structMember));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedStructArray', arrayIndex, nestedArrayIndex, structMember));
       expect(value).to.equal(nestedStructArray[arrayIndex][nestedArrayIndex][structMember]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedArrays.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of fixed size address type nested array by index', async () => {
       const arrayIndex = 2;
       const nestedArrayIndex = 1;
-      const { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedAddressArray', arrayIndex, nestedArrayIndex);
+      const { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedAddressArray', arrayIndex, nestedArrayIndex);
       expect(value).to.eql(nestedAddressArray[arrayIndex][nestedArrayIndex]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedArrays.address, JSON.parse(proof.data));
+      }
     });
 
     it('get value of dynamically sized nested array by index', async () => {
       // Test for variable nestedFixedDynamicArray.
       let arrayIndex = 1;
       let nestedArrayIndex = 2;
-      let { value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedFixedDynamicArray', arrayIndex, nestedArrayIndex);
+      let { value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedFixedDynamicArray', arrayIndex, nestedArrayIndex);
       expect(value).to.eql(nestedFixedDynamicArray[arrayIndex][nestedArrayIndex]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedArrays.address, JSON.parse(proof.data));
+      }
 
       // Test for variable nestedDynamicFixedArray.
       arrayIndex = 2;
       nestedArrayIndex = 3;
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedDynamicFixedArray', arrayIndex, nestedArrayIndex));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedDynamicFixedArray', arrayIndex, nestedArrayIndex));
       expect(value).to.eql(nestedDynamicArray[arrayIndex][nestedArrayIndex]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedArrays.address, JSON.parse(proof.data));
+      }
 
       // Test for variable nestedDynamicArray.
       arrayIndex = 3;
       nestedArrayIndex = 2;
-      ({ value } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedDynamicArray', arrayIndex, nestedArrayIndex));
+      ({ value, proof } = await getStorageValue(storageLayout, getStorageAt, blockHash, testNestedArrays.address, 'nestedDynamicArray', arrayIndex, nestedArrayIndex));
       expect(value).to.eql(nestedDynamicArray[arrayIndex][nestedArrayIndex]);
+
+      if (isIpldGql) {
+        assertProofData(blockHash, testNestedArrays.address, JSON.parse(proof.data));
+      }
     });
   });
 
