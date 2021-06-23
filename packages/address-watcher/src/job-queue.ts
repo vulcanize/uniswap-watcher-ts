@@ -16,7 +16,7 @@ export class JobQueue {
 
   constructor (config: Config) {
     this._config = config;
-    this._boss = new PgBoss(this._config.dbConnectionString);
+    this._boss = new PgBoss({ connectionString: this._config.dbConnectionString, onComplete: true });
     this._boss.on('error', error => log(error));
   }
 
@@ -24,11 +24,22 @@ export class JobQueue {
     await this._boss.start();
   }
 
-  async subscribe (queue: string, callback: JobCallback): Promise<void> {
-    await this._boss.subscribe(queue, async (job: any) => {
-      console.log(`Processing queue ${queue} job ${job.id}...`);
+  async subscribe (queue: string, callback: JobCallback): Promise<string> {
+    return await this._boss.subscribe(queue, async (job: any) => {
+      log(`Processing queue ${queue} job ${job.id}...`);
       await callback(job);
     });
+  }
+
+  async onComplete (queue: string, callback: JobCallback): Promise<string> {
+    return await this._boss.onComplete(queue, async (job: any) => {
+      log(`Job complete for queue ${queue} job ${job.id}...`);
+      await callback(job);
+    });
+  }
+
+  async markComplete (job: any): Promise<void> {
+    this._boss.complete(job.id);
   }
 
   async pushJob (queue: string, job: any): Promise<void> {

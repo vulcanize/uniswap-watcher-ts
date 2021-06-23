@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "server": "DEBUG=vulcanize:* nodemon src/server.ts -f environments/local.toml",
+    "job-runner": "DEBUG=vulcanize:* nodemon src/job-runner.ts -f environments/local.toml",
     "test": "mocha -r ts-node/register src/**/*.spec.ts",
     "lint": "eslint .",
     "build": "tsc"
