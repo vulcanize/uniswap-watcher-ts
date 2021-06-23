@@ -106,7 +106,7 @@ export class EthClient {
     };
   }
 
-  async getBlockWithTransactions (blockNumber: string) {
+  async getBlockWithTransactions (blockNumber: string): Promise<any> {
     const { data: result } = await this._client.query({ query: ethQueries.getBlockWithTransactions, variables: { blockNumber } });
 
     return result;

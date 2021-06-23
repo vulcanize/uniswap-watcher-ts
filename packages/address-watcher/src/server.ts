@@ -19,6 +19,7 @@ import { Indexer } from './indexer';
 import { Database } from './database';
 import { getConfig } from './config';
 import { TxWatcher } from './tx-watcher';
+import { JobQueue } from './job-queue';
 
 const log = debug('vulcanize:server');
 
@@ -38,7 +39,7 @@ export const main = async (): Promise<any> => {
 
   const { host, port } = config.server;
 
-  const { upstream, database: dbConfig } = config;
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
   assert(dbConfig, 'Missing database config');
 
@@ -62,7 +63,15 @@ export const main = async (): Promise<any> => {
   const pubsub = new PubSub();
   const indexer = new Indexer(db, ethClient, pubsub, tracingClient);
 
-  const txWatcher = new TxWatcher(ethClient, indexer);
+  assert(jobQueueConfig, 'Missing job queue config');
+
+  const { dbConnectionString } = jobQueueConfig;
+  assert(dbConnectionString, 'Missing job queue db connection string');
+
+  const jobQueue = new JobQueue({ dbConnectionString });
+  await jobQueue.start();
+
+  const txWatcher = new TxWatcher(ethClient, indexer, jobQueue);
   await txWatcher.start();
 
   const resolvers = await createResolvers(indexer);
