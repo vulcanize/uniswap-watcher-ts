@@ -33,3 +33,4 @@
 
 [jobQueue]
   dbConnectionString = "postgres://postgres:postgres@localhost/job-queue"
+  maxCompletionLag = 300

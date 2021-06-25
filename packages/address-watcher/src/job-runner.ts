@@ -53,10 +53,10 @@ export const main = async (): Promise<any> => {
 
   assert(jobQueueConfig, 'Missing job queue config');
 
-  const { dbConnectionString } = jobQueueConfig;
+  const { dbConnectionString, maxCompletionLag } = jobQueueConfig;
   assert(dbConnectionString, 'Missing job queue db connection string');
 
-  const jobQueue = new JobQueue({ dbConnectionString });
+  const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag });
   await jobQueue.start();
 
   await jobQueue.subscribe(QUEUE_TX_TRACING, async (job) => {

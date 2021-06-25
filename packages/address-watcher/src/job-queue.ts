@@ -4,6 +4,7 @@ import PgBoss from 'pg-boss';
 
 interface Config {
   dbConnectionString: string
+  maxCompletionLag: number
 }
 
 type JobCallback = (job: any) => Promise<void>;
@@ -18,6 +19,10 @@ export class JobQueue {
     this._config = config;
     this._boss = new PgBoss({ connectionString: this._config.dbConnectionString, onComplete: true });
     this._boss.on('error', error => log(error));
+  }
+
+  get maxCompletionLag (): number {
+    return this._config.maxCompletionLag;
   }
 
   async start (): Promise<void> {

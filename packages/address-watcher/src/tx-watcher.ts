@@ -37,10 +37,15 @@ export class TxWatcher {
     log('Started watching upstream tx...');
 
     this._jobQueue.onComplete(QUEUE_TX_TRACING, async (job) => {
-      const { data: { request, failed, state } } = job;
+      const { data: { request, failed, state, createdOn } } = job;
+      const timeElapsedInSeconds = (Date.now() - Date.parse(createdOn)) / 1000;
       if (!failed && state === 'completed') {
-        // TODO: Before publishing, check if trace is "recent".
-        return await this.publishAddressEventToSubscribers(request.data.txHash);
+        // Check for max acceptable lag time between tracing request and sending results to live subscribers.
+        if (timeElapsedInSeconds <= this._jobQueue.maxCompletionLag) {
+          return await this.publishAddressEventToSubscribers(request.data.txHash, timeElapsedInSeconds);
+        } else {
+          log(`tx ${request.data.txHash} is too old (${timeElapsedInSeconds}s), not broadcasting to live subscribers`);
+        }
       }
     });
 
@@ -51,7 +56,7 @@ export class TxWatcher {
     });
   }
 
-  async publishAddressEventToSubscribers (txHash: string): Promise<void> {
+  async publishAddressEventToSubscribers (txHash: string, timeElapsedInSeconds: number): Promise<void> {
     const traceObj = await this._indexer.getTrace(txHash);
     if (!traceObj) {
       return;
@@ -62,7 +67,7 @@ export class TxWatcher {
     for (let i = 0; i < traceObj.accounts.length; i++) {
       const account = traceObj.accounts[i];
 
-      log(`pushing tx ${txHash} event to GQL subscribers for address ${account.address}`);
+      log(`publishing trace for ${txHash} (${timeElapsedInSeconds}s elapsed) to GQL subscribers for address ${account.address}`);
 
       // Publishing the event here will result in pushing the payload to GQL subscribers for `onAddressEvent(address)`.
       await this._pubsub.publish(AddressEvent, {

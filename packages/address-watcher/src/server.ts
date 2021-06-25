@@ -61,10 +61,11 @@ export const main = async (): Promise<any> => {
 
   assert(jobQueueConfig, 'Missing job queue config');
 
-  const { dbConnectionString } = jobQueueConfig;
+  const { dbConnectionString, maxCompletionLag } = jobQueueConfig;
   assert(dbConnectionString, 'Missing job queue db connection string');
+  assert(dbConnectionString, 'Missing job queue max completion lag time (seconds)');
 
-  const jobQueue = new JobQueue({ dbConnectionString });
+  const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag });
   await jobQueue.start();
 
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
