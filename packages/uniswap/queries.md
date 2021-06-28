@@ -22,7 +22,7 @@
   * https://github.com/Uniswap/uniswap-v3-info/blob/master/src/data/pools/poolData.ts
     ```
     query pools {
-      pools(where: {id_in: $poolString, block: {number: $block}, orderBy: totalValueLockedUSD, orderDirection: desc) {
+      pools(where: {id_in: $poolString}, block: {number: $block}, orderBy: totalValueLockedUSD, orderDirection: desc) {
         id
         feeTier
         liquidity
