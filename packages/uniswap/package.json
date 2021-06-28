@@ -2,5 +2,11 @@
   "name": "@vulcanize/uniswap",
   "version": "0.1.0",
   "main": "index.js",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "get-graphql-schema": "^2.1.2"
+  },
+  "scripts": {
+    "generate:schema": "get-graphql-schema https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-alt > schema.graphql"
+  }
 }
