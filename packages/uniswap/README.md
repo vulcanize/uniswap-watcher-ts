@@ -965,7 +965,7 @@ Actual queries are listed in [queries](./queries.md) file.
       * updatePoolDayData (https://github.com/Uniswap/uniswap-v3-subgraph/blob/main/src/utils/intervalUpdates.ts#L43)
        - Uses Pool entity `token0Price`, `token1Price`, `liquidity`, `sqrtPrice`, `feeGrowthGlobal0X128`, `feeGrowthGlobal1X128`, `tick`, `totalValueLockedUSD` fields
 
-  * date ()
+  * date (timestamp rounded to current day by dividing by 86400)
     - Pool Initialize event, Mint event, Burn event, Swap event
       ```ts
       // Inside updatePoolDayData
@@ -973,6 +973,189 @@ Actual queries are listed in [queries](./queries.md) file.
       let dayID = timestamp / 86400
       let dayStartTimestamp = dayID * 86400
       poolDayData.date = dayStartTimestamp
+      ```
+
+  * tvlUSD (tvl derived in USD at end of period)
+    - Pool Initialize event, Mint event, Burn event, Swap event
+      ```ts
+      // Inside updatePoolDayData
+      let pool = Pool.load(event.address.toHexString())
+      poolDayData.tvlUSD = pool.totalValueLockedUSD
+      ```
+
+  * volumeUSD (volume in USD)
+    - Pool Swap event
+      ```ts
+      let pool = Pool.load(event.address.toHexString())
+      let token0 = Token.load(pool.token0)
+      let token1 = Token.load(pool.token1)
+      let amount0 = convertTokenToDecimal(event.params.amount0, token0.decimals)
+      let amount1 = convertTokenToDecimal(event.params.amount1, token1.decimals)
+
+      let amount0Abs = amount0
+      if (amount0.lt(ZERO_BD)) {
+        amount0Abs = amount0.times(BigDecimal.fromString('-1'))
+      }
+      let amount1Abs = amount1
+      if (amount1.lt(ZERO_BD)) {
+        amount1Abs = amount1.times(BigDecimal.fromString('-1'))
+      }
+
+      let amountTotalUSDTracked = getTrackedAmountUSD(amount0Abs, token0 as Token, amount1Abs, token1 as Token).div(
+        BigDecimal.fromString('2')
+      )
+
+      poolDayData.volumeUSD = poolDayData.volumeUSD.plus(amountTotalUSDTracked)
+      ```
+
+- TokenDayData
+  * id (token address concatendated with date)
+    - Pool Mint event, Burn event, Swap event
+      ```ts
+      let pool = Pool.load(event.address.toHexString())
+      let token0 = Token.load(pool.token0)
+      let token0DayData = updateTokenDayData(token0 as Token, event)
+
+      // Inside updateTokenDayData
+      // token = token0
+      let timestamp = event.block.timestamp.toI32()
+      let dayID = timestamp / 86400
+      let tokenDayID = token.id
+        .toString()
+        .concat('-')
+        .concat(dayID.toString())
+
+      let tokenDayData = TokenDayData.load(tokenDayID)
+      if (tokenDayData === null) {
+        tokenDayData = new TokenDayData(tokenDayID)
+      }
+      ```
+      * updateTokenDayData (https://github.com/Uniswap/uniswap-v3-subgraph/blob/main/src/utils/intervalUpdates.ts#L143)
+        - Uses Bundle entity `ethPriceUSD` field
+
+  * date (timestamp rounded to current day by dividing by 86400)
+    - Pool Mint event, Burn event, Swap event
+      ```ts
+      // Inside updateTokenDayData
+      let dayStartTimestamp = dayID * 86400
+
+      if (tokenDayData === null) {
+        tokenDayData = new TokenDayData(tokenDayID)
+        tokenDayData.date = dayStartTimestamp
+      }
+      ```
+
+  * totalValueLockedUSD (liquidity across all pools in derived USD)
+    - Pool Mint event, Burn event, Swap event
+      ```ts
+      // Inside updateTokenDayData
+      let tokenDayData = TokenDayData.load(tokenDayID)
+      tokenDayData.totalValueLockedUSD = token.totalValueLockedUSD
+      ```
+
+  * volumeUSD (volume in derived USD)
+    - Pool Swap event
+      ```ts
+      let pool = Pool.load(event.address.toHexString())
+      let token0 = Token.load(pool.token0)
+      let token1 = Token.load(pool.token1)
+      let amount0 = convertTokenToDecimal(event.params.amount0, token0.decimals)
+      let amount1 = convertTokenToDecimal(event.params.amount1, token1.decimals)
+
+      let amount0Abs = amount0
+      if (amount0.lt(ZERO_BD)) {
+        amount0Abs = amount0.times(BigDecimal.fromString('-1'))
+      }
+      let amount1Abs = amount1
+      if (amount1.lt(ZERO_BD)) {
+        amount1Abs = amount1.times(BigDecimal.fromString('-1'))
+      }
+
+      let amountTotalUSDTracked = getTrackedAmountUSD(amount0Abs, token0 as Token, amount1Abs, token1 as Token).div(
+        BigDecimal.fromString('2')
+      )
+
+      token0DayData.volumeUSD = token0DayData.volumeUSD.plus(amountTotalUSDTracked)
+      ```
+
+- TokenHourData
+  * id (token address concatendated with date)
+    - Pool Mint event, Burn event, Swap event
+      ```ts
+      let token0HourData = updateTokenHourData(token0 as Token, event)
+
+      // Inside updateTokenHourData
+      // token = token0
+      let tokenHourID = token.id
+        .toString()
+        .concat('-')
+        .concat(hourIndex.toString())
+      let tokenHourData = TokenHourData.load(tokenHourID)
+
+      if (tokenHourData === null) {
+        tokenHourData = new TokenHourData(tokenHourID)
+      }
+      ```
+      * updateTokenDayData (https://github.com/Uniswap/uniswap-v3-subgraph/blob/main/src/utils/intervalUpdates.ts#L186)
+        - Uses Bundle entity `ethPriceUSD` field
+
+  * close (close price USD)
+    - Pool Mint event, Burn event, Swap event
+      ```ts
+      // Inside updateTokenHourData
+      let bundle = Bundle.load('1')
+      let tokenPrice = token.derivedETH.times(bundle.ethPriceUSD)
+      tokenHourData.close = tokenPrice
+      ```
+
+  * high (high price USD)
+    - Pool Mint event, Burn event, Swap event
+      ```ts
+      // Inside updateTokenHourData
+      let tokenHourData = TokenHourData.load(tokenHourID)
+      if (tokenHourData === null) {
+        tokenHourData = new TokenHourData(tokenHourID)
+        tokenHourData.high = tokenPrice
+      }
+
+      if (tokenPrice.gt(tokenHourData.high)) {
+        tokenHourData.high = tokenPrice
+      }
+      ```
+
+  * low (low price USD)
+    - Pool Mint event, Burn event, Swap event
+      ```ts
+      // Inside updateTokenHourData
+      let tokenHourData = TokenHourData.load(tokenHourID)
+      if (tokenHourData === null) {
+        tokenHourData = new TokenHourData(tokenHourID)
+        tokenHourData.low = tokenPrice
+      }
+
+      if (tokenPrice.lt(tokenHourData.low)) {
+        tokenHourData.low = tokenPrice
+      }
+      ```
+
+  * open (opening price USD)
+    - Pool Mint event, Burn event, Swap event
+      ```ts
+      // Inside updateTokenHourData
+      if (tokenHourData === null) {
+        tokenHourData = new TokenHourData(tokenHourID)
+        tokenHourData.open = tokenPrice
+      }
+      ```
+
+  * periodStartUnix (unix timestamp for start of hour)
+    - Pool Mint event, Burn event, Swap event
+      ```ts
+      // Inside updateTokenHourData
+      if (tokenHourData === null) {
+        tokenHourData = new TokenHourData(tokenHourID)
+        tokenHourData.periodStartUnix = hourStartUnix
+      }
       ```
 
 ## References
