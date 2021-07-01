@@ -4,7 +4,7 @@ import { Data, Entity } from './data';
 
 const LATEST_BLOCK = 2;
 
-const log = debug('test');
+const log = debug('vulcanize:test');
 
 interface BlockHeight {
   number: number;
@@ -28,7 +28,7 @@ interface BurnFilter {
 
 export const createResolvers = async (): Promise<any> => {
   const data = Data.getInstance();
-  const { bundles, burns } = data.entities;
+  const { bundles, burns, pools, transactions, factories } = data.entities;
 
   return {
     BigInt: new BigInt('bigInt'),
@@ -65,9 +65,25 @@ export const createResolvers = async (): Promise<any> => {
 
           return false;
         }).slice(0, first)
+          .map(burn => {
+            return {
+              ...burn,
+              pool: pools.find(pool => pool.id === burn.pool),
+              transaction: transactions.find(transaction => transaction.id === burn.transaction)
+            };
+          })
           .sort((a: any, b: any) => {
             return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
           });
+
+        return res;
+      },
+
+      factories: (_: any, { first, block }: { first: number, block: BlockHeight }) => {
+        log('factories', first, block);
+
+        const res = factories.filter((factory: Entity) => factory.blockNumber === block.number)
+          .slice(0, first);
 
         return res;
       }

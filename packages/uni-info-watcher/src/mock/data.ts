@@ -15,7 +15,8 @@ export class Data {
     burns: [],
     transactions: [],
     pools: [],
-    tokens: []
+    tokens: [],
+    factories: []
   }
 
   _chance: Chance.Chance
@@ -37,21 +38,33 @@ export class Data {
   }
 
   _generateData (): void {
+    const factoryAddress = this._getRandomAddress();
+
     // Generate data for 3 blocks.
     Array.from(Array(3))
-      .forEach((_, index) => {
+      .forEach((_, blockNumber) => {
+        // Generate data for Factory.
+        this._entities.factories.push({
+          blockNumber,
+          id: factoryAddress,
+          totalFeesUSD: this._chance.floating({ min: 1, fixed: 2 }),
+          totalValueLockedUSD: this._chance.floating({ min: 1, fixed: 2 }),
+          totalVolumeUSD: this._chance.floating({ min: 1, fixed: 2 }),
+          txCount: this._chance.integer({ min: 1 })
+        });
+
         // Generate Bundle.
         this._entities.bundles.push({
-          blockNumber: index,
+          blockNumber,
           id: '1',
-          ethPriceUSD: this._chance.floating({ min: 0, fixed: 2 })
+          ethPriceUSD: this._chance.floating({ min: 1, fixed: 2 })
         });
 
         // Generate Pools.
         Array.from(Array(3))
           .forEach(() => {
             const token0 = {
-              blockNumber: index,
+              blockNumber: blockNumber,
               id: this._getRandomAddress(),
               symbol: this._chance.string({ length: 3, casing: 'upper', alpha: false }),
               name: this._chance.word({ syllables: 1 }),
@@ -65,7 +78,7 @@ export class Data {
             };
 
             const token1 = {
-              blockNumber: index,
+              blockNumber: blockNumber,
               id: this._getRandomAddress(),
               symbol: this._chance.string({ length: 3, casing: 'upper', alpha: false }),
               name: this._chance.word({ syllables: 1 }),
@@ -79,7 +92,7 @@ export class Data {
             };
 
             const pool = {
-              blockNumber: index,
+              blockNumber: blockNumber,
               id: this._getRandomAddress(),
               token0: token0.id,
               token1: token1.id,
@@ -105,7 +118,7 @@ export class Data {
                 const transactionHash = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
                 const transaction = {
-                  blockNumber: index,
+                  blockNumber,
                   id: transactionHash,
                   timestamp: this._chance.timestamp()
                 };
@@ -115,7 +128,7 @@ export class Data {
                 // Generate Burns
                 this._entities.burns.push({
                   id: `${transaction.id}#${transactionIndex}`,
-                  blockNumber: index,
+                  blockNumber,
                   transaction: transaction.id,
                   pool: pool.id,
                   timestamp: this._chance.timestamp(),
