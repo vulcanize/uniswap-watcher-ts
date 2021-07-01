@@ -1,37 +1,25 @@
 import 'mocha';
 import { expect } from 'chai';
-
 import { GraphQLClient } from 'graphql-request';
 
-import {
-  queryBundle
-} from '../queries';
-
-const testCases: {
-  balanceOf: any[],
-  allowance: any[],
-  events: any[],
-  tokens: any[]
-} = {
-  balanceOf: [],
-  allowance: [],
-  events: [],
-  tokens: []
-};
+import { queryBundle } from '../queries';
+import { Data } from './data';
 
 describe('server', () => {
   const client = new GraphQLClient('http://localhost:3003/graphql');
+  const data = Data.getInstance();
 
-  it('query token info', async () => {
-    const tests = testCases.tokens;
-    expect(tests.length).to.be.greaterThan(0);
+  it('query bundle', async () => {
+    const { bundles } = data.entities;
+    expect(bundles.length).to.be.greaterThan(0);
 
-    for (let i = 0; i < tests.length; i++) {
-      const testCase = tests[i];
+    for (let i = 0; i < bundles.length; i++) {
+      const { id, blockNumber, ethPriceUSD } = bundles[i];
 
-      // Bundle.
-      const result = await client.request(queryBundle, testCase);
-      expect(result.id).to.equal(testCase.info.id);
+      // Bundle query.
+      const result = await client.request(queryBundle, { id, blockNumber });
+      expect(result.bundle.id).to.equal(id);
+      expect(result.bundle.ethPriceUSD).to.equal(ethPriceUSD);
     }
   });
 });

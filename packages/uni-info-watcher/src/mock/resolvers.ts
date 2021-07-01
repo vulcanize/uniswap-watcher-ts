@@ -25,6 +25,15 @@ export const createResolvers = async (): Promise<any> => {
           const { ethPriceUSD, id } = res;
           return { ethPriceUSD, id };
         }
+      },
+
+      bundles: (_: any, { first, block }: { first: number, block: BlockHeight }) => {
+        log('bundles', first, block);
+        const res = bundles.filter((bundle: Entity) => bundle.blockNumber === block.number)
+          .slice(0, first)
+          .map(({ ethPriceUSD, id }) => ({ ethPriceUSD, id }));
+
+        return res;
       }
     }
   };
