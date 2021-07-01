@@ -31,30 +31,6 @@ export const main = async (): Promise<any> => {
 
   const { host, port } = config.server;
 
-  // const { upstream, database: dbConfig } = config;
-
-  // assert(dbConfig, 'Missing database config');
-
-  // const db = new Database(dbConfig);
-  // await db.init();
-
-  // assert(upstream, 'Missing upstream config');
-  // const {gqlEndpoint, gqlSubscriptionEndpoint, cache: cacheConfig } = upstream;
-  // assert(gqlEndpoint, 'Missing upstream gqlEndpoint');
-  // assert(gqlSubscriptionEndpoint, 'Missing upstream gqlSubscriptionEndpoint');
-
-  // const cache = await getCache(cacheConfig);
-
-  // const ethClient = new EthClient({ gqlEndpoint, gqlSubscriptionEndpoint, cache });
-
-  // // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
-  // // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
-  // const pubsub = new PubSub();
-  // const indexer = new Indexer(db, ethClient, pubsub, artifacts);
-
-  // const eventWatcher = new EventWatcher(ethClient, indexer);
-  // await eventWatcher.start();
-
   // const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer);
   const resolvers = await createMockResolvers();
 
