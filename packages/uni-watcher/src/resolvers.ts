@@ -12,16 +12,38 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
   return {
     BigInt: new BigInt('bigInt'),
 
-    TokenEvent: {
-      __resolveType: (obj: any) => {
-        assert(obj.__typename);
+    ERC20Event: {
+      __resolveType() {
+        return null;
+      }
+    },
 
-        return obj.__typename;
+    FactoryEvent: {
+      __resolveType() {
+        return null;
+      }
+    },
+
+    NonFungiblePositionManagerEvent: {
+      __resolveType() {
+        return null;
+      }
+    },
+
+    PoolEvent: {
+      __resolveType() {
+        return null;
+      }
+    },
+
+    Event: {
+      __resolveType() {
+        return null;
       }
     },
 
     Subscription: {
-      onTokenEvent: {
+      onEvent: {
         subscribe: () => indexer.getEventIterator()
       }
     },
