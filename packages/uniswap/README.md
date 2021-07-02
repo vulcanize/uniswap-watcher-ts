@@ -13,6 +13,17 @@
   $ yarn lint:schema schema/frontend.graphql
   ```
 
+* **deploy**
+
+  Deploy Factory contract, ERC20 tokens and create a Pool.
+  ```bash
+  $ yarn deploy
+
+  # Deploy to private network specified by ETH_RPC_URL in .env
+  # $ cp .env.example .env
+  $ yarn deploy --network private
+  ```
+
 ## References
 
 * https://github.com/Uniswap/uniswap-v3-core

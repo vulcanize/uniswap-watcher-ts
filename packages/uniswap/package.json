@@ -5,7 +5,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "generate:schema": "get-graphql-schema https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-alt > schema/full.graphql",
-    "lint:schema": "graphql-schema-linter"
+    "lint:schema": "graphql-schema-linter",
+    "deploy": "hardhat run scripts/deploy.ts"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
@@ -24,6 +25,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.2.0",
-    "@uniswap/v3-core": "^1.0.0"
+    "@uniswap/v3-core": "^1.0.0",
+    "dotenv": "^10.0.0"
   }
 }
