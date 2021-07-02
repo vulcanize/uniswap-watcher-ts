@@ -23,7 +23,8 @@ export class Data {
     swaps: [],
     poolDayDatas: [],
     tokenDayDatas: [],
-    uniswapDayDatas: []
+    uniswapDayDatas: [],
+    ticks: []
   }
 
   _chance: Chance.Chance
@@ -140,6 +141,16 @@ export class Data {
               id: String(timestamp),
               tvlUSD: this._chance.floating({ min: 1, fixed: 2 }),
               volumeUSD: this._chance.floating({ min: 1, fixed: 2 })
+            });
+
+            this._entities.ticks.push({
+              blockNumber,
+              id: `${pool.id}#${this._chance.integer({ min: 1 })}`,
+              liquidityGross: this._chance.integer({ min: 1 }),
+              liquidityNet: this._chance.integer({ min: 1 }),
+              price0: this._chance.floating({ min: 1, fixed: 2 }),
+              price1: this._chance.floating({ min: 1, fixed: 2 }),
+              tickIdx: this._chance.integer({ min: 1 })
             });
 
             this._entities.tokens.push(token0, token1);

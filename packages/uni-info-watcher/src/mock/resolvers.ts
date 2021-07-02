@@ -82,10 +82,16 @@ interface DayDataFilter {
   pool: string;
 }
 
+interface TickFilter {
+  poolAddress: string;
+  tickIdx_gte: number;
+  tickIdx_lte: number;
+}
+
 export const createResolvers = async (): Promise<any> => {
   const latestBlocks = NO_OF_BLOCKS - 1;
   const data = Data.getInstance();
-  const { bundles, burns, pools, transactions, factories, mints, tokens, swaps, poolDayDatas, tokenDayDatas, uniswapDayDatas } = data.entities;
+  const { bundles, burns, pools, transactions, factories, mints, tokens, swaps, poolDayDatas, tokenDayDatas, uniswapDayDatas, ticks } = data.entities;
 
   return {
     BigInt: new BigInt('bigInt'),
@@ -370,6 +376,35 @@ export const createResolvers = async (): Promise<any> => {
 
         return res;
       },
+
+      ticks: (_: any, { skip, first, where, block }: { skip: number, first: number, where: TickFilter, block: BlockHeight }) => {
+        log('ticks', skip, first, where, block);
+
+        const res = ticks.filter((tick: Entity) => {
+          if (tick.blockNumber === block.number) {
+            return Object.entries(where || {})
+              .every(([filter, value]) => {
+                if (filter.endsWith('_gte')) {
+                  const field = filter.substring(0, filter.length - 3);
+
+                  return tick[field] >= value;
+                }
+
+                if (filter.endsWith('_lte')) {
+                  const field = filter.substring(0, filter.length - 3);
+
+                  return tick[field] <= value;
+                }
+
+                return tick[filter] === value;
+              });
+          }
+
+          return false;
+        }).slice(skip, skip + first);
+
+        return res;
+      }
     }
   };
 };
