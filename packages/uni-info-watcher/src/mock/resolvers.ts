@@ -1,8 +1,7 @@
+/* eslint-disable camelcase */
 import debug from 'debug';
 import BigInt from 'apollo-type-bigint';
-import { Data, Entity } from './data';
-
-const LATEST_BLOCK = 2;
+import { Data, Entity, NO_OF_BLOCKS } from './data';
 
 const log = debug('vulcanize:test');
 
@@ -26,9 +25,48 @@ interface BurnFilter {
   token1: string;
 }
 
+enum MintOrderBy {
+  timestamp
+}
+
+interface MintFilter {
+  pool: string
+  token0: string
+  token1: string
+}
+
+enum PoolOrderBy {
+  totalValueLockedUSD
+}
+
+interface PoolFilter {
+  id: string;
+  id_in: [string]
+  token0: string
+  token0_in: [string]
+  token1: string
+  token1_in: [string]
+}
+
+interface TokenFilter {
+  id: string
+  id_in: [string]
+  name_contains: string
+  symbol_contains: string
+}
+
+enum TokenOrderBy {
+  totalValueLockedUSD
+}
+
+enum TransactionOrderBy {
+  timestamp
+}
+
 export const createResolvers = async (): Promise<any> => {
+  const latestBlocks = NO_OF_BLOCKS - 1;
   const data = Data.getInstance();
-  const { bundles, burns, pools, transactions, factories } = data.entities;
+  const { bundles, burns, pools, transactions, factories, mints, tokens } = data.entities;
 
   return {
     BigInt: new BigInt('bigInt'),
@@ -58,7 +96,7 @@ export const createResolvers = async (): Promise<any> => {
         log('burns', first, orderBy, orderDirection, where);
 
         const res = burns.filter((burn: Entity) => {
-          if (burn.blockNumber === LATEST_BLOCK) {
+          if (burn.blockNumber === latestBlocks) {
             return Object.entries(where || {})
               .every(([field, value]) => burn[field] === value);
           }
@@ -84,6 +122,129 @@ export const createResolvers = async (): Promise<any> => {
 
         const res = factories.filter((factory: Entity) => factory.blockNumber === block.number)
           .slice(0, first);
+
+        return res;
+      },
+
+      mints: (_: any, { first, orderBy, orderDirection, where }: { first: number, orderBy: MintOrderBy, orderDirection: OrderDirection, where: MintFilter }) => {
+        log('mints', first, orderBy, orderDirection, where);
+
+        const res = mints.filter((mint: Entity) => {
+          if (mint.blockNumber === latestBlocks) {
+            return Object.entries(where || {})
+              .every(([field, value]) => mint[field] === value);
+          }
+
+          return false;
+        }).slice(0, first)
+          .sort((a: any, b: any) => {
+            return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
+          })
+          .map(mint => {
+            return {
+              ...mint,
+              pool: pools.find(pool => pool.id === mint.pool),
+              transaction: transactions.find(transaction => transaction.id === mint.transaction)
+            };
+          });
+
+        return res;
+      },
+
+      pool: (_: any, { id: poolId }: { id: string }) => {
+        log('pool', poolId);
+        const res = pools.find((pool: Entity) => pool.id === poolId);
+
+        if (res) {
+          return {
+            ...res,
+            token0: tokens.find(token => token.id === res.token0),
+            token1: tokens.find(token => token.id === res.token1)
+          };
+        }
+      },
+
+      pools: (_: any, { first, orderBy, orderDirection, where, block }: { first: number, orderBy: PoolOrderBy, orderDirection: OrderDirection, where: PoolFilter, block: BlockHeight }) => {
+        log('pools', first, orderBy, orderDirection, where, block);
+
+        const res = pools.filter((pool: Entity) => {
+          if (pool.blockNumber === latestBlocks) {
+            return Object.entries(where || {})
+              .every(([filter, value]) => {
+                if (filter.endsWith('_in')) {
+                  const field = filter.substring(0, filter.length - 3);
+
+                  return value.some((el: any) => el === pool[field]);
+                }
+
+                return pool[filter] === value;
+              });
+          }
+
+          return false;
+        }).slice(0, first)
+          .sort((a: any, b: any) => {
+            return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
+          })
+          .map(pool => {
+            return {
+              ...pool,
+              token0: tokens.find(token => token.id === pool.token0),
+              token1: tokens.find(token => token.id === pool.token1)
+            };
+          });
+
+        return res;
+      },
+
+      token: (_: any, { id: tokenId, block }: { id: string, block: BlockHeight }) => {
+        log('token', tokenId, block);
+        const res = tokens.find((token: Entity) => token.blockNumber === block.number && token.id === tokenId);
+
+        return res;
+      },
+
+      tokens: (_: any, { orderBy, orderDirection, where }: { orderBy: TokenOrderBy, orderDirection: OrderDirection, where: TokenFilter }) => {
+        log('tokens', orderBy, orderDirection, where);
+
+        const res = tokens.filter((token: Entity) => {
+          if (token.blockNumber === latestBlocks) {
+            return Object.entries(where || {})
+              .every(([filter, value]) => {
+                if (filter.endsWith('_in')) {
+                  const field = filter.substring(0, filter.length - 3);
+
+                  return value.some((el: any) => el === token[field]);
+                }
+
+                return token[filter] === value;
+              });
+          }
+
+          return false;
+        }).sort((a: any, b: any) => {
+          return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
+        });
+
+        return res;
+      },
+
+      transactions: (_: any, { first, orderBy, orderDirection }: { first: number, orderBy: TransactionOrderBy, orderDirection: OrderDirection }) => {
+        log('transactions', first, orderBy, orderDirection);
+
+        const res = transactions.filter((transaction: Entity) => transaction.blockNumber === latestBlocks)
+          .slice(0, first)
+          .sort((a: any, b: any) => {
+            return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
+          })
+          .map(transaction => {
+            return {
+              ...transaction,
+              burns: burns.filter(burn => burn.transaction === transaction.id),
+              mints: mints.filter(mint => mint.transaction === transaction.id)
+              // swaps: swaps.find(swap => swap.transaction === transaction.id)
+            };
+          });
 
         return res;
       }

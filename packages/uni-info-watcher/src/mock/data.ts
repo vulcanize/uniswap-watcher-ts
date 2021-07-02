@@ -1,6 +1,8 @@
 import Chance from 'chance';
 import { ethers } from 'ethers';
 
+export const NO_OF_BLOCKS = 3;
+
 export interface Entity {
   blockNumber: number
   id: string
@@ -16,7 +18,8 @@ export class Data {
     transactions: [],
     pools: [],
     tokens: [],
-    factories: []
+    factories: [],
+    mints: []
   }
 
   _chance: Chance.Chance
@@ -40,8 +43,8 @@ export class Data {
   _generateData (): void {
     const factoryAddress = this._getRandomAddress();
 
-    // Generate data for 3 blocks.
-    Array.from(Array(3))
+    // Generate data for each block.
+    Array.from(Array(NO_OF_BLOCKS))
       .forEach((_, blockNumber) => {
         // Generate data for Factory.
         this._entities.factories.push({
@@ -96,9 +99,9 @@ export class Data {
               id: this._getRandomAddress(),
               token0: token0.id,
               token1: token1.id,
-              feeTier: this._chance.floating({ min: 1, fixed: 2 }),
+              feeTier: this._chance.integer({ min: 1 }),
               liquidity: this._chance.integer({ min: 1 }),
-              sqrtPrice: this._chance.floating({ min: 1, fixed: 2 }),
+              sqrtPrice: this._chance.integer({ min: 1 }),
               token0Price: this._chance.floating({ min: 1, fixed: 2 }),
               token1Price: this._chance.floating({ min: 1, fixed: 2 }),
               tick: this._chance.integer({ min: 1 }),
@@ -137,6 +140,21 @@ export class Data {
                   amount0: this._chance.integer({ min: 1 }),
                   amount1: this._chance.integer({ min: 1 }),
                   amountUSD: this._chance.floating({ min: 1, fixed: 2 })
+                });
+
+                // Generate Mints
+                this._entities.mints.push({
+                  id: `${transaction.id}#${transactionIndex}`,
+                  blockNumber,
+                  transaction: transaction.id,
+                  pool: pool.id,
+                  timestamp: this._chance.timestamp(),
+                  owner: this._getRandomAddress(),
+                  origin: this._getRandomAddress(),
+                  amount0: this._chance.integer({ min: 1 }),
+                  amount1: this._chance.integer({ min: 1 }),
+                  amountUSD: this._chance.floating({ min: 1, fixed: 2 }),
+                  sender: this._getRandomAddress()
                 });
               });
           });
