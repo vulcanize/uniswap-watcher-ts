@@ -73,10 +73,19 @@ enum SwapOrderBy {
   timestamp
 }
 
+enum DayDataOrderBy {
+  date
+}
+
+interface DayDataFilter {
+  date_gt: number;
+  pool: string;
+}
+
 export const createResolvers = async (): Promise<any> => {
   const latestBlocks = NO_OF_BLOCKS - 1;
   const data = Data.getInstance();
-  const { bundles, burns, pools, transactions, factories, mints, tokens, swaps } = data.entities;
+  const { bundles, burns, pools, transactions, factories, mints, tokens, swaps, poolDayDatas, tokenDayDatas, uniswapDayDatas } = data.entities;
 
   return {
     BigInt: new BigInt('bigInt'),
@@ -113,15 +122,15 @@ export const createResolvers = async (): Promise<any> => {
 
           return false;
         }).slice(0, first)
+          .sort((a: any, b: any) => {
+            return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
+          })
           .map(burn => {
             return {
               ...burn,
               pool: pools.find(pool => pool.id === burn.pool),
               transaction: transactions.find(transaction => transaction.id === burn.transaction)
             };
-          })
-          .sort((a: any, b: any) => {
-            return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
           });
 
         return res;
@@ -282,7 +291,85 @@ export const createResolvers = async (): Promise<any> => {
           });
 
         return res;
-      }
+      },
+
+      poolDayDatas: (_: any, { skip, first, orderBy, orderDirection, where }: { skip: number, first: number, orderBy: DayDataOrderBy, orderDirection: OrderDirection, where: DayDataFilter }) => {
+        log('poolDayDatas', skip, first, orderBy, orderDirection, where);
+
+        const res = poolDayDatas.filter((poolDayData: Entity) => {
+          if (poolDayData.blockNumber === latestBlocks) {
+            return Object.entries(where || {})
+              .every(([filter, value]) => {
+                if (filter.endsWith('_gt')) {
+                  const field = filter.substring(0, filter.length - 3);
+
+                  return poolDayData[field] > value;
+                }
+
+                return poolDayData[filter] === value;
+              });
+          }
+
+          return false;
+        }).slice(skip, skip + first)
+          .sort((a: any, b: any) => {
+            return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
+          });
+
+        return res;
+      },
+
+      tokenDayDatas: (_: any, { skip, first, orderBy, orderDirection, where }: { skip: number, first: number, orderBy: DayDataOrderBy, orderDirection: OrderDirection, where: DayDataFilter }) => {
+        log('tokenDayDatas', skip, first, orderBy, orderDirection, where);
+
+        const res = tokenDayDatas.filter((tokenDayData: Entity) => {
+          if (tokenDayData.blockNumber === latestBlocks) {
+            return Object.entries(where || {})
+              .every(([filter, value]) => {
+                if (filter.endsWith('_gt')) {
+                  const field = filter.substring(0, filter.length - 3);
+
+                  return tokenDayData[field] > value;
+                }
+
+                return tokenDayData[filter] === value;
+              });
+          }
+
+          return false;
+        }).slice(skip, skip + first)
+          .sort((a: any, b: any) => {
+            return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
+          });
+
+        return res;
+      },
+
+      uniswapDayDatas: (_: any, { skip, first, orderBy, orderDirection, where }: { skip: number, first: number, orderBy: DayDataOrderBy, orderDirection: OrderDirection, where: DayDataFilter }) => {
+        log('uniswapDayDatas', skip, first, orderBy, orderDirection, where);
+
+        const res = uniswapDayDatas.filter((uniswapDayData: Entity) => {
+          if (uniswapDayData.blockNumber === latestBlocks) {
+            return Object.entries(where || {})
+              .every(([filter, value]) => {
+                if (filter.endsWith('_gt')) {
+                  const field = filter.substring(0, filter.length - 3);
+
+                  return uniswapDayData[field] > value;
+                }
+
+                return uniswapDayData[filter] === value;
+              });
+          }
+
+          return false;
+        }).slice(skip, skip + first)
+          .sort((a: any, b: any) => {
+            return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
+          });
+
+        return res;
+      },
     }
   };
 };

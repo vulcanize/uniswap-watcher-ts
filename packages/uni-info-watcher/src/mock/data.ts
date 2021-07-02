@@ -20,7 +20,10 @@ export class Data {
     tokens: [],
     factories: [],
     mints: [],
-    swaps: []
+    swaps: [],
+    poolDayDatas: [],
+    tokenDayDatas: [],
+    uniswapDayDatas: []
   }
 
   _chance: Chance.Chance
@@ -112,6 +115,32 @@ export class Data {
               totalValueLockedToken1: this._chance.integer({ min: 1 }),
               totalValueLockedUSD: this._chance.floating({ min: 1, fixed: 2 })
             };
+
+            const timestamp = this._chance.timestamp();
+
+            this._entities.poolDayDatas.push({
+              blockNumber,
+              date: timestamp,
+              id: String(timestamp),
+              tvlUSD: this._chance.floating({ min: 1, fixed: 2 }),
+              volumeUSD: this._chance.floating({ min: 1, fixed: 2 })
+            });
+
+            this._entities.tokenDayDatas.push({
+              blockNumber,
+              date: timestamp,
+              id: String(timestamp),
+              totalValueLockedUSD: this._chance.floating({ min: 1, fixed: 2 }),
+              volumeUSD: this._chance.floating({ min: 1, fixed: 2 })
+            });
+
+            this._entities.uniswapDayDatas.push({
+              blockNumber,
+              date: timestamp,
+              id: String(timestamp),
+              tvlUSD: this._chance.floating({ min: 1, fixed: 2 }),
+              volumeUSD: this._chance.floating({ min: 1, fixed: 2 })
+            });
 
             this._entities.tokens.push(token0, token1);
             this._entities.pools.push(pool);
