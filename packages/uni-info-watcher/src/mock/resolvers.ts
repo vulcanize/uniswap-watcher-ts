@@ -285,8 +285,8 @@ export const createResolvers = async (): Promise<any> => {
             return {
               ...transaction,
               burns: burns.filter(burn => burn.transaction === transaction.id),
-              mints: mints.filter(mint => mint.transaction === transaction.id)
-              // swaps: swaps.find(swap => swap.transaction === transaction.id)
+              mints: mints.filter(mint => mint.transaction === transaction.id),
+              swaps: swaps.filter(swap => swap.transaction === transaction.id)
             };
           });
 
