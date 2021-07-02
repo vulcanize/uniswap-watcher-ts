@@ -4,7 +4,7 @@ import {
 } from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json'
 import { ContractTransaction } from "ethers";
 
-task("pool-create", "Creates pool using Factory contract")
+task("create-pool", "Creates pool using Factory contract")
   .addParam('factory', 'Address of factory contract', undefined, types.string)
   .addParam('token0', 'Address of first token contract', undefined, types.string)
   .addParam('token1', 'Address of second token contract', undefined, types.string)
@@ -15,6 +15,7 @@ task("pool-create", "Creates pool using Factory contract")
     const factory = new hre.ethers.Contract(factoryAddress, FACTORY_ABI, signer);
     const transaction: ContractTransaction = await factory.createPool(token0, token1, fee)
     const receipt = await transaction.wait();
+
     if (receipt.events) {
       const poolCreatedEvent = receipt.events.find(el => el.event === 'PoolCreated');
 

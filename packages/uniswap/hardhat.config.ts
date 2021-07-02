@@ -3,8 +3,9 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomiclabs/hardhat-waffle";
 
 import './tasks/accounts'
-import './tasks/token-create'
-import './tasks/pool-create'
+import './tasks/deploy-factory'
+import './tasks/deploy-token'
+import './tasks/create-pool'
 
 const config: HardhatUserConfig = {
   solidity: "0.8.0",
@@ -13,6 +14,7 @@ const config: HardhatUserConfig = {
       url: process.env.ETH_RPC_URL
     }
   },
+  defaultNetwork: 'private'
 };
 
 // You need to export an object to set up your config

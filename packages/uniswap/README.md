@@ -1,5 +1,39 @@
 # Uniswap
 
+## Instructions
+
+### Deploy contracts
+
+```bash
+# Create .env.
+$ cp .env.example .env
+# Set ETH_RPC_URL variable to target chain network.
+
+# Deploy contracts to private network specified by ETH_RPC_URL
+$ yarn deploy:factory
+# Factory deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+$ yarn deploy:token --name Token0 --symbol TK0
+# token TK0 deployed to: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+
+$ yarn deploy:token --name Token1 --symbol TK1
+# token TK1 deployed to: 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+
+$ yarn create:pool --factory 0x5FbDB2315678afecb367f032d93F642f64180aa3 --token0 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 --token1 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 --fee 500
+# Pool deployed to: 0x315244f2680ABa32F27004B67d83E53c8c88F5FE
+
+
+# For local development.
+# Start hardhat local network.
+$ yarn hardhat node
+
+# Deploy contracts to local network.
+# Deploy contracts to private network specified by ETH_RPC_URL
+$ yarn deploy:factory --network localhost
+$ yarn deploy:token --network localhost --name Token0 --symbol TK0
+
+```
+
 ## Scripts
 
 * **generate:schema**
@@ -13,15 +47,28 @@
   $ yarn lint:schema schema/frontend.graphql
   ```
 
-* **deploy**
+* **deploy:factory**
 
-  Deploy Factory contract, ERC20 tokens and create a Pool.
+  Deploy Factory contract.
   ```bash
-  $ yarn deploy
+  $ yarn deploy:factory
 
-  # Deploy to private network specified by ETH_RPC_URL in .env
-  # $ cp .env.example .env
-  $ yarn deploy --network private
+  # Deploy to hardhat local network.
+  $ yarn deploy --network localhost
+  ```
+
+* **deploy:token**
+
+  Deploy Token contract.
+  ```bash
+  $ yarn deploy:token --name TokenName --symbol TKS
+  ```
+
+* **create:pool**
+
+  Create pool with factory contract and tokens.
+  ```bash
+  $ yarn create:pool --factory 0xFactoryAddress --token0 0xToken0Address --token1 0xToken1Address --fee 500
   ```
 
 ## References

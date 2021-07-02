@@ -6,7 +6,9 @@
   "scripts": {
     "generate:schema": "get-graphql-schema https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-alt > schema/full.graphql",
     "lint:schema": "graphql-schema-linter",
-    "deploy": "hardhat run scripts/deploy.ts"
+    "deploy:factory": "hardhat deploy-factory",
+    "deploy:token": "hardhat deploy-token",
+    "create:pool": "hardhat create-pool"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
