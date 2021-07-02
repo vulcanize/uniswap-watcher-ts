@@ -24,7 +24,8 @@ export class Data {
     poolDayDatas: [],
     tokenDayDatas: [],
     uniswapDayDatas: [],
-    ticks: []
+    ticks: [],
+    tokenHourDatas: []
   }
 
   _chance: Chance.Chance
@@ -127,13 +128,22 @@ export class Data {
               volumeUSD: this._chance.floating({ min: 1, fixed: 2 })
             });
 
-            this._entities.tokenDayDatas.push({
-              blockNumber,
-              date: timestamp,
-              id: String(timestamp),
-              totalValueLockedUSD: this._chance.floating({ min: 1, fixed: 2 }),
-              volumeUSD: this._chance.floating({ min: 1, fixed: 2 })
-            });
+            this._entities.tokenDayDatas.push(
+              {
+                blockNumber,
+                date: timestamp,
+                id: `${token0.id}-${timestamp}`,
+                totalValueLockedUSD: this._chance.floating({ min: 1, fixed: 2 }),
+                volumeUSD: this._chance.floating({ min: 1, fixed: 2 })
+              },
+              {
+                blockNumber,
+                date: timestamp,
+                id: `${token1.id}-${timestamp}`,
+                totalValueLockedUSD: this._chance.floating({ min: 1, fixed: 2 }),
+                volumeUSD: this._chance.floating({ min: 1, fixed: 2 })
+              }
+            );
 
             this._entities.uniswapDayDatas.push({
               blockNumber,
@@ -152,6 +162,27 @@ export class Data {
               price1: this._chance.floating({ min: 1, fixed: 2 }),
               tickIdx: this._chance.integer({ min: 1 })
             });
+
+            this._entities.tokenHourDatas.push(
+              {
+                blockNumber,
+                close: this._chance.floating({ min: 1, fixed: 2 }),
+                high: this._chance.floating({ min: 1, fixed: 2 }),
+                id: `${token0.id}-${timestamp}`,
+                low: this._chance.floating({ min: 1, fixed: 2 }),
+                open: this._chance.floating({ min: 1, fixed: 2 }),
+                periodStartUnix: timestamp
+              },
+              {
+                blockNumber,
+                close: this._chance.floating({ min: 1, fixed: 2 }),
+                high: this._chance.floating({ min: 1, fixed: 2 }),
+                id: `${token1.id}-${timestamp}`,
+                low: this._chance.floating({ min: 1, fixed: 2 }),
+                open: this._chance.floating({ min: 1, fixed: 2 }),
+                periodStartUnix: timestamp
+              }
+            );
 
             this._entities.tokens.push(token0, token1);
             this._entities.pools.push(pool);

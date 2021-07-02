@@ -88,10 +88,19 @@ interface TickFilter {
   tickIdx_lte: number;
 }
 
+enum TokenHourDataOrderBy {
+  periodStartUnix
+}
+
+interface TokenHourDataFilter {
+  periodStartUnix_gt: number;
+  token: string;
+}
+
 export const createResolvers = async (): Promise<any> => {
-  const latestBlocks = NO_OF_BLOCKS - 1;
+  const latestBlockNumber = NO_OF_BLOCKS - 1;
   const data = Data.getInstance();
-  const { bundles, burns, pools, transactions, factories, mints, tokens, swaps, poolDayDatas, tokenDayDatas, uniswapDayDatas, ticks } = data.entities;
+  const { bundles, burns, pools, transactions, factories, mints, tokens, swaps, poolDayDatas, tokenDayDatas, uniswapDayDatas, ticks, tokenHourDatas } = data.entities;
 
   return {
     BigInt: new BigInt('bigInt'),
@@ -121,7 +130,7 @@ export const createResolvers = async (): Promise<any> => {
         log('burns', first, orderBy, orderDirection, where);
 
         const res = burns.filter((burn: Entity) => {
-          if (burn.blockNumber === latestBlocks) {
+          if (burn.blockNumber === latestBlockNumber) {
             return Object.entries(where || {})
               .every(([field, value]) => burn[field] === value);
           }
@@ -129,6 +138,8 @@ export const createResolvers = async (): Promise<any> => {
           return false;
         }).slice(0, first)
           .sort((a: any, b: any) => {
+            a = a[orderBy];
+            b = b[orderBy];
             return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
           })
           .map(burn => {
@@ -155,7 +166,7 @@ export const createResolvers = async (): Promise<any> => {
         log('mints', first, orderBy, orderDirection, where);
 
         const res = mints.filter((mint: Entity) => {
-          if (mint.blockNumber === latestBlocks) {
+          if (mint.blockNumber === latestBlockNumber) {
             return Object.entries(where || {})
               .every(([field, value]) => mint[field] === value);
           }
@@ -163,6 +174,8 @@ export const createResolvers = async (): Promise<any> => {
           return false;
         }).slice(0, first)
           .sort((a: any, b: any) => {
+            a = a[orderBy];
+            b = b[orderBy];
             return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
           })
           .map(mint => {
@@ -193,7 +206,7 @@ export const createResolvers = async (): Promise<any> => {
         log('pools', first, orderBy, orderDirection, where, block);
 
         const res = pools.filter((pool: Entity) => {
-          if (pool.blockNumber === latestBlocks) {
+          if (pool.blockNumber === latestBlockNumber) {
             return Object.entries(where || {})
               .every(([filter, value]) => {
                 if (filter.endsWith('_in')) {
@@ -209,6 +222,8 @@ export const createResolvers = async (): Promise<any> => {
           return false;
         }).slice(0, first)
           .sort((a: any, b: any) => {
+            a = a[orderBy];
+            b = b[orderBy];
             return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
           })
           .map(pool => {
@@ -233,7 +248,7 @@ export const createResolvers = async (): Promise<any> => {
         log('tokens', orderBy, orderDirection, where);
 
         const res = tokens.filter((token: Entity) => {
-          if (token.blockNumber === latestBlocks) {
+          if (token.blockNumber === latestBlockNumber) {
             return Object.entries(where || {})
               .every(([filter, value]) => {
                 if (filter.endsWith('_in')) {
@@ -248,6 +263,8 @@ export const createResolvers = async (): Promise<any> => {
 
           return false;
         }).sort((a: any, b: any) => {
+          a = a[orderBy];
+          b = b[orderBy];
           return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
         });
 
@@ -257,9 +274,11 @@ export const createResolvers = async (): Promise<any> => {
       transactions: (_: any, { first, orderBy, orderDirection }: { first: number, orderBy: TransactionOrderBy, orderDirection: OrderDirection }) => {
         log('transactions', first, orderBy, orderDirection);
 
-        const res = transactions.filter((transaction: Entity) => transaction.blockNumber === latestBlocks)
+        const res = transactions.filter((transaction: Entity) => transaction.blockNumber === latestBlockNumber)
           .slice(0, first)
           .sort((a: any, b: any) => {
+            a = a[orderBy];
+            b = b[orderBy];
             return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
           })
           .map(transaction => {
@@ -278,7 +297,7 @@ export const createResolvers = async (): Promise<any> => {
         log('swaps', first, orderBy, orderDirection, where);
 
         const res = swaps.filter((swap: Entity) => {
-          if (swap.blockNumber === latestBlocks) {
+          if (swap.blockNumber === latestBlockNumber) {
             return Object.entries(where || {})
               .every(([field, value]) => swap[field] === value);
           }
@@ -286,6 +305,8 @@ export const createResolvers = async (): Promise<any> => {
           return false;
         }).slice(0, first)
           .sort((a: any, b: any) => {
+            a = a[orderBy];
+            b = b[orderBy];
             return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
           })
           .map(swap => {
@@ -303,7 +324,7 @@ export const createResolvers = async (): Promise<any> => {
         log('poolDayDatas', skip, first, orderBy, orderDirection, where);
 
         const res = poolDayDatas.filter((poolDayData: Entity) => {
-          if (poolDayData.blockNumber === latestBlocks) {
+          if (poolDayData.blockNumber === latestBlockNumber) {
             return Object.entries(where || {})
               .every(([filter, value]) => {
                 if (filter.endsWith('_gt')) {
@@ -319,6 +340,8 @@ export const createResolvers = async (): Promise<any> => {
           return false;
         }).slice(skip, skip + first)
           .sort((a: any, b: any) => {
+            a = a[orderBy];
+            b = b[orderBy];
             return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
           });
 
@@ -329,7 +352,7 @@ export const createResolvers = async (): Promise<any> => {
         log('tokenDayDatas', skip, first, orderBy, orderDirection, where);
 
         const res = tokenDayDatas.filter((tokenDayData: Entity) => {
-          if (tokenDayData.blockNumber === latestBlocks) {
+          if (tokenDayData.blockNumber === latestBlockNumber) {
             return Object.entries(where || {})
               .every(([filter, value]) => {
                 if (filter.endsWith('_gt')) {
@@ -345,6 +368,8 @@ export const createResolvers = async (): Promise<any> => {
           return false;
         }).slice(skip, skip + first)
           .sort((a: any, b: any) => {
+            a = a[orderBy];
+            b = b[orderBy];
             return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
           });
 
@@ -355,7 +380,7 @@ export const createResolvers = async (): Promise<any> => {
         log('uniswapDayDatas', skip, first, orderBy, orderDirection, where);
 
         const res = uniswapDayDatas.filter((uniswapDayData: Entity) => {
-          if (uniswapDayData.blockNumber === latestBlocks) {
+          if (uniswapDayData.blockNumber === latestBlockNumber) {
             return Object.entries(where || {})
               .every(([filter, value]) => {
                 if (filter.endsWith('_gt')) {
@@ -371,6 +396,8 @@ export const createResolvers = async (): Promise<any> => {
           return false;
         }).slice(skip, skip + first)
           .sort((a: any, b: any) => {
+            a = a[orderBy];
+            b = b[orderBy];
             return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
           });
 
@@ -402,6 +429,34 @@ export const createResolvers = async (): Promise<any> => {
 
           return false;
         }).slice(skip, skip + first);
+
+        return res;
+      },
+
+      tokenHourDatas: (_: any, { skip, first, orderBy, orderDirection, where }: { skip: number, first: number, orderBy: TokenHourDataOrderBy, orderDirection: OrderDirection, where: TokenHourDataFilter }) => {
+        log('tokenHourDatas', skip, first, orderBy, orderDirection, where);
+
+        const res = tokenHourDatas.filter((tokenHourData: Entity) => {
+          if (tokenHourData.blockNumber === latestBlockNumber) {
+            return Object.entries(where || {})
+              .every(([filter, value]) => {
+                if (filter.endsWith('_gt')) {
+                  const field = filter.substring(0, filter.length - 3);
+
+                  return tokenHourData[field] > value;
+                }
+
+                return tokenHourData[filter] === value;
+              });
+          }
+
+          return false;
+        }).slice(skip, skip + first)
+          .sort((a: any, b: any) => {
+            a = a[orderBy];
+            b = b[orderBy];
+            return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
+          });
 
         return res;
       }
