@@ -19,7 +19,8 @@ export class Data {
     pools: [],
     tokens: [],
     factories: [],
-    mints: []
+    mints: [],
+    swaps: []
   }
 
   _chance: Chance.Chance
@@ -155,6 +156,19 @@ export class Data {
                   amount1: this._chance.integer({ min: 1 }),
                   amountUSD: this._chance.floating({ min: 1, fixed: 2 }),
                   sender: this._getRandomAddress()
+                });
+
+                // Generate Swaps
+                this._entities.swaps.push({
+                  id: `${transaction.id}#${transactionIndex}`,
+                  blockNumber,
+                  transaction: transaction.id,
+                  pool: pool.id,
+                  timestamp: this._chance.timestamp(),
+                  origin: this._getRandomAddress(),
+                  amount0: this._chance.integer({ min: 1 }),
+                  amount1: this._chance.integer({ min: 1 }),
+                  amountUSD: this._chance.floating({ min: 1, fixed: 2 })
                 });
               });
           });

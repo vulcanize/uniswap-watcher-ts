@@ -30,9 +30,9 @@ enum MintOrderBy {
 }
 
 interface MintFilter {
-  pool: string
-  token0: string
-  token1: string
+  pool: string;
+  token0: string;
+  token1: string;
 }
 
 enum PoolOrderBy {
@@ -41,32 +41,42 @@ enum PoolOrderBy {
 
 interface PoolFilter {
   id: string;
-  id_in: [string]
-  token0: string
-  token0_in: [string]
-  token1: string
-  token1_in: [string]
-}
-
-interface TokenFilter {
-  id: string
-  id_in: [string]
-  name_contains: string
-  symbol_contains: string
+  id_in: [string];
+  token0: string;
+  token0_in: [string];
+  token1: string;
+  token1_in: [string];
 }
 
 enum TokenOrderBy {
   totalValueLockedUSD
 }
 
+interface TokenFilter {
+  id: string;
+  id_in: [string];
+  name_contains: string;
+  symbol_contains: string;
+}
+
 enum TransactionOrderBy {
+  timestamp
+}
+
+interface SwapFilter {
+  pool: string;
+  token0: string;
+  token1: string;
+}
+
+enum SwapOrderBy {
   timestamp
 }
 
 export const createResolvers = async (): Promise<any> => {
   const latestBlocks = NO_OF_BLOCKS - 1;
   const data = Data.getInstance();
-  const { bundles, burns, pools, transactions, factories, mints, tokens } = data.entities;
+  const { bundles, burns, pools, transactions, factories, mints, tokens, swaps } = data.entities;
 
   return {
     BigInt: new BigInt('bigInt'),
@@ -243,6 +253,31 @@ export const createResolvers = async (): Promise<any> => {
               burns: burns.filter(burn => burn.transaction === transaction.id),
               mints: mints.filter(mint => mint.transaction === transaction.id)
               // swaps: swaps.find(swap => swap.transaction === transaction.id)
+            };
+          });
+
+        return res;
+      },
+
+      swaps: (_: any, { first, orderBy, orderDirection, where }: { first: number, orderBy: SwapOrderBy, orderDirection: OrderDirection, where: SwapFilter }) => {
+        log('swaps', first, orderBy, orderDirection, where);
+
+        const res = swaps.filter((swap: Entity) => {
+          if (swap.blockNumber === latestBlocks) {
+            return Object.entries(where || {})
+              .every(([field, value]) => swap[field] === value);
+          }
+
+          return false;
+        }).slice(0, first)
+          .sort((a: any, b: any) => {
+            return orderDirection === OrderDirection.asc ? (a - b) : (b - a);
+          })
+          .map(swap => {
+            return {
+              ...swap,
+              pool: pools.find(pool => pool.id === swap.pool),
+              transaction: transactions.find(transaction => transaction.id === swap.transaction)
             };
           });
 
