@@ -9,6 +9,9 @@ import {
   bytecode as FACTORY_BYTECODE,
 } from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json'
 
+// TODO: Get fee from uniswap Factory contract.
+const FEE = 500;
+
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
@@ -25,15 +28,21 @@ async function main() {
   await factory.deployed();
   console.log("Factory deployed to:", factory.address);
 
-  const Token = await ethers.getContractFactory('ERC20Token');
-  const token0 = await Token.deploy();
-  const token1 = await Token.deploy();
+  const token0 = await run('token-create', {
+    name: 'Token0',
+    symbol: 'TK0'
+  })
+
+  const token1 = await run('token-create', {
+    name: 'Token1',
+    symbol: 'TK1'
+  })
 
   await run('pool-create', {
     factory: factory.address,
     token0: token0.address,
     token1: token1.address,
-    fee: 123
+    fee: FEE
   })
 }
 
