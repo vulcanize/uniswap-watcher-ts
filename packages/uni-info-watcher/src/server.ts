@@ -19,6 +19,8 @@ import { Indexer } from './indexer';
 import { Database } from './database';
 import { EventWatcher } from './events';
 import { getConfig } from './config';
+import { UniClient } from './uni-client';
+import { TokenClient } from './token-client';
 
 const log = debug('vulcanize:server');
 
@@ -46,20 +48,22 @@ export const main = async (): Promise<any> => {
   await db.init();
 
   assert(upstream, 'Missing upstream config');
-  const { gqlEndpoint, gqlSubscriptionEndpoint, cache: cacheConfig } = upstream;
+  const { gqlEndpoint, gqlSubscriptionEndpoint, cache: cacheConfig, uniWatcher, tokenWatcher } = upstream;
   assert(gqlEndpoint, 'Missing upstream gqlEndpoint');
   assert(gqlSubscriptionEndpoint, 'Missing upstream gqlSubscriptionEndpoint');
 
   const cache = await getCache(cacheConfig);
 
   const ethClient = new EthClient({ gqlEndpoint, gqlSubscriptionEndpoint, cache });
+  const uniClient = new UniClient(uniWatcher);
 
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
   // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
   const pubsub = new PubSub();
-  const indexer = new Indexer(db, ethClient, pubsub);
+  const tokenClient = new TokenClient(tokenWatcher);
+  const indexer = new Indexer(db, ethClient, pubsub, tokenClient);
 
-  const eventWatcher = new EventWatcher(ethClient, indexer);
+  const eventWatcher = new EventWatcher(uniClient, indexer);
   await eventWatcher.start();
 
   const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer);

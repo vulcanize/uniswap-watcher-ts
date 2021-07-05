@@ -5,6 +5,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { Factory } from './entity/Factory';
 import { Pool } from './entity/Pool';
 import { Event } from './entity/Event';
+import { Token } from './entity/Token';
 import { EventSyncProgress } from './entity/EventProgress';
 
 export class Database {
@@ -60,6 +61,24 @@ export class Database {
   async savePool ({ id, blockNumber }: DeepPartial<Pool>): Promise<Pool> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Pool);
+      const entity = repo.create({ blockNumber, id });
+      return repo.save(entity);
+    });
+  }
+
+  async getToken ({ id, blockNumber }: { id: string, blockNumber: number }): Promise<Token | undefined> {
+    return this._conn.getRepository(Token)
+      .createQueryBuilder('token')
+      .where('id = :id AND block_number <= :blockNumber', {
+        id,
+        blockNumber
+      })
+      .getOne();
+  }
+
+  async saveToken ({ id, blockNumber }: DeepPartial<Token>): Promise<Token> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Token);
       const entity = repo.create({ blockNumber, id });
       return repo.save(entity);
     });

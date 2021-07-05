@@ -1,10 +1,8 @@
 import assert from 'assert';
 import debug from 'debug';
-import _ from 'lodash';
-
-import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { Indexer } from './indexer';
+import { UniClient } from './uni-client';
 
 const log = debug('vulcanize:events');
 
@@ -19,63 +17,48 @@ interface PoolCreatedEvent {
 }
 
 export class EventWatcher {
-  _ethClient: EthClient
   _indexer: Indexer
-  _subscription: ZenObservable.Subscription | undefined
+  _subscriptions: { [key: string]: ZenObservable.Subscription } = {}
+  _uniClient: UniClient
 
-  constructor (ethClient: EthClient, indexer: Indexer) {
-    assert(ethClient);
+  constructor (uniClient: UniClient, indexer: Indexer) {
     assert(indexer);
 
-    this._ethClient = ethClient;
     this._indexer = indexer;
+    this._uniClient = uniClient;
   }
 
   async start (): Promise<void> {
-    assert(!this._subscription, 'subscription already started');
-
-    log('Started watching upstream logs...');
-
-    this._subscription = await this._ethClient.watchLogs(async (value) => {
-      const receipt = _.get(value, 'data.listen.relatedNode');
-      log('watchLogs', JSON.stringify(receipt, null, 2));
-
-      // Check if this log is for a contract we care about.
-      const { logContracts } = receipt;
-      if (logContracts && logContracts.length) {
-        for (let logIndex = 0; logIndex < logContracts.length; logIndex++) {
-          const contractAddress = logContracts[logIndex];
-          const isWatchedContract = await this._indexer.isUniswapContract(contractAddress);
-          if (isWatchedContract) {
-            // TODO: Move processing to background task runner.
-
-            const { ethTransactionCidByTxId: { ethHeaderCidByHeaderId: { blockHash } } } = receipt;
-            await this._indexer.getEvents(blockHash, contractAddress, null);
-
-            // Trigger other indexer methods based on event topic.
-            await this._indexer.processEvent(blockHash, contractAddress, receipt, logIndex);
-          }
-        }
-      }
-    });
+    assert(!(Object.keys(this._subscriptions).length), 'subscriptions already started');
+    log('Started watching upstream events...');
+    await this._watchEvents();
   }
 
   async stop (): Promise<void> {
-    if (this._subscription) {
-      log('Stopped watching upstream logs');
-      this._subscription.unsubscribe();
-    }
+    Object.values(this._subscriptions)
+      .forEach(subscription => subscription.unsubscribe());
+
+    log('Stopped watching upstream events');
   }
 
-  async handlePoolCreated (blockNumber: number, params: PoolCreatedEvent): Promise<void> {
-    const { token0, token1, fee, tickSpacing, pool: poolAddress } = params;
+  async _watchEvents (): Promise<void> {
+    this._subscriptions.poolCreatedEvent = await this._uniClient.watchPoolCreatedEvent(this._handlePoolCreated.bind(this));
+  }
+
+  async _handlePoolCreated ({ blockHash, event }: { blockHash: string, event: { proof: string, event: PoolCreatedEvent}}): Promise<void> {
+    const { token0: token0Address, token1: token1Address, fee, tickSpacing, pool: poolAddress } = event.event;
+
+    // TODO: Use blockHash or blockNumber? uniswap-info uses blockNumber.
+    const blockNumber = 1;
 
     // Load factory.
-    const factory = await this._indexer.factory(blockNumber, FACTORY_ADDRESS);
+    const factory = await this._indexer.factory({ number: blockNumber, hash: blockHash }, FACTORY_ADDRESS);
     factory.poolCount = factory.poolCount + 1;
 
     // Create new Pool entity.
-    const pool = this._indexer.pool(blockNumber, poolAddress);
+    const pool = this._indexer.pool({ number: blockNumber, hash: blockHash }, poolAddress);
+    const token0 = this._indexer.token({ number: blockNumber, hash: blockHash }, token0Address);
+    const token1 = this._indexer.token({ number: blockNumber, hash: blockHash }, token1Address);
 
     // TODO: Load Token entities.
 
