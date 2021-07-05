@@ -8,6 +8,16 @@ import { Indexer } from './indexer';
 
 const log = debug('vulcanize:events');
 
+const FACTORY_ADDRESS = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
+
+interface PoolCreatedEvent {
+  token0: string;
+  token1: string;
+  fee: bigint;
+  tickSpacing: bigint;
+  pool: string;
+}
+
 export class EventWatcher {
   _ethClient: EthClient
   _indexer: Indexer
@@ -55,5 +65,23 @@ export class EventWatcher {
       log('Stopped watching upstream logs');
       this._subscription.unsubscribe();
     }
+  }
+
+  async handlePoolCreated (blockNumber: number, params: PoolCreatedEvent): Promise<void> {
+    const { token0, token1, fee, tickSpacing, pool } = params;
+
+    // load factory
+    const factory = await this._indexer.factory(blockNumber, FACTORY_ADDRESS);
+    factory.poolCount = factory.poolCount + 1;
+
+    // TODO: Create new Pool entity.
+
+    // TODO: Load Token entities.
+
+    // TODO: Update Token entities.
+
+    // TODO: Update Pool entity.
+
+    // TODO: Save entities to DB.
   }
 }

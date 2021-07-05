@@ -2,6 +2,7 @@ import assert from 'assert';
 import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
+import { Factory } from './entity/Factory';
 import { Event } from './entity/Event';
 import { EventSyncProgress } from './entity/EventProgress';
 
@@ -25,6 +26,24 @@ export class Database {
 
   async close (): Promise<void> {
     return this._conn.close();
+  }
+
+  async getFactory ({ id, blockNumber }: { id: string, blockNumber: number }): Promise<Factory | undefined> {
+    return this._conn.getRepository(Factory)
+      .createQueryBuilder('factory')
+      .where('id = :id AND blockNumber = :blockNumber', {
+        id,
+        blockNumber
+      })
+      .getOne();
+  }
+
+  async saveFactory ({ id, blockNumber }: DeepPartial<Factory>): Promise<Factory> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Factory);
+      const entity = repo.create({ blockNumber, id });
+      return repo.save(entity);
+    });
   }
 
   // Returns true if events have already been synced for the (block, token) combination.
