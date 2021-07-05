@@ -14,6 +14,7 @@ import {
 import { Database } from './database';
 import { Event } from './entity/Event';
 import { Factory } from './entity/Factory';
+import { Pool } from './entity/Pool';
 
 const log = debug('vulcanize:indexer');
 
@@ -79,6 +80,16 @@ export class Indexer {
     }
 
     return this._db.saveFactory({ blockNumber, id });
+  }
+
+  async pool (blockNumber: number, id: string): Promise<Pool> {
+    const entity = await this._db.getPool({ blockNumber, id });
+
+    if (entity) {
+      return entity;
+    }
+
+    return this._db.savePool({ blockNumber, id });
   }
 
   async getEvents (blockHash: string, token: string, name: string | null): Promise<EventsResult> {

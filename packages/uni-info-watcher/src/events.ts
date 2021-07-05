@@ -68,13 +68,14 @@ export class EventWatcher {
   }
 
   async handlePoolCreated (blockNumber: number, params: PoolCreatedEvent): Promise<void> {
-    const { token0, token1, fee, tickSpacing, pool } = params;
+    const { token0, token1, fee, tickSpacing, pool: poolAddress } = params;
 
-    // load factory
+    // Load factory.
     const factory = await this._indexer.factory(blockNumber, FACTORY_ADDRESS);
     factory.poolCount = factory.poolCount + 1;
 
-    // TODO: Create new Pool entity.
+    // Create new Pool entity.
+    const pool = this._indexer.pool(blockNumber, poolAddress);
 
     // TODO: Load Token entities.
 

@@ -3,6 +3,7 @@ import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'ty
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 import { Factory } from './entity/Factory';
+import { Pool } from './entity/Pool';
 import { Event } from './entity/Event';
 import { EventSyncProgress } from './entity/EventProgress';
 
@@ -31,7 +32,7 @@ export class Database {
   async getFactory ({ id, blockNumber }: { id: string, blockNumber: number }): Promise<Factory | undefined> {
     return this._conn.getRepository(Factory)
       .createQueryBuilder('factory')
-      .where('id = :id AND blockNumber = :blockNumber', {
+      .where('id = :id AND block_number <= :blockNumber', {
         id,
         blockNumber
       })
@@ -41,6 +42,24 @@ export class Database {
   async saveFactory ({ id, blockNumber }: DeepPartial<Factory>): Promise<Factory> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Factory);
+      const entity = repo.create({ blockNumber, id });
+      return repo.save(entity);
+    });
+  }
+
+  async getPool ({ id, blockNumber }: { id: string, blockNumber: number }): Promise<Pool | undefined> {
+    return this._conn.getRepository(Pool)
+      .createQueryBuilder('pool')
+      .where('id = :id AND block_number <= :blockNumber', {
+        id,
+        blockNumber
+      })
+      .getOne();
+  }
+
+  async savePool ({ id, blockNumber }: DeepPartial<Pool>): Promise<Pool> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Pool);
       const entity = repo.create({ blockNumber, id });
       return repo.save(entity);
     });

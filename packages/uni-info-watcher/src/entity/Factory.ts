@@ -1,9 +1,9 @@
-import { Entity, Column, Index } from 'typeorm';
+import { Entity, Column, Index, PrimaryColumn } from 'typeorm';
 
 @Entity()
 @Index(['blockNumber', 'id'], { unique: true })
 export class Factory {
-  @Column('varchar', { length: 42 })
+  @PrimaryColumn('varchar', { length: 42 })
   id!: string;
 
   @Column('numeric')
