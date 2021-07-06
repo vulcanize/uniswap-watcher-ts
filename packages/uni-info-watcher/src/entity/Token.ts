@@ -11,13 +11,4 @@ export class Token {
 
   @Column('varchar')
   symbol!: string;
-
-  @Column('varchar')
-  name!: string;
-
-  @Column('numeric')
-  decimals!: bigint;
-
-  @Column('numeric')
-  totalSupply!: bigint;
 }

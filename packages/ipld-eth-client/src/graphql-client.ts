@@ -4,7 +4,7 @@ import fetch from 'cross-fetch';
 import { SubscriptionClient } from 'subscriptions-transport-ws';
 import ws from 'ws';
 
-import { ApolloClient, NormalizedCacheObject, split, HttpLink, InMemoryCache, DocumentNode } from '@apollo/client/core';
+import { ApolloClient, NormalizedCacheObject, split, HttpLink, InMemoryCache, DocumentNode, TypedDocumentNode } from '@apollo/client/core';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { WebSocketLink } from '@apollo/client/link/ws';
 
@@ -15,7 +15,7 @@ interface Config {
   gqlSubscriptionEndpoint: string;
 }
 
-export class Client {
+export class GraphQLClient {
   _config: Config;
   _client: ApolloClient<NormalizedCacheObject>;
 
@@ -78,7 +78,7 @@ export class Client {
     });
   }
 
-  async query (query: DocumentNode, variables: { [key: string]: any }): Promise<any> {
+  async query (query: DocumentNode | TypedDocumentNode, variables: { [key: string]: any }): Promise<any> {
     const { data: result } = await this._client.query({ query, variables });
 
     return result;

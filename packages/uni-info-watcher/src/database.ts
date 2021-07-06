@@ -30,57 +30,64 @@ export class Database {
     return this._conn.close();
   }
 
-  async getFactory ({ id, blockNumber }: { id: string, blockNumber: number }): Promise<Factory | undefined> {
-    return this._conn.getRepository(Factory)
-      .createQueryBuilder('factory')
-      .where('id = :id AND block_number <= :blockNumber', {
-        id,
-        blockNumber
-      })
-      .getOne();
-  }
-
-  async saveFactory ({ id, blockNumber }: DeepPartial<Factory>): Promise<Factory> {
+  async loadFactory ({ id, blockNumber }: DeepPartial<Factory>): Promise<Factory> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Factory);
-      const entity = repo.create({ blockNumber, id });
-      return repo.save(entity);
+
+      let entity = await repo.createQueryBuilder('factory')
+        .where('id = :id AND block_number <= :blockNumber', {
+          id,
+          blockNumber
+        })
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
     });
   }
 
-  async getPool ({ id, blockNumber }: { id: string, blockNumber: number }): Promise<Pool | undefined> {
-    return this._conn.getRepository(Pool)
-      .createQueryBuilder('pool')
-      .where('id = :id AND block_number <= :blockNumber', {
-        id,
-        blockNumber
-      })
-      .getOne();
-  }
-
-  async savePool ({ id, blockNumber }: DeepPartial<Pool>): Promise<Pool> {
+  async loadPool ({ id, blockNumber }: DeepPartial<Pool>): Promise<Pool> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Pool);
-      const entity = repo.create({ blockNumber, id });
-      return repo.save(entity);
+
+      let entity = await repo.createQueryBuilder('pool')
+        .where('id = :id AND block_number <= :blockNumber', {
+          id,
+          blockNumber
+        })
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
     });
   }
 
-  async getToken ({ id, blockNumber }: { id: string, blockNumber: number }): Promise<Token | undefined> {
-    return this._conn.getRepository(Token)
-      .createQueryBuilder('token')
-      .where('id = :id AND block_number <= :blockNumber', {
-        id,
-        blockNumber
-      })
-      .getOne();
-  }
-
-  async saveToken ({ id, blockNumber }: DeepPartial<Token>): Promise<Token> {
+  async loadToken ({ id, blockNumber }: DeepPartial<Token>, getValues: () => Promise<DeepPartial<Token>>): Promise<Token> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Token);
-      const entity = repo.create({ blockNumber, id });
-      return repo.save(entity);
+
+      let entity = await repo.createQueryBuilder('token')
+        .where('id = :id AND block_number <= :blockNumber', {
+          id,
+          blockNumber
+        })
+        .getOne();
+
+      if (!entity) {
+        const tokenValues = await getValues();
+        entity = repo.create({ blockNumber, id, ...tokenValues });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
     });
   }
 

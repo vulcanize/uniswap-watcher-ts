@@ -13,10 +13,6 @@ import {
 
 import { Database } from './database';
 import { Event } from './entity/Event';
-import { Factory } from './entity/Factory';
-import { Pool } from './entity/Pool';
-import { Token } from './entity/Token';
-import { TokenClient } from './token-client';
 
 const log = debug('vulcanize:indexer');
 
@@ -49,13 +45,12 @@ export class Indexer {
   _ethClient: EthClient
   _pubsub: PubSub
   _getStorageAt: GetStorageAt
-  _tokenClient: TokenClient
 
   // _abi: JsonFragment[]
   // _storageLayout: StorageLayout
   // _contract: ethers.utils.Interface
 
-  constructor (db: Database, ethClient: EthClient, pubsub: PubSub, tokenClient: TokenClient) {
+  constructor (db: Database, ethClient: EthClient, pubsub: PubSub) {
     assert(db);
     assert(ethClient);
     assert(pubsub);
@@ -68,7 +63,6 @@ export class Indexer {
     this._db = db;
     this._ethClient = ethClient;
     this._pubsub = pubsub;
-    this._tokenClient = tokenClient;
     this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
 
     // this._abi = abi;
@@ -79,37 +73,6 @@ export class Indexer {
 
   getEventIterator (): AsyncIterator<any> {
     return this._pubsub.asyncIterator(['event']);
-  }
-
-  async factory ({ number }: BlockHeight, id: string): Promise<Factory> {
-    const entity = await this._db.getFactory({ blockNumber: number, id });
-
-    if (entity) {
-      return entity;
-    }
-
-    return this._db.saveFactory({ blockNumber: number, id });
-  }
-
-  async pool ({ number }: BlockHeight, id: string): Promise<Pool> {
-    const entity = await this._db.getPool({ blockNumber: number, id });
-
-    if (entity) {
-      return entity;
-    }
-
-    return this._db.savePool({ blockNumber: number, id });
-  }
-
-  async token ({ number, hash }: BlockHeight, id: string): Promise<Token> {
-    const entity = await this._db.getToken({ blockNumber: number, id });
-
-    if (entity) {
-      return entity;
-    }
-
-    const { value: symbol } = await this._tokenClient.getSymbol(hash, id);
-    return this._db.saveToken({ blockNumber: number, id, symbol });
   }
 
   async getEvents (blockHash: string, token: string, name: string | null): Promise<EventsResult> {

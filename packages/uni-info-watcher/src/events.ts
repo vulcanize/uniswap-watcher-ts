@@ -1,12 +1,11 @@
 import assert from 'assert';
 import debug from 'debug';
+import { Client as UniClient } from '@vulcanize/uni-watcher';
+import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 
-import { Indexer } from './indexer';
-import { UniClient } from './uni-client';
+import { Database } from './database';
 
 const log = debug('vulcanize:events');
-
-const FACTORY_ADDRESS = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 
 interface PoolCreatedEvent {
   token0: string;
@@ -16,51 +15,75 @@ interface PoolCreatedEvent {
   pool: string;
 }
 
+interface ResultEvent {
+  proof: {
+    data: string
+  }
+  event: {
+    __typename: string;
+    [key: string]: any;
+  }
+}
+
 export class EventWatcher {
-  _indexer: Indexer
-  _subscriptions: { [key: string]: ZenObservable.Subscription } = {}
+  _db: Database
+  _subscription?: ZenObservable.Subscription
   _uniClient: UniClient
+  _erc20Client: ERC20Client
 
-  constructor (uniClient: UniClient, indexer: Indexer) {
-    assert(indexer);
+  constructor (db: Database, uniClient: UniClient, erc20Client: ERC20Client) {
+    assert(db);
 
-    this._indexer = indexer;
+    this._db = db;
     this._uniClient = uniClient;
+    this._erc20Client = erc20Client;
   }
 
   async start (): Promise<void> {
-    assert(!(Object.keys(this._subscriptions).length), 'subscriptions already started');
+    assert(!this._subscription, 'subscription already started');
     log('Started watching upstream events...');
-    await this._watchEvents();
+    this._subscription = await this._uniClient.watchEvents(this._handleEvents.bind(this));
   }
 
   async stop (): Promise<void> {
-    Object.values(this._subscriptions)
-      .forEach(subscription => subscription.unsubscribe());
-
-    log('Stopped watching upstream events');
+    if (this._subscription) {
+      log('Stopped watching upstream events');
+      this._subscription.unsubscribe();
+    }
   }
 
-  async _watchEvents (): Promise<void> {
-    this._subscriptions.poolCreatedEvent = await this._uniClient.watchPoolCreatedEvent(this._handlePoolCreated.bind(this));
+  async _handleEvents ({ blockHash, blockNumber, contract, event }: { blockHash: string, blockNumber: number, contract: string, event: ResultEvent}): Promise<void> {
+    // TODO: Process proof (proof.data) in event.
+    const { event: { __typename: eventType, ...eventValues } } = event;
+
+    switch (eventType) {
+      case 'PoolCreatedEvent':
+        this._handlePoolCreated(blockHash, blockNumber, contract, eventValues as PoolCreatedEvent);
+        break;
+
+      default:
+        break;
+    }
   }
 
-  async _handlePoolCreated ({ blockHash, event }: { blockHash: string, event: { proof: string, event: PoolCreatedEvent}}): Promise<void> {
-    const { token0: token0Address, token1: token1Address, fee, tickSpacing, pool: poolAddress } = event.event;
-
-    // TODO: Use blockHash or blockNumber? uniswap-info uses blockNumber.
-    const blockNumber = 1;
+  async _handlePoolCreated (blockHash: string, blockNumber: number, contractAddress: string, poolCreatedEvent: PoolCreatedEvent): Promise<void> {
+    const { token0: token0Address, token1: token1Address, fee, tickSpacing, pool: poolAddress } = poolCreatedEvent;
 
     // Load factory.
-    const factory = await this._indexer.factory({ number: blockNumber, hash: blockHash }, FACTORY_ADDRESS);
+    const factory = await this._db.loadFactory({ blockNumber, id: contractAddress });
     factory.poolCount = factory.poolCount + 1;
 
     // Create new Pool entity.
-    const pool = this._indexer.pool({ number: blockNumber, hash: blockHash }, poolAddress);
-    const token0 = this._indexer.token({ number: blockNumber, hash: blockHash }, token0Address);
-    const token1 = this._indexer.token({ number: blockNumber, hash: blockHash }, token1Address);
+    const pool = this._db.loadPool({ blockNumber, id: poolAddress });
 
     // TODO: Load Token entities.
+    const getTokenValues = async (tokenAddress: string) => {
+      const { value: symbol } = await this._erc20Client.getSymbol(blockHash, tokenAddress);
+      return { symbol };
+    };
+
+    const token0 = this._db.loadToken({ blockNumber, id: token0Address }, () => getTokenValues(token0Address));
+    const token1 = this._db.loadToken({ blockNumber, id: token1Address }, () => getTokenValues(token1Address));
 
     // TODO: Update Token entities.
 

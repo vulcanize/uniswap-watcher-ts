@@ -1,27 +1,28 @@
 import { gql } from 'apollo-server-express';
-import { Client } from './client';
+import { GraphQLClient } from '@vulcanize/ipld-eth-client';
 
 interface Config {
   gqlEndpoint: string;
   gqlSubscriptionEndpoint: string;
 }
 
-export class UniClient {
+export class Client {
   _config: Config;
-  _client: Client;
+  _client: GraphQLClient;
 
   constructor (config: Config) {
     this._config = config;
 
-    this._client = new Client(config);
+    this._client = new GraphQLClient(config);
   }
 
-  async watchPoolCreatedEvent (onNext: (value: any) => void): Promise<ZenObservable.Subscription> {
+  async watchEvents (onNext: (value: any) => void): Promise<ZenObservable.Subscription> {
     return this._client.subscribe(
       gql`
         subscription SubscriptionReceipt {
           onEvent {
             blockHash
+            blockNumber
             contract
             event {
               proof {
