@@ -79,13 +79,19 @@ export class EventWatcher {
     // TODO: Load Token entities.
     const getTokenValues = async (tokenAddress: string) => {
       const { value: symbol } = await this._erc20Client.getSymbol(blockHash, tokenAddress);
-      return { symbol };
+      const { value: name } = await this._erc20Client.getName(blockHash, tokenAddress);
+      const { value: totalSupply } = await this._erc20Client.getTotalSupply(blockHash, tokenAddress);
+
+      // TODO: decimals not implemented by erc20-watcher.
+      // const { value: decimals } = await this._erc20Client.getDecimals(blockHash, tokenAddress);
+
+      // TODO: Check if whitelistPools field is required.
+
+      return { symbol, name, totalSupply };
     };
 
     const token0 = this._db.loadToken({ blockNumber, id: token0Address }, () => getTokenValues(token0Address));
     const token1 = this._db.loadToken({ blockNumber, id: token1Address }, () => getTokenValues(token1Address));
-
-    // TODO: Update Token entities.
 
     // TODO: Update Pool entity.
 
