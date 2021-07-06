@@ -20,7 +20,7 @@ task("initialize-pool", "Initializes a pool")
 
       if (poolInitializeEvent && poolInitializeEvent.args) {
         const { sqrtPriceX96, tick } = poolInitializeEvent.args;
-        console.log('Pool initialized:', sqrtPriceX96, tick);
+        console.log('Pool initialized:', sqrtPriceX96.toString(), tick);
       }
     }
   });
