@@ -9,6 +9,6 @@ export class Bundle {
   @PrimaryColumn('numeric')
   blockNumber!: number;
 
-  @Column('numeric')
+  @Column('numeric', { default: 0 })
   ethPriceUSD!: number
 }

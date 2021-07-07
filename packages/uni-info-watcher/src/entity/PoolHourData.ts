@@ -3,7 +3,7 @@ import { Pool } from './Pool';
 
 @Entity()
 @Index(['blockNumber', 'id'])
-export class PoolDayData {
+export class PoolHourData {
   @PrimaryColumn('varchar')
   id!: string;
 
@@ -11,7 +11,7 @@ export class PoolDayData {
   blockNumber!: number;
 
   @Column('integer')
-  date!: number;
+  periodStartUnix!: number;
 
   @ManyToOne(() => Pool)
   pool!: Pool;

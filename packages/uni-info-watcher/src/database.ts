@@ -9,6 +9,7 @@ import { Event } from './entity/Event';
 import { Token } from './entity/Token';
 import { Bundle } from './entity/Bundle';
 import { PoolDayData } from './entity/PoolDayData';
+import { PoolHourData } from './entity/PoolHourData';
 
 export class Database {
   _config: ConnectionOptions
@@ -35,12 +36,28 @@ export class Database {
   async getToken ({ id, blockNumber }: DeepPartial<Token>): Promise<Token | undefined> {
     const repo = this._conn.getRepository(Token);
 
-    return repo.createQueryBuilder('token')
-      .where('id = :id AND block_number <= :blockNumber', {
-        id,
-        blockNumber
-      })
-      .orderBy('token.block_number', 'DESC')
+    let selectQueryBuilder = repo.createQueryBuilder('token')
+      .where('id = :id', { id });
+
+    if (blockNumber) {
+      selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+    }
+
+    return selectQueryBuilder.orderBy('token.block_number', 'DESC')
+      .getOne();
+  }
+
+  async getPool ({ id, blockNumber }: DeepPartial<Pool>): Promise<Pool | undefined> {
+    const repo = this._conn.getRepository(Pool);
+
+    let selectQueryBuilder = repo.createQueryBuilder('pool')
+      .where('id = :id', { id });
+
+    if (blockNumber) {
+      selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+    }
+
+    return selectQueryBuilder.orderBy('pool.block_number', 'DESC')
       .getOne();
   }
 
@@ -55,7 +72,7 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('pool.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('factory.block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -101,7 +118,7 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('pool.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('token.block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -124,7 +141,7 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('pool.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('bundle.block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -140,14 +157,37 @@ export class Database {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(PoolDayData);
 
-      let selectQueryBuilder = repo.createQueryBuilder('poolDayData')
+      let selectQueryBuilder = repo.createQueryBuilder('pool_day_data')
         .where('id = :id', { id });
 
       if (blockNumber) {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('pool.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('pool_day_data.block_number', 'DESC')
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id, ...values });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
+    });
+  }
+
+  async loadPoolHourData ({ id, blockNumber, ...values }: DeepPartial<PoolHourData>): Promise<PoolHourData> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(PoolHourData);
+
+      let selectQueryBuilder = repo.createQueryBuilder('pool_hour_data')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('pool_hour_data.block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -180,6 +220,14 @@ export class Database {
       const repo = tx.getRepository(PoolDayData);
       poolDayData.blockNumber = blockNumber;
       return repo.save(poolDayData);
+    });
+  }
+
+  async savePoolHourData (poolHourData: PoolHourData, blockNumber: number): Promise<PoolHourData> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(PoolHourData);
+      poolHourData.blockNumber = blockNumber;
+      return repo.save(poolHourData);
     });
   }
 

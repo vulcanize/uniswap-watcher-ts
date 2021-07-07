@@ -6,7 +6,7 @@ import { BigNumber } from 'ethers';
 
 import { Database } from './database';
 import { getEthPriceInUSD } from './utils/pricing';
-import { updatePoolDayData } from './utils/intervalUpdates';
+import { updatePoolDayData, updatePoolHourData } from './utils/intervalUpdates';
 
 const log = debug('vulcanize:events');
 
@@ -147,21 +147,18 @@ export class EventWatcher {
     pool.sqrtPrice = BigInt(sqrtPriceX96);
     pool.tick = BigInt(tick);
 
-    // update ETH price now that prices could have changed
+    // Update ETH price now that prices could have changed.
     const bundle = await this._db.loadBundle({ id: '1', blockNumber });
     bundle.ethPriceUSD = await getEthPriceInUSD(this._db);
     this._db.saveBundle(bundle, blockNumber);
 
-    await updatePoolDayData(this._db, { contractAddress, blockNumber });
-
-    // TODO: Update Pool Hour data.
-    // await updatePoolHourData(this._db, { contractAddress, blockNumber })
-
-    // update token prices
-    const token0 = pool.token0;
-    const token1 = pool.token1;
+    // TODO: Fix duplicate key error when saving Pool data after update.
+    // await updatePoolDayData(this._db, { contractAddress, blockNumber });
+    // await updatePoolHourData(this._db, { contractAddress, blockNumber });
 
     // TODO: update token prices
+    // const token0 = pool.token0;
+    // const token1 = pool.token1;
     // token0.derivedETH = findEthPerToken(token0 as Token)
     // token1.derivedETH = findEthPerToken(token1 as Token)
     // this._db.saveToken(token0, blockNumber);

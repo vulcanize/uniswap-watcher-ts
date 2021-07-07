@@ -2,13 +2,14 @@ import { BigNumber } from 'ethers';
 
 import { Database } from '../database';
 import { PoolDayData } from '../entity/PoolDayData';
+import { PoolHourData } from '../entity/PoolHourData';
 
 export const updatePoolDayData = async (db: Database, event: { contractAddress: string, blockNumber: number }): Promise<PoolDayData> => {
   const { contractAddress, blockNumber } = event;
 
   // TODO: Get timestamp from event block.
   // let timestamp = event.block.timestamp.toI32()
-  const timestamp = Date.now();
+  const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp.
 
   const dayID = Math.floor(timestamp / 86400);
   const dayStartTimestamp = dayID * 86400;
@@ -23,7 +24,11 @@ export const updatePoolDayData = async (db: Database, event: { contractAddress: 
     id: dayPoolID,
     blockNumber,
     date: dayStartTimestamp,
-    pool: pool
+    pool: pool,
+    open: pool.token0Price,
+    high: pool.token0Price,
+    low: pool.token0Price,
+    close: pool.token0Price
   });
 
   if (Number(pool.token0Price) > Number(poolDayData.high)) {
@@ -46,4 +51,54 @@ export const updatePoolDayData = async (db: Database, event: { contractAddress: 
   poolDayData = await db.savePoolDayData(poolDayData, blockNumber);
 
   return poolDayData;
+};
+
+export const updatePoolHourData = async (db: Database, event: { contractAddress: string, blockNumber: number }): Promise<PoolHourData> => {
+  const { contractAddress, blockNumber } = event;
+
+  // TODO: Get timestamp from event block.
+  // let timestamp = event.block.timestamp.toI32()
+  const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp.
+
+  const hourIndex = Math.floor(timestamp / 3600); // get unique hour within unix history
+  const hourStartUnix = hourIndex * 3600; // want the rounded effect
+
+  const hourPoolID = contractAddress
+    .concat('-')
+    .concat(hourIndex.toString());
+
+  const pool = await db.loadPool({ id: contractAddress, blockNumber });
+
+  let poolHourData = await db.loadPoolHourData({
+    id: hourPoolID,
+    blockNumber,
+    periodStartUnix: hourStartUnix,
+    pool: pool,
+    open: pool.token0Price,
+    high: pool.token0Price,
+    low: pool.token0Price,
+    close: pool.token0Price
+  });
+
+  if (Number(pool.token0Price) > Number(poolHourData.high)) {
+    poolHourData.high = pool.token0Price;
+  }
+  if (Number(pool.token0Price) < Number(poolHourData.low)) {
+    poolHourData.low = pool.token0Price;
+  }
+
+  poolHourData.liquidity = pool.liquidity;
+  poolHourData.sqrtPrice = pool.sqrtPrice;
+  poolHourData.token0Price = pool.token0Price;
+  poolHourData.token1Price = pool.token1Price;
+  poolHourData.feeGrowthGlobal0X128 = pool.feeGrowthGlobal0X128;
+  poolHourData.feeGrowthGlobal1X128 = pool.feeGrowthGlobal1X128;
+  poolHourData.close = pool.token0Price;
+  poolHourData.tick = pool.tick;
+  poolHourData.tvlUSD = pool.totalValueLockedUSD;
+  poolHourData.txCount = BigInt(BigNumber.from(poolHourData.txCount).add(1).toHexString());
+  poolHourData = await db.savePoolHourData(poolHourData, blockNumber);
+
+  // test
+  return poolHourData;
 };
