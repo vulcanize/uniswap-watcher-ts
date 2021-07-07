@@ -6,7 +6,7 @@ export class Token {
   @PrimaryColumn('varchar', { length: 42 })
   id!: string;
 
-  @Column('numeric')
+  @PrimaryColumn('numeric')
   blockNumber!: number;
 
   @Column('varchar')
@@ -17,4 +17,6 @@ export class Token {
 
   @Column('numeric')
   totalSupply!: number;
+
+  // TODO: Add remaining fields when they are used.
 }
