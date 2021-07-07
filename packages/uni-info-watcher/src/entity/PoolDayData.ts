@@ -1,30 +1,26 @@
 import { Entity, PrimaryColumn, Column, Index, ManyToOne } from 'typeorm';
-
-import { Token } from './Token';
+import { Pool } from './Pool';
 
 @Entity()
 @Index(['blockNumber', 'id'])
-export class Pool {
+export class PoolDayData {
   @PrimaryColumn('varchar', { length: 42 })
   id!: string;
 
   @PrimaryColumn('numeric')
   blockNumber!: number;
 
-  @ManyToOne(() => Token)
-  token0!: Token;
+  @PrimaryColumn('integer')
+  date!: number;
 
-  @ManyToOne(() => Token)
-  token1!: Token;
+  @ManyToOne(() => Pool)
+  pool!: Pool;
 
-  @Column('numeric', { default: 0 })
-  token0Price!: number
+  @PrimaryColumn('numeric')
+  high!: number;
 
-  @Column('numeric', { default: 0 })
-  token1Price!: number
-
-  @Column('numeric')
-  feeTier!: bigint
+  @PrimaryColumn('numeric')
+  low!: number;
 
   @Column('numeric', { default: BigInt(0) })
   sqrtPrice!: bigint
@@ -42,7 +38,16 @@ export class Pool {
   feeGrowthGlobal1X128!: bigint
 
   @Column('numeric', { default: 0 })
-  totalValueLockedUSD!: number
+  token0Price!: number
+
+  @Column('numeric', { default: 0 })
+  token1Price!: number
+
+  @Column('numeric', { default: 0 })
+  tvlUSD!: number
+
+  @Column('numeric', { default: BigInt(0) })
+  txCount!: bigint
 
   // TODO: Add remaining fields when they are used.
 }

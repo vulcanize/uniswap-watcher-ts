@@ -2,11 +2,13 @@ import assert from 'assert';
 import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
+import { EventSyncProgress } from './entity/EventProgress';
 import { Factory } from './entity/Factory';
 import { Pool } from './entity/Pool';
 import { Event } from './entity/Event';
 import { Token } from './entity/Token';
-import { EventSyncProgress } from './entity/EventProgress';
+import { Bundle } from './entity/Bundle';
+import { PoolDayData } from './entity/PoolDayData';
 
 export class Database {
   _config: ConnectionOptions
@@ -46,12 +48,14 @@ export class Database {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Factory);
 
-      let entity = await repo.createQueryBuilder('factory')
-        .where('id = :id AND block_number <= :blockNumber', {
-          id,
-          blockNumber
-        })
-        .orderBy('factory.block_number', 'DESC')
+      let selectQueryBuilder = repo.createQueryBuilder('factory')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('pool.block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -67,12 +71,14 @@ export class Database {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Pool);
 
-      let entity = await repo.createQueryBuilder('pool')
-        .where('id = :id AND block_number <= :blockNumber', {
-          id,
-          blockNumber
-        })
-        .orderBy('pool.block_number', 'DESC')
+      let selectQueryBuilder = repo.createQueryBuilder('pool')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('pool.block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -88,12 +94,60 @@ export class Database {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Token);
 
-      let entity = await repo.createQueryBuilder('token')
-        .where('id = :id AND block_number <= :blockNumber', {
-          id,
-          blockNumber
-        })
-        .orderBy('token.block_number', 'DESC')
+      let selectQueryBuilder = repo.createQueryBuilder('token')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('pool.block_number', 'DESC')
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id, ...values });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
+    });
+  }
+
+  async loadBundle ({ id, blockNumber, ...values }: DeepPartial<Bundle>): Promise<Bundle> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Bundle);
+
+      let selectQueryBuilder = repo.createQueryBuilder('bundle')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('pool.block_number', 'DESC')
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id, ...values });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
+    });
+  }
+
+  async loadPoolDayData ({ id, blockNumber, ...values }: DeepPartial<PoolDayData>): Promise<PoolDayData> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(PoolDayData);
+
+      let selectQueryBuilder = repo.createQueryBuilder('poolDayData')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('pool.block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -110,6 +164,22 @@ export class Database {
       const repo = tx.getRepository(Factory);
       factory.blockNumber = blockNumber;
       return repo.save(factory);
+    });
+  }
+
+  async saveBundle (bundle: Bundle, blockNumber: number): Promise<Bundle> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Bundle);
+      bundle.blockNumber = blockNumber;
+      return repo.save(bundle);
+    });
+  }
+
+  async savePoolDayData (poolDayData: PoolDayData, blockNumber: number): Promise<PoolDayData> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(PoolDayData);
+      poolDayData.blockNumber = blockNumber;
+      return repo.save(poolDayData);
     });
   }
 

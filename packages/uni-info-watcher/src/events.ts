@@ -5,6 +5,8 @@ import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { BigNumber } from 'ethers';
 
 import { Database } from './database';
+import { getEthPriceInUSD } from './utils/pricing';
+import { updatePoolDayData } from './utils/intervalUpdates';
 
 const log = debug('vulcanize:events');
 
@@ -14,6 +16,11 @@ interface PoolCreatedEvent {
   fee: bigint;
   tickSpacing: bigint;
   pool: string;
+}
+
+interface InitializeEvent {
+  sqrtPriceX96: bigint;
+  tick: bigint;
 }
 
 interface ResultEvent {
@@ -59,8 +66,13 @@ export class EventWatcher {
 
     switch (eventType) {
       case 'PoolCreatedEvent':
-        log('PoolCreated event', contract);
+        log('Factory PoolCreated event', contract);
         this._handlePoolCreated(blockHash, blockNumber, contract, eventValues as PoolCreatedEvent);
+        break;
+
+      case 'InitializeEvent':
+        log('Pool Initialize event', contract);
+        this._handleInitialize(blockHash, blockNumber, contract, eventValues as InitializeEvent);
         break;
 
       default:
@@ -126,5 +138,33 @@ export class EventWatcher {
 
     // Save entities to DB.
     await this._db.saveFactory(factory, blockNumber);
+  }
+
+  async _handleInitialize (blockHash: string, blockNumber: number, contractAddress: string, initializeEvent: InitializeEvent): Promise<void> {
+    const { sqrtPriceX96, tick } = initializeEvent;
+    const pool = await this._db.loadPool({ id: contractAddress, blockNumber });
+
+    pool.sqrtPrice = BigInt(sqrtPriceX96);
+    pool.tick = BigInt(tick);
+
+    // update ETH price now that prices could have changed
+    const bundle = await this._db.loadBundle({ id: '1', blockNumber });
+    bundle.ethPriceUSD = await getEthPriceInUSD(this._db);
+    this._db.saveBundle(bundle, blockNumber);
+
+    await updatePoolDayData(this._db, { contractAddress, blockNumber });
+
+    // TODO: Update Pool Hour data.
+    // await updatePoolHourData(this._db, { contractAddress, blockNumber })
+
+    // update token prices
+    const token0 = pool.token0;
+    const token1 = pool.token1;
+
+    // TODO: update token prices
+    // token0.derivedETH = findEthPerToken(token0 as Token)
+    // token1.derivedETH = findEthPerToken(token1 as Token)
+    // this._db.saveToken(token0, blockNumber);
+    // this._db.saveToken(token1, blockNumber);
   }
 }
