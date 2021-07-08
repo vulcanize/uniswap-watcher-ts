@@ -1,12 +1,11 @@
-import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column } from 'typeorm';
 
 @Entity()
-@Index(['blockNumber'])
 export class Bundle {
   @PrimaryColumn('varchar', { length: 1 })
   id!: string;
 
-  @PrimaryColumn('numeric')
+  @PrimaryColumn('integer')
   blockNumber!: number;
 
   @Column('numeric', { default: 0 })

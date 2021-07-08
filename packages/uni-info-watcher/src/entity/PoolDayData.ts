@@ -1,13 +1,12 @@
-import { Entity, PrimaryColumn, Column, Index, ManyToOne } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
 import { Pool } from './Pool';
 
 @Entity()
-@Index(['blockNumber', 'id'])
 export class PoolDayData {
   @PrimaryColumn('varchar')
   id!: string;
 
-  @PrimaryColumn('numeric')
+  @PrimaryColumn('integer')
   blockNumber!: number;
 
   @Column('integer')

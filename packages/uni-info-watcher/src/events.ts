@@ -5,7 +5,7 @@ import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { BigNumber } from 'ethers';
 
 import { Database } from './database';
-import { getEthPriceInUSD } from './utils/pricing';
+import { findEthPerToken, getEthPriceInUSD, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData } from './utils/intervalUpdates';
 import { Token } from './entity/Token';
 
@@ -109,7 +109,7 @@ export class EventWatcher {
 
     // Create new Pool entity.
     // Skipping adding createdAtTimestamp field as it is not queried in frontend subgraph.
-    await this._db.loadPool({
+    const pool = await this._db.loadPool({
       blockNumber,
       id: poolAddress,
       token0: token0,
@@ -117,7 +117,16 @@ export class EventWatcher {
       feeTier: BigInt(fee)
     });
 
-    // Skipping updating token whitelistPools field as it is not queried in frontend subgraph.
+    // Update white listed pools.
+    if (WHITELIST_TOKENS.includes(token0.id)) {
+      token1.whitelistPools.push(pool);
+      await this._db.saveToken(token1, blockNumber);
+    }
+
+    if (WHITELIST_TOKENS.includes(token1.id)) {
+      token0.whitelistPools.push(pool);
+      await this._db.saveToken(token0, blockNumber);
+    }
 
     // Save entities to DB.
     await this._db.saveFactory(factory, blockNumber);
@@ -132,7 +141,7 @@ export class EventWatcher {
     const { value: name } = await this._erc20Client.getName(blockHash, tokenAddress);
     const { value: totalSupply } = await this._erc20Client.getTotalSupply(blockHash, tokenAddress);
 
-    // TODO: decimals not implemented by erc20-watcher.
+    // TODO: Decimals not implemented by erc20-watcher.
     // const { value: decimals } = await this._erc20Client.getDecimals(blockHash, tokenAddress);
 
     return this._db.loadToken({
@@ -159,17 +168,23 @@ export class EventWatcher {
     bundle.ethPriceUSD = await getEthPriceInUSD(this._db);
     this._db.saveBundle(bundle, blockNumber);
 
-    // TODO: Fix duplicate key error when saving Pool data after update.
     await updatePoolDayData(this._db, { contractAddress, blockNumber });
     await updatePoolHourData(this._db, { contractAddress, blockNumber });
 
-    const token0 = pool.token0;
-    const token1 = pool.token1;
+    const [token0, token1] = await Promise.all([
+      this._db.getToken({ id: pool.token0.id, blockNumber }),
+      this._db.getToken({ id: pool.token1.id, blockNumber })
+    ]);
 
-    // TODO: update token prices
-    // token0.derivedETH = findEthPerToken(token0 as Token)
-    // token1.derivedETH = findEthPerToken(token1 as Token)
-    // this._db.saveToken(token0, blockNumber);
-    // this._db.saveToken(token1, blockNumber);
+    assert(token0 && token1, 'Pool tokens not found.');
+
+    // Update token prices.
+    token0.derivedETH = await findEthPerToken(token0);
+    token1.derivedETH = await findEthPerToken(token1);
+
+    await Promise.all([
+      this._db.saveToken(token0, blockNumber),
+      this._db.saveToken(token1, blockNumber)
+    ]);
   }
 }

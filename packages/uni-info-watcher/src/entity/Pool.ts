@@ -1,14 +1,13 @@
-import { Entity, PrimaryColumn, Column, Index, ManyToOne } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
 
 import { Token } from './Token';
 
 @Entity()
-@Index(['blockNumber', 'id'])
 export class Pool {
   @PrimaryColumn('varchar', { length: 42 })
   id!: string;
 
-  @PrimaryColumn('numeric')
+  @PrimaryColumn('integer')
   blockNumber!: number;
 
   @ManyToOne(() => Token)
@@ -43,6 +42,12 @@ export class Pool {
 
   @Column('numeric', { default: 0 })
   totalValueLockedUSD!: number
+
+  @Column('numeric', { default: 0 })
+  totalValueLockedToken0!: number
+
+  @Column('numeric', { default: 0 })
+  totalValueLockedToken1!: number
 
   // TODO: Add remaining fields when they are used.
 }

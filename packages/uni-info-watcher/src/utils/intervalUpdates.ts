@@ -7,7 +7,7 @@ import { PoolHourData } from '../entity/PoolHourData';
 export const updatePoolDayData = async (db: Database, event: { contractAddress: string, blockNumber: number }): Promise<PoolDayData> => {
   const { contractAddress, blockNumber } = event;
 
-  // TODO: Get timestamp from event block.
+  // TODO: Get block timestamp from event.
   // let timestamp = event.block.timestamp.toI32()
   const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp.
 
@@ -56,12 +56,12 @@ export const updatePoolDayData = async (db: Database, event: { contractAddress: 
 export const updatePoolHourData = async (db: Database, event: { contractAddress: string, blockNumber: number }): Promise<PoolHourData> => {
   const { contractAddress, blockNumber } = event;
 
-  // TODO: Get timestamp from event block.
+  // TODO: Get block timestamp from event.
   // let timestamp = event.block.timestamp.toI32()
   const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp.
 
-  const hourIndex = Math.floor(timestamp / 3600); // get unique hour within unix history
-  const hourStartUnix = hourIndex * 3600; // want the rounded effect
+  const hourIndex = Math.floor(timestamp / 3600); // Get unique hour within unix history.
+  const hourStartUnix = hourIndex * 3600; // Want the rounded effect.
 
   const hourPoolID = contractAddress
     .concat('-')
@@ -99,6 +99,5 @@ export const updatePoolHourData = async (db: Database, event: { contractAddress:
   poolHourData.txCount = BigInt(BigNumber.from(poolHourData.txCount).add(1).toHexString());
   poolHourData = await db.savePoolHourData(poolHourData, blockNumber);
 
-  // test
   return poolHourData;
 };

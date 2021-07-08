@@ -36,15 +36,21 @@ export class Database {
   async getToken ({ id, blockNumber }: DeepPartial<Token>): Promise<Token | undefined> {
     const repo = this._conn.getRepository(Token);
 
-    let selectQueryBuilder = repo.createQueryBuilder('token')
-      .where('id = :id', { id });
+    const whereOptions: FindConditions<Token> = { id };
 
     if (blockNumber) {
-      selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
     }
 
-    return selectQueryBuilder.orderBy('token.block_number', 'DESC')
-      .getOne();
+    const findOptions: FindOneOptions<Token> = {
+      where: whereOptions,
+      relations: ['whitelistPools', 'whitelistPools.token0', 'whitelistPools.token1'],
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    return repo.findOne(findOptions);
   }
 
   async getPool ({ id, blockNumber }: DeepPartial<Pool>): Promise<Pool | undefined> {
@@ -122,19 +128,28 @@ export class Database {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Token);
 
-      let selectQueryBuilder = repo.createQueryBuilder('token')
-        .where('id = :id', { id });
+      const whereOptions: FindConditions<Token> = { id };
 
       if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+        whereOptions.blockNumber = LessThanOrEqual(blockNumber);
       }
 
-      let entity = await selectQueryBuilder.orderBy('token.block_number', 'DESC')
-        .getOne();
+      const findOptions: FindOneOptions<Token> = {
+        where: whereOptions,
+        relations: ['whitelistPools', 'whitelistPools.token0', 'whitelistPools.token1'],
+        order: {
+          blockNumber: 'DESC'
+        }
+      };
+
+      let entity = await repo.findOne(findOptions);
 
       if (!entity) {
         entity = repo.create({ blockNumber, id, ...values });
         entity = await repo.save(entity);
+
+        // TODO: Find way to preload relations during create.
+        entity.whitelistPools = [];
       }
 
       return entity;
@@ -237,58 +252,24 @@ export class Database {
   async savePoolDayData (poolDayData: PoolDayData, blockNumber: number): Promise<PoolDayData> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(PoolDayData);
-
       poolDayData.blockNumber = blockNumber;
-      // Using save inserts data even if row present in table (verified from db debug logs).
-      // return repo.save(poolDayData);
-
-      const { id, ...values } = poolDayData;
-
-      let entity = await repo.findOne({
-        where: { id, blockNumber }
-      });
-
-      if (!entity) {
-        entity = await repo.create(poolDayData);
-      }
-
-      await repo.update({
-        id,
-        blockNumber
-      },
-      values
-      );
-
-      return poolDayData;
+      return repo.save(poolDayData);
     });
   }
 
   async savePoolHourData (poolHourData: PoolHourData, blockNumber: number): Promise<PoolHourData> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(PoolHourData);
-
       poolHourData.blockNumber = blockNumber;
-      // Using save inserts data even if row present in table (verified from db debug logs).
-      // return repo.save(poolHourData);
+      return repo.save(poolHourData);
+    });
+  }
 
-      const { id, ...values } = poolHourData;
-
-      let entity = await repo.findOne({
-        where: { id, blockNumber }
-      });
-
-      if (!entity) {
-        entity = await repo.create(poolHourData);
-      }
-
-      await repo.update({
-        id,
-        blockNumber
-      },
-      values
-      );
-
-      return poolHourData;
+  async saveToken (token: Token, blockNumber: number): Promise<Token> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Token);
+      token.blockNumber = blockNumber;
+      return repo.save(token);
     });
   }
 
