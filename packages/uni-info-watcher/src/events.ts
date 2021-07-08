@@ -7,6 +7,7 @@ import { BigNumber } from 'ethers';
 import { Database } from './database';
 import { getEthPriceInUSD } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData } from './utils/intervalUpdates';
+import { Token } from './entity/Token';
 
 const log = debug('vulcanize:events');
 
@@ -97,31 +98,13 @@ export class EventWatcher {
       this._db.getToken({ blockNumber, id: token1Address })
     ]);
 
-    // Create Token.
-    const createToken = async (tokenAddress: string) => {
-      const { value: symbol } = await this._erc20Client.getSymbol(blockHash, tokenAddress);
-      const { value: name } = await this._erc20Client.getName(blockHash, tokenAddress);
-      const { value: totalSupply } = await this._erc20Client.getTotalSupply(blockHash, tokenAddress);
-
-      // TODO: decimals not implemented by erc20-watcher.
-      // const { value: decimals } = await this._erc20Client.getDecimals(blockHash, tokenAddress);
-
-      return this._db.loadToken({
-        blockNumber,
-        id: token1Address,
-        symbol,
-        name,
-        totalSupply
-      });
-    };
-
     // Create Tokens if not present.
     if (!token0) {
-      token0 = await createToken(token0Address);
+      token0 = await this._createToken(blockHash, blockNumber, token0Address);
     }
 
     if (!token1) {
-      token1 = await createToken(token1Address);
+      token1 = await this._createToken(blockHash, blockNumber, token1Address);
     }
 
     // Create new Pool entity.
@@ -140,12 +123,36 @@ export class EventWatcher {
     await this._db.saveFactory(factory, blockNumber);
   }
 
+  /**
+   * Create new Token.
+   * @param tokenAddress
+   */
+  async _createToken (blockHash: string, blockNumber: number, tokenAddress: string): Promise<Token> {
+    const { value: symbol } = await this._erc20Client.getSymbol(blockHash, tokenAddress);
+    const { value: name } = await this._erc20Client.getName(blockHash, tokenAddress);
+    const { value: totalSupply } = await this._erc20Client.getTotalSupply(blockHash, tokenAddress);
+
+    // TODO: decimals not implemented by erc20-watcher.
+    // const { value: decimals } = await this._erc20Client.getDecimals(blockHash, tokenAddress);
+
+    return this._db.loadToken({
+      blockNumber,
+      id: tokenAddress,
+      symbol,
+      name,
+      totalSupply
+    });
+  }
+
   async _handleInitialize (blockHash: string, blockNumber: number, contractAddress: string, initializeEvent: InitializeEvent): Promise<void> {
     const { sqrtPriceX96, tick } = initializeEvent;
-    const pool = await this._db.loadPool({ id: contractAddress, blockNumber });
+    const pool = await this._db.getPool({ id: contractAddress, blockNumber });
+    assert(pool, `Pool ${contractAddress} not found.`);
 
+    // Update Pool.
     pool.sqrtPrice = BigInt(sqrtPriceX96);
     pool.tick = BigInt(tick);
+    this._db.savePool(pool, blockNumber);
 
     // Update ETH price now that prices could have changed.
     const bundle = await this._db.loadBundle({ id: '1', blockNumber });
@@ -153,12 +160,13 @@ export class EventWatcher {
     this._db.saveBundle(bundle, blockNumber);
 
     // TODO: Fix duplicate key error when saving Pool data after update.
-    // await updatePoolDayData(this._db, { contractAddress, blockNumber });
-    // await updatePoolHourData(this._db, { contractAddress, blockNumber });
+    await updatePoolDayData(this._db, { contractAddress, blockNumber });
+    await updatePoolHourData(this._db, { contractAddress, blockNumber });
+
+    const token0 = pool.token0;
+    const token1 = pool.token1;
 
     // TODO: update token prices
-    // const token0 = pool.token0;
-    // const token1 = pool.token1;
     // token0.derivedETH = findEthPerToken(token0 as Token)
     // token1.derivedETH = findEthPerToken(token1 as Token)
     // this._db.saveToken(token0, blockNumber);

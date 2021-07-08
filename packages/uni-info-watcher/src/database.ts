@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'typeorm';
+import { Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, FindOneOptions, LessThanOrEqual } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 import { EventSyncProgress } from './entity/EventProgress';
@@ -49,16 +49,21 @@ export class Database {
 
   async getPool ({ id, blockNumber }: DeepPartial<Pool>): Promise<Pool | undefined> {
     const repo = this._conn.getRepository(Pool);
-
-    let selectQueryBuilder = repo.createQueryBuilder('pool')
-      .where('id = :id', { id });
+    const whereOptions: FindConditions<Pool> = { id };
 
     if (blockNumber) {
-      selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
     }
 
-    return selectQueryBuilder.orderBy('pool.block_number', 'DESC')
-      .getOne();
+    const findOptions: FindOneOptions<Pool> = {
+      where: whereOptions,
+      relations: ['token0', 'token1'],
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    return repo.findOne(findOptions);
   }
 
   async loadFactory ({ id, blockNumber, ...values }: DeepPartial<Factory>): Promise<Factory> {
@@ -88,15 +93,21 @@ export class Database {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Pool);
 
-      let selectQueryBuilder = repo.createQueryBuilder('pool')
-        .where('id = :id', { id });
+      const whereOptions: FindConditions<Pool> = { id };
 
       if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+        whereOptions.blockNumber = LessThanOrEqual(blockNumber);
       }
 
-      let entity = await selectQueryBuilder.orderBy('pool.block_number', 'DESC')
-        .getOne();
+      const findOptions: FindOneOptions<Pool> = {
+        where: whereOptions,
+        relations: ['token0', 'token1'],
+        order: {
+          blockNumber: 'DESC'
+        }
+      };
+
+      let entity = await repo.findOne(findOptions);
 
       if (!entity) {
         entity = repo.create({ blockNumber, id, ...values });
@@ -215,19 +226,69 @@ export class Database {
     });
   }
 
+  async savePool (pool: Pool, blockNumber: number): Promise<Pool> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Pool);
+      pool.blockNumber = blockNumber;
+      return repo.save(pool);
+    });
+  }
+
   async savePoolDayData (poolDayData: PoolDayData, blockNumber: number): Promise<PoolDayData> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(PoolDayData);
+
       poolDayData.blockNumber = blockNumber;
-      return repo.save(poolDayData);
+      // Using save inserts data even if row present in table (verified from db debug logs).
+      // return repo.save(poolDayData);
+
+      const { id, ...values } = poolDayData;
+
+      let entity = await repo.findOne({
+        where: { id, blockNumber }
+      });
+
+      if (!entity) {
+        entity = await repo.create(poolDayData);
+      }
+
+      await repo.update({
+        id,
+        blockNumber
+      },
+      values
+      );
+
+      return poolDayData;
     });
   }
 
   async savePoolHourData (poolHourData: PoolHourData, blockNumber: number): Promise<PoolHourData> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(PoolHourData);
+
       poolHourData.blockNumber = blockNumber;
-      return repo.save(poolHourData);
+      // Using save inserts data even if row present in table (verified from db debug logs).
+      // return repo.save(poolHourData);
+
+      const { id, ...values } = poolHourData;
+
+      let entity = await repo.findOne({
+        where: { id, blockNumber }
+      });
+
+      if (!entity) {
+        entity = await repo.create(poolHourData);
+      }
+
+      await repo.update({
+        id,
+        blockNumber
+      },
+      values
+      );
+
+      return poolHourData;
     });
   }
 
