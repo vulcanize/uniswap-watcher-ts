@@ -38,6 +38,16 @@ export class Client {
                   sqrtPriceX96
                   tick
                 }
+
+                ... on MintEvent {
+                  sender
+                  owner
+                  tickLower
+                  tickUpper
+                  amount
+                  amount0
+                  amount1
+                }
               }
             }
           }

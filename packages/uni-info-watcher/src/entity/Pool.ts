@@ -28,8 +28,8 @@ export class Pool {
   @Column('numeric', { default: BigInt(0) })
   sqrtPrice!: bigint
 
-  @Column('numeric', { default: BigInt(0) })
-  tick!: bigint
+  @Column('bigint', { nullable: true })
+  tick!: bigint | null
 
   @Column('numeric', { default: BigInt(0) })
   liquidity!: bigint
@@ -48,6 +48,12 @@ export class Pool {
 
   @Column('numeric', { default: 0 })
   totalValueLockedToken1!: number
+
+  @Column('numeric', { default: 0 })
+  totalValueLockedETH!: number;
+
+  @Column('bigint', { default: BigInt(0) })
+  txCount!: bigint;
 
   // TODO: Add remaining fields when they are used.
 }

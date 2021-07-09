@@ -72,6 +72,27 @@ export class Database {
     return repo.findOne(findOptions);
   }
 
+  async getFactories ({ blockNumber }: DeepPartial<Factory>, queryOptions: { [key: string]: any }): Promise<Array<Factory>> {
+    const repo = this._conn.getRepository(Factory);
+
+    let selectQueryBuilder = repo.createQueryBuilder('factory')
+      .distinctOn(['id'])
+      .orderBy('factory.id')
+      .addOrderBy('factory.block_number', 'DESC');
+
+    if (blockNumber) {
+      selectQueryBuilder = selectQueryBuilder.where('block_number <= :blockNumber', { blockNumber });
+    }
+
+    const { limit } = queryOptions;
+
+    if (limit) {
+      selectQueryBuilder = selectQueryBuilder.limit(limit);
+    }
+
+    return selectQueryBuilder.getMany();
+  }
+
   async loadFactory ({ id, blockNumber, ...values }: DeepPartial<Factory>): Promise<Factory> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Factory);

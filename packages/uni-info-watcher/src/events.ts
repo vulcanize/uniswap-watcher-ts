@@ -8,6 +8,7 @@ import { Database } from './database';
 import { findEthPerToken, getEthPriceInUSD, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData } from './utils/intervalUpdates';
 import { Token } from './entity/Token';
+import { convertTokenToDecimal } from './utils';
 
 const log = debug('vulcanize:events');
 
@@ -22,6 +23,16 @@ interface PoolCreatedEvent {
 interface InitializeEvent {
   sqrtPriceX96: bigint;
   tick: bigint;
+}
+
+interface MintEvent {
+  sender: string;
+  owner: string;
+  tickLower: bigint;
+  tickUpper: bigint;
+  amount: bigint;
+  amount0: bigint;
+  amount1: bigint;
 }
 
 interface ResultEvent {
@@ -74,6 +85,11 @@ export class EventWatcher {
       case 'InitializeEvent':
         log('Pool Initialize event', contract);
         this._handleInitialize(blockHash, blockNumber, contract, eventValues as InitializeEvent);
+        break;
+
+      case 'MintEvent':
+        log('Pool Mint event', contract);
+        this._handleMint(blockHash, blockNumber, contract, eventValues as MintEvent);
         break;
 
       default:
@@ -186,5 +202,131 @@ export class EventWatcher {
       this._db.saveToken(token0, blockNumber),
       this._db.saveToken(token1, blockNumber)
     ]);
+  }
+
+  async _handleMint (blockHash: string, blockNumber: number, contractAddress: string, initializeEvent: MintEvent): Promise<void> {
+    console.log('mint event', initializeEvent);
+    const bundle = await this._db.loadBundle({ id: '1', blockNumber });
+    const poolAddress = contractAddress;
+    const pool = await this._db.loadPool({ id: poolAddress, blockNumber });
+
+    // TODO: In subgraph factory is fetched by hardcoded factory address
+    // Currently fetching first factory in database as only one exists.
+    const [factory] = await this._db.getFactories({ blockNumber }, { limit: 1 });
+
+    const token0 = pool.token0;
+    const token1 = pool.token1;
+    const amount0 = convertTokenToDecimal(initializeEvent.amount0, BigInt(token0.decimals));
+    const amount1 = convertTokenToDecimal(initializeEvent.amount1, BigInt(token1.decimals));
+
+    const amountUSD = amount0 *
+      (Number(token0.derivedETH) * Number(bundle.ethPriceUSD)) +
+      (amount1 * (Number(token1.derivedETH) * Number(bundle.ethPriceUSD)));
+
+    // Reset tvl aggregates until new amounts calculated.
+    factory.totalValueLockedETH = Number(factory.totalValueLockedETH) - Number(pool.totalValueLockedETH);
+
+    // Update globals.
+    factory.txCount = BigInt(factory.txCount) + BigInt(1);
+
+    // Update token0 data.
+    token0.txCount = BigInt(token0.txCount) + BigInt(1);
+    token0.totalValueLocked = Number(token0.totalValueLocked) + amount0;
+    token0.totalValueLockedUSD = Number(token0.totalValueLocked) * (Number(token0.derivedETH) * Number(bundle.ethPriceUSD));
+
+    // Update token1 data.
+    token1.txCount = BigInt(token1.txCount) + BigInt(1);
+    token1.totalValueLocked = Number(token1.totalValueLocked) + amount1;
+    token1.totalValueLockedUSD = Number(token1.totalValueLocked) * (Number(token1.derivedETH) * Number(bundle.ethPriceUSD));
+
+    // Pool data.
+    pool.txCount = BigInt(pool.txCount) + BigInt(1);
+
+    // Pools liquidity tracks the currently active liquidity given pools current tick.
+    // We only want to update it on mint if the new position includes the current tick.
+    if (pool.tick !== null) {
+      if (
+        BigInt(initializeEvent.tickLower) <= BigInt(pool.tick) &&
+        BigInt(initializeEvent.tickUpper) > BigInt(pool.tick)
+      ) {
+        pool.liquidity = BigInt(pool.liquidity) + initializeEvent.amount;
+      }
+    }
+
+    pool.totalValueLockedToken0 = Number(pool.totalValueLockedToken0) + amount0;
+    pool.totalValueLockedToken1 = Number(pool.totalValueLockedToken1) + amount1;
+
+    pool.totalValueLockedETH = Number(pool.totalValueLockedToken0) *
+      Number(token0.derivedETH) +
+      (Number(pool.totalValueLockedToken1) * Number(token1.derivedETH));
+
+    pool.totalValueLockedUSD = Number(pool.totalValueLockedETH) * Number(bundle.ethPriceUSD);
+
+    // Reset aggregates with new amounts.
+    factory.totalValueLockedETH = Number(factory.totalValueLockedETH) + Number(pool.totalValueLockedETH);
+    factory.totalValueLockedUSD = Number(factory.totalValueLockedETH) * Number(bundle.ethPriceUSD);
+
+    // let transaction = loadTransaction(event)
+    // let mint = new Mint(transaction.id.toString() + '#' + pool.txCount.toString())
+    // mint.transaction = transaction.id
+    // mint.timestamp = transaction.timestamp
+    // mint.pool = pool.id
+    // mint.token0 = pool.token0
+    // mint.token1 = pool.token1
+    // mint.owner = event.params.owner
+    // mint.sender = event.params.sender
+    // mint.origin = event.transaction.from
+    // mint.amount = event.params.amount
+    // mint.amount0 = amount0
+    // mint.amount1 = amount1
+    // mint.amountUSD = amountUSD
+    // mint.tickLower = BigInt.fromI32(event.params.tickLower)
+    // mint.tickUpper = BigInt.fromI32(event.params.tickUpper)
+    // mint.logIndex = event.logIndex
+
+    // // tick entities
+    // let lowerTickIdx = event.params.tickLower
+    // let upperTickIdx = event.params.tickUpper
+
+    // let lowerTickId = poolAddress + '#' + BigInt.fromI32(event.params.tickLower).toString()
+    // let upperTickId = poolAddress + '#' + BigInt.fromI32(event.params.tickUpper).toString()
+
+    // let lowerTick = Tick.load(lowerTickId)
+    // let upperTick = Tick.load(upperTickId)
+
+    // if (lowerTick === null) {
+    //   lowerTick = createTick(lowerTickId, lowerTickIdx, pool.id, event)
+    // }
+
+    // if (upperTick === null) {
+    //   upperTick = createTick(upperTickId, upperTickIdx, pool.id, event)
+    // }
+
+    // let amount = event.params.amount
+    // lowerTick.liquidityGross = lowerTick.liquidityGross.plus(amount)
+    // lowerTick.liquidityNet = lowerTick.liquidityNet.plus(amount)
+    // upperTick.liquidityGross = upperTick.liquidityGross.plus(amount)
+    // upperTick.liquidityNet = upperTick.liquidityNet.minus(amount)
+
+    // // TODO: Update Tick's volume, fees, and liquidity provider count. Computing these on the tick
+    // // level requires reimplementing some of the swapping code from v3-core.
+
+    // updateUniswapDayData(event)
+    // updatePoolDayData(event)
+    // updatePoolHourData(event)
+    // updateTokenDayData(token0 as Token, event)
+    // updateTokenDayData(token1 as Token, event)
+    // updateTokenHourData(token0 as Token, event)
+    // updateTokenHourData(token1 as Token, event)
+
+    // token0.save()
+    // token1.save()
+    // pool.save()
+    // factory.save()
+    // mint.save()
+
+    // // Update inner tick vars and save the ticks
+    // updateTickFeeVarsAndSave(lowerTick!, event)
+    // updateTickFeeVarsAndSave(upperTick!, event)
   }
 }

@@ -18,8 +18,21 @@ export class Token {
   @Column('numeric')
   totalSupply!: number;
 
+  // TODO: Fetch decimals from contract using erc20-watcher. Currently using hardcoded value.
+  @Column('bigint', { default: BigInt(18) })
+  decimals!: bigint;
+
   @Column('numeric', { default: 0 })
   derivedETH!: number;
+
+  @Column('bigint', { default: BigInt(0) })
+  txCount!: bigint;
+
+  @Column('numeric', { default: 0 })
+  totalValueLocked!: number;
+
+  @Column('numeric', { default: 0 })
+  totalValueLockedUSD!: number;
 
   @ManyToMany(() => Pool)
   @JoinTable()

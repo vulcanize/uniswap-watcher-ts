@@ -30,8 +30,8 @@ export class PoolHourData {
   @Column('numeric', { default: BigInt(0) })
   sqrtPrice!: bigint
 
-  @Column('numeric', { default: BigInt(0) })
-  tick!: bigint
+  @Column('bigint', { nullable: true })
+  tick!: bigint | null
 
   @Column('numeric', { default: BigInt(0) })
   liquidity!: bigint
