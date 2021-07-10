@@ -219,25 +219,25 @@ export class EventWatcher {
     const amount0 = convertTokenToDecimal(initializeEvent.amount0, BigInt(token0.decimals));
     const amount1 = convertTokenToDecimal(initializeEvent.amount1, BigInt(token1.decimals));
 
-    const amountUSD = amount0 *
-      (Number(token0.derivedETH) * Number(bundle.ethPriceUSD)) +
-      (amount1 * (Number(token1.derivedETH) * Number(bundle.ethPriceUSD)));
+    const amountUSD = amount0
+      .times(token0.derivedETH.times(bundle.ethPriceUSD))
+      .plus(amount1.times(token1.derivedETH.times(bundle.ethPriceUSD)));
 
     // Reset tvl aggregates until new amounts calculated.
-    factory.totalValueLockedETH = Number(factory.totalValueLockedETH) - Number(pool.totalValueLockedETH);
+    factory.totalValueLockedETH = factory.totalValueLockedETH.minus(pool.totalValueLockedETH);
 
     // Update globals.
     factory.txCount = BigInt(factory.txCount) + BigInt(1);
 
     // Update token0 data.
     token0.txCount = BigInt(token0.txCount) + BigInt(1);
-    token0.totalValueLocked = Number(token0.totalValueLocked) + amount0;
-    token0.totalValueLockedUSD = Number(token0.totalValueLocked) * (Number(token0.derivedETH) * Number(bundle.ethPriceUSD));
+    token0.totalValueLocked = token0.totalValueLocked.plus(amount0);
+    token0.totalValueLockedUSD = token0.totalValueLocked.times(token0.derivedETH.times(bundle.ethPriceUSD));
 
     // Update token1 data.
     token1.txCount = BigInt(token1.txCount) + BigInt(1);
-    token1.totalValueLocked = Number(token1.totalValueLocked) + amount1;
-    token1.totalValueLockedUSD = Number(token1.totalValueLocked) * (Number(token1.derivedETH) * Number(bundle.ethPriceUSD));
+    token1.totalValueLocked = token1.totalValueLocked.plus(amount1);
+    token1.totalValueLockedUSD = token1.totalValueLocked.times(token1.derivedETH.times(bundle.ethPriceUSD));
 
     // Pool data.
     pool.txCount = BigInt(pool.txCount) + BigInt(1);
@@ -253,18 +253,17 @@ export class EventWatcher {
       }
     }
 
-    pool.totalValueLockedToken0 = Number(pool.totalValueLockedToken0) + amount0;
-    pool.totalValueLockedToken1 = Number(pool.totalValueLockedToken1) + amount1;
+    pool.totalValueLockedToken0 = pool.totalValueLockedToken0.plus(amount0);
+    pool.totalValueLockedToken1 = pool.totalValueLockedToken1.plus(amount1);
 
-    pool.totalValueLockedETH = Number(pool.totalValueLockedToken0) *
-      Number(token0.derivedETH) +
-      (Number(pool.totalValueLockedToken1) * Number(token1.derivedETH));
+    pool.totalValueLockedETH = pool.totalValueLockedToken0.times(token0.derivedETH)
+      .plus(pool.totalValueLockedToken1.times(token1.derivedETH));
 
-    pool.totalValueLockedUSD = Number(pool.totalValueLockedETH) * Number(bundle.ethPriceUSD);
+    pool.totalValueLockedUSD = pool.totalValueLockedETH.times(bundle.ethPriceUSD);
 
     // Reset aggregates with new amounts.
-    factory.totalValueLockedETH = Number(factory.totalValueLockedETH) + Number(pool.totalValueLockedETH);
-    factory.totalValueLockedUSD = Number(factory.totalValueLockedETH) * Number(bundle.ethPriceUSD);
+    factory.totalValueLockedETH = factory.totalValueLockedETH.plus(pool.totalValueLockedETH);
+    factory.totalValueLockedUSD = factory.totalValueLockedETH.times(bundle.ethPriceUSD);
 
     // let transaction = loadTransaction(event)
     // let mint = new Mint(transaction.id.toString() + '#' + pool.txCount.toString())

@@ -1,4 +1,7 @@
+import Decimal from 'decimal.js';
 import { Entity, PrimaryColumn, Column, ManyToMany, JoinTable } from 'typeorm';
+
+import { decimalTransformer } from '../utils/database';
 import { Pool } from './Pool';
 
 @Entity()
@@ -15,24 +18,24 @@ export class Token {
   @Column('varchar')
   name!: string;
 
-  @Column('numeric')
-  totalSupply!: number;
+  @Column('numeric', { transformer: decimalTransformer })
+  totalSupply!: Decimal;
 
   // TODO: Fetch decimals from contract using erc20-watcher. Currently using hardcoded value.
-  @Column('bigint', { default: BigInt(18) })
+  @Column('bigint', { default: 18 })
   decimals!: bigint;
 
-  @Column('numeric', { default: 0 })
-  derivedETH!: number;
+  @Column('numeric', { default: 0, transformer: decimalTransformer })
+  derivedETH!: Decimal;
 
   @Column('bigint', { default: BigInt(0) })
   txCount!: bigint;
 
-  @Column('numeric', { default: 0 })
-  totalValueLocked!: number;
+  @Column('numeric', { default: 0, transformer: decimalTransformer })
+  totalValueLocked!: Decimal;
 
-  @Column('numeric', { default: 0 })
-  totalValueLockedUSD!: number;
+  @Column('numeric', { default: 0, transformer: decimalTransformer })
+  totalValueLockedUSD!: Decimal;
 
   @ManyToMany(() => Pool)
   @JoinTable()

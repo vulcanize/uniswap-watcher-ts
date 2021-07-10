@@ -1,20 +1,20 @@
+import Decimal from 'decimal.js';
 import { BigNumber } from 'ethers';
 
-export const exponentToBigDecimal = (decimals: bigint): number => {
-  let bd = 1;
+export const exponentToBigDecimal = (decimals: bigint): Decimal => {
+  let bd = new Decimal(1);
 
   for (let i = 0; BigNumber.from(decimals).gte(i); i++) {
-    bd = bd * 10;
+    bd = bd.times(10);
   }
 
   return bd;
 };
 
-export const convertTokenToDecimal = (tokenAmount: bigint, exchangeDecimals: bigint): number => {
-  // TODO: Use external library like BigDecimal to perform operations.
+export const convertTokenToDecimal = (tokenAmount: bigint, exchangeDecimals: bigint): Decimal => {
   if (exchangeDecimals === BigInt(0)) {
-    return Number(tokenAmount);
+    return new Decimal(tokenAmount.toString());
   }
 
-  return Number(tokenAmount) / exponentToBigDecimal(exchangeDecimals);
+  return (new Decimal(tokenAmount.toString())).div(exponentToBigDecimal(exchangeDecimals));
 };
