@@ -10,6 +10,10 @@ import { Token } from './entity/Token';
 import { Bundle } from './entity/Bundle';
 import { PoolDayData } from './entity/PoolDayData';
 import { PoolHourData } from './entity/PoolHourData';
+import { Transaction } from './entity/Transaction';
+import { Mint } from './entity/Mint';
+import { UniswapDayData } from './entity/UniswapDayData';
+import { Tick } from './entity/Tick';
 
 export class Database {
   _config: ConnectionOptions
@@ -246,6 +250,98 @@ export class Database {
     });
   }
 
+  async loadTransaction ({ id, blockNumber, ...values }: DeepPartial<Transaction>): Promise<Transaction> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Transaction);
+
+      let selectQueryBuilder = repo.createQueryBuilder('transaction')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('transaction.block_number', 'DESC')
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id, ...values });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
+    });
+  }
+
+  async loadMint ({ id, blockNumber, ...values }:DeepPartial<Mint>): Promise<Mint> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Mint);
+
+      let selectQueryBuilder = repo.createQueryBuilder('mint')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('mint.block_number', 'DESC')
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id, ...values });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
+    });
+  }
+
+  async loadTick ({ id, blockNumber, ...values }: DeepPartial<Tick>): Promise<Tick> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Tick);
+
+      let selectQueryBuilder = repo.createQueryBuilder('tick')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('tick.block_number', 'DESC')
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id, ...values });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
+    });
+  }
+
+  async loadUniswapDayData ({ id, blockNumber, ...values }: DeepPartial<UniswapDayData>): Promise<UniswapDayData> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(UniswapDayData);
+
+      let selectQueryBuilder = repo.createQueryBuilder('uniswap_day_data')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('uniswap_day_data.block_number', 'DESC')
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id, ...values });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
+    });
+  }
+
   async saveFactory (factory: Factory, blockNumber: number): Promise<Factory> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Factory);
@@ -291,6 +387,22 @@ export class Database {
       const repo = tx.getRepository(Token);
       token.blockNumber = blockNumber;
       return repo.save(token);
+    });
+  }
+
+  async saveTransaction (transaction: Transaction, blockNumber: number): Promise<Transaction> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Transaction);
+      transaction.blockNumber = blockNumber;
+      return repo.save(transaction);
+    });
+  }
+
+  async saveUniswapDayData (uniswapDayData: UniswapDayData, blockNumber: number): Promise<UniswapDayData> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(UniswapDayData);
+      uniswapDayData.blockNumber = blockNumber;
+      return repo.save(uniswapDayData);
     });
   }
 

@@ -6,9 +6,10 @@ import { BigNumber } from 'ethers';
 
 import { Database } from './database';
 import { findEthPerToken, getEthPriceInUSD, WHITELIST_TOKENS } from './utils/pricing';
-import { updatePoolDayData, updatePoolHourData } from './utils/intervalUpdates';
+import { updatePoolDayData, updatePoolHourData, updateUniswapDayData } from './utils/intervalUpdates';
 import { Token } from './entity/Token';
-import { convertTokenToDecimal } from './utils';
+import { convertTokenToDecimal, loadTransaction } from './utils';
+import { loadTick } from './utils/tick';
 
 const log = debug('vulcanize:events');
 
@@ -72,24 +73,24 @@ export class EventWatcher {
     }
   }
 
-  async _handleEvents ({ blockHash, blockNumber, contract, event }: { blockHash: string, blockNumber: number, contract: string, event: ResultEvent}): Promise<void> {
+  async _handleEvents ({ blockHash, blockNumber, contract, txHash, event }: { blockHash: string, blockNumber: number, contract: string, txHash: string, event: ResultEvent}): Promise<void> {
     // TODO: Process proof (proof.data) in event.
     const { event: { __typename: eventType, ...eventValues } } = event;
 
     switch (eventType) {
       case 'PoolCreatedEvent':
         log('Factory PoolCreated event', contract);
-        this._handlePoolCreated(blockHash, blockNumber, contract, eventValues as PoolCreatedEvent);
+        this._handlePoolCreated(blockHash, blockNumber, contract, txHash, eventValues as PoolCreatedEvent);
         break;
 
       case 'InitializeEvent':
         log('Pool Initialize event', contract);
-        this._handleInitialize(blockHash, blockNumber, contract, eventValues as InitializeEvent);
+        this._handleInitialize(blockHash, blockNumber, contract, txHash, eventValues as InitializeEvent);
         break;
 
       case 'MintEvent':
         log('Pool Mint event', contract);
-        this._handleMint(blockHash, blockNumber, contract, eventValues as MintEvent);
+        this._handleMint(blockHash, blockNumber, contract, txHash, eventValues as MintEvent);
         break;
 
       default:
@@ -97,7 +98,7 @@ export class EventWatcher {
     }
   }
 
-  async _handlePoolCreated (blockHash: string, blockNumber: number, contractAddress: string, poolCreatedEvent: PoolCreatedEvent): Promise<void> {
+  async _handlePoolCreated (blockHash: string, blockNumber: number, contractAddress: string, txHash: string, poolCreatedEvent: PoolCreatedEvent): Promise<void> {
     const { token0: token0Address, token1: token1Address, fee, pool: poolAddress } = poolCreatedEvent;
 
     // Load factory.
@@ -169,7 +170,7 @@ export class EventWatcher {
     });
   }
 
-  async _handleInitialize (blockHash: string, blockNumber: number, contractAddress: string, initializeEvent: InitializeEvent): Promise<void> {
+  async _handleInitialize (blockHash: string, blockNumber: number, contractAddress: string, txHash: string, initializeEvent: InitializeEvent): Promise<void> {
     const { sqrtPriceX96, tick } = initializeEvent;
     const pool = await this._db.getPool({ id: contractAddress, blockNumber });
     assert(pool, `Pool ${contractAddress} not found.`);
@@ -204,8 +205,7 @@ export class EventWatcher {
     ]);
   }
 
-  async _handleMint (blockHash: string, blockNumber: number, contractAddress: string, initializeEvent: MintEvent): Promise<void> {
-    console.log('mint event', initializeEvent);
+  async _handleMint (blockHash: string, blockNumber: number, contractAddress: string, txHash: string, mintEvent: MintEvent): Promise<void> {
     const bundle = await this._db.loadBundle({ id: '1', blockNumber });
     const poolAddress = contractAddress;
     const pool = await this._db.loadPool({ id: poolAddress, blockNumber });
@@ -216,8 +216,8 @@ export class EventWatcher {
 
     const token0 = pool.token0;
     const token1 = pool.token1;
-    const amount0 = convertTokenToDecimal(initializeEvent.amount0, BigInt(token0.decimals));
-    const amount1 = convertTokenToDecimal(initializeEvent.amount1, BigInt(token1.decimals));
+    const amount0 = convertTokenToDecimal(mintEvent.amount0, BigInt(token0.decimals));
+    const amount1 = convertTokenToDecimal(mintEvent.amount1, BigInt(token1.decimals));
 
     const amountUSD = amount0
       .times(token0.derivedETH.times(bundle.ethPriceUSD))
@@ -246,10 +246,10 @@ export class EventWatcher {
     // We only want to update it on mint if the new position includes the current tick.
     if (pool.tick !== null) {
       if (
-        BigInt(initializeEvent.tickLower) <= BigInt(pool.tick) &&
-        BigInt(initializeEvent.tickUpper) > BigInt(pool.tick)
+        BigInt(mintEvent.tickLower) <= BigInt(pool.tick) &&
+        BigInt(mintEvent.tickUpper) > BigInt(pool.tick)
       ) {
-        pool.liquidity = BigInt(pool.liquidity) + initializeEvent.amount;
+        pool.liquidity = BigInt(pool.liquidity) + mintEvent.amount;
       }
     }
 
@@ -265,54 +265,52 @@ export class EventWatcher {
     factory.totalValueLockedETH = factory.totalValueLockedETH.plus(pool.totalValueLockedETH);
     factory.totalValueLockedUSD = factory.totalValueLockedETH.times(bundle.ethPriceUSD);
 
-    // let transaction = loadTransaction(event)
-    // let mint = new Mint(transaction.id.toString() + '#' + pool.txCount.toString())
-    // mint.transaction = transaction.id
-    // mint.timestamp = transaction.timestamp
-    // mint.pool = pool.id
-    // mint.token0 = pool.token0
-    // mint.token1 = pool.token1
-    // mint.owner = event.params.owner
-    // mint.sender = event.params.sender
-    // mint.origin = event.transaction.from
-    // mint.amount = event.params.amount
-    // mint.amount0 = amount0
-    // mint.amount1 = amount1
-    // mint.amountUSD = amountUSD
-    // mint.tickLower = BigInt.fromI32(event.params.tickLower)
-    // mint.tickUpper = BigInt.fromI32(event.params.tickUpper)
-    // mint.logIndex = event.logIndex
+    const transaction = await loadTransaction(this._db, { txHash, blockNumber });
 
-    // // tick entities
-    // let lowerTickIdx = event.params.tickLower
-    // let upperTickIdx = event.params.tickUpper
+    const mint = await this._db.loadMint({
+      id: transaction.id + '#' + pool.txCount.toString(),
+      blockNumber,
+      transaction,
+      timestamp: transaction.timestamp,
+      pool,
+      token0: pool.token0,
+      token1: pool.token1,
+      owner: mintEvent.owner,
+      sender: mintEvent.sender,
 
-    // let lowerTickId = poolAddress + '#' + BigInt.fromI32(event.params.tickLower).toString()
-    // let upperTickId = poolAddress + '#' + BigInt.fromI32(event.params.tickUpper).toString()
+      // TODO: Assign origin with Transaction from address.
+      // origin: event.transaction.from
 
-    // let lowerTick = Tick.load(lowerTickId)
-    // let upperTick = Tick.load(upperTickId)
+      amount: mintEvent.amount,
+      amount0: amount0,
+      amount1: amount1,
+      amountUSD: amountUSD,
+      tickLower: mintEvent.tickLower,
+      tickUpper: mintEvent.tickUpper
+    });
 
-    // if (lowerTick === null) {
-    //   lowerTick = createTick(lowerTickId, lowerTickIdx, pool.id, event)
-    // }
+    // Tick entities.
+    const lowerTickIdx = mintEvent.tickLower;
+    const upperTickIdx = mintEvent.tickUpper;
 
-    // if (upperTick === null) {
-    //   upperTick = createTick(upperTickId, upperTickIdx, pool.id, event)
-    // }
+    const lowerTickId = poolAddress + '#' + mintEvent.tickLower.toString();
+    const upperTickId = poolAddress + '#' + mintEvent.tickUpper.toString();
 
-    // let amount = event.params.amount
-    // lowerTick.liquidityGross = lowerTick.liquidityGross.plus(amount)
-    // lowerTick.liquidityNet = lowerTick.liquidityNet.plus(amount)
-    // upperTick.liquidityGross = upperTick.liquidityGross.plus(amount)
-    // upperTick.liquidityNet = upperTick.liquidityNet.minus(amount)
+    const lowerTick = await loadTick(this._db, lowerTickId, lowerTickIdx, pool, blockNumber);
+    const upperTick = await loadTick(this._db, upperTickId, upperTickIdx, pool, blockNumber);
 
-    // // TODO: Update Tick's volume, fees, and liquidity provider count. Computing these on the tick
-    // // level requires reimplementing some of the swapping code from v3-core.
+    const amount = mintEvent.amount;
+    lowerTick.liquidityGross = lowerTick.liquidityGross + amount;
+    lowerTick.liquidityNet = lowerTick.liquidityNet + amount;
+    upperTick.liquidityGross = upperTick.liquidityGross + amount;
+    upperTick.liquidityNet = upperTick.liquidityNet + amount;
 
-    // updateUniswapDayData(event)
-    // updatePoolDayData(event)
-    // updatePoolHourData(event)
+    // TODO: Update Tick's volume, fees, and liquidity provider count.
+    // Computing these on the tick level requires reimplementing some of the swapping code from v3-core.
+
+    await updateUniswapDayData(this._db, { blockNumber, contractAddress });
+    await updatePoolDayData(this._db, { blockNumber, contractAddress });
+    await updatePoolHourData(this._db, { blockNumber, contractAddress });
     // updateTokenDayData(token0 as Token, event)
     // updateTokenDayData(token1 as Token, event)
     // updateTokenHourData(token0 as Token, event)

@@ -19,6 +19,7 @@ export class Client {
             blockHash
             blockNumber
             contract
+            txHash
             event {
               proof {
                 data

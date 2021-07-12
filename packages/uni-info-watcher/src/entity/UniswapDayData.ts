@@ -1,0 +1,25 @@
+import { Entity, PrimaryColumn, Column } from 'typeorm';
+import Decimal from 'decimal.js';
+
+import { decimalTransformer } from '../utils/database';
+
+@Entity()
+export class UniswapDayData {
+  @PrimaryColumn('varchar')
+  id!: string;
+
+  @PrimaryColumn('integer')
+  blockNumber!: number;
+
+  @Column('integer')
+  date!: number
+
+  @Column('numeric', { transformer: decimalTransformer })
+  tvlUSD!: Decimal
+
+  @Column('numeric', { default: 0, transformer: decimalTransformer })
+  volumeUSD!: Decimal
+
+  @Column('bigint')
+  txCount!: bigint;
+}

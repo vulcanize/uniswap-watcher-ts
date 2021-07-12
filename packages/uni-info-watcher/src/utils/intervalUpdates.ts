@@ -4,6 +4,36 @@ import { Database } from '../database';
 import { PoolDayData } from '../entity/PoolDayData';
 import { PoolHourData } from '../entity/PoolHourData';
 
+/**
+ * Tracks global aggregate data over daily windows.
+ * @param db
+ * @param event
+ */
+export const updateUniswapDayData = async (db: Database, event: { contractAddress: string, blockNumber: number }): Promise<UniswapDayData> => {
+  const { blockNumber } = event;
+  // TODO: In subgraph factory is fetched by hardcoded factory address
+  // Currently fetching first factory in database as only one exists.
+  const [factory] = await db.getFactories({ blockNumber }, { limit: 1 });
+
+  // TODO: Get block timestamp from event.
+  // let timestamp = event.block.timestamp.toI32()
+  const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp.
+
+  const dayID = Math.floor(timestamp / 86400); // Rounded.
+  const dayStartTimestamp = dayID * 86400;
+
+  const uniswapDayData = await db.loadUniswapDayData({
+    id: dayID.toString(),
+    date: dayStartTimestamp,
+    tvlUSD: factory.totalValueLockedUSD,
+    txCount: factory.txCount
+  });
+
+  uniswapDayData.tvlUSD = factory.totalValueLockedUSD;
+  uniswapDayData.txCount = factory.txCount;
+  return db.saveUniswapDayData(uniswapDayData, blockNumber);
+};
+
 export const updatePoolDayData = async (db: Database, event: { contractAddress: string, blockNumber: number }): Promise<PoolDayData> => {
   const { contractAddress, blockNumber } = event;
 
