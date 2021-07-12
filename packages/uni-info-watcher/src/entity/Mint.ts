@@ -1,7 +1,7 @@
 import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
 import Decimal from 'decimal.js';
+import { decimalTransformer } from '@vulcanize/util';
 
-import { decimalTransformer } from '../utils/database';
 import { Transaction } from './Transaction';
 import { Pool } from './Pool';
 import { Token } from './Token';
@@ -35,8 +35,9 @@ export class Mint {
   @Column('varchar', { length: 42 })
   sender!: string
 
-  @Column('varchar', { length: 42 })
-  origin!: string
+  // TODO: Assign origin with Transaction from address.
+  // @Column('varchar', { length: 42 })
+  // origin!: string
 
   @Column('bigint')
   amount!: bigint

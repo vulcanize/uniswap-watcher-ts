@@ -3,6 +3,10 @@ import { BigNumber } from 'ethers';
 import { Database } from '../database';
 import { PoolDayData } from '../entity/PoolDayData';
 import { PoolHourData } from '../entity/PoolHourData';
+import { Token } from '../entity/Token';
+import { TokenDayData } from '../entity/TokenDayData';
+import { TokenHourData } from '../entity/TokenHourData';
+import { UniswapDayData } from '../entity/UniswapDayData';
 
 /**
  * Tracks global aggregate data over daily windows.
@@ -11,7 +15,7 @@ import { PoolHourData } from '../entity/PoolHourData';
  */
 export const updateUniswapDayData = async (db: Database, event: { contractAddress: string, blockNumber: number }): Promise<UniswapDayData> => {
   const { blockNumber } = event;
-  // TODO: In subgraph factory is fetched by hardcoded factory address
+  // TODO: In subgraph factory is fetched by hardcoded factory address.
   // Currently fetching first factory in database as only one exists.
   const [factory] = await db.getFactories({ blockNumber }, { limit: 1 });
 
@@ -24,6 +28,7 @@ export const updateUniswapDayData = async (db: Database, event: { contractAddres
 
   const uniswapDayData = await db.loadUniswapDayData({
     id: dayID.toString(),
+    blockNumber,
     date: dayStartTimestamp,
     tvlUSD: factory.totalValueLockedUSD,
     txCount: factory.txCount
@@ -130,4 +135,96 @@ export const updatePoolHourData = async (db: Database, event: { contractAddress:
   poolHourData = await db.savePoolHourData(poolHourData, blockNumber);
 
   return poolHourData;
+};
+
+export const updateTokenDayData = async (db: Database, token: Token, event: { blockNumber: number }): Promise<TokenDayData> => {
+  const { blockNumber } = event;
+  const bundle = await db.loadBundle({ id: '1', blockNumber });
+
+  // TODO: Get block timestamp from event.
+  // let timestamp = event.block.timestamp.toI32()
+  const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp.
+
+  const dayID = Math.floor(timestamp / 86400);
+  const dayStartTimestamp = dayID * 86400;
+
+  const tokenDayID = token.id
+    .concat('-')
+    .concat(dayID.toString());
+
+  const tokenPrice = token.derivedETH.times(bundle.ethPriceUSD);
+
+  const tokenDayData = await db.loadTokenDayData({
+    id: tokenDayID,
+    blockNumber,
+    date: dayStartTimestamp,
+    token,
+    open: tokenPrice,
+    high: tokenPrice,
+    low: tokenPrice,
+    close: tokenPrice,
+    priceUSD: token.derivedETH.times(bundle.ethPriceUSD),
+    totalValueLocked: token.totalValueLocked,
+    totalValueLockedUSD: token.totalValueLockedUSD
+  });
+
+  if (tokenPrice.gt(tokenDayData.high)) {
+    tokenDayData.high = tokenPrice;
+  }
+
+  if (tokenPrice.lt(tokenDayData.low)) {
+    tokenDayData.low = tokenPrice;
+  }
+
+  tokenDayData.close = tokenPrice;
+  tokenDayData.priceUSD = token.derivedETH.times(bundle.ethPriceUSD);
+  tokenDayData.totalValueLocked = token.totalValueLocked;
+  tokenDayData.totalValueLockedUSD = token.totalValueLockedUSD;
+  return db.saveTokenDayData(tokenDayData, blockNumber);
+};
+
+export const updateTokenHourData = async (db: Database, token: Token, event: { blockNumber: number }): Promise<TokenHourData> => {
+  const { blockNumber } = event;
+  const bundle = await db.loadBundle({ id: '1', blockNumber });
+
+  // TODO: Get block timestamp from event.
+  // let timestamp = event.block.timestamp.toI32()
+  const timestamp = Math.floor(Date.now() / 1000); // Unix timestamp.
+
+  const hourIndex = Math.floor(timestamp / 3600); // Get unique hour within unix history.
+  const hourStartUnix = hourIndex * 3600; // Want the rounded effect.
+
+  const tokenHourID = token.id
+    .concat('-')
+    .concat(hourIndex.toString());
+
+  const tokenPrice = token.derivedETH.times(bundle.ethPriceUSD);
+
+  const tokenHourData = await db.loadTokenHourData({
+    id: tokenHourID,
+    blockNumber,
+    periodStartUnix: hourStartUnix,
+    token: token,
+    open: tokenPrice,
+    high: tokenPrice,
+    low: tokenPrice,
+    close: tokenPrice,
+    priceUSD: tokenPrice,
+    totalValueLocked: token.totalValueLocked,
+    totalValueLockedUSD: token.totalValueLockedUSD
+  });
+
+  if (tokenPrice.gt(tokenHourData.high)) {
+    tokenHourData.high = tokenPrice;
+  }
+
+  if (tokenPrice.lt(tokenHourData.low)) {
+    tokenHourData.low = tokenPrice;
+  }
+
+  tokenHourData.close = tokenPrice;
+  tokenHourData.priceUSD = tokenPrice;
+  tokenHourData.totalValueLocked = token.totalValueLocked;
+  tokenHourData.totalValueLockedUSD = token.totalValueLockedUSD;
+  return db.saveTokenHourData(tokenHourData, blockNumber);
 };

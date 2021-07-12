@@ -1,7 +1,6 @@
 import Decimal from 'decimal.js';
 import { Entity, Column, PrimaryColumn } from 'typeorm';
-
-import { decimalTransformer } from '../utils/database';
+import { decimalTransformer } from '@vulcanize/util';
 
 @Entity()
 export class Factory {

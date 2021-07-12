@@ -14,6 +14,8 @@ import { Transaction } from './entity/Transaction';
 import { Mint } from './entity/Mint';
 import { UniswapDayData } from './entity/UniswapDayData';
 import { Tick } from './entity/Tick';
+import { TokenDayData } from './entity/TokenDayData';
+import { TokenHourData } from './entity/TokenHourData';
 
 export class Database {
   _config: ConnectionOptions
@@ -81,8 +83,8 @@ export class Database {
 
     let selectQueryBuilder = repo.createQueryBuilder('factory')
       .distinctOn(['id'])
-      .orderBy('factory.id')
-      .addOrderBy('factory.block_number', 'DESC');
+      .orderBy('id')
+      .addOrderBy('block_number', 'DESC');
 
     if (blockNumber) {
       selectQueryBuilder = selectQueryBuilder.where('block_number <= :blockNumber', { blockNumber });
@@ -108,7 +110,7 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('factory.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -192,7 +194,7 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('bundle.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -215,7 +217,7 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('pool_day_data.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -238,7 +240,7 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('pool_hour_data.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -261,7 +263,7 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('transaction.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -284,7 +286,7 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('mint.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -307,7 +309,7 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('tick.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -330,7 +332,53 @@ export class Database {
         selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
       }
 
-      let entity = await selectQueryBuilder.orderBy('uniswap_day_data.block_number', 'DESC')
+      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id, ...values });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
+    });
+  }
+
+  async loadTokenDayData ({ id, blockNumber, ...values }: DeepPartial<TokenDayData>): Promise<TokenDayData> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(TokenDayData);
+
+      let selectQueryBuilder = repo.createQueryBuilder('token_day_data')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
+        .getOne();
+
+      if (!entity) {
+        entity = repo.create({ blockNumber, id, ...values });
+        entity = await repo.save(entity);
+      }
+
+      return entity;
+    });
+  }
+
+  async loadTokenHourData ({ id, blockNumber, ...values }: DeepPartial<TokenHourData>): Promise<TokenHourData> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(TokenHourData);
+
+      let selectQueryBuilder = repo.createQueryBuilder('token_hour_data')
+        .where('id = :id', { id });
+
+      if (blockNumber) {
+        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
+      }
+
+      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
         .getOne();
 
       if (!entity) {
@@ -403,6 +451,22 @@ export class Database {
       const repo = tx.getRepository(UniswapDayData);
       uniswapDayData.blockNumber = blockNumber;
       return repo.save(uniswapDayData);
+    });
+  }
+
+  async saveTokenDayData (tokenDayData: TokenDayData, blockNumber: number): Promise<TokenDayData> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(TokenDayData);
+      tokenDayData.blockNumber = blockNumber;
+      return repo.save(tokenDayData);
+    });
+  }
+
+  async saveTokenHourData (tokenHourData: TokenHourData, blockNumber: number): Promise<TokenHourData> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(TokenHourData);
+      tokenHourData.blockNumber = blockNumber;
+      return repo.save(tokenHourData);
     });
   }
 

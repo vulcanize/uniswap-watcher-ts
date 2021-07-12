@@ -1,7 +1,7 @@
 import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
 import Decimal from 'decimal.js';
+import { decimalTransformer } from '@vulcanize/util';
 
-import { decimalTransformer } from '../utils/database';
 import { Pool } from './Pool';
 
 @Entity()

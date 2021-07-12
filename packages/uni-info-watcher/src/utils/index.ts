@@ -41,7 +41,7 @@ export const loadTransaction = async (db: Database, event: { txHash: string, blo
   return db.saveTransaction(transaction, blockNumber);
 };
 
-// return 0 if denominator is 0 in division
+// Return 0 if denominator is 0 in division.
 export const safeDiv = (amount0: Decimal, amount1: Decimal): Decimal => {
   if (amount1.isZero()) {
     return new Decimal(0);

@@ -6,7 +6,7 @@ import { BigNumber } from 'ethers';
 
 import { Database } from './database';
 import { findEthPerToken, getEthPriceInUSD, WHITELIST_TOKENS } from './utils/pricing';
-import { updatePoolDayData, updatePoolHourData, updateUniswapDayData } from './utils/intervalUpdates';
+import { updatePoolDayData, updatePoolHourData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
 import { Token } from './entity/Token';
 import { convertTokenToDecimal, loadTransaction } from './utils';
 import { loadTick } from './utils/tick';
@@ -210,7 +210,7 @@ export class EventWatcher {
     const poolAddress = contractAddress;
     const pool = await this._db.loadPool({ id: poolAddress, blockNumber });
 
-    // TODO: In subgraph factory is fetched by hardcoded factory address
+    // TODO: In subgraph factory is fetched by hardcoded factory address.
     // Currently fetching first factory in database as only one exists.
     const [factory] = await this._db.getFactories({ blockNumber }, { limit: 1 });
 
@@ -267,7 +267,7 @@ export class EventWatcher {
 
     const transaction = await loadTransaction(this._db, { txHash, blockNumber });
 
-    const mint = await this._db.loadMint({
+    await this._db.loadMint({
       id: transaction.id + '#' + pool.txCount.toString(),
       blockNumber,
       transaction,
@@ -311,19 +311,19 @@ export class EventWatcher {
     await updateUniswapDayData(this._db, { blockNumber, contractAddress });
     await updatePoolDayData(this._db, { blockNumber, contractAddress });
     await updatePoolHourData(this._db, { blockNumber, contractAddress });
-    // updateTokenDayData(token0 as Token, event)
-    // updateTokenDayData(token1 as Token, event)
-    // updateTokenHourData(token0 as Token, event)
-    // updateTokenHourData(token1 as Token, event)
+    await updateTokenDayData(this._db, token0, { blockNumber });
+    await updateTokenDayData(this._db, token1, { blockNumber });
+    await updateTokenHourData(this._db, token0, { blockNumber });
+    await updateTokenHourData(this._db, token1, { blockNumber });
 
-    // token0.save()
-    // token1.save()
-    // pool.save()
-    // factory.save()
-    // mint.save()
+    await Promise.all([
+      this._db.saveToken(token0, blockNumber),
+      this._db.saveToken(token1, blockNumber)
+    ]);
 
-    // // Update inner tick vars and save the ticks
-    // updateTickFeeVarsAndSave(lowerTick!, event)
-    // updateTickFeeVarsAndSave(upperTick!, event)
+    await this._db.savePool(pool, blockNumber);
+    await this._db.saveFactory(factory, blockNumber);
+
+    // Skipping update inner tick vars and tick day data as they are not queried.
   }
 }
