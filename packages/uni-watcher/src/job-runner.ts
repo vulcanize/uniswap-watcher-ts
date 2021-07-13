@@ -6,12 +6,11 @@ import debug from 'debug';
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { TracingClient } from '@vulcanize/tracing-client';
 import { getConfig, JobQueue } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
-import { QUEUE_TX_TRACING } from './tx-watcher';
+import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING } from './events';
 
 const log = debug('vulcanize:server');
 
@@ -46,9 +45,7 @@ export const main = async (): Promise<any> => {
 
   const ethClient = new EthClient({ gqlEndpoint, gqlSubscriptionEndpoint, cache });
 
-  const tracingClient = new TracingClient(traceProviderEndpoint);
-
-  const indexer = new Indexer(db, ethClient, tracingClient);
+  const indexer = new Indexer(config, db, ethClient);
 
   assert(jobQueueConfig, 'Missing job queue config');
 
@@ -58,9 +55,36 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag });
   await jobQueue.start();
 
-  await jobQueue.subscribe(QUEUE_TX_TRACING, async (job) => {
-    const { data: { txHash } } = job;
-    await indexer.traceTxAndIndexAppearances(txHash);
+  await jobQueue.subscribe(QUEUE_BLOCK_PROCESSING, async (job) => {
+    const { data: { blockHash } } = job;
+
+    const events = await indexer.getBlockEvents(blockHash);
+    for (let ei = 0; ei < events.length; ei++) {
+      const eventObj = events[ei];
+      await jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { blockHash: eventObj.blockHash, id: eventObj.id });
+    }
+
+    await jobQueue.markComplete(job);
+  });
+
+  await jobQueue.subscribe(QUEUE_EVENT_PROCESSING, async (job) => {
+    const { data: { id } } = job;
+
+    const event = await indexer.getEvent(id);
+    assert(event);
+
+    const uniContract = await indexer.isUniswapContract(event.contract);
+    if (uniContract) {
+      // TODO: We might not have parsed this event yet.
+      // if (event.eventName === 'unknown') {
+      //   const eventDetails = indexer.parseEventNameAndArgs(uniContract.kind, logObj);
+      //   eventName = eventDetails.eventName;
+      //   eventInfo = eventDetails.eventInfo;
+      // }
+
+      indexer.processEvent(event);
+    }
+
     await jobQueue.markComplete(job);
   });
 };

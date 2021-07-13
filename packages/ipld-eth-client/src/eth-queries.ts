@@ -75,6 +75,18 @@ subscription SubscriptionReceipt {
 }
 `;
 
+export const subscribeBlocks = gql`
+subscription {
+  listen(topic: "header_cids") {
+    relatedNode {
+      ... on EthHeaderCid {
+        blockHash
+      }
+    }
+  }
+}
+`;
+
 export const subscribeTransactions = gql`
 subscription SubscriptionHeader {
   listen(topic: "transaction_cids") {
@@ -96,5 +108,6 @@ export default {
   getLogs,
   getBlockWithTransactions,
   subscribeLogs,
+  subscribeBlocks,
   subscribeTransactions
 };

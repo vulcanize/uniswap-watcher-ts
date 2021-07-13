@@ -4,7 +4,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 import { Event } from './entity/Event';
 import { Contract } from './entity/Contract';
-import { EventSyncProgress } from './entity/EventProgress';
+import { BlockProgress } from './entity/BlockProgress';
 
 export class Database {
   _config: ConnectionOptions
@@ -28,9 +28,9 @@ export class Database {
     return this._conn.close();
   }
 
-  // Returns true if events have already been synced for the (block, token) combination.
-  async didSyncEvents ({ blockHash }: { blockHash: string }): Promise<boolean> {
-    const numRows = await this._conn.getRepository(EventSyncProgress)
+  // Returns true if events have already been synced for the block.
+  async didSyncEvents (blockHash: string): Promise<boolean> {
+    const numRows = await this._conn.getRepository(BlockProgress)
       .createQueryBuilder()
       .where('block_hash = :blockHash', { blockHash })
       .getCount();
@@ -38,7 +38,7 @@ export class Database {
     return numRows > 0;
   }
 
-  async getBlockEvents ({ blockHash }: { blockHash: string }): Promise<Event[]> {
+  async getBlockEvents (blockHash: string): Promise<Event[]> {
     return this._conn.getRepository(Event)
       .createQueryBuilder('event')
       .where('block_hash = :blockHash', { blockHash })
@@ -46,7 +46,7 @@ export class Database {
       .getMany();
   }
 
-  async getEvents ({ blockHash, contract }: { blockHash: string, contract: string }): Promise<Event[]> {
+  async getEvents (blockHash: string, contract: string): Promise<Event[]> {
     return this._conn.getRepository(Event)
       .createQueryBuilder('event')
       .where('block_hash = :blockHash AND contract = :contract', {
@@ -57,7 +57,7 @@ export class Database {
       .getMany();
   }
 
-  async getEventsByName ({ blockHash, contract, eventName }: { blockHash: string, contract: string, eventName: string }): Promise<Event[] | undefined> {
+  async getEventsByName (blockHash: string, contract: string, eventName: string): Promise<Event[] | undefined> {
     return this._conn.getRepository(Event)
       .createQueryBuilder('event')
       .where('block_hash = :blockHash AND contract = :contract AND event_name = :eventName', {
@@ -68,13 +68,13 @@ export class Database {
       .getMany();
   }
 
-  async saveEvents ({ blockHash, events }: { blockHash: string, events: DeepPartial<Event>[] }): Promise<void> {
+  async saveEvents (blockHash: string, events: DeepPartial<Event>[]): Promise<void> {
     // In a transaction:
     // (1) Save all the events in the database.
     // (2) Add an entry to the event progress table.
 
     await this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(EventSyncProgress);
+      const repo = tx.getRepository(Event);
 
       // Check sync progress inside the transaction.
       const numRows = await repo
@@ -89,12 +89,12 @@ export class Database {
           .into(Event)
           .values(events)
           .execute();
-
-        // Update event sync progress.
-        const progress = repo.create({ blockHash });
-        await repo.save(progress);
       }
     });
+  }
+
+  async getEvent (id: string): Promise<Event | undefined> {
+    return this._conn.getRepository(Event).findOne(id);
   }
 
   async getContract (address: string): Promise<Contract | undefined> {
@@ -115,6 +115,41 @@ export class Database {
 
       if (numRows === 0) {
         const entity = repo.create({ address, kind, startingBlock });
+        await repo.save(entity);
+      }
+    });
+  }
+
+  async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
+    const repo = this._conn.getRepository(BlockProgress);
+    return repo.findOne({ where: { blockHash } });
+  }
+
+  async initBlockProgress (blockHash: string, blockNumber: number, numEvents: number): Promise<void> {
+    await this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(BlockProgress);
+
+      const numRows = await repo
+        .createQueryBuilder()
+        .where('block_hash = :blockHash', { blockHash })
+        .getCount();
+
+      if (numRows === 0) {
+        const entity = repo.create({ blockHash, blockNumber, numEvents, numProcessedEvents: 0, isComplete: (numEvents === 0) });
+        await repo.save(entity);
+      }
+    });
+  }
+
+  async updateBlockProgress (blockHash: string): Promise<void> {
+    await this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(BlockProgress);
+      const entity = await repo.findOne({ where: { blockHash } });
+      if (entity && !entity.isComplete) {
+        entity.numProcessedEvents++;
+        if (entity.numProcessedEvents >= entity.numEvents) {
+          entity.isComplete = true;
+        }
         await repo.save(entity);
       }
     });
