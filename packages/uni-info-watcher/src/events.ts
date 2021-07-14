@@ -505,7 +505,7 @@ export class EventWatcher {
 
   async _handleSwap (block: Block, contractAddress: string, tx: Transaction, swapEvent: SwapEvent): Promise<void> {
     const { number: blockNumber, timestamp: blockTimestamp } = block;
-    const { hash: txHash, from: txFrom } = tx;
+    const { hash: txHash } = tx;
     const bundle = await this._db.loadBundle({ id: '1', blockNumber });
 
     // TODO: In subgraph factory is fetched by hardcoded factory address.
@@ -525,8 +525,6 @@ export class EventWatcher {
     ]);
 
     assert(token0 && token1, 'Pool tokens not found.');
-
-    const oldTick = pool.tick;
 
     // Amounts - 0/1 are token deltas. Can be positive or negative.
     const amount0 = convertTokenToDecimal(swapEvent.amount0, token0.decimals);
@@ -633,13 +631,17 @@ export class EventWatcher {
 
     await this._db.loadSwap({
       id: transaction.id + '#' + pool.txCount.toString(),
+      blockNumber,
       transaction,
       timestamp: transaction.timestamp,
       pool,
       token0: pool.token0,
       token1: pool.token1,
       sender: swapEvent.sender,
-      // origin: txFrom,
+
+      // TODO: Assign origin with Transaction from address.
+      // origin: event.transaction.from
+
       recipient: swapEvent.recipient,
       amount0: amount0,
       amount1: amount1,
@@ -648,97 +650,61 @@ export class EventWatcher {
       sqrtPriceX96: swapEvent.sqrtPriceX96
     });
 
-    // // update fee growth
-    // let poolContract = PoolABI.bind(event.address)
-    // let feeGrowthGlobal0X128 = poolContract.feeGrowthGlobal0X128()
-    // let feeGrowthGlobal1X128 = poolContract.feeGrowthGlobal1X128()
-    // pool.feeGrowthGlobal0X128 = feeGrowthGlobal0X128 as BigInt
-    // pool.feeGrowthGlobal1X128 = feeGrowthGlobal1X128 as BigInt
+    // Skipping update pool fee growth as they are not queried.
 
-    // // interval data
-    // let uniswapDayData = updateUniswapDayData(event)
-    // let poolDayData = updatePoolDayData(event)
-    // let poolHourData = updatePoolHourData(event)
-    // let token0DayData = updateTokenDayData(token0 as Token, event)
-    // let token1DayData = updateTokenDayData(token1 as Token, event)
-    // let token0HourData = updateTokenHourData(token0 as Token, event)
-    // let token1HourData = updateTokenHourData(token1 as Token, event)
+    // Interval data.
+    const uniswapDayData = await updateUniswapDayData(this._db, { blockNumber, contractAddress, blockTimestamp });
+    const poolDayData = await updatePoolDayData(this._db, { blockNumber, contractAddress, blockTimestamp });
+    const poolHourData = await updatePoolHourData(this._db, { blockNumber, contractAddress, blockTimestamp });
+    const token0DayData = await updateTokenDayData(this._db, token0, { blockNumber, blockTimestamp });
+    const token1DayData = await updateTokenDayData(this._db, token0, { blockNumber, blockTimestamp });
+    const token0HourData = await updateTokenHourData(this._db, token0, { blockNumber, blockTimestamp });
+    const token1HourData = await updateTokenHourData(this._db, token0, { blockNumber, blockTimestamp });
 
-    // // update volume metrics
-    // uniswapDayData.volumeETH = uniswapDayData.volumeETH.plus(amountTotalETHTracked)
-    // uniswapDayData.volumeUSD = uniswapDayData.volumeUSD.plus(amountTotalUSDTracked)
-    // uniswapDayData.feesUSD = uniswapDayData.feesUSD.plus(feesUSD)
+    // Update volume metrics.
+    uniswapDayData.volumeETH = uniswapDayData.volumeETH.plus(amountTotalETHTracked);
+    uniswapDayData.volumeUSD = uniswapDayData.volumeUSD.plus(amountTotalUSDTracked);
+    uniswapDayData.feesUSD = uniswapDayData.feesUSD.plus(feesUSD);
 
-    // poolDayData.volumeUSD = poolDayData.volumeUSD.plus(amountTotalUSDTracked)
-    // poolDayData.volumeToken0 = poolDayData.volumeToken0.plus(amount0Abs)
-    // poolDayData.volumeToken1 = poolDayData.volumeToken1.plus(amount1Abs)
-    // poolDayData.feesUSD = poolDayData.feesUSD.plus(feesUSD)
+    poolDayData.volumeUSD = poolDayData.volumeUSD.plus(amountTotalUSDTracked);
+    poolDayData.volumeToken0 = poolDayData.volumeToken0.plus(amount0Abs);
+    poolDayData.volumeToken1 = poolDayData.volumeToken1.plus(amount1Abs);
+    poolDayData.feesUSD = poolDayData.feesUSD.plus(feesUSD);
 
-    // poolHourData.volumeUSD = poolHourData.volumeUSD.plus(amountTotalUSDTracked)
-    // poolHourData.volumeToken0 = poolHourData.volumeToken0.plus(amount0Abs)
-    // poolHourData.volumeToken1 = poolHourData.volumeToken1.plus(amount1Abs)
-    // poolHourData.feesUSD = poolHourData.feesUSD.plus(feesUSD)
+    poolHourData.volumeUSD = poolHourData.volumeUSD.plus(amountTotalUSDTracked);
+    poolHourData.volumeToken0 = poolHourData.volumeToken0.plus(amount0Abs);
+    poolHourData.volumeToken1 = poolHourData.volumeToken1.plus(amount1Abs);
+    poolHourData.feesUSD = poolHourData.feesUSD.plus(feesUSD);
 
-    // token0DayData.volume = token0DayData.volume.plus(amount0Abs)
-    // token0DayData.volumeUSD = token0DayData.volumeUSD.plus(amountTotalUSDTracked)
-    // token0DayData.untrackedVolumeUSD = token0DayData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-    // token0DayData.feesUSD = token0DayData.feesUSD.plus(feesUSD)
+    token0DayData.volume = token0DayData.volume.plus(amount0Abs);
+    token0DayData.volumeUSD = token0DayData.volumeUSD.plus(amountTotalUSDTracked);
+    token0DayData.untrackedVolumeUSD = token0DayData.untrackedVolumeUSD.plus(amountTotalUSDTracked);
+    token0DayData.feesUSD = token0DayData.feesUSD.plus(feesUSD);
 
-    // token0HourData.volume = token0HourData.volume.plus(amount0Abs)
-    // token0HourData.volumeUSD = token0HourData.volumeUSD.plus(amountTotalUSDTracked)
-    // token0HourData.untrackedVolumeUSD = token0HourData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-    // token0HourData.feesUSD = token0HourData.feesUSD.plus(feesUSD)
+    token0HourData.volume = token0HourData.volume.plus(amount0Abs);
+    token0HourData.volumeUSD = token0HourData.volumeUSD.plus(amountTotalUSDTracked);
+    token0HourData.untrackedVolumeUSD = token0HourData.untrackedVolumeUSD.plus(amountTotalUSDTracked);
+    token0HourData.feesUSD = token0HourData.feesUSD.plus(feesUSD);
 
-    // token1DayData.volume = token1DayData.volume.plus(amount1Abs)
-    // token1DayData.volumeUSD = token1DayData.volumeUSD.plus(amountTotalUSDTracked)
-    // token1DayData.untrackedVolumeUSD = token1DayData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-    // token1DayData.feesUSD = token1DayData.feesUSD.plus(feesUSD)
+    token1DayData.volume = token1DayData.volume.plus(amount1Abs);
+    token1DayData.volumeUSD = token1DayData.volumeUSD.plus(amountTotalUSDTracked);
+    token1DayData.untrackedVolumeUSD = token1DayData.untrackedVolumeUSD.plus(amountTotalUSDTracked);
+    token1DayData.feesUSD = token1DayData.feesUSD.plus(feesUSD);
 
-    // token1HourData.volume = token1HourData.volume.plus(amount1Abs)
-    // token1HourData.volumeUSD = token1HourData.volumeUSD.plus(amountTotalUSDTracked)
-    // token1HourData.untrackedVolumeUSD = token1HourData.untrackedVolumeUSD.plus(amountTotalUSDTracked)
-    // token1HourData.feesUSD = token1HourData.feesUSD.plus(feesUSD)
+    token1HourData.volume = token1HourData.volume.plus(amount1Abs);
+    token1HourData.volumeUSD = token1HourData.volumeUSD.plus(amountTotalUSDTracked);
+    token1HourData.untrackedVolumeUSD = token1HourData.untrackedVolumeUSD.plus(amountTotalUSDTracked);
+    token1HourData.feesUSD = token1HourData.feesUSD.plus(feesUSD);
 
-    // swap.save()
-    // token0DayData.save()
-    // token1DayData.save()
-    // uniswapDayData.save()
-    // poolDayData.save()
-    // factory.save()
-    // pool.save()
-    // token0.save()
-    // token1.save()
+    this._db.saveTokenDayData(token0DayData, blockNumber);
+    this._db.saveTokenDayData(token1DayData, blockNumber);
+    this._db.saveUniswapDayData(uniswapDayData, blockNumber);
+    this._db.savePoolDayData(poolDayData, blockNumber);
+    this._db.saveFactory(factory, blockNumber);
+    this._db.savePool(pool, blockNumber);
+    this._db.saveToken(token0, blockNumber);
+    this._db.saveToken(token1, blockNumber);
 
-    // // Update inner vars of current or crossed ticks
-    // let newTick = pool.tick!
-    // let tickSpacing = feeTierToTickSpacing(pool.feeTier)
-    // let modulo = newTick.mod(tickSpacing)
-    // if (modulo.equals(ZERO_BI)) {
-    //   // Current tick is initialized and needs to be updated
-    //   loadTickUpdateFeeVarsAndSave(newTick.toI32(), event)
-    // }
-
-    // let numIters = oldTick
-    //   .minus(newTick)
-    //   .abs()
-    //   .div(tickSpacing)
-
-    // if (numIters.gt(BigInt.fromI32(100))) {
-    //   // In case more than 100 ticks need to be updated ignore the update in
-    //   // order to avoid timeouts. From testing this behavior occurs only upon
-    //   // pool initialization. This should not be a big issue as the ticks get
-    //   // updated later. For early users this error also disappears when calling
-    //   // collect
-    // } else if (newTick.gt(oldTick)) {
-    //   let firstInitialized = oldTick.plus(tickSpacing.minus(modulo))
-    //   for (let i = firstInitialized; i.le(newTick); i = i.plus(tickSpacing)) {
-    //     loadTickUpdateFeeVarsAndSave(i.toI32(), event)
-    //   }
-    // } else if (newTick.lt(oldTick)) {
-    //   let firstInitialized = oldTick.minus(modulo)
-    //   for (let i = firstInitialized; i.ge(newTick); i = i.minus(tickSpacing)) {
-    //     loadTickUpdateFeeVarsAndSave(i.toI32(), event)
-    //   }
-    // }
+    // Skipping update of inner vars of current or crossed ticks as they are not queried.
   }
 }
