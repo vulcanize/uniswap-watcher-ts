@@ -8,6 +8,7 @@ import { JobQueue } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { BlockProgress } from './entity/BlockProgress';
+import { UNKNOWN_EVENT_NAME } from './entity/Event';
 
 const log = debug('vulcanize:events');
 
@@ -43,6 +44,11 @@ export class EventWatcher {
 
     log('Started watching upstream blocks...');
 
+    this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
+      const { data: { request: { data: { blockHash, blockNumber } } } } = job;
+      log(`Job onComplete block ${blockHash} ${blockNumber}`);
+    });
+
     this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
       const { data: { request, failed, state, createdOn } } = job;
 
@@ -65,24 +71,25 @@ export class EventWatcher {
     });
 
     this._subscription = await this._ethClient.watchBlocks(async (value) => {
-      const { blockHash } = _.get(value, 'data.listen.relatedNode');
-      log('watchBlock', blockHash);
-      await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash });
+      const { blockHash, blockNumber } = _.get(value, 'data.listen.relatedNode');
+      log('watchBlock', blockHash, blockNumber);
+      await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber });
     });
   }
 
   async publishUniswapEventToSubscribers (id: string, timeElapsedInSeconds: number): Promise<void> {
     const dbEvent = await this._indexer.getEvent(id);
 
-    assert(dbEvent);
-    const resultEvent = this._indexer.getResultEvent(dbEvent);
+    if (dbEvent && dbEvent.eventName !== UNKNOWN_EVENT_NAME) {
+      const resultEvent = this._indexer.getResultEvent(dbEvent);
 
-    log(`pushing event to GQL subscribers (${timeElapsedInSeconds}s elapsed): ${resultEvent.event.__typename}`);
+      log(`pushing event to GQL subscribers (${timeElapsedInSeconds}s elapsed): ${resultEvent.event.__typename}`);
 
-    // Publishing the event here will result in pushing the payload to GQL subscribers for `onEvent`.
-    await this._pubsub.publish('event', {
-      onEvent: resultEvent
-    });
+      // Publishing the event here will result in pushing the payload to GQL subscribers for `onEvent`.
+      await this._pubsub.publish(UniswapEvent, {
+        onEvent: resultEvent
+      });
+    }
   }
 
   async publishBlockProgressToSubscribers (blockProgress: BlockProgress): Promise<void> {

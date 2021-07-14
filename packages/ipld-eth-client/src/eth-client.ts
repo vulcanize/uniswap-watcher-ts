@@ -65,21 +65,11 @@ export class EthClient {
 
   async getLogs (vars: Vars): Promise<any> {
     const result = await this._getCachedOrFetch('getLogs', vars);
-    const { getLogs: logs, block: { number: blockNumHex, timestamp: timestampHex } } = result;
-    const blockNumber = parseInt(blockNumHex, 16);
-    const timestamp = parseInt(timestampHex, 16);
+    const { getLogs: resultLogs, block: { number: blockNumHex, timestamp: timestampHex } } = result;
+    const block = { hash: vars.blockHash, number: parseInt(blockNumHex, 16), timestamp: parseInt(timestampHex, 16) };
+    const logs = resultLogs.map((logEntry: any) => _.merge({}, logEntry, { transaction: { block }}));
 
-    return logs.map((logEntry: any) => {
-      return _.merge({}, logEntry, {
-        transaction: {
-          block: {
-            hash: vars.blockHash,
-            number: blockNumber,
-            timestamp
-          }
-        }
-      });
-    });
+    return { logs, block };
   }
 
   async watchBlocks (onNext: (value: any) => void): Promise<ZenObservable.Subscription> {

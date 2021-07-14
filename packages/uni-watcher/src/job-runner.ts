@@ -10,9 +10,10 @@ import { getConfig, JobQueue } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
+import { UNKNOWN_EVENT_NAME } from './entity/Event';
 import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING } from './events';
 
-const log = debug('vulcanize:server');
+const log = debug('vulcanize:job-runner');
 
 export const main = async (): Promise<any> => {
   const argv = await yargs(hideBin(process.argv))
@@ -36,10 +37,9 @@ export const main = async (): Promise<any> => {
   await db.init();
 
   assert(upstream, 'Missing upstream config');
-  const { gqlEndpoint, gqlSubscriptionEndpoint, traceProviderEndpoint, cache: cacheConfig } = upstream;
+  const { gqlEndpoint, gqlSubscriptionEndpoint, cache: cacheConfig } = upstream;
   assert(gqlEndpoint, 'Missing upstream gqlEndpoint');
   assert(gqlSubscriptionEndpoint, 'Missing upstream gqlSubscriptionEndpoint');
-  assert(traceProviderEndpoint, 'Missing upstream traceProviderEndpoint');
 
   const cache = await getCache(cacheConfig);
 
@@ -56,12 +56,14 @@ export const main = async (): Promise<any> => {
   await jobQueue.start();
 
   await jobQueue.subscribe(QUEUE_BLOCK_PROCESSING, async (job) => {
-    const { data: { blockHash } } = job;
+    const { data: { blockHash, blockNumber } } = job;
 
-    const events = await indexer.getBlockEvents(blockHash);
+    log(`Processing block ${blockHash} ${blockNumber}`);
+
+    const events = await indexer.getOrFetchBlockEvents(blockHash);
     for (let ei = 0; ei < events.length; ei++) {
-      const eventObj = events[ei];
-      await jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { blockHash: eventObj.blockHash, id: eventObj.id });
+      const { blockHash, id } = events[ei];
+      await jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { blockHash, id, publish: true });
     }
 
     await jobQueue.markComplete(job);
@@ -70,19 +72,24 @@ export const main = async (): Promise<any> => {
   await jobQueue.subscribe(QUEUE_EVENT_PROCESSING, async (job) => {
     const { data: { id } } = job;
 
-    const event = await indexer.getEvent(id);
-    assert(event);
+    log(`Processing event ${id}`);
 
-    const uniContract = await indexer.isUniswapContract(event.contract);
+    let dbEvent = await indexer.getEvent(id);
+    assert(dbEvent);
+
+    const uniContract = await indexer.isUniswapContract(dbEvent.contract);
     if (uniContract) {
-      // TODO: We might not have parsed this event yet.
-      // if (event.eventName === 'unknown') {
-      //   const eventDetails = indexer.parseEventNameAndArgs(uniContract.kind, logObj);
-      //   eventName = eventDetails.eventName;
-      //   eventInfo = eventDetails.eventInfo;
-      // }
+      // We might not have parsed this event yet. This can happen if the contract was added
+      // as a result of a previous event in the same block.
+      if (dbEvent.eventName === UNKNOWN_EVENT_NAME) {
+        const logObj = JSON.parse(dbEvent.extraInfo);
+        const { eventName, eventInfo } = indexer.parseEventNameAndArgs(uniContract.kind, logObj);
+        dbEvent.eventName = eventName;
+        dbEvent.eventInfo = JSON.stringify(eventInfo);
+        dbEvent = await indexer.saveEventEntity(dbEvent);
+      }
 
-      indexer.processEvent(event);
+      await indexer.processEvent(dbEvent);
     }
 
     await jobQueue.markComplete(job);

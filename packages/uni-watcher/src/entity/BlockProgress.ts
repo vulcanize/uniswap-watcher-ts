@@ -1,9 +1,12 @@
-import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 @Entity()
-@Index(['blockNumber'])
+@Index(['blockHash'], { unique: true })
 export class BlockProgress {
-  @PrimaryColumn('varchar', { length: 66 })
+  @PrimaryGeneratedColumn()
+  id!: number;
+
+  @Column('varchar', { length: 66 })
   blockHash!: string;
 
   @Column('numeric')

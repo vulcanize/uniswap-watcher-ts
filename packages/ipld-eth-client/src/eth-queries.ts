@@ -81,6 +81,7 @@ subscription {
     relatedNode {
       ... on EthHeaderCid {
         blockHash
+        blockNumber
       }
     }
   }

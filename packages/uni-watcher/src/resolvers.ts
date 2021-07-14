@@ -57,11 +57,15 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
 
       events: async (_: any, { blockHash, contract, name }: { blockHash: string, contract: string, name: string }) => {
         log('events', blockHash, contract, name || '');
-        const events = await indexer.getEventsByFilter(blockHash, contract, name);
 
-        return events
-          .filter(event => event.isProcessed)
-          .map(event => indexer.getResultEvent(event));
+        const blockProgress = await indexer.getBlockProgress(blockHash);
+        if (!blockProgress || !blockProgress.isComplete) {
+          // TODO: Trigger indexing for the block.
+          throw new Error('Not available');
+        }
+
+        const events = await indexer.getEventsByFilter(blockHash, contract, name);
+        return events.map(event => indexer.getResultEvent(event));
       }
     }
   };

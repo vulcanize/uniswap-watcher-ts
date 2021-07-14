@@ -1,6 +1,4 @@
-import assert from 'assert';
 import debug from 'debug';
-import _ from 'lodash';
 import { DeepPartial } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
@@ -10,7 +8,7 @@ import { GetStorageAt } from '@vulcanize/solidity-mapper';
 import { Config } from '@vulcanize/util';
 
 import { Database } from './database';
-import { Event } from './entity/Event';
+import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
 import { BlockProgress } from './entity/BlockProgress';
 import { Contract, KIND_FACTORY, KIND_POOL } from './entity/Contract';
 
@@ -77,15 +75,14 @@ export class Indexer {
     };
   }
 
-  async getBlockEvents (blockHash: string): Promise<Array<Event>> {
-    const didSyncEvents = await this._db.didSyncEvents(blockHash);
-    if (!didSyncEvents) {
+  // Note: Some event names might be unknown at this point, as earlier events might not yet be processed.
+  async getOrFetchBlockEvents (blockHash: string): Promise<Array<Event>> {
+    const blockProgress = await this._db.getBlockProgress(blockHash);
+    if (!blockProgress) {
       // Fetch and save events first and make a note in the event sync progress table.
       await this.fetchAndSaveEvents(blockHash);
       log('getBlockEvents: db miss, fetching from upstream server');
     }
-
-    assert(await this._db.didSyncEvents(blockHash));
 
     const events = await this._db.getBlockEvents(blockHash);
     log(`getBlockEvents: db hit, num events: ${events.length}`);
@@ -100,7 +97,7 @@ export class Indexer {
     }
 
     // Fetch block events first.
-    await this.getBlockEvents(blockHash);
+    await this.getOrFetchBlockEvents(blockHash);
 
     const events = await this._db.getEvents(blockHash, contract);
     log(`getEvents: db hit, num events: ${events.length}`);
@@ -136,7 +133,7 @@ export class Indexer {
   }
 
   parseEventNameAndArgs (kind: string, logObj: any): any {
-    let eventName = 'unknown';
+    let eventName = UNKNOWN_EVENT_NAME;
     let eventInfo = {};
 
     const { topics, data } = logObj;
@@ -220,7 +217,7 @@ export class Indexer {
   }
 
   async fetchAndSaveEvents (blockHash: string): Promise<void> {
-    const logs = await this._ethClient.getLogs({ blockHash });
+    const { block, logs } = await this._ethClient.getLogs({ blockHash });
 
     const dbEvents: Array<DeepPartial<Event>> = [];
 
@@ -244,7 +241,7 @@ export class Indexer {
         }
       } = logObj;
 
-      let eventName = 'unknown';
+      let eventName = UNKNOWN_EVENT_NAME;
       let eventInfo = {};
       const extraInfo = { topics, data };
 
@@ -279,12 +276,15 @@ export class Indexer {
       });
     }
 
-    const events: DeepPartial<Event>[] = _.compact(dbEvents);
-    await this._db.saveEvents(blockHash, events);
+    await this._db.saveEvents(blockHash, block.number, dbEvents);
   }
 
   async getEvent (id: string): Promise<Event | undefined> {
     return this._db.getEvent(id);
+  }
+
+  async saveEventEntity (dbEvent: Event): Promise<Event> {
+    return this._db.saveEventEntity(dbEvent);
   }
 
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
