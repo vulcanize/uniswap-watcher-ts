@@ -294,4 +294,8 @@ export class Indexer {
   async updateBlockProgress (blockHash: string): Promise<void> {
     return this._db.updateBlockProgress(blockHash);
   }
+
+  async getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<Event>> {
+    return this._db.getEventsInRange(fromBlockNumber, toBlockNumber);
+  }
 }

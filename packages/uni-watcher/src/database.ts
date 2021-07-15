@@ -2,7 +2,7 @@ import assert from 'assert';
 import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
-import { Event } from './entity/Event';
+import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
 import { Contract } from './entity/Contract';
 import { BlockProgress } from './entity/BlockProgress';
 
@@ -54,6 +54,21 @@ export class Database {
         blockHash,
         contract,
         eventName
+      })
+      .getMany();
+  }
+
+  async getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<Event>> {
+    return this._conn.getRepository(Event)
+      .createQueryBuilder('event')
+      .where('block_number >= :fromBlockNumber AND block_number <= :toBlockNumber AND event_name <> :eventName', {
+        fromBlockNumber,
+        toBlockNumber,
+        eventName: UNKNOWN_EVENT_NAME
+      })
+      .orderBy({
+        block_number: 'ASC',
+        index: 'ASC'
       })
       .getMany();
   }
