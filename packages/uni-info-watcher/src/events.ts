@@ -2,7 +2,8 @@ import assert from 'assert';
 import debug from 'debug';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
-import { BigNumber } from 'ethers';
+import { BigNumber, utils, getDefaultProvider, Contract } from 'ethers';
+import { BaseProvider } from '@ethersproject/providers';
 
 import { Database } from './database';
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
@@ -11,6 +12,11 @@ import { Token } from './entity/Token';
 import { convertTokenToDecimal, loadTransaction, safeDiv } from './utils';
 import { loadTick } from './utils/tick';
 import Decimal from 'decimal.js';
+import { Position } from './entity/Position';
+import nfpmABI from './artifacts/NonfungiblePositionManager.json';
+import factoryABI from './artifacts/factory.json';
+
+const RPC_URL = 'http://localhost:8545';
 
 const log = debug('vulcanize:events');
 
@@ -61,6 +67,14 @@ interface SwapEvent {
   tick: bigint;
 }
 
+interface IncreaseLiquidityEvent {
+  __typename: 'IncreaseLiquidityEvent';
+  tokenId: bigint;
+  liquidity: bigint;
+  amount0: bigint;
+  amount1: bigint;
+}
+
 interface Block {
   number: number;
   hash: string;
@@ -76,7 +90,7 @@ interface ResultEvent {
   block: Block;
   tx: Transaction;
   contract: string;
-  event: PoolCreatedEvent | InitializeEvent | MintEvent | BurnEvent | SwapEvent;
+  event: PoolCreatedEvent | InitializeEvent | MintEvent | BurnEvent | SwapEvent | IncreaseLiquidityEvent;
   proof: {
     data: string;
   }
@@ -87,6 +101,7 @@ export class EventWatcher {
   _subscription?: ZenObservable.Subscription
   _uniClient: UniClient
   _erc20Client: ERC20Client
+  _provider: BaseProvider
 
   constructor (db: Database, uniClient: UniClient, erc20Client: ERC20Client) {
     assert(db);
@@ -94,6 +109,7 @@ export class EventWatcher {
     this._db = db;
     this._uniClient = uniClient;
     this._erc20Client = erc20Client;
+    this._provider = getDefaultProvider(RPC_URL);
   }
 
   async start (): Promise<void> {
@@ -137,6 +153,11 @@ export class EventWatcher {
       case 'SwapEvent':
         log('Pool Swap event', contract);
         this._handleSwap(block, contract, tx, event as SwapEvent);
+        break;
+
+      case 'IncreaseLiquidityEvent':
+        log('NFPM IncreaseLiquidity event', contract);
+        this._handleIncreaseLiquidity(block, contract, tx, event as IncreaseLiquidityEvent);
         break;
 
       default:
@@ -299,7 +320,7 @@ export class EventWatcher {
         BigInt(mintEvent.tickLower) <= BigInt(pool.tick) &&
         BigInt(mintEvent.tickUpper) > BigInt(pool.tick)
       ) {
-        pool.liquidity = BigInt(pool.liquidity) + mintEvent.amount;
+        pool.liquidity = BigInt(pool.liquidity) + BigInt(mintEvent.amount);
       }
     }
 
@@ -346,8 +367,8 @@ export class EventWatcher {
     const lowerTickId = poolAddress + '#' + mintEvent.tickLower.toString();
     const upperTickId = poolAddress + '#' + mintEvent.tickUpper.toString();
 
-    const lowerTick = await loadTick(this._db, lowerTickId, lowerTickIdx, pool, blockNumber);
-    const upperTick = await loadTick(this._db, upperTickId, upperTickIdx, pool, blockNumber);
+    const lowerTick = await loadTick(this._db, lowerTickId, BigInt(lowerTickIdx), pool, blockNumber);
+    const upperTick = await loadTick(this._db, upperTickId, BigInt(upperTickIdx), pool, blockNumber);
 
     const amount = mintEvent.amount;
     lowerTick.liquidityGross = lowerTick.liquidityGross + amount;
@@ -395,8 +416,8 @@ export class EventWatcher {
 
     const token0 = pool.token0;
     const token1 = pool.token1;
-    const amount0 = convertTokenToDecimal(burnEvent.amount0, token0.decimals);
-    const amount1 = convertTokenToDecimal(burnEvent.amount1, token1.decimals);
+    const amount0 = convertTokenToDecimal(burnEvent.amount0, BigInt(token0.decimals));
+    const amount1 = convertTokenToDecimal(burnEvent.amount1, BigInt(token1.decimals));
 
     const amountUSD = amount0
       .times(token0.derivedETH.times(bundle.ethPriceUSD))
@@ -406,20 +427,20 @@ export class EventWatcher {
     factory.totalValueLockedETH = factory.totalValueLockedETH.minus(pool.totalValueLockedETH);
 
     // Update globals.
-    factory.txCount = factory.txCount + BigInt(1);
+    factory.txCount = BigInt(factory.txCount) + BigInt(1);
 
     // Update token0 data.
-    token0.txCount = token0.txCount + BigInt(1);
+    token0.txCount = BigInt(token0.txCount) + BigInt(1);
     token0.totalValueLocked = token0.totalValueLocked.minus(amount0);
     token0.totalValueLockedUSD = token0.totalValueLocked.times(token0.derivedETH.times(bundle.ethPriceUSD));
 
     // Update token1 data.
-    token1.txCount = token1.txCount + BigInt(1);
+    token1.txCount = BigInt(token1.txCount) + BigInt(1);
     token1.totalValueLocked = token1.totalValueLocked.minus(amount1);
     token1.totalValueLockedUSD = token1.totalValueLocked.times(token1.derivedETH.times(bundle.ethPriceUSD));
 
     // Pool data.
-    pool.txCount = pool.txCount + BigInt(1);
+    pool.txCount = BigInt(pool.txCount) + BigInt(1);
 
     // Pools liquidity tracks the currently active liquidity given pools current tick.
     // We only want to update it on burn if the position being burnt includes the current tick.
@@ -527,8 +548,8 @@ export class EventWatcher {
     assert(token0 && token1, 'Pool tokens not found.');
 
     // Amounts - 0/1 are token deltas. Can be positive or negative.
-    const amount0 = convertTokenToDecimal(swapEvent.amount0, token0.decimals);
-    const amount1 = convertTokenToDecimal(swapEvent.amount1, token1.decimals);
+    const amount0 = convertTokenToDecimal(swapEvent.amount0, BigInt(token0.decimals));
+    const amount1 = convertTokenToDecimal(swapEvent.amount1, BigInt(token1.decimals));
 
     // Need absolute amounts for volume.
     let amount0Abs = amount0;
@@ -557,7 +578,7 @@ export class EventWatcher {
     const feesUSD = amountTotalUSDTracked.times(pool.feeTier.toString()).div(new Decimal('1000000'));
 
     // Global updates.
-    factory.txCount = factory.txCount + BigInt(1);
+    factory.txCount = BigInt(factory.txCount) + BigInt(1);
     factory.totalVolumeETH = factory.totalVolumeETH.plus(amountTotalETHTracked);
     factory.totalVolumeUSD = factory.totalVolumeUSD.plus(amountTotalUSDTracked);
     factory.untrackedVolumeUSD = factory.untrackedVolumeUSD.plus(amountTotalUSDUntracked);
@@ -574,7 +595,7 @@ export class EventWatcher {
     pool.volumeUSD = pool.volumeUSD.plus(amountTotalUSDTracked);
     pool.untrackedVolumeUSD = pool.untrackedVolumeUSD.plus(amountTotalUSDUntracked);
     pool.feesUSD = pool.feesUSD.plus(feesUSD);
-    pool.txCount = pool.txCount + BigInt(1);
+    pool.txCount = BigInt(pool.txCount) + BigInt(1);
 
     // Update the pool with the new active liquidity, price, and tick.
     pool.liquidity = swapEvent.liquidity;
@@ -589,7 +610,7 @@ export class EventWatcher {
     token0.volumeUSD = token0.volumeUSD.plus(amountTotalUSDTracked);
     token0.untrackedVolumeUSD = token0.untrackedVolumeUSD.plus(amountTotalUSDUntracked);
     token0.feesUSD = token0.feesUSD.plus(feesUSD);
-    token0.txCount = token0.txCount + BigInt(1);
+    token0.txCount = BigInt(token0.txCount) + BigInt(1);
 
     // Update token1 data.
     token1.volume = token1.volume.plus(amount1Abs);
@@ -597,7 +618,7 @@ export class EventWatcher {
     token1.volumeUSD = token1.volumeUSD.plus(amountTotalUSDTracked);
     token1.untrackedVolumeUSD = token1.untrackedVolumeUSD.plus(amountTotalUSDUntracked);
     token1.feesUSD = token1.feesUSD.plus(feesUSD);
-    token1.txCount = token1.txCount + BigInt(1);
+    token1.txCount = BigInt(token1.txCount) + BigInt(1);
 
     // Updated pool rates.
     const prices = sqrtPriceX96ToTokenPrices(pool.sqrtPrice, token0 as Token, token1 as Token);
@@ -706,5 +727,133 @@ export class EventWatcher {
     this._db.saveToken(token1, blockNumber);
 
     // Skipping update of inner vars of current or crossed ticks as they are not queried.
+  }
+
+  async _handleIncreaseLiquidity (block: Block, contractAddress: string, tx: Transaction, event: IncreaseLiquidityEvent): Promise<void> {
+    const { number: blockNumber } = block;
+    const position = await this._getPosition(block, contractAddress, tx, event.tokenId);
+
+    // position was not able to be fetched.
+    if (position === null) {
+      return;
+    }
+
+    // Temp fix.
+    if (utils.getAddress(position.pool.id) === utils.getAddress('0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248')) {
+      return;
+    }
+
+    const token0 = position.token0;
+    const token1 = position.token1;
+
+    const amount0 = convertTokenToDecimal(event.amount0, BigInt(token0.decimals));
+    const amount1 = convertTokenToDecimal(event.amount1, BigInt(token1.decimals));
+
+    position.liquidity = BigInt(position.liquidity) + BigInt(event.liquidity);
+    position.depositedToken0 = position.depositedToken0.plus(amount0);
+    position.depositedToken1 = position.depositedToken1.plus(amount1);
+
+    await this._updateFeeVars(position, block, contractAddress, event.tokenId);
+
+    await this._db.savePosition(position, blockNumber);
+
+    await this._savePositionSnapshot(position, block, tx);
+  }
+
+  async _getPosition (block: Block, contractAddress: string, tx: Transaction, tokenId: bigint): Promise<Position | null> {
+    const { number: blockNumber, hash: blockHash, timestamp: blockTimestamp } = block;
+    const { hash: txHash } = tx;
+    let position = await this._db.getPosition({ id: tokenId.toString(), blockNumber });
+
+    if (!position) {
+      // TODO: Query uni-watch for NFPM position.
+      // const nfpmPosition = await this._uniClient.getPosition(blockHash, tokenId);
+      const contract = new Contract(contractAddress, nfpmABI, this._provider);
+
+      try {
+        const nfpmPosition = await contract.positions(tokenId);
+
+        // TODO: Query uni-watch for poolKey.
+        // const { token0: token0Address, token1: token1Address, fee } = await this._uniClient.poolIdToPoolKey(blockHash, nfpmPosition.poolId);
+
+        const { token0: token0Address, token1: token1Address, fee } = nfpmPosition;
+
+        // TODO: Query uni-watch for factory getPool.
+        // const { pool: poolAddress } = await this._uniClient.getPool(blockHash, token0Address, token1Address, fee);
+        const [factory] = await this._db.getFactories({ blockNumber }, { limit: 1 });
+        const factoryContract = new Contract(factory.id, factoryABI, this._provider);
+        const poolAddress = await factoryContract.getPool(token0Address, token1Address, fee);
+
+        const transaction = await loadTransaction(this._db, { txHash, blockNumber, blockTimestamp });
+        const pool = await this._db.getPool({ id: poolAddress, blockNumber });
+
+        const [token0, token1] = await Promise.all([
+          this._db.getToken({ id: token0Address, blockNumber }),
+          this._db.getToken({ id: token0Address, blockNumber })
+        ]);
+
+        const [tickLower, tickUpper] = await Promise.all([
+          this._db.getTick({ id: poolAddress.concat('#').concat(nfpmPosition.tickLower.toString()), blockNumber }),
+          this._db.getTick({ id: poolAddress.concat('#').concat(nfpmPosition.tickUpper.toString()), blockNumber })
+        ]);
+
+        position = await this._db.loadPosition({
+          id: tokenId.toString(),
+          blockNumber,
+          pool,
+          token0,
+          token1,
+          tickLower,
+          tickUpper,
+          transaction,
+          feeGrowthInside0LastX128: BigInt(nfpmPosition.feeGrowthInside0LastX128.toString()),
+          feeGrowthInside1LastX128: BigInt(nfpmPosition.feeGrowthInside1LastX128.toString())
+        });
+      } catch (error) {
+        // The following call reverts in situations where the position is minted and deleted in the same block.
+        // From my investigation this happens in calls from BancorSwap.
+        // (e.g. 0xf7867fa19aa65298fadb8d4f72d0daed5e836f3ba01f0b9b9631cdc6c36bed40)
+        console.error(error);
+      }
+    }
+
+    return position || null;
+  }
+
+  async _updateFeeVars (position: Position, block: Block, contractAddress: string, tokenId: bigint): Promise<Position> {
+    // TODO: Query uni-watch for nfpmPosition.
+    // const nfpmPosition = await this._uniClient.getPosition(blockHash, tokenId);
+    const contract = new Contract(contractAddress, nfpmABI, this._provider);
+    const nfpmPosition = await contract.positions(tokenId);
+
+    if (nfpmPosition) {
+      position.feeGrowthInside0LastX128 = BigInt(nfpmPosition.feeGrowthInside0LastX128.toString());
+      position.feeGrowthInside1LastX128 = BigInt(nfpmPosition.feeGrowthInside1LastX128.toString());
+    }
+
+    return position;
+  }
+
+  async _savePositionSnapshot (position: Position, block: Block, tx: Transaction): Promise<void> {
+    const transaction = await loadTransaction(this._db, { txHash: tx.hash, blockNumber: block.number, blockTimestamp: block.timestamp });
+
+    await this._db.loadPositionSnapshot({
+      id: position.id.concat('#').concat(block.number.toString()),
+      blockNumber: block.number,
+      owner: position.owner,
+      pool: position.pool,
+      position: position,
+      timestamp: block.timestamp,
+      liquidity: position.liquidity,
+      depositedToken0: position.depositedToken0,
+      depositedToken1: position.depositedToken1,
+      withdrawnToken0: position.withdrawnToken0,
+      withdrawnToken1: position.withdrawnToken1,
+      collectedFeesToken0: position.collectedFeesToken0,
+      collectedFeesToken1: position.collectedFeesToken1,
+      transaction,
+      feeGrowthInside0LastX128: position.feeGrowthInside0LastX128,
+      feeGrowthInside1LastX128: position.feeGrowthInside1LastX128
+    });
   }
 }
