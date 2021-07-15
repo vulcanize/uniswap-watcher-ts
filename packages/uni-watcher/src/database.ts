@@ -1,4 +1,5 @@
 import assert from 'assert';
+import _ from 'lodash';
 import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
@@ -56,6 +57,20 @@ export class Database {
         eventName
       })
       .getMany();
+  }
+
+  async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
+    const blockNumbers = _.range(fromBlockNumber, toBlockNumber + 1);
+    const expected = blockNumbers.length;
+
+    const repo = this._conn.getRepository(BlockProgress);
+    const { count: actual } = await repo
+      .createQueryBuilder('block_progress')
+      .select('COUNT(DISTINCT(block_number))', 'count')
+      .where('block_number IN (:...blockNumbers) AND is_complete = :isComplete', { blockNumbers, isComplete: true })
+      .getRawOne();
+
+    return { expected, actual: parseInt(actual) };
   }
 
   async getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<Event>> {
