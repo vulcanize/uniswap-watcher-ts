@@ -2,8 +2,7 @@ import assert from 'assert';
 import debug from 'debug';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
-import { BigNumber, utils, getDefaultProvider, Contract } from 'ethers';
-import { BaseProvider } from '@ethersproject/providers';
+import { BigNumber, utils } from 'ethers';
 
 import { Database } from './database';
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
@@ -13,10 +12,6 @@ import { convertTokenToDecimal, loadTransaction, safeDiv } from './utils';
 import { loadTick } from './utils/tick';
 import Decimal from 'decimal.js';
 import { Position } from './entity/Position';
-import nfpmABI from './artifacts/NonfungiblePositionManager.json';
-import factoryABI from './artifacts/factory.json';
-
-const RPC_URL = 'http://localhost:8545';
 
 const log = debug('vulcanize:events');
 
@@ -101,7 +96,6 @@ export class EventWatcher {
   _subscription?: ZenObservable.Subscription
   _uniClient: UniClient
   _erc20Client: ERC20Client
-  _provider: BaseProvider
 
   constructor (db: Database, uniClient: UniClient, erc20Client: ERC20Client) {
     assert(db);
@@ -109,7 +103,6 @@ export class EventWatcher {
     this._db = db;
     this._uniClient = uniClient;
     this._erc20Client = erc20Client;
-    this._provider = getDefaultProvider(RPC_URL);
   }
 
   async start (): Promise<void> {
@@ -370,11 +363,11 @@ export class EventWatcher {
     const lowerTick = await loadTick(this._db, lowerTickId, BigInt(lowerTickIdx), pool, blockNumber);
     const upperTick = await loadTick(this._db, upperTickId, BigInt(upperTickIdx), pool, blockNumber);
 
-    const amount = mintEvent.amount;
-    lowerTick.liquidityGross = lowerTick.liquidityGross + amount;
-    lowerTick.liquidityNet = lowerTick.liquidityNet + amount;
-    upperTick.liquidityGross = upperTick.liquidityGross + amount;
-    upperTick.liquidityNet = upperTick.liquidityNet + amount;
+    const amount = BigInt(mintEvent.amount);
+    lowerTick.liquidityGross = BigInt(lowerTick.liquidityGross) + amount;
+    lowerTick.liquidityNet = BigInt(lowerTick.liquidityNet) + amount;
+    upperTick.liquidityGross = BigInt(upperTick.liquidityGross) + amount;
+    upperTick.liquidityNet = BigInt(upperTick.liquidityNet) + amount;
 
     // TODO: Update Tick's volume, fees, and liquidity provider count.
     // Computing these on the tick level requires reimplementing some of the swapping code from v3-core.
@@ -494,11 +487,11 @@ export class EventWatcher {
     const upperTickId = poolAddress + '#' + (burnEvent.tickUpper).toString();
     const lowerTick = await this._db.loadTick({ id: lowerTickId, blockNumber });
     const upperTick = await this._db.loadTick({ id: upperTickId, blockNumber });
-    const amount = burnEvent.amount;
-    lowerTick.liquidityGross = lowerTick.liquidityGross - amount;
-    lowerTick.liquidityNet = lowerTick.liquidityNet - amount;
-    upperTick.liquidityGross = upperTick.liquidityGross - amount;
-    upperTick.liquidityNet = upperTick.liquidityNet + amount;
+    const amount = BigInt(burnEvent.amount);
+    lowerTick.liquidityGross = BigInt(lowerTick.liquidityGross) - amount;
+    lowerTick.liquidityNet = BigInt(lowerTick.liquidityNet) - amount;
+    upperTick.liquidityGross = BigInt(upperTick.liquidityGross) - amount;
+    upperTick.liquidityNet = BigInt(upperTick.liquidityNet) + amount;
 
     await updateUniswapDayData(this._db, { blockNumber, contractAddress, blockTimestamp });
     await updatePoolDayData(this._db, { blockNumber, contractAddress, blockTimestamp });
@@ -731,7 +724,7 @@ export class EventWatcher {
 
   async _handleIncreaseLiquidity (block: Block, contractAddress: string, tx: Transaction, event: IncreaseLiquidityEvent): Promise<void> {
     const { number: blockNumber } = block;
-    const position = await this._getPosition(block, contractAddress, tx, event.tokenId);
+    const position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
 
     // position was not able to be fetched.
     if (position === null) {
@@ -746,14 +739,14 @@ export class EventWatcher {
     const token0 = position.token0;
     const token1 = position.token1;
 
-    const amount0 = convertTokenToDecimal(event.amount0, BigInt(token0.decimals));
-    const amount1 = convertTokenToDecimal(event.amount1, BigInt(token1.decimals));
+    const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
+    const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
 
     position.liquidity = BigInt(position.liquidity) + BigInt(event.liquidity);
     position.depositedToken0 = position.depositedToken0.plus(amount0);
     position.depositedToken1 = position.depositedToken1.plus(amount1);
 
-    await this._updateFeeVars(position, block, contractAddress, event.tokenId);
+    await this._updateFeeVars(position, block, contractAddress, BigInt(event.tokenId));
 
     await this._db.savePosition(position, blockNumber);
 
@@ -766,23 +759,16 @@ export class EventWatcher {
     let position = await this._db.getPosition({ id: tokenId.toString(), blockNumber });
 
     if (!position) {
-      // TODO: Query uni-watch for NFPM position.
-      // const nfpmPosition = await this._uniClient.getPosition(blockHash, tokenId);
-      const contract = new Contract(contractAddress, nfpmABI, this._provider);
+      const nfpmPosition = await this._uniClient.getPosition(blockHash, tokenId);
 
-      try {
-        const nfpmPosition = await contract.positions(tokenId);
+      // The contract call reverts in situations where the position is minted and deleted in the same block.
+      // From my investigation this happens in calls from BancorSwap.
+      // (e.g. 0xf7867fa19aa65298fadb8d4f72d0daed5e836f3ba01f0b9b9631cdc6c36bed40)
 
-        // TODO: Query uni-watch for poolKey.
-        // const { token0: token0Address, token1: token1Address, fee } = await this._uniClient.poolIdToPoolKey(blockHash, nfpmPosition.poolId);
+      if (nfpmPosition) {
+        const { token0: token0Address, token1: token1Address, fee } = await this._uniClient.poolIdToPoolKey(blockHash, nfpmPosition.poolId);
 
-        const { token0: token0Address, token1: token1Address, fee } = nfpmPosition;
-
-        // TODO: Query uni-watch for factory getPool.
-        // const { pool: poolAddress } = await this._uniClient.getPool(blockHash, token0Address, token1Address, fee);
-        const [factory] = await this._db.getFactories({ blockNumber }, { limit: 1 });
-        const factoryContract = new Contract(factory.id, factoryABI, this._provider);
-        const poolAddress = await factoryContract.getPool(token0Address, token1Address, fee);
+        const { pool: poolAddress } = await this._uniClient.getPool(blockHash, token0Address, token1Address, fee);
 
         const transaction = await loadTransaction(this._db, { txHash, blockNumber, blockTimestamp });
         const pool = await this._db.getPool({ id: poolAddress, blockNumber });
@@ -809,11 +795,6 @@ export class EventWatcher {
           feeGrowthInside0LastX128: BigInt(nfpmPosition.feeGrowthInside0LastX128.toString()),
           feeGrowthInside1LastX128: BigInt(nfpmPosition.feeGrowthInside1LastX128.toString())
         });
-      } catch (error) {
-        // The following call reverts in situations where the position is minted and deleted in the same block.
-        // From my investigation this happens in calls from BancorSwap.
-        // (e.g. 0xf7867fa19aa65298fadb8d4f72d0daed5e836f3ba01f0b9b9631cdc6c36bed40)
-        console.error(error);
       }
     }
 
@@ -821,10 +802,7 @@ export class EventWatcher {
   }
 
   async _updateFeeVars (position: Position, block: Block, contractAddress: string, tokenId: bigint): Promise<Position> {
-    // TODO: Query uni-watch for nfpmPosition.
-    // const nfpmPosition = await this._uniClient.getPosition(blockHash, tokenId);
-    const contract = new Contract(contractAddress, nfpmABI, this._provider);
-    const nfpmPosition = await contract.positions(tokenId);
+    const nfpmPosition = await this._uniClient.getPosition(block.hash, tokenId);
 
     if (nfpmPosition) {
       position.feeGrowthInside0LastX128 = BigInt(nfpmPosition.feeGrowthInside0LastX128.toString());

@@ -14,8 +14,8 @@ query getEvents($blockHash: String!, $token: String!) {
 `;
 
 export const queryPosition = gql`
-query getPosition($blockHash: String!, $tokenId: BigInt!) {
-  position(blockHash: $blockHash, token: $token) {
+query getPosition($blockHash: String!, $tokenId: String!) {
+  position(blockHash: $blockHash, tokenId: $tokenId) {
     nonce
     operator
     poolId
@@ -35,7 +35,7 @@ query getPosition($blockHash: String!, $tokenId: BigInt!) {
 `;
 
 export const queryPoolIdToPoolKey = gql`
-query poolIdToPoolKey($blockHash: String!, $poolId: BigInt!) {
+query poolIdToPoolKey($blockHash: String!, $poolId: String!) {
   poolIdToPoolKey(blockHash: $blockHash, poolId: $poolId) {
     token0
     token1
@@ -49,7 +49,7 @@ query poolIdToPoolKey($blockHash: String!, $poolId: BigInt!) {
 `;
 
 export const queryGetPool = gql`
-query getPool($blockHash: String!, $token0: String!, $token1: String!, fee: BigInt!) {
+query getPool($blockHash: String!, $token0: String!, $token1: String!, $fee: String!) {
   getPool(blockHash: $blockHash, token0: $token0, token1: $token1, fee: $fee) {
     pool
     proof {

@@ -94,7 +94,10 @@ export class Client {
   async getPosition (blockHash: string, tokenId: bigint): Promise<any> {
     const { position } = await this._client.query(
       gql(queryPosition),
-      { blockHash, tokenId }
+      {
+        blockHash,
+        tokenId: tokenId.toString()
+      }
     );
 
     return position;
@@ -103,7 +106,10 @@ export class Client {
   async poolIdToPoolKey (blockHash: string, poolId: bigint): Promise<any> {
     const { poolIdToPoolKey } = await this._client.query(
       gql(queryPoolIdToPoolKey),
-      { blockHash, poolId }
+      {
+        blockHash,
+        poolId: poolId.toString()
+      }
     );
 
     return poolIdToPoolKey;
@@ -112,7 +118,12 @@ export class Client {
   async getPool (blockHash: string, token0: string, token1: string, fee: bigint): Promise<any> {
     const { getPool } = await this._client.query(
       gql(queryGetPool),
-      { blockHash, token0, token1, fee }
+      {
+        blockHash,
+        token0,
+        token1,
+        fee: fee.toString()
+      }
     );
 
     return getPool;
