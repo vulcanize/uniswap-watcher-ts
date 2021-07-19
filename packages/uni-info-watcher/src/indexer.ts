@@ -15,7 +15,7 @@ import Decimal from 'decimal.js';
 import { Position } from './entity/Position';
 import { Database } from './database';
 import { Event } from './entity/Event';
-import { ResultEvent, Block, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent } from './events';
+import { ResultEvent, Block, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent } from './events';
 
 const log = debug('vulcanize:indexer');
 
@@ -125,6 +125,11 @@ export class Indexer {
       case 'DecreaseLiquidityEvent':
         log('NFPM DecreaseLiquidity event', contract);
         this._handleDecreaseLiquidity(block, contract, tx, event as DecreaseLiquidityEvent);
+        break;
+
+      case 'CollectEvent':
+        log('NFPM Collect event', contract);
+        this._handleCollect(block, contract, tx, event as CollectEvent);
         break;
 
       default:
@@ -787,6 +792,34 @@ export class Indexer {
     position.depositedToken1 = position.depositedToken1.plus(amount1);
 
     await this._updateFeeVars(position, block, contractAddress, BigInt(event.tokenId));
+
+    await this._db.savePosition(position, blockNumber);
+
+    await this._savePositionSnapshot(position, block, tx);
+  }
+
+  async _handleCollect (block: Block, contractAddress: string, tx: Transaction, event: CollectEvent): Promise<void> {
+    const { number: blockNumber } = block;
+    let position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
+
+    // Position was not able to be fetched.
+    if (position == null) {
+      return;
+    }
+
+    // Temp fix from Subgraph mapping code.
+    if (utils.getAddress(position.pool.id) === utils.getAddress('0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248')) {
+      return;
+    }
+
+    const token0 = position.token0;
+    const token1 = position.token1;
+    const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
+    const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
+    position.collectedFeesToken0 = position.collectedFeesToken0.plus(amount0);
+    position.collectedFeesToken1 = position.collectedFeesToken1.plus(amount1);
+
+    position = await this._updateFeeVars(position, block, contractAddress, BigInt(event.tokenId));
 
     await this._db.savePosition(position, blockNumber);
 
