@@ -52,14 +52,14 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
       events: async (_: any, { blockHash, contract, name }: { blockHash: string, contract: string, name: string }) => {
         log('events', blockHash, contract, name || '');
 
-        const blockProgress = await indexer.getBlockProgress(blockHash);
-        if (!blockProgress || !blockProgress.isComplete) {
+        const block = await indexer.getBlockProgress(blockHash);
+        if (!block || !block.isComplete) {
           // TODO: Trigger indexing for the block.
           throw new Error('Not available');
         }
 
         const events = await indexer.getEventsByFilter(blockHash, contract, name);
-        return events.map(event => indexer.getResultEvent(event));
+        return events.map(event => indexer.getResultEvent(block, event));
       },
 
       eventsInRange: async (_: any, { fromBlockNumber, toBlockNumber }: { fromBlockNumber: number, toBlockNumber: number }) => {
@@ -71,7 +71,13 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         }
 
         const events = await indexer.getEventsInRange(fromBlockNumber, toBlockNumber);
-        return events.map(event => indexer.getResultEvent(event));
+        return Promise.all(events.map(async (event) => {
+          // TODO: Join events with blocks table.
+          const block = await indexer.getBlockProgress(event.blockHash);
+          assert(block);
+
+          return indexer.getResultEvent(block, event)
+        }));
       },
 
       position: (_: any, { blockHash, tokenId }: { blockHash: string, tokenId: string }) => {

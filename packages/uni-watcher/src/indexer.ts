@@ -62,14 +62,15 @@ export class Indexer {
     this._nfpmContract = new ethers.utils.Interface(nfpmABI);
   }
 
-  getResultEvent (event: Event): ResultEvent {
+  getResultEvent (block: BlockProgress, event: Event): ResultEvent {
     const eventFields = JSON.parse(event.eventInfo);
 
     return {
       block: {
         hash: event.blockHash,
-        number: event.blockNumber,
-        timestamp: event.blockTimestamp
+        number: block.blockNumber,
+        timestamp: block.blockTimestamp,
+        parentHash: block.parentHash
       },
 
       tx: {
@@ -110,9 +111,6 @@ export class Indexer {
       throw new Error('Not a uniswap contract');
     }
 
-    // Fetch block events first.
-    await this.getOrFetchBlockEvents(blockHash);
-
     const events = await this._db.getEvents(blockHash, contract);
     log(`getEvents: db hit, num events: ${events.length}`);
 
@@ -127,12 +125,15 @@ export class Indexer {
   }
 
   async triggerIndexingOnEvent (dbEvent: Event): Promise<void> {
-    const re = this.getResultEvent(dbEvent);
+    const block = await this._db.getBlockProgress(dbEvent.blockHash);
+    assert(block);
+
+    const re = this.getResultEvent(block, dbEvent);
 
     switch (re.event.__typename) {
       case 'PoolCreatedEvent': {
         const poolContract = ethers.utils.getAddress(re.event.pool);
-        await this._db.saveContract(poolContract, KIND_POOL, dbEvent.blockNumber);
+        await this._db.saveContract(poolContract, KIND_POOL, block.blockNumber);
       }
     }
   }
@@ -305,11 +306,7 @@ export class Indexer {
           address
         },
         transaction: {
-          hash: txHash,
-          block: {
-            number: blockNumber,
-            timestamp: blockTimestamp
-          }
+          hash: txHash
         }
       } = logObj;
 
@@ -328,8 +325,6 @@ export class Indexer {
 
       dbEvents.push({
         blockHash,
-        blockNumber,
-        blockTimestamp,
         index: logIndex,
         txHash,
         contract,
@@ -348,7 +343,8 @@ export class Indexer {
       });
     }
 
-    await this._db.saveEvents(blockHash, block.number, dbEvents);
+
+    await this._db.saveEvents(block, dbEvents);
   }
 
   async getEvent (id: string): Promise<Event | undefined> {

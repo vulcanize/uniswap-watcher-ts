@@ -81,7 +81,10 @@ export class EventWatcher {
     const dbEvent = await this._indexer.getEvent(id);
 
     if (dbEvent && dbEvent.eventName !== UNKNOWN_EVENT_NAME) {
-      const resultEvent = this._indexer.getResultEvent(dbEvent);
+      const block = await this._indexer.getBlockProgress(dbEvent.blockHash);
+
+      assert(block);
+      const resultEvent = this._indexer.getResultEvent(block, dbEvent);
 
       log(`pushing event to GQL subscribers (${timeElapsedInSeconds}s elapsed): ${resultEvent.event.__typename}`);
 

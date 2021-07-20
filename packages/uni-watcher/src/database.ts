@@ -88,7 +88,21 @@ export class Database {
       .getMany();
   }
 
-  async saveEvents (blockHash: string, blockNumber: number, events: DeepPartial<Event>[]): Promise<void> {
+  async saveEvents (block: any, events: DeepPartial<Event>[]): Promise<void> {
+    const {
+      hash: blockHash,
+      number: blockNumber,
+      timestamp: blockTimestamp,
+      parent: {
+        hash: parentHash
+      }
+    } = block;
+
+    assert(blockHash);
+    assert(blockNumber);
+    assert(blockTimestamp);
+    assert(parentHash);
+
     // In a transaction:
     // (1) Save all the events in the database.
     // (2) Add an entry to the block progress table.
@@ -100,7 +114,16 @@ export class Database {
         // Bulk insert events.
         await tx.createQueryBuilder().insert().into(Event).values(events).execute();
 
-        const entity = blockProgressRepo.create({ blockHash, blockNumber, numEvents, numProcessedEvents: 0, isComplete: (numEvents === 0) });
+        const entity = blockProgressRepo.create({
+          blockHash,
+          parentHash,
+          blockNumber,
+          blockTimestamp,
+          numEvents,
+          numProcessedEvents: 0,
+          isComplete: (numEvents === 0)
+        });
+
         await blockProgressRepo.save(entity);
       }
     });

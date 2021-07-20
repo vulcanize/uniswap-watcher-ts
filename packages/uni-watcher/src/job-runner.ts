@@ -104,3 +104,7 @@ main().then(() => {
 }).catch(err => {
   log(err);
 });
+
+process.on('uncaughtException', err => {
+  log('uncaughtException', err);
+});

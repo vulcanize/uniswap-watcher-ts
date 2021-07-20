@@ -5,21 +5,12 @@ export const UNKNOWN_EVENT_NAME = '__unknown__';
 @Entity()
 // Index to query all events for a contract efficiently.
 @Index(['blockHash', 'contract'])
-// Index to query block range for uniswap events.
-@Index(['blockNumber', 'eventName'])
 export class Event {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  // TODO: Denormalizing the block fields is simpler but perhaps not necessary.
   @Column('varchar', { length: 66 })
   blockHash!: string;
-
-  @Column('integer')
-  blockNumber!: number;
-
-  @Column('integer')
-  blockTimestamp!: number;
 
   @Column('varchar', { length: 66 })
   txHash!: string;
