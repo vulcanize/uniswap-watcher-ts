@@ -20,6 +20,7 @@ import { Burn } from './entity/Burn';
 import { Swap } from './entity/Swap';
 import { Position } from './entity/Position';
 import { PositionSnapshot } from './entity/PositionSnapshot';
+import { BlockProgress } from './entity/BlockProgress';
 
 export class Database {
   _config: ConnectionOptions
@@ -633,6 +634,14 @@ export class Database {
     return numRows > 0;
   }
 
+  async getBlockEvents (blockHash: string, contract: string): Promise<Event[]> {
+    return this._conn.getRepository(Event)
+      .createQueryBuilder('event')
+      .where('block_hash = :blockHash AND contract = :contract', { blockHash, contract })
+      .addOrderBy('id', 'ASC')
+      .getMany();
+  }
+
   async getEvents ({ blockHash, token }: { blockHash: string, token: string }): Promise<Event[]> {
     return this._conn.getRepository(Event)
       .createQueryBuilder('event')
@@ -655,34 +664,44 @@ export class Database {
       .getMany();
   }
 
-  async saveEvents ({ blockHash, token, events }: { blockHash: string, token: string, events: DeepPartial<Event>[] }): Promise<void> {
+  async saveEvents (blockHash: string, blockNumber: number, contract: string, events: DeepPartial<Event>[]): Promise<void> {
     // In a transaction:
     // (1) Save all the events in the database.
-    // (2) Add an entry to the event progress table.
-
+    // (2) Add an entry to the block progress table.
     await this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(EventSyncProgress);
+      const numEvents = events.length;
+      const blockProgressRepo = tx.getRepository(BlockProgress);
+      const blockProgress = await blockProgressRepo.findOne({ where: { blockHash, contract } });
 
-      // Check sync progress inside the transaction.
-      const numRows = await repo
-        .createQueryBuilder()
-        .where('block_hash = :blockHash AND token = :token', {
-          blockHash,
-          token
-        })
-        .getCount();
-
-      if (numRows === 0) {
+      if (!blockProgress) {
         // Bulk insert events.
-        await tx.createQueryBuilder()
-          .insert()
-          .into(Event)
-          .values(events)
-          .execute();
+        await tx.createQueryBuilder().insert().into(Event).values(events).execute();
 
-        // Update event sync progress.
-        const progress = repo.create({ blockHash, token });
-        await repo.save(progress);
+        const entity = blockProgressRepo.create({ blockHash, blockNumber, contract, numEvents, numProcessedEvents: 0, isComplete: (numEvents === 0) });
+        await blockProgressRepo.save(entity);
+      }
+    });
+  }
+
+  async getEvent (id: string): Promise<Event | undefined> {
+    return this._conn.getRepository(Event).findOne(id);
+  }
+
+  async getBlockProgress (blockHash: string, contract: string): Promise<BlockProgress | undefined> {
+    const repo = this._conn.getRepository(BlockProgress);
+    return repo.findOne({ where: { blockHash, contract } });
+  }
+
+  async updateBlockProgress (blockHash: string, contract: string): Promise<void> {
+    await this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(BlockProgress);
+      const entity = await repo.findOne({ where: { blockHash, contract } });
+      if (entity && !entity.isComplete) {
+        entity.numProcessedEvents++;
+        if (entity.numProcessedEvents >= entity.numEvents) {
+          entity.isComplete = true;
+        }
+        await repo.save(entity);
       }
     });
   }

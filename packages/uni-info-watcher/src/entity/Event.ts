@@ -2,19 +2,38 @@ import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 @Entity()
 // Index to query all events for a contract efficiently.
-@Index(['blockHash', 'token'])
+@Index(['blockHash', 'contract'])
+// Index to query block range for uniswap events.
+@Index(['blockNumber', 'eventName'])
 export class Event {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  // TODO: Denormalizing the block fields is simpler but perhaps not necessary.
   @Column('varchar', { length: 66 })
   blockHash!: string;
 
+  @Column('integer')
+  blockNumber!: number;
+
+  @Column('integer')
+  blockTimestamp!: number;
+
+  @Column('varchar', { length: 66 })
+  txHash!: string;
+
+  // Index of the log in the block.
+  @Column('integer')
+  index!: number;
+
   @Column('varchar', { length: 42 })
-  token!: string;
+  contract!: string;
 
   @Column('varchar', { length: 256 })
   eventName!: string;
+
+  @Column('text')
+  eventInfo!: string;
 
   @Column('text')
   proof!: string;
