@@ -16,6 +16,7 @@ import { Contract, KIND_FACTORY, KIND_POOL, KIND_NFPM } from './entity/Contract'
 import { abi as factoryABI, storageLayout as factoryStorageLayout } from './artifacts/factory.json';
 import { abi as nfpmABI, storageLayout as nfpmStorageLayout } from './artifacts/NonfungiblePositionManager.json';
 import poolABI from './artifacts/pool.json';
+import { SyncStatus } from './entity/SyncStatus';
 
 // TODO: Move to config.
 const MAX_EVENTS_BLOCK_RANGE = 1000;
@@ -345,6 +346,24 @@ export class Indexer {
     await this._db.saveEvents(block, dbEvents);
   }
 
+  async updateSyncStatus (blockHash: string, blockNumber: number): Promise<void> {
+    await this._db.updateSyncStatus(blockHash, blockNumber);
+  }
+
+  async getSyncStatus (): Promise<SyncStatus> {
+    const syncStatus = await this._db.getSyncStatus();
+    if (!syncStatus) {
+      throw new Error('Fatal: sync status record not found');
+    }
+
+    return syncStatus;
+  }
+
+  async getBlock (blockHash: string): Promise<any> {
+    const { block } = await this._ethClient.getLogs({ blockHash });
+    return block;
+  }
+
   async getEvent (id: string): Promise<Event | undefined> {
     return this._db.getEvent(id);
   }
@@ -377,7 +396,7 @@ export class Indexer {
     return this._db.getEventsInRange(fromBlockNumber, toBlockNumber);
   }
 
-  async position (blockHash: string, tokenId: string) {
+  async position (blockHash: string, tokenId: string): Promise<any> {
     const nfpmContract = await this._db.getLatestContract('nfpm');
     assert(nfpmContract, 'No NFPM contract watched.');
     const { value, proof } = await this._getStorageValue(nfpmStorageLayout, blockHash, nfpmContract.address, '_positions', BigInt(tokenId));
@@ -388,7 +407,7 @@ export class Indexer {
     };
   }
 
-  async poolIdToPoolKey (blockHash: string, poolId: string) {
+  async poolIdToPoolKey (blockHash: string, poolId: string): Promise<any> {
     const nfpmContract = await this._db.getLatestContract('nfpm');
     assert(nfpmContract, 'No NFPM contract watched.');
     const { value, proof } = await this._getStorageValue(nfpmStorageLayout, blockHash, nfpmContract.address, '_poolIdToPoolKey', BigInt(poolId));
@@ -399,7 +418,7 @@ export class Indexer {
     };
   }
 
-  async getPool (blockHash: string, token0: string, token1: string, fee: string) {
+  async getPool (blockHash: string, token0: string, token1: string, fee: string): Promise<any> {
     const factoryContract = await this._db.getLatestContract('factory');
     assert(factoryContract, 'No Factory contract watched.');
     const { value, proof } = await this._getStorageValue(factoryStorageLayout, blockHash, factoryContract.address, 'getPool', token0, token1, BigInt(fee));

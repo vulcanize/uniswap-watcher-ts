@@ -6,6 +6,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
 import { Contract } from './entity/Contract';
 import { BlockProgress } from './entity/BlockProgress';
+import { SyncStatus } from './entity/SyncStatus';
 
 export class Database {
   _config: ConnectionOptions
@@ -103,10 +104,37 @@ export class Database {
         blockProgress = await blockProgressRepo.save(entity);
 
         // Bulk insert events.
-        events.forEach(event => event.block = blockProgress);
+        events.forEach(event => {
+          event.block = blockProgress;
+        });
+
         await tx.createQueryBuilder().insert().into(Event).values(events).execute();
       }
     });
+  }
+
+  async updateSyncStatus (blockHash: string, blockNumber: number): Promise<void> {
+    await this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(SyncStatus);
+
+      let entity = await repo.findOne();
+      if (!entity) {
+        entity = repo.create({
+          latestCanonicalBlockHash: blockHash,
+          latestCanonicalBlockNumber: blockNumber
+        });
+      }
+
+      entity.chainHeadBlockHash = blockHash;
+      entity.chainHeadBlockNumber = blockNumber;
+
+      await repo.save(entity);
+    });
+  }
+
+  async getSyncStatus (): Promise<SyncStatus | undefined> {
+    const repo = this._conn.getRepository(SyncStatus);
+    return repo.findOne();
   }
 
   async getEvent (id: string): Promise<Event | undefined> {

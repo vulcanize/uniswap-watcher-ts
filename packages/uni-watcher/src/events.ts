@@ -44,6 +44,15 @@ export class EventWatcher {
 
     log('Started watching upstream blocks...');
 
+    this._subscription = await this._ethClient.watchBlocks(async (value) => {
+      const { blockHash, blockNumber, parentHash } = _.get(value, 'data.listen.relatedNode');
+
+      await this._indexer.updateSyncStatus(blockHash, blockNumber);
+
+      log('watchBlock', blockHash, blockNumber);
+      await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash });
+    });
+
     this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
       const { data: { request: { data: { blockHash, blockNumber } } } } = job;
       log(`Job onComplete block ${blockHash} ${blockNumber}`);
@@ -71,12 +80,6 @@ export class EventWatcher {
           log(`event ${request.data.id} is too old (${timeElapsedInSeconds}s), not broadcasting to live subscribers`);
         }
       }
-    });
-
-    this._subscription = await this._ethClient.watchBlocks(async (value) => {
-      const { blockHash, blockNumber } = _.get(value, 'data.listen.relatedNode');
-      log('watchBlock', blockHash, blockNumber);
-      await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber });
     });
   }
 
