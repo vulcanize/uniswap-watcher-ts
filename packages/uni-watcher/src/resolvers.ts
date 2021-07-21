@@ -59,7 +59,7 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         }
 
         const events = await indexer.getEventsByFilter(blockHash, contract, name);
-        return events.map(event => indexer.getResultEvent(block, event));
+        return events.map(event => indexer.getResultEvent(event));
       },
 
       eventsInRange: async (_: any, { fromBlockNumber, toBlockNumber }: { fromBlockNumber: number, toBlockNumber: number }) => {
@@ -71,13 +71,7 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         }
 
         const events = await indexer.getEventsInRange(fromBlockNumber, toBlockNumber);
-        return Promise.all(events.map(async (event) => {
-          // TODO: Join events with blocks table.
-          const block = await indexer.getBlockProgress(event.blockHash);
-          assert(block);
-
-          return indexer.getResultEvent(block, event)
-        }));
+        return events.map(event => indexer.getResultEvent(event));
       },
 
       position: (_: any, { blockHash, tokenId }: { blockHash: string, tokenId: string }) => {

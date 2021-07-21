@@ -1,16 +1,17 @@
-import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index } from 'typeorm';
+import { BlockProgress } from './BlockProgress';
 
 export const UNKNOWN_EVENT_NAME = '__unknown__';
 
 @Entity()
 // Index to query all events for a contract efficiently.
-@Index(['blockHash', 'contract'])
+@Index(['contract'])
 export class Event {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column('varchar', { length: 66 })
-  blockHash!: string;
+  @ManyToOne(() => BlockProgress)
+  block!: BlockProgress;
 
   @Column('varchar', { length: 66 })
   txHash!: string;

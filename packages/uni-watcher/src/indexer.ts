@@ -62,12 +62,13 @@ export class Indexer {
     this._nfpmContract = new ethers.utils.Interface(nfpmABI);
   }
 
-  getResultEvent (block: BlockProgress, event: Event): ResultEvent {
+  getResultEvent (event: Event): ResultEvent {
+    const block = event.block;
     const eventFields = JSON.parse(event.eventInfo);
 
     return {
       block: {
-        hash: event.blockHash,
+        hash: block.blockHash,
         number: block.blockNumber,
         timestamp: block.blockTimestamp,
         parentHash: block.parentHash
@@ -125,15 +126,12 @@ export class Indexer {
   }
 
   async triggerIndexingOnEvent (dbEvent: Event): Promise<void> {
-    const block = await this._db.getBlockProgress(dbEvent.blockHash);
-    assert(block);
-
-    const re = this.getResultEvent(block, dbEvent);
+    const re = this.getResultEvent(dbEvent);
 
     switch (re.event.__typename) {
       case 'PoolCreatedEvent': {
         const poolContract = ethers.utils.getAddress(re.event.pool);
-        await this._db.saveContract(poolContract, KIND_POOL, block.blockNumber);
+        await this._db.saveContract(poolContract, KIND_POOL, dbEvent.block.blockNumber);
       }
     }
   }
@@ -324,7 +322,6 @@ export class Indexer {
       }
 
       dbEvents.push({
-        blockHash,
         index: logIndex,
         txHash,
         contract,
