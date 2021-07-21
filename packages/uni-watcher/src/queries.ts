@@ -6,6 +6,7 @@ const resultEvent = `
     number
     hash
     timestamp
+    parentHash
   }
   tx {
     hash
@@ -87,7 +88,7 @@ export const subscribeEvents = gql`
 `;
 
 export const queryEvents = gql`
-query getEvents($blockHash: String!, $contract: String!) {
+query getEvents($blockHash: String!, $contract: String) {
   events(blockHash: $blockHash, contract: $contract)
     ${resultEvent}
 }

@@ -22,7 +22,7 @@ export class Client {
     );
   }
 
-  async getEvents (blockHash: string, contract: string): Promise<any> {
+  async getEvents (blockHash: string, contract?: string): Promise<any> {
     const { events } = await this._client.query(
       gql(queryEvents),
       {

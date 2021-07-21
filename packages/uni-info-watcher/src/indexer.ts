@@ -26,11 +26,6 @@ export interface ValueResult {
   }
 }
 
-export interface BlockHeight {
-  number: number;
-  hash: string;
-}
-
 export class Indexer {
   _db: Database
   _uniClient: UniClient
@@ -46,13 +41,15 @@ export class Indexer {
   }
 
   getResultEvent (event: Event): ResultEvent {
+    const block = event.block;
     const eventFields = JSON.parse(event.eventInfo);
 
     return {
       block: {
-        hash: event.blockHash,
-        number: event.blockNumber,
-        timestamp: event.blockTimestamp
+        hash: block.blockHash,
+        number: block.blockNumber,
+        timestamp: block.blockTimestamp,
+        parentHash: block.parentHash
       },
 
       tx: {
@@ -72,16 +69,16 @@ export class Indexer {
   }
 
   // Note: Some event names might be unknown at this point, as earlier events might not yet be processed.
-  async getOrFetchBlockEvents (block: BlockHeight, contract: string): Promise<Array<Event>> {
-    const blockProgress = await this._db.getBlockProgress(block.hash, contract);
+  async getOrFetchBlockEvents (block: Block): Promise<Array<Event>> {
+    const blockProgress = await this._db.getBlockProgress(block.hash);
 
     if (!blockProgress) {
       // Fetch and save events first and make a note in the event sync progress table.
-      await this._fetchAndSaveEvents(block, contract);
+      await this._fetchAndSaveEvents(block);
       log('getBlockEvents: db miss, fetching from upstream server');
     }
 
-    const events = await this._db.getBlockEvents(block.hash, contract);
+    const events = await this._db.getBlockEvents(block.hash);
     log(`getBlockEvents: db hit, num events: ${events.length}`);
 
     return events;
@@ -135,17 +132,20 @@ export class Indexer {
     }
   }
 
-  async updateBlockProgress (blockHash: string, contract: string): Promise<void> {
-    return this._db.updateBlockProgress(blockHash, contract);
+  async getEvent (id: string): Promise<Event | undefined> {
+    return this._db.getEvent(id);
   }
 
-  async _fetchAndSaveEvents (block: BlockHeight, contract: string): Promise<void> {
-    const events = await this._uniClient.getEvents(block.hash, contract);
+  async updateBlockProgress (blockHash: string): Promise<void> {
+    return this._db.updateBlockProgress(blockHash);
+  }
+
+  async _fetchAndSaveEvents (block: Block): Promise<void> {
+    const events = await this._uniClient.getEvents(block.hash);
     const dbEvents: Array<DeepPartial<Event>> = [];
 
     for (let i = 0; i < events.length; i++) {
       const {
-        block,
         tx,
         contract,
         eventIndex,
@@ -156,9 +156,6 @@ export class Indexer {
       const { __typename: eventName, ...eventInfo } = event;
 
       dbEvents.push({
-        blockHash: block.hash,
-        blockNumber: block.number,
-        blockTimestamp: block.timestamp,
         index: eventIndex,
         txHash: tx.hash,
         contract,
@@ -168,7 +165,7 @@ export class Indexer {
       });
     }
 
-    await this._db.saveEvents(block.hash, block.number, contract, dbEvents);
+    await this._db.saveEvents(block, dbEvents);
   }
 
   async _handlePoolCreated (block: Block, contractAddress: string, tx: Transaction, poolCreatedEvent: PoolCreatedEvent): Promise<void> {

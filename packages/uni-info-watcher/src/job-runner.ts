@@ -58,28 +58,28 @@ export const main = async (): Promise<any> => {
   await jobQueue.start();
 
   await jobQueue.subscribe(QUEUE_BLOCK_PROCESSING, async (job) => {
-    const { data: { block, contract } } = job;
-    log(`Processing block ${block.hash} ${block.number} for contract ${contract}`);
-    const events = await indexer.getOrFetchBlockEvents(block, contract);
+    const { data: { block } } = job;
+    log(`Processing block hash ${block.hash} number ${block.number}`);
+    const events = await indexer.getOrFetchBlockEvents(block);
 
     for (let ei = 0; ei < events.length; ei++) {
-      const { blockHash, id } = events[ei];
-      await jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { blockHash, contract, id, publish: true });
+      const { id } = events[ei];
+      await jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { id });
     }
 
     await jobQueue.markComplete(job);
   });
 
   await jobQueue.subscribe(QUEUE_EVENT_PROCESSING, async (job) => {
-    const { data: { id, blockHash, contract } } = job;
+    const { data: { id } } = job;
 
     log(`Processing event ${id}`);
-    const blockProgress = await db.getBlockProgress(blockHash, contract)
+    const dbEvent = await db.getEvent(id);
+    assert(dbEvent);
 
-    if (!blockProgress?.isComplete) {
-      const dbEvent = await db.getEvent(id);
-      assert(dbEvent);
+    if (!dbEvent.block.isComplete) {
       await indexer.processEvent(dbEvent);
+      await indexer.updateBlockProgress(dbEvent.block.blockHash);
     }
 
     await jobQueue.markComplete(job);
@@ -90,4 +90,8 @@ main().then(() => {
   log('Starting job runner...');
 }).catch(err => {
   log(err);
+});
+
+process.on('uncaughtException', err => {
+  log('uncaughtException', err);
 });

@@ -73,6 +73,7 @@ export interface Block {
   number: number;
   hash: string;
   timestamp: number;
+  parentHash: string;
 }
 
 export interface Transaction {
@@ -118,14 +119,12 @@ export class EventWatcher {
     this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
       const { data: { request } } = job;
 
-      await this._indexer.updateBlockProgress(request.data.blockHash, request.data.contract);
-
       log(`Job onComplete event ${request.data.id}`);
     });
 
-    this._subscription = await this._uniClient.watchEvents(async ({ block, contract }: ResultEvent) => {
+    this._subscription = await this._uniClient.watchEvents(async ({ block }: ResultEvent) => {
       log('watchEvent', block.hash, block.number);
-      return this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { block, contract });
+      return this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { block });
     });
   }
 
