@@ -10,7 +10,7 @@ import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToT
 import { updatePoolDayData, updatePoolHourData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
 import { Token } from './entity/Token';
 import { convertTokenToDecimal, loadTransaction, safeDiv } from './utils';
-import { loadTick } from './utils/tick';
+import { createTick } from './utils/tick';
 import Decimal from 'decimal.js';
 import { Position } from './entity/Position';
 import { Database } from './database';
@@ -19,6 +19,9 @@ import { ResultEvent, Block, Transaction, PoolCreatedEvent, InitializeEvent, Min
 import { Factory } from './entity/Factory';
 import { Bundle } from './entity/Bundle';
 import { Pool } from './entity/Pool';
+import { Mint } from './entity/Mint';
+import { Burn } from './entity/Burn';
+import { Swap } from './entity/Swap';
 
 const log = debug('vulcanize:indexer');
 
@@ -196,17 +199,18 @@ export class Indexer {
     if (!factory) {
       factory = new Factory();
       factory.id = contractAddress;
+      factory = await this._db.saveFactory(factory, blockNumber);
 
       // Create new bundle for tracking eth price.
       const bundle = new Bundle();
       bundle.id = '1';
-      this._db.saveBundle(bundle, blockNumber);
+      await this._db.saveBundle(bundle, blockNumber);
     }
 
     // Update Factory.
     factory.poolCount = BigInt(factory.poolCount) + BigInt(1);
 
-    const pool = new Pool();
+    let pool = new Pool();
     pool.id = poolAddress;
 
     // Get Tokens.
@@ -224,6 +228,11 @@ export class Indexer {
       token1 = await this._createToken(blockHash, blockNumber, token1Address);
     }
 
+    pool.token0 = token0;
+    pool.token1 = token1;
+    pool.feeTier = BigInt(fee);
+    pool = await this._db.savePool(pool, blockNumber);
+
     // Update white listed pools.
     if (WHITELIST_TOKENS.includes(token0.id)) {
       token1.whitelistPools.push(pool);
@@ -233,13 +242,9 @@ export class Indexer {
       token0.whitelistPools.push(pool);
     }
 
-    pool.token0 = token0;
-    pool.token1 = token1;
-    pool.feeTier = BigInt(fee);
     // Skipping adding createdAtTimestamp field as it is not queried in frontend subgraph.
 
     // Save entities to DB.
-    await this._db.savePool(pool, blockNumber);
     await this._db.saveToken(token0, blockNumber);
     await this._db.saveToken(token1, blockNumber);
     await this._db.saveFactory(factory, blockNumber);
@@ -264,7 +269,7 @@ export class Indexer {
     token.name = name;
     token.totalSupply = totalSupply;
 
-    return token;
+    return this._db.saveToken(token, blockNumber);
   }
 
   async _handleInitialize (block: Block, contractAddress: string, tx: Transaction, initializeEvent: InitializeEvent): Promise<void> {
@@ -370,27 +375,25 @@ export class Indexer {
 
     const transaction = await loadTransaction(this._db, { txHash, blockNumber, blockTimestamp });
 
-    await this._db.loadMint({
-      id: transaction.id + '#' + pool.txCount.toString(),
-      blockNumber,
-      transaction,
-      timestamp: transaction.timestamp,
-      pool,
-      token0: pool.token0,
-      token1: pool.token1,
-      owner: mintEvent.owner,
-      sender: mintEvent.sender,
+    const mint = new Mint();
+    mint.id = transaction.id + '#' + pool.txCount.toString();
+    mint.transaction = transaction;
+    mint.timestamp = transaction.timestamp;
+    mint.pool = pool;
+    mint.token0 = pool.token0;
+    mint.token1 = pool.token1;
+    mint.owner = mintEvent.owner;
+    mint.sender = mintEvent.sender;
 
-      // TODO: Assign origin with Transaction from address.
-      // origin: event.transaction.from
+    // TODO: Assign origin with Transaction from address.
+    // origin: event.transaction.from
 
-      amount: mintEvent.amount,
-      amount0: amount0,
-      amount1: amount1,
-      amountUSD: amountUSD,
-      tickLower: mintEvent.tickLower,
-      tickUpper: mintEvent.tickUpper
-    });
+    mint.amount = mintEvent.amount;
+    mint.amount0 = amount0;
+    mint.amount1 = amount1;
+    mint.amountUSD = amountUSD;
+    mint.tickLower = mintEvent.tickLower;
+    mint.tickUpper = mintEvent.tickUpper;
 
     // Tick entities.
     const lowerTickIdx = mintEvent.tickLower;
@@ -399,8 +402,16 @@ export class Indexer {
     const lowerTickId = poolAddress + '#' + mintEvent.tickLower.toString();
     const upperTickId = poolAddress + '#' + mintEvent.tickUpper.toString();
 
-    const lowerTick = await loadTick(this._db, lowerTickId, BigInt(lowerTickIdx), pool, blockNumber);
-    const upperTick = await loadTick(this._db, upperTickId, BigInt(upperTickIdx), pool, blockNumber);
+    let lowerTick = await this._db.getTick({ id: lowerTickId, blockNumber });
+    let upperTick = await this._db.getTick({ id: upperTickId, blockNumber });
+
+    if (!lowerTick) {
+      lowerTick = await createTick(this._db, lowerTickId, BigInt(lowerTickIdx), pool, blockNumber);
+    }
+
+    if (!upperTick) {
+      upperTick = await createTick(this._db, upperTickId, BigInt(upperTickIdx), pool, blockNumber);
+    }
 
     const amount = BigInt(mintEvent.amount);
     lowerTick.liquidityGross = BigInt(lowerTick.liquidityGross) + amount;
@@ -438,9 +449,11 @@ export class Indexer {
   async _handleBurn (block: Block, contractAddress: string, tx: Transaction, burnEvent: BurnEvent): Promise<void> {
     const { number: blockNumber, timestamp: blockTimestamp } = block;
     const { hash: txHash } = tx;
-    const bundle = await this._db.loadBundle({ id: '1', blockNumber });
+    const bundle = await this._db.getBundle({ id: '1', blockNumber });
+    assert(bundle);
     const poolAddress = contractAddress;
-    const pool = await this._db.loadPool({ id: poolAddress, blockNumber });
+    const pool = await this._db.getPool({ id: poolAddress, blockNumber });
+    assert(pool);
 
     // TODO: In subgraph factory is fetched by hardcoded factory address.
     // Currently fetching first factory in database as only one exists.
@@ -500,32 +513,31 @@ export class Indexer {
     // Burn entity.
     const transaction = await loadTransaction(this._db, { txHash, blockNumber, blockTimestamp });
 
-    await this._db.loadBurn({
-      id: transaction.id + '#' + pool.txCount.toString(),
-      blockNumber,
-      transaction,
-      timestamp: transaction.timestamp,
-      pool,
-      token0: pool.token0,
-      token1: pool.token1,
-      owner: burnEvent.owner,
+    const burn = new Burn();
+    burn.id = transaction.id + '#' + pool.txCount.toString();
+    burn.transaction = transaction;
+    burn.timestamp = transaction.timestamp;
+    burn.pool = pool;
+    burn.token0 = pool.token0;
+    burn.token1 = pool.token1;
+    burn.owner = burnEvent.owner;
 
-      // TODO: Assign origin with Transaction from address.
-      // origin: event.transaction.from
+    // TODO: Assign origin with Transaction from address.
+    // origin: event.transaction.from
 
-      amount: burnEvent.amount,
-      amount0,
-      amount1,
-      amountUSD,
-      tickLower: burnEvent.tickLower,
-      tickUpper: burnEvent.tickUpper
-    });
+    burn.amount = burnEvent.amount;
+    burn.amount0 = amount0;
+    burn.amount1 = amount1;
+    burn.amountUSD = amountUSD;
+    burn.tickLower = burnEvent.tickLower;
+    burn.tickUpper = burnEvent.tickUpper;
 
     // Tick entities.
     const lowerTickId = poolAddress + '#' + (burnEvent.tickLower).toString();
     const upperTickId = poolAddress + '#' + (burnEvent.tickUpper).toString();
-    const lowerTick = await this._db.loadTick({ id: lowerTickId, blockNumber });
-    const upperTick = await this._db.loadTick({ id: upperTickId, blockNumber });
+    const lowerTick = await this._db.getTick({ id: lowerTickId, blockNumber });
+    const upperTick = await this._db.getTick({ id: upperTickId, blockNumber });
+    assert(lowerTick && upperTick);
     const amount = BigInt(burnEvent.amount);
     lowerTick.liquidityGross = BigInt(lowerTick.liquidityGross) - amount;
     lowerTick.liquidityNet = BigInt(lowerTick.liquidityNet) - amount;
@@ -559,13 +571,15 @@ export class Indexer {
   async _handleSwap (block: Block, contractAddress: string, tx: Transaction, swapEvent: SwapEvent): Promise<void> {
     const { number: blockNumber, timestamp: blockTimestamp } = block;
     const { hash: txHash } = tx;
-    const bundle = await this._db.loadBundle({ id: '1', blockNumber });
+    const bundle = await this._db.getBundle({ id: '1', blockNumber });
+    assert(bundle);
 
     // TODO: In subgraph factory is fetched by hardcoded factory address.
     // Currently fetching first factory in database as only one exists.
     const [factory] = await this._db.getFactories({ blockNumber }, { limit: 1 });
 
-    const pool = await this._db.loadPool({ id: contractAddress, blockNumber });
+    const pool = await this._db.getPool({ id: contractAddress, blockNumber });
+    assert(pool);
 
     // Hot fix for bad pricing.
     if (pool.id === '0x9663f2ca0454accad3e094448ea6f77443880454') {
@@ -682,26 +696,24 @@ export class Indexer {
     // Create Swap event
     const transaction = await loadTransaction(this._db, { txHash, blockNumber, blockTimestamp });
 
-    await this._db.loadSwap({
-      id: transaction.id + '#' + pool.txCount.toString(),
-      blockNumber,
-      transaction,
-      timestamp: transaction.timestamp,
-      pool,
-      token0: pool.token0,
-      token1: pool.token1,
-      sender: swapEvent.sender,
+    const swap = new Swap();
+    swap.id = transaction.id + '#' + pool.txCount.toString();
+    swap.transaction = transaction;
+    swap.timestamp = transaction.timestamp;
+    swap.pool = pool;
+    swap.token0 = pool.token0;
+    swap.token1 = pool.token1;
+    swap.sender = swapEvent.sender;
 
-      // TODO: Assign origin with Transaction from address.
-      // origin: event.transaction.from
+    // TODO: Assign origin with Transaction from address.
+    // origin: event.transaction.from
 
-      recipient: swapEvent.recipient,
-      amount0: amount0,
-      amount1: amount1,
-      amountUSD: amountTotalUSDTracked,
-      tick: BigInt(swapEvent.tick),
-      sqrtPriceX96: swapEvent.sqrtPriceX96
-    });
+    swap.recipient = swapEvent.recipient;
+    swap.amount0 = amount0;
+    swap.amount1 = amount1;
+    swap.amountUSD = amountTotalUSDTracked;
+    swap.tick = BigInt(swapEvent.tick);
+    swap.sqrtPriceX96 = swapEvent.sqrtPriceX96;
 
     // Skipping update pool fee growth as they are not queried.
 

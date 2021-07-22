@@ -24,13 +24,15 @@ export const updateUniswapDayData = async (db: Database, event: { contractAddres
   const dayID = Math.floor(blockTimestamp / 86400); // Rounded.
   const dayStartTimestamp = dayID * 86400;
 
-  const uniswapDayData = await db.loadUniswapDayData({
-    id: dayID.toString(),
-    blockNumber,
-    date: dayStartTimestamp,
-    tvlUSD: factory.totalValueLockedUSD,
-    txCount: factory.txCount
-  });
+  let uniswapDayData = await db.getUniswapDayData({ id: dayID.toString(), blockNumber });
+
+  if (!uniswapDayData) {
+    uniswapDayData = new UniswapDayData();
+    uniswapDayData.id = dayID.toString();
+    uniswapDayData.date = dayStartTimestamp;
+    uniswapDayData.tvlUSD = factory.totalValueLockedUSD;
+    uniswapDayData.txCount = factory.txCount;
+  }
 
   uniswapDayData.tvlUSD = factory.totalValueLockedUSD;
   uniswapDayData.txCount = factory.txCount;
@@ -60,6 +62,7 @@ export const updatePoolDayData = async (db: Database, event: { contractAddress: 
     poolDayData.high = pool.token0Price;
     poolDayData.low = pool.token0Price;
     poolDayData.close = pool.token0Price;
+    poolDayData = await db.savePoolDayData(poolDayData, blockNumber);
   }
 
   if (Number(pool.token0Price) > Number(poolDayData.high)) {
@@ -107,6 +110,7 @@ export const updatePoolHourData = async (db: Database, event: { contractAddress:
     poolHourData.high = pool.token0Price;
     poolHourData.low = pool.token0Price;
     poolHourData.close = pool.token0Price;
+    poolHourData = await db.savePoolHourData(poolHourData, blockNumber);
   }
 
   if (Number(pool.token0Price) > Number(poolHourData.high)) {
@@ -133,7 +137,8 @@ export const updatePoolHourData = async (db: Database, event: { contractAddress:
 
 export const updateTokenDayData = async (db: Database, token: Token, event: { blockNumber: number, blockTimestamp: number }): Promise<TokenDayData> => {
   const { blockNumber, blockTimestamp } = event;
-  const bundle = await db.loadBundle({ id: '1', blockNumber });
+  const bundle = await db.getBundle({ id: '1', blockNumber });
+  assert(bundle);
   const dayID = Math.floor(blockTimestamp / 86400);
   const dayStartTimestamp = dayID * 86400;
 
@@ -143,19 +148,21 @@ export const updateTokenDayData = async (db: Database, token: Token, event: { bl
 
   const tokenPrice = token.derivedETH.times(bundle.ethPriceUSD);
 
-  const tokenDayData = await db.loadTokenDayData({
-    id: tokenDayID,
-    blockNumber,
-    date: dayStartTimestamp,
-    token,
-    open: tokenPrice,
-    high: tokenPrice,
-    low: tokenPrice,
-    close: tokenPrice,
-    priceUSD: token.derivedETH.times(bundle.ethPriceUSD),
-    totalValueLocked: token.totalValueLocked,
-    totalValueLockedUSD: token.totalValueLockedUSD
-  });
+  let tokenDayData = await db.getTokenDayData({ id: tokenDayID, blockNumber });
+
+  if (!tokenDayData) {
+    tokenDayData = new TokenDayData();
+    tokenDayData.id = tokenDayID;
+    tokenDayData.date = dayStartTimestamp;
+    tokenDayData.token = token;
+    tokenDayData.open = tokenPrice;
+    tokenDayData.high = tokenPrice;
+    tokenDayData.low = tokenPrice;
+    tokenDayData.close = tokenPrice;
+    tokenDayData.priceUSD = token.derivedETH.times(bundle.ethPriceUSD);
+    tokenDayData.totalValueLocked = token.totalValueLocked;
+    tokenDayData.totalValueLockedUSD = token.totalValueLockedUSD;
+  }
 
   if (tokenPrice.gt(tokenDayData.high)) {
     tokenDayData.high = tokenPrice;
@@ -174,7 +181,8 @@ export const updateTokenDayData = async (db: Database, token: Token, event: { bl
 
 export const updateTokenHourData = async (db: Database, token: Token, event: { blockNumber: number, blockTimestamp: number }): Promise<TokenHourData> => {
   const { blockNumber, blockTimestamp } = event;
-  const bundle = await db.loadBundle({ id: '1', blockNumber });
+  const bundle = await db.getBundle({ id: '1', blockNumber });
+  assert(bundle);
   const hourIndex = Math.floor(blockTimestamp / 3600); // Get unique hour within unix history.
   const hourStartUnix = hourIndex * 3600; // Want the rounded effect.
 
@@ -184,19 +192,21 @@ export const updateTokenHourData = async (db: Database, token: Token, event: { b
 
   const tokenPrice = token.derivedETH.times(bundle.ethPriceUSD);
 
-  const tokenHourData = await db.loadTokenHourData({
-    id: tokenHourID,
-    blockNumber,
-    periodStartUnix: hourStartUnix,
-    token: token,
-    open: tokenPrice,
-    high: tokenPrice,
-    low: tokenPrice,
-    close: tokenPrice,
-    priceUSD: tokenPrice,
-    totalValueLocked: token.totalValueLocked,
-    totalValueLockedUSD: token.totalValueLockedUSD
-  });
+  let tokenHourData = await db.getTokenHourData({ id: tokenHourID, blockNumber });
+
+  if (!tokenHourData) {
+    tokenHourData = new TokenHourData();
+    tokenHourData.id = tokenHourID;
+    tokenHourData.periodStartUnix = hourStartUnix;
+    tokenHourData.token = token;
+    tokenHourData.open = tokenPrice;
+    tokenHourData.high = tokenPrice;
+    tokenHourData.low = tokenPrice;
+    tokenHourData.close = tokenPrice;
+    tokenHourData.priceUSD = tokenPrice;
+    tokenHourData.totalValueLocked = token.totalValueLocked;
+    tokenHourData.totalValueLockedUSD = token.totalValueLockedUSD;
+  }
 
   if (tokenPrice.gt(tokenHourData.high)) {
     tokenHourData.high = tokenPrice;

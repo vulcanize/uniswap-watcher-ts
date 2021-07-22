@@ -196,6 +196,60 @@ export class Database {
     return repo.findOne(findOptions);
   }
 
+  async getUniswapDayData ({ id, blockNumber }: DeepPartial<UniswapDayData>): Promise<UniswapDayData | undefined> {
+    const repo = this._conn.getRepository(UniswapDayData);
+    const whereOptions: FindConditions<UniswapDayData> = { id };
+
+    if (blockNumber) {
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
+    }
+
+    const findOptions: FindOneOptions<UniswapDayData> = {
+      where: whereOptions,
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    return repo.findOne(findOptions);
+  }
+
+  async getTokenDayData ({ id, blockNumber }: DeepPartial<TokenDayData>): Promise<TokenDayData | undefined> {
+    const repo = this._conn.getRepository(TokenDayData);
+    const whereOptions: FindConditions<TokenDayData> = { id };
+
+    if (blockNumber) {
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
+    }
+
+    const findOptions: FindOneOptions<TokenDayData> = {
+      where: whereOptions,
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    return repo.findOne(findOptions);
+  }
+
+  async getTokenHourData ({ id, blockNumber }: DeepPartial<TokenHourData>): Promise<TokenHourData | undefined> {
+    const repo = this._conn.getRepository(TokenHourData);
+    const whereOptions: FindConditions<TokenHourData> = { id };
+
+    if (blockNumber) {
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
+    }
+
+    const findOptions: FindOneOptions<TokenHourData> = {
+      where: whereOptions,
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    return repo.findOne(findOptions);
+  }
+
   async getTransaction ({ id, blockNumber }: DeepPartial<Transaction>): Promise<Transaction | undefined> {
     const repo = this._conn.getRepository(Transaction);
     const whereOptions: FindConditions<Transaction> = { id };
