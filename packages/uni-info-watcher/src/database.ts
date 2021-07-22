@@ -289,389 +289,6 @@ export class Database {
     return selectQueryBuilder.getMany();
   }
 
-  async loadFactory ({ id, blockNumber, ...values }: DeepPartial<Factory>): Promise<Factory> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Factory);
-
-      let selectQueryBuilder = repo.createQueryBuilder('factory')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadPool ({ id, blockNumber, ...values }: DeepPartial<Pool>): Promise<Pool> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Pool);
-
-      const whereOptions: FindConditions<Pool> = { id };
-
-      if (blockNumber) {
-        whereOptions.blockNumber = LessThanOrEqual(blockNumber);
-      }
-
-      const findOptions: FindOneOptions<Pool> = {
-        where: whereOptions,
-        relations: ['token0', 'token1'],
-        order: {
-          blockNumber: 'DESC'
-        }
-      };
-
-      let entity = await repo.findOne(findOptions);
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadToken ({ id, blockNumber, ...values }: DeepPartial<Token>): Promise<Token> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Token);
-
-      const whereOptions: FindConditions<Token> = { id };
-
-      if (blockNumber) {
-        whereOptions.blockNumber = LessThanOrEqual(blockNumber);
-      }
-
-      const findOptions: FindOneOptions<Token> = {
-        where: whereOptions,
-        relations: ['whitelistPools', 'whitelistPools.token0', 'whitelistPools.token1'],
-        order: {
-          blockNumber: 'DESC'
-        }
-      };
-
-      let entity = await repo.findOne(findOptions);
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-
-        // TODO: Find way to preload relations during create.
-        entity.whitelistPools = [];
-      }
-
-      return entity;
-    });
-  }
-
-  async loadBundle ({ id, blockNumber, ...values }: DeepPartial<Bundle>): Promise<Bundle> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Bundle);
-
-      let selectQueryBuilder = repo.createQueryBuilder('bundle')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadPoolDayData ({ id, blockNumber, ...values }: DeepPartial<PoolDayData>): Promise<PoolDayData> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(PoolDayData);
-
-      let selectQueryBuilder = repo.createQueryBuilder('pool_day_data')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadPoolHourData ({ id, blockNumber, ...values }: DeepPartial<PoolHourData>): Promise<PoolHourData> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(PoolHourData);
-
-      let selectQueryBuilder = repo.createQueryBuilder('pool_hour_data')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadTransaction ({ id, blockNumber, ...values }: DeepPartial<Transaction>): Promise<Transaction> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Transaction);
-
-      let selectQueryBuilder = repo.createQueryBuilder('transaction')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadMint ({ id, blockNumber, ...values }:DeepPartial<Mint>): Promise<Mint> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Mint);
-
-      let selectQueryBuilder = repo.createQueryBuilder('mint')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadBurn ({ id, blockNumber, ...values }:DeepPartial<Burn>): Promise<Burn> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Burn);
-
-      let selectQueryBuilder = repo.createQueryBuilder('burn')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadSwap ({ id, blockNumber, ...values }:DeepPartial<Swap>): Promise<Swap> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Swap);
-
-      let selectQueryBuilder = repo.createQueryBuilder('swap')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadTick ({ id, blockNumber, ...values }: DeepPartial<Tick>): Promise<Tick> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Tick);
-
-      let selectQueryBuilder = repo.createQueryBuilder('tick')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadUniswapDayData ({ id, blockNumber, ...values }: DeepPartial<UniswapDayData>): Promise<UniswapDayData> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(UniswapDayData);
-
-      let selectQueryBuilder = repo.createQueryBuilder('uniswap_day_data')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadTokenDayData ({ id, blockNumber, ...values }: DeepPartial<TokenDayData>): Promise<TokenDayData> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(TokenDayData);
-
-      let selectQueryBuilder = repo.createQueryBuilder('token_day_data')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadTokenHourData ({ id, blockNumber, ...values }: DeepPartial<TokenHourData>): Promise<TokenHourData> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(TokenHourData);
-
-      let selectQueryBuilder = repo.createQueryBuilder('token_hour_data')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadPosition ({ id, blockNumber, ...values }: DeepPartial<Position>): Promise<Position> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Position);
-
-      let selectQueryBuilder = repo.createQueryBuilder('position')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
-  async loadPositionSnapshot ({ id, blockNumber, ...values }: DeepPartial<PositionSnapshot>): Promise<PositionSnapshot> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(PositionSnapshot);
-
-      let selectQueryBuilder = repo.createQueryBuilder('positionSnapshot')
-        .where('id = :id', { id });
-
-      if (blockNumber) {
-        selectQueryBuilder = selectQueryBuilder.andWhere('block_number <= :blockNumber', { blockNumber });
-      }
-
-      let entity = await selectQueryBuilder.orderBy('block_number', 'DESC')
-        .getOne();
-
-      if (!entity) {
-        entity = repo.create({ blockNumber, id, ...values });
-        entity = await repo.save(entity);
-      }
-
-      return entity;
-    });
-  }
-
   async saveFactory (factory: Factory, blockNumber: number): Promise<Factory> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Factory);
@@ -765,6 +382,38 @@ export class Database {
       const repo = tx.getRepository(Position);
       position.blockNumber = blockNumber;
       return repo.save(position);
+    });
+  }
+
+  async savePositionSnapshot (positionSnapshot: PositionSnapshot, blockNumber: number): Promise<PositionSnapshot> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(PositionSnapshot);
+      positionSnapshot.blockNumber = blockNumber;
+      return repo.save(positionSnapshot);
+    });
+  }
+
+  async saveMint (mint: Mint, blockNumber: number): Promise<Mint> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Mint);
+      mint.blockNumber = blockNumber;
+      return repo.save(mint);
+    });
+  }
+
+  async saveBurn (burn: Burn, blockNumber: number): Promise<Burn> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Burn);
+      burn.blockNumber = blockNumber;
+      return repo.save(burn);
+    });
+  }
+
+  async saveSwap (swap: Swap, blockNumber: number): Promise<Swap> {
+    return this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(Swap);
+      swap.blockNumber = blockNumber;
+      return repo.save(swap);
     });
   }
 

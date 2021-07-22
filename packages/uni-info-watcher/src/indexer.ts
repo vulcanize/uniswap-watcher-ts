@@ -22,6 +22,7 @@ import { Pool } from './entity/Pool';
 import { Mint } from './entity/Mint';
 import { Burn } from './entity/Burn';
 import { Swap } from './entity/Swap';
+import { PositionSnapshot } from './entity/PositionSnapshot';
 
 const log = debug('vulcanize:indexer');
 
@@ -437,6 +438,7 @@ export class Indexer {
 
     await this._db.savePool(pool, blockNumber);
     await this._db.saveFactory(factory, blockNumber);
+    await this._db.saveMint(mint, blockNumber);
 
     await Promise.all([
       await this._db.saveTick(lowerTick, blockNumber),
@@ -566,6 +568,7 @@ export class Indexer {
 
     await this._db.savePool(pool, blockNumber);
     await this._db.saveFactory(factory, blockNumber);
+    await this._db.saveBurn(burn, blockNumber);
   }
 
   async _handleSwap (block: Block, contractAddress: string, tx: Transaction, swapEvent: SwapEvent): Promise<void> {
@@ -761,14 +764,15 @@ export class Indexer {
     token1HourData.untrackedVolumeUSD = token1HourData.untrackedVolumeUSD.plus(amountTotalUSDTracked);
     token1HourData.feesUSD = token1HourData.feesUSD.plus(feesUSD);
 
-    this._db.saveTokenDayData(token0DayData, blockNumber);
-    this._db.saveTokenDayData(token1DayData, blockNumber);
-    this._db.saveUniswapDayData(uniswapDayData, blockNumber);
-    this._db.savePoolDayData(poolDayData, blockNumber);
-    this._db.saveFactory(factory, blockNumber);
-    this._db.savePool(pool, blockNumber);
-    this._db.saveToken(token0, blockNumber);
-    this._db.saveToken(token1, blockNumber);
+    await this._db.saveSwap(swap, blockNumber);
+    await this._db.saveTokenDayData(token0DayData, blockNumber);
+    await this._db.saveTokenDayData(token1DayData, blockNumber);
+    await this._db.saveUniswapDayData(uniswapDayData, blockNumber);
+    await this._db.savePoolDayData(poolDayData, blockNumber);
+    await this._db.saveFactory(factory, blockNumber);
+    await this._db.savePool(pool, blockNumber);
+    await this._db.saveToken(token0, blockNumber);
+    await this._db.saveToken(token1, blockNumber);
 
     // Skipping update of inner vars of current or crossed ticks as they are not queried.
   }
@@ -940,25 +944,24 @@ export class Indexer {
   }
 
   async _savePositionSnapshot (position: Position, block: Block, tx: Transaction): Promise<void> {
-    const transaction = await loadTransaction(this._db, { txHash: tx.hash, blockNumber: block.number, blockTimestamp: block.timestamp });
+    const positionSnapshot = new PositionSnapshot();
+    positionSnapshot.id = position.id.concat('#').concat(block.number.toString());
+    positionSnapshot.blockNumber = block.number;
+    positionSnapshot.owner = position.owner;
+    positionSnapshot.pool = position.pool;
+    positionSnapshot.position = position;
+    positionSnapshot.timestamp = BigInt(block.timestamp);
+    positionSnapshot.liquidity = position.liquidity;
+    positionSnapshot.depositedToken0 = position.depositedToken0;
+    positionSnapshot.depositedToken1 = position.depositedToken1;
+    positionSnapshot.withdrawnToken0 = position.withdrawnToken0;
+    positionSnapshot.withdrawnToken1 = position.withdrawnToken1;
+    positionSnapshot.collectedFeesToken0 = position.collectedFeesToken0;
+    positionSnapshot.collectedFeesToken1 = position.collectedFeesToken1;
+    positionSnapshot.transaction = await loadTransaction(this._db, { txHash: tx.hash, blockNumber: block.number, blockTimestamp: block.timestamp });
+    positionSnapshot.feeGrowthInside0LastX128 = position.feeGrowthInside0LastX128;
+    positionSnapshot.feeGrowthInside1LastX128 = position.feeGrowthInside1LastX128;
 
-    await this._db.loadPositionSnapshot({
-      id: position.id.concat('#').concat(block.number.toString()),
-      blockNumber: block.number,
-      owner: position.owner,
-      pool: position.pool,
-      position: position,
-      timestamp: block.timestamp,
-      liquidity: position.liquidity,
-      depositedToken0: position.depositedToken0,
-      depositedToken1: position.depositedToken1,
-      withdrawnToken0: position.withdrawnToken0,
-      withdrawnToken1: position.withdrawnToken1,
-      collectedFeesToken0: position.collectedFeesToken0,
-      collectedFeesToken1: position.collectedFeesToken1,
-      transaction,
-      feeGrowthInside0LastX128: position.feeGrowthInside0LastX128,
-      feeGrowthInside1LastX128: position.feeGrowthInside1LastX128
-    });
+    await this._db.savePositionSnapshot(positionSnapshot, block.number);
   }
 }
