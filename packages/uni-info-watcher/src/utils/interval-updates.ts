@@ -1,3 +1,4 @@
+import assert from 'assert';
 import { BigNumber } from 'ethers';
 
 import { Database } from '../database';
@@ -45,18 +46,21 @@ export const updatePoolDayData = async (db: Database, event: { contractAddress: 
     .concat('-')
     .concat(dayID.toString());
 
-  const pool = await db.loadPool({ id: contractAddress, blockNumber });
+  const pool = await db.getPool({ id: contractAddress, blockNumber });
+  assert(pool);
 
-  let poolDayData = await db.loadPoolDayData({
-    id: dayPoolID,
-    blockNumber,
-    date: dayStartTimestamp,
-    pool: pool,
-    open: pool.token0Price,
-    high: pool.token0Price,
-    low: pool.token0Price,
-    close: pool.token0Price
-  });
+  let poolDayData = await db.getPoolDayData({ id: dayPoolID, blockNumber });
+
+  if (!poolDayData) {
+    poolDayData = new PoolDayData();
+    poolDayData.id = dayPoolID;
+    poolDayData.date = dayStartTimestamp;
+    poolDayData.pool = pool;
+    poolDayData.open = pool.token0Price;
+    poolDayData.high = pool.token0Price;
+    poolDayData.low = pool.token0Price;
+    poolDayData.close = pool.token0Price;
+  }
 
   if (Number(pool.token0Price) > Number(poolDayData.high)) {
     poolDayData.high = pool.token0Price;
@@ -89,18 +93,21 @@ export const updatePoolHourData = async (db: Database, event: { contractAddress:
     .concat('-')
     .concat(hourIndex.toString());
 
-  const pool = await db.loadPool({ id: contractAddress, blockNumber });
+  const pool = await db.getPool({ id: contractAddress, blockNumber });
+  assert(pool);
 
-  let poolHourData = await db.loadPoolHourData({
-    id: hourPoolID,
-    blockNumber,
-    periodStartUnix: hourStartUnix,
-    pool: pool,
-    open: pool.token0Price,
-    high: pool.token0Price,
-    low: pool.token0Price,
-    close: pool.token0Price
-  });
+  let poolHourData = await db.getPoolHourData({ id: hourPoolID, blockNumber });
+
+  if (!poolHourData) {
+    poolHourData = new PoolHourData();
+    poolHourData.id = hourPoolID;
+    poolHourData.periodStartUnix = hourStartUnix;
+    poolHourData.pool = pool;
+    poolHourData.open = pool.token0Price;
+    poolHourData.high = pool.token0Price;
+    poolHourData.low = pool.token0Price;
+    poolHourData.close = pool.token0Price;
+  }
 
   if (Number(pool.token0Price) > Number(poolHourData.high)) {
     poolHourData.high = pool.token0Price;

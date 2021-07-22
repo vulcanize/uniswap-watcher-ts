@@ -2,7 +2,7 @@ import assert from 'assert';
 import debug from 'debug';
 import { DeepPartial } from 'typeorm';
 import JSONbig from 'json-bigint';
-import { BigNumber, utils } from 'ethers';
+import { utils } from 'ethers';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 
@@ -16,6 +16,9 @@ import { Position } from './entity/Position';
 import { Database } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Block, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent } from './events';
+import { Factory } from './entity/Factory';
+import { Bundle } from './entity/Bundle';
+import { Pool } from './entity/Pool';
 
 const log = debug('vulcanize:indexer');
 
@@ -182,13 +185,29 @@ export class Indexer {
     const { number: blockNumber, hash: blockHash } = block;
     const { token0: token0Address, token1: token1Address, fee, pool: poolAddress } = poolCreatedEvent;
 
+    // Temp fix from Subgraph mapping code.
+    if (utils.getAddress(poolAddress) === utils.getAddress('0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248')) {
+      return;
+    }
+
     // Load factory.
-    const factory = await this._db.loadFactory({ blockNumber, id: contractAddress });
+    let factory = await this._db.getFactory({ blockNumber, id: contractAddress });
+
+    if (!factory) {
+      factory = new Factory();
+      factory.id = contractAddress;
+
+      // Create new bundle for tracking eth price.
+      const bundle = new Bundle();
+      bundle.id = '1';
+      this._db.saveBundle(bundle, blockNumber);
+    }
 
     // Update Factory.
-    let factoryPoolCount = BigNumber.from(factory.poolCount);
-    factoryPoolCount = factoryPoolCount.add(1);
-    factory.poolCount = BigInt(factoryPoolCount.toHexString());
+    factory.poolCount = BigInt(factory.poolCount) + BigInt(1);
+
+    const pool = new Pool();
+    pool.id = poolAddress;
 
     // Get Tokens.
     let [token0, token1] = await Promise.all([
@@ -205,28 +224,24 @@ export class Indexer {
       token1 = await this._createToken(blockHash, blockNumber, token1Address);
     }
 
-    // Create new Pool entity.
-    // Skipping adding createdAtTimestamp field as it is not queried in frontend subgraph.
-    const pool = await this._db.loadPool({
-      blockNumber,
-      id: poolAddress,
-      token0: token0,
-      token1: token1,
-      feeTier: BigInt(fee)
-    });
-
     // Update white listed pools.
     if (WHITELIST_TOKENS.includes(token0.id)) {
       token1.whitelistPools.push(pool);
-      await this._db.saveToken(token1, blockNumber);
     }
 
     if (WHITELIST_TOKENS.includes(token1.id)) {
       token0.whitelistPools.push(pool);
-      await this._db.saveToken(token0, blockNumber);
     }
 
+    pool.token0 = token0;
+    pool.token1 = token1;
+    pool.feeTier = BigInt(fee);
+    // Skipping adding createdAtTimestamp field as it is not queried in frontend subgraph.
+
     // Save entities to DB.
+    await this._db.savePool(pool, blockNumber);
+    await this._db.saveToken(token0, blockNumber);
+    await this._db.saveToken(token1, blockNumber);
     await this._db.saveFactory(factory, blockNumber);
   }
 
@@ -235,6 +250,9 @@ export class Indexer {
    * @param tokenAddress
    */
   async _createToken (blockHash: string, blockNumber: number, tokenAddress: string): Promise<Token> {
+    const token = new Token();
+    token.id = tokenAddress;
+
     const { value: symbol } = await this._erc20Client.getSymbol(blockHash, tokenAddress);
     const { value: name } = await this._erc20Client.getName(blockHash, tokenAddress);
     const { value: totalSupply } = await this._erc20Client.getTotalSupply(blockHash, tokenAddress);
@@ -242,13 +260,11 @@ export class Indexer {
     // TODO: Decimals not implemented by erc20-watcher.
     // const { value: decimals } = await this._erc20Client.getDecimals(blockHash, tokenAddress);
 
-    return this._db.loadToken({
-      blockNumber,
-      id: tokenAddress,
-      symbol,
-      name,
-      totalSupply
-    });
+    token.symbol = symbol;
+    token.name = name;
+    token.totalSupply = totalSupply;
+
+    return token;
   }
 
   async _handleInitialize (block: Block, contractAddress: string, tx: Transaction, initializeEvent: InitializeEvent): Promise<void> {
@@ -262,22 +278,23 @@ export class Indexer {
     pool.tick = BigInt(tick);
     this._db.savePool(pool, blockNumber);
 
+    // Update token prices.
+    const [token0, token1] = await Promise.all([
+      this._db.getToken({ id: pool.token0.id, blockNumber }),
+      this._db.getToken({ id: pool.token1.id, blockNumber })
+    ]);
+
     // Update ETH price now that prices could have changed.
-    const bundle = await this._db.loadBundle({ id: '1', blockNumber });
+    const bundle = await this._db.getBundle({ id: '1', blockNumber });
+    assert(bundle);
     bundle.ethPriceUSD = await getEthPriceInUSD(this._db);
     this._db.saveBundle(bundle, blockNumber);
 
     await updatePoolDayData(this._db, { contractAddress, blockNumber, blockTimestamp });
     await updatePoolHourData(this._db, { contractAddress, blockNumber, blockTimestamp });
 
-    const [token0, token1] = await Promise.all([
-      this._db.getToken({ id: pool.token0.id, blockNumber }),
-      this._db.getToken({ id: pool.token1.id, blockNumber })
-    ]);
-
     assert(token0 && token1, 'Pool tokens not found.');
 
-    // Update token prices.
     token0.derivedETH = await findEthPerToken(token0);
     token1.derivedETH = await findEthPerToken(token1);
 
@@ -290,9 +307,11 @@ export class Indexer {
   async _handleMint (block: Block, contractAddress: string, tx: Transaction, mintEvent: MintEvent): Promise<void> {
     const { number: blockNumber, timestamp: blockTimestamp } = block;
     const { hash: txHash } = tx;
-    const bundle = await this._db.loadBundle({ id: '1', blockNumber });
+    const bundle = await this._db.getBundle({ id: '1', blockNumber });
+    assert(bundle);
     const poolAddress = contractAddress;
-    const pool = await this._db.loadPool({ id: poolAddress, blockNumber });
+    const pool = await this._db.getPool({ id: poolAddress, blockNumber });
+    assert(pool);
 
     // TODO: In subgraph factory is fetched by hardcoded factory address.
     // Currently fetching first factory in database as only one exists.

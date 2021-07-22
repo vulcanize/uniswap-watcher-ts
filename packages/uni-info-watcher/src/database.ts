@@ -45,6 +45,44 @@ export class Database {
     return this._conn.close();
   }
 
+  async getFactory ({ id, blockNumber }: DeepPartial<Factory>): Promise<Factory | undefined> {
+    const repo = this._conn.getRepository(Factory);
+
+    const whereOptions: FindConditions<Factory> = { id };
+
+    if (blockNumber) {
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
+    }
+
+    const findOptions: FindOneOptions<Factory> = {
+      where: whereOptions,
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    return repo.findOne(findOptions);
+  }
+
+  async getBundle ({ id, blockNumber }: DeepPartial<Bundle>): Promise<Bundle | undefined> {
+    const repo = this._conn.getRepository(Bundle);
+
+    const whereOptions: FindConditions<Bundle> = { id };
+
+    if (blockNumber) {
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
+    }
+
+    const findOptions: FindOneOptions<Bundle> = {
+      where: whereOptions,
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    return repo.findOne(findOptions);
+  }
+
   async getToken ({ id, blockNumber }: DeepPartial<Token>): Promise<Token | undefined> {
     const repo = this._conn.getRepository(Token);
 
@@ -114,6 +152,60 @@ export class Database {
     const findOptions: FindOneOptions<Tick> = {
       where: whereOptions,
       relations: ['pool'],
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    return repo.findOne(findOptions);
+  }
+
+  async getPoolDayData ({ id, blockNumber }: DeepPartial<PoolDayData>): Promise<PoolDayData | undefined> {
+    const repo = this._conn.getRepository(PoolDayData);
+    const whereOptions: FindConditions<PoolDayData> = { id };
+
+    if (blockNumber) {
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
+    }
+
+    const findOptions: FindOneOptions<PoolDayData> = {
+      where: whereOptions,
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    return repo.findOne(findOptions);
+  }
+
+  async getPoolHourData ({ id, blockNumber }: DeepPartial<PoolHourData>): Promise<PoolHourData | undefined> {
+    const repo = this._conn.getRepository(PoolHourData);
+    const whereOptions: FindConditions<PoolHourData> = { id };
+
+    if (blockNumber) {
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
+    }
+
+    const findOptions: FindOneOptions<PoolHourData> = {
+      where: whereOptions,
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    return repo.findOne(findOptions);
+  }
+
+  async getTransaction ({ id, blockNumber }: DeepPartial<Transaction>): Promise<Transaction | undefined> {
+    const repo = this._conn.getRepository(Transaction);
+    const whereOptions: FindConditions<Transaction> = { id };
+
+    if (blockNumber) {
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
+    }
+
+    const findOptions: FindOneOptions<Transaction> = {
+      where: whereOptions,
       order: {
         blockNumber: 'DESC'
       }

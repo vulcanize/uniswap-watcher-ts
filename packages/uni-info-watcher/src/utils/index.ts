@@ -24,12 +24,12 @@ export const convertTokenToDecimal = (tokenAmount: bigint, exchangeDecimals: big
 
 export const loadTransaction = async (db: Database, event: { txHash: string, blockNumber: number, blockTimestamp: number }): Promise<Transaction> => {
   const { txHash, blockNumber, blockTimestamp } = event;
+  let transaction = await db.getTransaction({ id: txHash, blockNumber });
 
-  const transaction = await db.loadTransaction({
-    id: txHash,
-    blockNumber,
-    timestamp: BigInt(blockTimestamp)
-  });
+  if (!transaction) {
+    transaction = new Transaction();
+    transaction.id = txHash;
+  }
 
   transaction.blockNumber = blockNumber;
   transaction.timestamp = BigInt(blockTimestamp);
