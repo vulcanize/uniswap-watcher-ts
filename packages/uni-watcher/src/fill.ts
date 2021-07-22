@@ -80,7 +80,7 @@ export const main = async (): Promise<any> => {
       if (blockProgress) {
         log(`Block number ${blockNumber}, block hash ${blockHash} already known, skip filling`);
       } else {
-        await jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash, publishBlockProgress: true });
+        await jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash });
       }
     }
   }

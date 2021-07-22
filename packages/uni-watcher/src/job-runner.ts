@@ -59,7 +59,7 @@ export const main = async (): Promise<any> => {
   await jobQueue.start();
 
   await jobQueue.subscribe(QUEUE_BLOCK_PROCESSING, async (job) => {
-    const { data: { blockHash, blockNumber, parentHash, priority, publishBlockProgress } } = job;
+    const { data: { blockHash, blockNumber, parentHash, priority } } = job;
 
     log(`Processing block number ${blockNumber} hash ${blockHash} `);
 
@@ -82,8 +82,7 @@ export const main = async (): Promise<any> => {
           blockHash: parentHash,
           blockNumber: parentBlockNumber,
           parentHash: grandparentHash,
-          priority: newPriority,
-          publishBlockProgress
+          priority: newPriority
         }, { priority: newPriority });
 
         const message = `Parent block number ${parentBlockNumber} hash ${parentHash} of block number ${blockNumber} hash ${blockHash} not fetched yet, aborting`;
@@ -103,7 +102,7 @@ export const main = async (): Promise<any> => {
 
     const events = await indexer.getOrFetchBlockEvents(blockHash);
     for (let ei = 0; ei < events.length; ei++) {
-      await jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { id: events[ei].id, publish: true, publishBlockProgress });
+      await jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { id: events[ei].id, publish: true });
     }
 
     await jobQueue.markComplete(job);

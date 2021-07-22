@@ -63,6 +63,10 @@ export class EventWatcher {
     this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
       const { data: { request: { data: { blockHash, blockNumber } } } } = job;
       log(`Job onComplete block ${blockHash} ${blockNumber}`);
+      const blockProgress = await this._indexer.getBlockProgress(blockHash);
+      if (blockProgress) {
+        await this.publishBlockProgressToSubscribers(blockProgress);
+      }
     });
   }
 
@@ -75,7 +79,7 @@ export class EventWatcher {
 
       await this._indexer.updateBlockProgress(dbEvent.block.blockHash, dbEvent.index);
       const blockProgress = await this._indexer.getBlockProgress(dbEvent.block.blockHash);
-      if (blockProgress && request.data.publishBlockProgress) {
+      if (blockProgress) {
         await this.publishBlockProgressToSubscribers(blockProgress);
       }
 
