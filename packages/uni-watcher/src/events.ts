@@ -8,7 +8,7 @@ import { JobQueue } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { BlockProgress } from './entity/BlockProgress';
-import { UNKNOWN_EVENT_NAME } from './entity/Event';
+import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
 
 const log = debug('vulcanize:events');
 
@@ -42,8 +42,13 @@ export class EventWatcher {
   async start (): Promise<void> {
     assert(!this._subscription, 'subscription already started');
 
-    log('Started watching upstream blocks...');
+    await this.watchBlocksAtChainHead();
+    await this.initBlockProcessingOnCompleteHandler();
+    await this.initEventProcessingOnCompleteHandler();
+  }
 
+  async watchBlocksAtChainHead () {
+    log('Started watching upstream blocks...');
     this._subscription = await this._ethClient.watchBlocks(async (value) => {
       const { blockHash, blockNumber, parentHash } = _.get(value, 'data.listen.relatedNode');
 
@@ -52,19 +57,23 @@ export class EventWatcher {
       log('watchBlock', blockHash, blockNumber);
       await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash });
     });
+  }
 
+  async initBlockProcessingOnCompleteHandler () {
     this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
       const { data: { request: { data: { blockHash, blockNumber } } } } = job;
       log(`Job onComplete block ${blockHash} ${blockNumber}`);
     });
+  }
 
+  async initEventProcessingOnCompleteHandler () {
     this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
       const { data: { request, failed, state, createdOn } } = job;
 
       const dbEvent = await this._indexer.getEvent(request.data.id);
       assert(dbEvent);
 
-      await this._indexer.updateBlockProgress(dbEvent.block.blockHash);
+      await this._indexer.updateBlockProgress(dbEvent.block.blockHash, dbEvent.index);
       const blockProgress = await this._indexer.getBlockProgress(dbEvent.block.blockHash);
       if (blockProgress && request.data.publishBlockProgress) {
         await this.publishBlockProgressToSubscribers(blockProgress);
@@ -75,7 +84,7 @@ export class EventWatcher {
       if (!failed && state === 'completed' && request.data.publish) {
         // Check for max acceptable lag time between request and sending results to live subscribers.
         if (timeElapsedInSeconds <= this._jobQueue.maxCompletionLag) {
-          return await this.publishUniswapEventToSubscribers(request.data.id, timeElapsedInSeconds);
+          return await this.publishUniswapEventToSubscribers(dbEvent, timeElapsedInSeconds);
         } else {
           log(`event ${request.data.id} is too old (${timeElapsedInSeconds}s), not broadcasting to live subscribers`);
         }
@@ -83,9 +92,7 @@ export class EventWatcher {
     });
   }
 
-  async publishUniswapEventToSubscribers (id: string, timeElapsedInSeconds: number): Promise<void> {
-    const dbEvent = await this._indexer.getEvent(id);
-
+  async publishUniswapEventToSubscribers (dbEvent: Event, timeElapsedInSeconds: number): Promise<void> {
     if (dbEvent && dbEvent.eventName !== UNKNOWN_EVENT_NAME) {
       const resultEvent = this._indexer.getResultEvent(dbEvent);
 

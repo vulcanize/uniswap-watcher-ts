@@ -107,6 +107,10 @@ export class Indexer {
     return events;
   }
 
+  async getBlockEvents (blockHash: string): Promise<Array<Event>> {
+    return this._db.getBlockEvents(blockHash);
+  }
+
   async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<Event>> {
     if (contract) {
       const uniContract = await this.isUniswapContract(contract);
@@ -376,8 +380,8 @@ export class Indexer {
     return this._db.getBlockProgress(blockHash);
   }
 
-  async updateBlockProgress (blockHash: string): Promise<void> {
-    return this._db.updateBlockProgress(blockHash);
+  async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {
+    return this._db.updateBlockProgress(blockHash, lastProcessedEventIndex);
   }
 
   async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
