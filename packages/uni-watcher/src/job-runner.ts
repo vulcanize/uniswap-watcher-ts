@@ -63,9 +63,13 @@ export const main = async (): Promise<any> => {
 
     log(`Processing block number ${blockNumber} hash ${blockHash} `);
 
-    // Check if parent block has been processed yet, if not, push a high prioroty job to process that first and abort.
+    // Check if parent block has been processed yet, if not, push a high priority job to process that first and abort.
     // However, don't go beyond the `latestCanonicalBlockHash` from SyncStatus as we have to assume the reorg can't be that deep.
-    const syncStatus = await indexer.getSyncStatus();
+    let syncStatus = await indexer.getSyncStatus();
+    if (!syncStatus) {
+      syncStatus = await indexer.updateSyncStatus(blockHash, blockNumber);
+    }
+
     if (blockHash !== syncStatus.latestCanonicalBlockHash) {
       const parent = await indexer.getBlockProgress(parentHash);
       if (!parent) {
@@ -88,7 +92,7 @@ export const main = async (): Promise<any> => {
         throw new Error(message);
       }
 
-      if (!parent.isComplete) {
+      if (parentHash !== syncStatus.latestCanonicalBlockHash && !parent.isComplete) {
         // Parent block indexing needs to finish before this block can be indexed.
         const message = `Indexing incomplete for parent block number ${parent.blockNumber} hash ${parentHash} of block number ${blockNumber} hash ${blockHash}, aborting`;
         log(message);

@@ -114,8 +114,8 @@ export class Database {
     });
   }
 
-  async updateSyncStatus (blockHash: string, blockNumber: number): Promise<void> {
-    await this._conn.transaction(async (tx) => {
+  async updateSyncStatus (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return await this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(SyncStatus);
 
       let entity = await repo.findOne();
@@ -126,10 +126,12 @@ export class Database {
         });
       }
 
-      entity.chainHeadBlockHash = blockHash;
-      entity.chainHeadBlockNumber = blockNumber;
+      if (blockNumber >= entity.latestCanonicalBlockNumber) {
+        entity.chainHeadBlockHash = blockHash;
+        entity.chainHeadBlockNumber = blockNumber;
+      }
 
-      await repo.save(entity);
+      return await repo.save(entity);
     });
   }
 

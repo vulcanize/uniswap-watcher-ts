@@ -97,12 +97,12 @@ export class Indexer {
     const blockProgress = await this._db.getBlockProgress(blockHash);
     if (!blockProgress) {
       // Fetch and save events first and make a note in the event sync progress table.
+      log(`getBlockEvents: db miss, fetching from upstream server ${blockHash}`);
       await this.fetchAndSaveEvents(blockHash);
-      log('getBlockEvents: db miss, fetching from upstream server');
     }
 
     const events = await this._db.getBlockEvents(blockHash);
-    log(`getBlockEvents: db hit, num events: ${events.length}`);
+    log(`getBlockEvents: db hit, ${blockHash} num events: ${events.length}`);
 
     return events;
   }
@@ -350,17 +350,12 @@ export class Indexer {
     await this._db.saveEvents(block, dbEvents);
   }
 
-  async updateSyncStatus (blockHash: string, blockNumber: number): Promise<void> {
-    await this._db.updateSyncStatus(blockHash, blockNumber);
+  async updateSyncStatus (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return this._db.updateSyncStatus(blockHash, blockNumber);
   }
 
-  async getSyncStatus (): Promise<SyncStatus> {
-    const syncStatus = await this._db.getSyncStatus();
-    if (!syncStatus) {
-      throw new Error('Fatal: sync status record not found');
-    }
-
-    return syncStatus;
+  async getSyncStatus (): Promise<SyncStatus | undefined> {
+    return this._db.getSyncStatus();
   }
 
   async getBlock (blockHash: string): Promise<any> {
