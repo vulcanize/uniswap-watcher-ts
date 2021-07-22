@@ -806,7 +806,7 @@ export class Indexer {
 
   async _handleDecreaseLiquidity (block: Block, contractAddress: string, tx: Transaction, event: DecreaseLiquidityEvent): Promise<void> {
     const { number: blockNumber } = block;
-    const position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
+    let position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
 
     // Position was not able to be fetched.
     if (position == null) {
@@ -827,7 +827,7 @@ export class Indexer {
     position.depositedToken0 = position.depositedToken0.plus(amount0);
     position.depositedToken1 = position.depositedToken1.plus(amount1);
 
-    await this._updateFeeVars(position, block, contractAddress, BigInt(event.tokenId));
+    position = await this._updateFeeVars(position, block, contractAddress, BigInt(event.tokenId));
 
     await this._db.savePosition(position, blockNumber);
 
@@ -892,31 +892,36 @@ export class Indexer {
 
         const { pool: poolAddress } = await this._uniClient.getPool(blockHash, token0Address, token1Address, fee);
 
-        const transaction = await loadTransaction(this._db, { txHash, blockNumber, blockTimestamp });
+        position = new Position();
+        position.id = tokenId.toString();
+
         const pool = await this._db.getPool({ id: poolAddress, blockNumber });
+        assert(pool);
+        position.pool = pool;
 
         const [token0, token1] = await Promise.all([
           this._db.getToken({ id: token0Address, blockNumber }),
           this._db.getToken({ id: token0Address, blockNumber })
         ]);
+        assert(token0 && token1);
+        position.token0 = token0;
+        position.token1 = token1;
 
         const [tickLower, tickUpper] = await Promise.all([
           this._db.getTick({ id: poolAddress.concat('#').concat(nfpmPosition.tickLower.toString()), blockNumber }),
           this._db.getTick({ id: poolAddress.concat('#').concat(nfpmPosition.tickUpper.toString()), blockNumber })
         ]);
+        assert(tickLower && tickUpper);
+        position.tickLower = tickLower;
+        position.tickUpper = tickUpper;
 
-        position = await this._db.loadPosition({
-          id: tokenId.toString(),
-          blockNumber,
-          pool,
-          token0,
-          token1,
-          tickLower,
-          tickUpper,
-          transaction,
-          feeGrowthInside0LastX128: BigInt(nfpmPosition.feeGrowthInside0LastX128.toString()),
-          feeGrowthInside1LastX128: BigInt(nfpmPosition.feeGrowthInside1LastX128.toString())
-        });
+        const transaction = await loadTransaction(this._db, { txHash, blockNumber, blockTimestamp });
+        position.transaction = transaction;
+
+        position.feeGrowthInside0LastX128 = BigInt(nfpmPosition.feeGrowthInside0LastX128.toString());
+        position.feeGrowthInside1LastX128 = BigInt(nfpmPosition.feeGrowthInside1LastX128.toString());
+
+        position = await this._db.savePosition(position, blockNumber);
       }
     }
 
