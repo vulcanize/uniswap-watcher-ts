@@ -4,8 +4,9 @@ import { Pool } from '../entity/Pool';
 import { Database } from '../database';
 import { bigDecimalExponated, safeDiv } from '.';
 import { Tick } from '../entity/Tick';
+import { Block } from '../events';
 
-export const createTick = async (db: Database, tickId: string, tickIdx: bigint, pool: Pool, blockNumber: number): Promise<Tick> => {
+export const createTick = async (db: Database, tickId: string, tickIdx: bigint, pool: Pool, block: Block): Promise<Tick> => {
   const tick = new Tick();
   tick.id = tickId;
   tick.tickIdx = tickIdx;
@@ -18,5 +19,5 @@ export const createTick = async (db: Database, tickId: string, tickIdx: bigint, 
   tick.price0 = price0;
   tick.price1 = safeDiv(new Decimal(1), price0);
 
-  return db.saveTick(tick, blockNumber);
+  return db.saveTick(tick, block);
 };

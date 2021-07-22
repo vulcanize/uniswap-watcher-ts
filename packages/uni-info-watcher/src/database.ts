@@ -289,130 +289,146 @@ export class Database {
     return selectQueryBuilder.getMany();
   }
 
-  async saveFactory (factory: Factory, blockNumber: number): Promise<Factory> {
+  async saveFactory (factory: Factory, block: Block): Promise<Factory> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Factory);
-      factory.blockNumber = blockNumber;
+      factory.blockNumber = block.number;
+      factory.blockHash = block.hash;
       return repo.save(factory);
     });
   }
 
-  async saveBundle (bundle: Bundle, blockNumber: number): Promise<Bundle> {
+  async saveBundle (bundle: Bundle, block: Block): Promise<Bundle> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Bundle);
-      bundle.blockNumber = blockNumber;
+      bundle.blockNumber = block.number;
+      bundle.blockHash = block.hash;
       return repo.save(bundle);
     });
   }
 
-  async savePool (pool: Pool, blockNumber: number): Promise<Pool> {
+  async savePool (pool: Pool, block: Block): Promise<Pool> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Pool);
-      pool.blockNumber = blockNumber;
+      pool.blockNumber = block.number;
+      pool.blockHash = block.hash;
       return repo.save(pool);
     });
   }
 
-  async savePoolDayData (poolDayData: PoolDayData, blockNumber: number): Promise<PoolDayData> {
+  async savePoolDayData (poolDayData: PoolDayData, block: Block): Promise<PoolDayData> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(PoolDayData);
-      poolDayData.blockNumber = blockNumber;
+      poolDayData.blockNumber = block.number;
+      poolDayData.blockHash = block.hash;
       return repo.save(poolDayData);
     });
   }
 
-  async savePoolHourData (poolHourData: PoolHourData, blockNumber: number): Promise<PoolHourData> {
+  async savePoolHourData (poolHourData: PoolHourData, block: Block): Promise<PoolHourData> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(PoolHourData);
-      poolHourData.blockNumber = blockNumber;
+      poolHourData.blockNumber = block.number;
+      poolHourData.blockHash = block.hash;
       return repo.save(poolHourData);
     });
   }
 
-  async saveToken (token: Token, blockNumber: number): Promise<Token> {
+  async saveToken (token: Token, block: Block): Promise<Token> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Token);
-      token.blockNumber = blockNumber;
+      token.blockNumber = block.number;
+      token.blockHash = block.hash;
       return repo.save(token);
     });
   }
 
-  async saveTransaction (transaction: Transaction, blockNumber: number): Promise<Transaction> {
+  async saveTransaction (transaction: Transaction, block: Block): Promise<Transaction> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Transaction);
-      transaction.blockNumber = blockNumber;
+      transaction.blockNumber = block.number;
+      transaction.blockHash = block.hash;
       return repo.save(transaction);
     });
   }
 
-  async saveUniswapDayData (uniswapDayData: UniswapDayData, blockNumber: number): Promise<UniswapDayData> {
+  async saveUniswapDayData (uniswapDayData: UniswapDayData, block: Block): Promise<UniswapDayData> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(UniswapDayData);
-      uniswapDayData.blockNumber = blockNumber;
+      uniswapDayData.blockNumber = block.number;
+      uniswapDayData.blockHash = block.hash;
       return repo.save(uniswapDayData);
     });
   }
 
-  async saveTokenDayData (tokenDayData: TokenDayData, blockNumber: number): Promise<TokenDayData> {
+  async saveTokenDayData (tokenDayData: TokenDayData, block: Block): Promise<TokenDayData> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(TokenDayData);
-      tokenDayData.blockNumber = blockNumber;
+      tokenDayData.blockNumber = block.number;
+      tokenDayData.blockHash = block.hash;
       return repo.save(tokenDayData);
     });
   }
 
-  async saveTokenHourData (tokenHourData: TokenHourData, blockNumber: number): Promise<TokenHourData> {
+  async saveTokenHourData (tokenHourData: TokenHourData, block: Block): Promise<TokenHourData> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(TokenHourData);
-      tokenHourData.blockNumber = blockNumber;
+      tokenHourData.blockNumber = block.number;
+      tokenHourData.blockHash = block.hash;
       return repo.save(tokenHourData);
     });
   }
 
-  async saveTick (tick: Tick, blockNumber: number): Promise<Tick> {
+  async saveTick (tick: Tick, block: Block): Promise<Tick> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Tick);
-      tick.blockNumber = blockNumber;
+      tick.blockNumber = block.number;
+      tick.blockHash = block.hash;
       return repo.save(tick);
     });
   }
 
-  async savePosition (position: Position, blockNumber: number): Promise<Position> {
+  async savePosition (position: Position, block: Block): Promise<Position> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Position);
-      position.blockNumber = blockNumber;
+      position.blockNumber = block.number;
+      position.blockHash = block.hash;
       return repo.save(position);
     });
   }
 
-  async savePositionSnapshot (positionSnapshot: PositionSnapshot, blockNumber: number): Promise<PositionSnapshot> {
+  async savePositionSnapshot (positionSnapshot: PositionSnapshot, block: Block): Promise<PositionSnapshot> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(PositionSnapshot);
-      positionSnapshot.blockNumber = blockNumber;
+      positionSnapshot.blockNumber = block.number;
+      positionSnapshot.blockHash = block.hash;
       return repo.save(positionSnapshot);
     });
   }
 
-  async saveMint (mint: Mint, blockNumber: number): Promise<Mint> {
+  async saveMint (mint: Mint, block: Block): Promise<Mint> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Mint);
-      mint.blockNumber = blockNumber;
+      mint.blockNumber = block.number;
+      mint.blockHash = block.hash;
       return repo.save(mint);
     });
   }
 
-  async saveBurn (burn: Burn, blockNumber: number): Promise<Burn> {
+  async saveBurn (burn: Burn, block: Block): Promise<Burn> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Burn);
-      burn.blockNumber = blockNumber;
+      burn.blockNumber = block.number;
+      burn.blockHash = block.hash;
       return repo.save(burn);
     });
   }
 
-  async saveSwap (swap: Swap, blockNumber: number): Promise<Swap> {
+  async saveSwap (swap: Swap, block: Block): Promise<Swap> {
     return this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Swap);
-      swap.blockNumber = blockNumber;
+      swap.blockNumber = block.number;
+      swap.blockHash = block.hash;
       return repo.save(swap);
     });
   }
