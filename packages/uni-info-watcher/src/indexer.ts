@@ -300,9 +300,8 @@ export class Indexer {
   }
 
   async _handleInitialize (block: Block, contractAddress: string, tx: Transaction, initializeEvent: InitializeEvent): Promise<void> {
-    const { number: blockNumber } = block;
     const { sqrtPriceX96, tick } = initializeEvent;
-    const pool = await this._db.getPool({ id: contractAddress, blockNumber });
+    const pool = await this._db.getPool({ id: contractAddress, blockHash: block.hash });
     assert(pool, `Pool ${contractAddress} not found.`);
 
     // Update Pool.
@@ -312,14 +311,14 @@ export class Indexer {
 
     // Update token prices.
     const [token0, token1] = await Promise.all([
-      this._db.getToken({ id: pool.token0.id, blockNumber }),
-      this._db.getToken({ id: pool.token1.id, blockNumber })
+      this._db.getToken({ id: pool.token0.id, blockHash: block.hash }),
+      this._db.getToken({ id: pool.token1.id, blockHash: block.hash })
     ]);
 
     // Update ETH price now that prices could have changed.
-    const bundle = await this._db.getBundle({ id: '1', blockNumber });
+    const bundle = await this._db.getBundle({ id: '1', blockHash: block.hash });
     assert(bundle);
-    bundle.ethPriceUSD = await getEthPriceInUSD(this._db);
+    bundle.ethPriceUSD = await getEthPriceInUSD(this._db, block);
     this._db.saveBundle(bundle, block);
 
     await updatePoolDayData(this._db, { contractAddress, block });
@@ -337,16 +336,15 @@ export class Indexer {
   }
 
   async _handleMint (block: Block, contractAddress: string, tx: Transaction, mintEvent: MintEvent): Promise<void> {
-    const { number: blockNumber } = block;
-    const bundle = await this._db.getBundle({ id: '1', blockNumber });
+    const bundle = await this._db.getBundle({ id: '1', blockHash: block.hash });
     assert(bundle);
     const poolAddress = contractAddress;
-    const pool = await this._db.getPool({ id: poolAddress, blockNumber });
+    const pool = await this._db.getPool({ id: poolAddress, blockHash: block.hash });
     assert(pool);
 
     // TODO: In subgraph factory is fetched by hardcoded factory address.
     // Currently fetching first factory in database as only one exists.
-    const [factory] = await this._db.getFactories({ blockNumber }, { limit: 1 });
+    const [factory] = await this._db.getFactories({ blockHash: block.hash }, { limit: 1 });
 
     const token0 = pool.token0;
     const token1 = pool.token1;
@@ -428,8 +426,8 @@ export class Indexer {
     const lowerTickId = poolAddress + '#' + mintEvent.tickLower.toString();
     const upperTickId = poolAddress + '#' + mintEvent.tickUpper.toString();
 
-    let lowerTick = await this._db.getTick({ id: lowerTickId, blockNumber });
-    let upperTick = await this._db.getTick({ id: upperTickId, blockNumber });
+    let lowerTick = await this._db.getTick({ id: lowerTickId, blockHash: block.hash });
+    let upperTick = await this._db.getTick({ id: upperTickId, blockHash: block.hash });
 
     if (!lowerTick) {
       lowerTick = await createTick(this._db, lowerTickId, BigInt(lowerTickIdx), pool, block);
@@ -474,16 +472,15 @@ export class Indexer {
   }
 
   async _handleBurn (block: Block, contractAddress: string, tx: Transaction, burnEvent: BurnEvent): Promise<void> {
-    const { number: blockNumber } = block;
-    const bundle = await this._db.getBundle({ id: '1', blockNumber });
+    const bundle = await this._db.getBundle({ id: '1', blockHash: block.hash });
     assert(bundle);
     const poolAddress = contractAddress;
-    const pool = await this._db.getPool({ id: poolAddress, blockNumber });
+    const pool = await this._db.getPool({ id: poolAddress, blockHash: block.hash });
     assert(pool);
 
     // TODO: In subgraph factory is fetched by hardcoded factory address.
     // Currently fetching first factory in database as only one exists.
-    const [factory] = await this._db.getFactories({ blockNumber }, { limit: 1 });
+    const [factory] = await this._db.getFactories({ blockHash: block.hash }, { limit: 1 });
 
     const token0 = pool.token0;
     const token1 = pool.token1;
@@ -561,8 +558,8 @@ export class Indexer {
     // Tick entities.
     const lowerTickId = poolAddress + '#' + (burnEvent.tickLower).toString();
     const upperTickId = poolAddress + '#' + (burnEvent.tickUpper).toString();
-    const lowerTick = await this._db.getTick({ id: lowerTickId, blockNumber });
-    const upperTick = await this._db.getTick({ id: upperTickId, blockNumber });
+    const lowerTick = await this._db.getTick({ id: lowerTickId, blockHash: block.hash });
+    const upperTick = await this._db.getTick({ id: upperTickId, blockHash: block.hash });
     assert(lowerTick && upperTick);
     const amount = BigInt(burnEvent.amount);
     lowerTick.liquidityGross = BigInt(lowerTick.liquidityGross) - amount;
@@ -596,15 +593,14 @@ export class Indexer {
   }
 
   async _handleSwap (block: Block, contractAddress: string, tx: Transaction, swapEvent: SwapEvent): Promise<void> {
-    const { number: blockNumber } = block;
-    const bundle = await this._db.getBundle({ id: '1', blockNumber });
+    const bundle = await this._db.getBundle({ id: '1', blockHash: block.hash });
     assert(bundle);
 
     // TODO: In subgraph factory is fetched by hardcoded factory address.
     // Currently fetching first factory in database as only one exists.
-    const [factory] = await this._db.getFactories({ blockNumber }, { limit: 1 });
+    const [factory] = await this._db.getFactories({ blockHash: block.hash }, { limit: 1 });
 
-    const pool = await this._db.getPool({ id: contractAddress, blockNumber });
+    const pool = await this._db.getPool({ id: contractAddress, blockHash: block.hash });
     assert(pool);
 
     // Hot fix for bad pricing.
@@ -613,8 +609,8 @@ export class Indexer {
     }
 
     const [token0, token1] = await Promise.all([
-      this._db.getToken({ id: pool.token0.id, blockNumber }),
-      this._db.getToken({ id: pool.token1.id, blockNumber })
+      this._db.getToken({ id: pool.token0.id, blockHash: block.hash }),
+      this._db.getToken({ id: pool.token1.id, blockHash: block.hash })
     ]);
 
     assert(token0 && token1, 'Pool tokens not found.');
@@ -699,7 +695,7 @@ export class Indexer {
     this._db.savePool(pool, block);
 
     // Update USD pricing.
-    bundle.ethPriceUSD = await getEthPriceInUSD(this._db);
+    bundle.ethPriceUSD = await getEthPriceInUSD(this._db, block);
     this._db.saveBundle(bundle, block);
     token0.derivedETH = await findEthPerToken(token0);
     token1.derivedETH = await findEthPerToken(token1);
