@@ -896,8 +896,8 @@ export class Indexer {
   }
 
   async _getPosition (block: Block, contractAddress: string, tx: Transaction, tokenId: bigint): Promise<Position | null> {
-    const { number: blockNumber, hash: blockHash } = block;
-    let position = await this._db.getPosition({ id: tokenId.toString(), blockNumber });
+    const { hash: blockHash } = block;
+    let position = await this._db.getPosition({ id: tokenId.toString(), blockHash });
 
     if (!position) {
       const nfpmPosition = await this._uniClient.getPosition(blockHash, tokenId);
@@ -914,21 +914,21 @@ export class Indexer {
         position = new Position();
         position.id = tokenId.toString();
 
-        const pool = await this._db.getPool({ id: poolAddress, blockNumber });
+        const pool = await this._db.getPool({ id: poolAddress, blockHash });
         assert(pool);
         position.pool = pool;
 
         const [token0, token1] = await Promise.all([
-          this._db.getToken({ id: token0Address, blockNumber }),
-          this._db.getToken({ id: token0Address, blockNumber })
+          this._db.getToken({ id: token0Address, blockHash }),
+          this._db.getToken({ id: token0Address, blockHash })
         ]);
         assert(token0 && token1);
         position.token0 = token0;
         position.token1 = token1;
 
         const [tickLower, tickUpper] = await Promise.all([
-          this._db.getTick({ id: poolAddress.concat('#').concat(nfpmPosition.tickLower.toString()), blockNumber }),
-          this._db.getTick({ id: poolAddress.concat('#').concat(nfpmPosition.tickUpper.toString()), blockNumber })
+          this._db.getTick({ id: poolAddress.concat('#').concat(nfpmPosition.tickLower.toString()), blockHash }),
+          this._db.getTick({ id: poolAddress.concat('#').concat(nfpmPosition.tickUpper.toString()), blockHash })
         ]);
         assert(tickLower && tickUpper);
         position.tickLower = tickLower;

@@ -145,15 +145,15 @@ export class Database {
     return entity;
   }
 
-  async getPosition ({ id, blockNumber }: DeepPartial<Position>): Promise<Position | undefined> {
+  async getPosition ({ id, blockHash }: DeepPartial<Position>): Promise<Position | undefined> {
     const repo = this._conn.getRepository(Position);
     const whereOptions: FindConditions<Position> = { id };
 
-    if (blockNumber) {
-      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
+    if (blockHash) {
+      whereOptions.blockHash = blockHash;
     }
 
-    const findOptions: FindOneOptions<Position> = {
+    const findOptions = {
       where: whereOptions,
       relations: ['pool', 'token0', 'token1', 'tickLower', 'tickUpper', 'transaction'],
       order: {
@@ -161,7 +161,13 @@ export class Database {
       }
     };
 
-    return repo.findOne(findOptions);
+    let entity = await repo.findOne(findOptions as FindOneOptions<Position>);
+
+    if (!entity && findOptions.where.blockHash) {
+      entity = await this._getPrevEntityVersion(repo, findOptions);
+    }
+
+    return entity;
   }
 
   async getTick ({ id, blockHash }: DeepPartial<Tick>): Promise<Tick | undefined> {
@@ -642,13 +648,16 @@ export class Database {
   async _getPrevEntityVersion<Entity> (repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
     assert(findOptions.order.blockNumber);
     const { canonicalBlockNumber, blockHashes } = await this._getBranchInfo(findOptions.where.blockHash);
+    findOptions.where.blockHash = In(blockHashes)
+    let entity = await repo.findOne(findOptions);
 
-    findOptions.where = [
-      { blockHash: In(blockHashes) },
-      { blockNumber: LessThanOrEqual(canonicalBlockNumber) }
-    ];
+    if (!entity) {
+      delete findOptions.where.blockHash;
+      findOptions.where.blockNumber = LessThanOrEqual(canonicalBlockNumber);
+      entity = await repo.findOne(findOptions);
+    }
 
-    return repo.findOne(findOptions);
+    return entity;
   }
 
   async _getBranchInfo (blockHash: string): Promise<{ canonicalBlockNumber: number, blockHashes: string[] }> {
