@@ -4,7 +4,7 @@ import { invert } from 'lodash';
 import { JsonFragment } from '@ethersproject/abi';
 import { DeepPartial } from 'typeorm';
 import JSONbig from 'json-bigint';
-import { ethers } from 'ethers';
+import { ethers, providers } from 'ethers';
 import { PubSub } from 'apollo-server-express';
 
 import { EthClient, topictoAddress } from '@vulcanize/ipld-eth-client';
@@ -14,6 +14,8 @@ import { Database } from './database';
 import { Event } from './entity/Event';
 
 const log = debug('vulcanize:indexer');
+
+const ETH_CALL_MODE = 'eth_call';
 
 interface Artifacts {
   abi: JsonFragment[];
@@ -44,12 +46,14 @@ export class Indexer {
   _ethClient: EthClient
   _pubsub: PubSub
   _getStorageAt: GetStorageAt
+  _ethProvider: providers.JsonRpcProvider
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
+  _serverMode: string
 
-  constructor (db: Database, ethClient: EthClient, pubsub: PubSub, artifacts: Artifacts) {
+  constructor (db: Database, ethClient: EthClient, ethProvider: providers.JsonRpcProvider, pubsub: PubSub, artifacts: Artifacts, serverMode: string) {
     assert(db);
     assert(ethClient);
     assert(pubsub);
@@ -62,8 +66,10 @@ export class Indexer {
 
     this._db = db;
     this._ethClient = ethClient;
+    this._ethProvider = ethProvider;
     this._pubsub = pubsub;
     this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
+    this._serverMode = serverMode;
 
     this._abi = abi;
     this._storageLayout = storageLayout;
@@ -76,10 +82,17 @@ export class Indexer {
   }
 
   async totalSupply (blockHash: string, token: string): Promise<ValueResult> {
-    const result = await this._getStorageValue(blockHash, token, '_totalSupply');
+    let result: ValueResult;
+
+    if (this._serverMode === ETH_CALL_MODE) {
+      const data = this._contract.encodeFunctionData('totalSupply');
+      result = await this._ethProvider.send('eth_call', [{ data, to: token }, 'latest']);
+    } else {
+      result = await this._getStorageValue(blockHash, token, '_totalSupply');
+    }
 
     // https://github.com/GoogleChromeLabs/jsbi/issues/30#issuecomment-521460510
-    // log(JSONbig.stringify(result, null, 2));
+    log(JSONbig.stringify(result, null, 2));
 
     return result;
   }
