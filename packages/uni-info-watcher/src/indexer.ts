@@ -213,7 +213,6 @@ export class Indexer {
   }
 
   async _handlePoolCreated (block: Block, contractAddress: string, tx: Transaction, poolCreatedEvent: PoolCreatedEvent): Promise<void> {
-    const { number: blockNumber } = block;
     const { token0: token0Address, token1: token1Address, fee, pool: poolAddress } = poolCreatedEvent;
 
     // Temp fix from Subgraph mapping code.
@@ -243,8 +242,8 @@ export class Indexer {
 
     // Get Tokens.
     let [token0, token1] = await Promise.all([
-      this._db.getToken({ blockNumber, id: token0Address }),
-      this._db.getToken({ blockNumber, id: token1Address })
+      this._db.getToken({ blockHash: block.hash, id: token0Address }),
+      this._db.getToken({ blockHash: block.hash, id: token1Address })
     ]);
 
     // Create Tokens if not present.

@@ -1,3 +1,1 @@
-export const constants = {
-  MAX_REORG_DEPTH: 16
-}
+export const MAX_REORG_DEPTH = 16;

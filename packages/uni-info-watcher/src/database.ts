@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, FindOneOptions, LessThanOrEqual, Repository } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { MAX_REORG_DEPTH } from '@vulcanize/util';
 
 import { EventSyncProgress } from './entity/EventProgress';
 import { Factory } from './entity/Factory';
@@ -23,7 +24,6 @@ import { PositionSnapshot } from './entity/PositionSnapshot';
 import { BlockProgress } from './entity/BlockProgress';
 import { Block } from './events';
 import { SyncStatus } from './entity/SyncStatus';
-import { constants } from '../../util';
 
 export class Database {
   _config: ConnectionOptions
@@ -60,7 +60,7 @@ export class Database {
     let entity = await repo.findOne(findOptions as FindOneOptions<Factory>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevVersionEntity(repo, findOptions);
+      entity = await this._getPrevEntityVersion(repo, findOptions);
     }
 
     return entity;
@@ -85,24 +85,24 @@ export class Database {
     return repo.findOne(findOptions);
   }
 
-  async getToken ({ id, blockNumber }: DeepPartial<Token>): Promise<Token | undefined> {
+  async getToken ({ id, blockHash }: DeepPartial<Token>): Promise<Token | undefined> {
     const repo = this._conn.getRepository(Token);
 
-    const whereOptions: FindConditions<Token> = { id };
-
-    if (blockNumber) {
-      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
-    }
-
-    const findOptions: FindOneOptions<Token> = {
-      where: whereOptions,
+    const findOptions = {
+      where: { id, blockHash },
       relations: ['whitelistPools', 'whitelistPools.token0', 'whitelistPools.token1'],
       order: {
         blockNumber: 'DESC'
       }
     };
 
-    return repo.findOne(findOptions);
+    let entity = await repo.findOne(findOptions as FindOneOptions<Token>);
+
+    if (!entity && findOptions.where.blockHash) {
+      entity = await this._getPrevEntityVersion(repo, findOptions);
+    }
+
+    return entity;
   }
 
   async getPool ({ id, blockNumber }: DeepPartial<Pool>): Promise<Pool | undefined> {
@@ -572,12 +572,12 @@ export class Database {
     });
   }
 
-  async _getPrevVersionEntity<Entity> (repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
+  async _getPrevEntityVersion<Entity> (repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
+    assert(findOptions.order.blockNumber);
     const blockRepo = this._conn.getRepository(BlockProgress);
-
     let block = await blockRepo.findOne({ blockHash: findOptions.where.blockHash });
     assert(block);
-    const canonicalBlockNumber = block.blockNumber - constants.MAX_REORG_DEPTH;
+    const canonicalBlockNumber = block.blockNumber - MAX_REORG_DEPTH;
 
     while (block.blockNumber > canonicalBlockNumber) {
       findOptions.where.blockHash = block.parentHash;
