@@ -22,6 +22,7 @@ import { Position } from './entity/Position';
 import { PositionSnapshot } from './entity/PositionSnapshot';
 import { BlockProgress } from './entity/BlockProgress';
 import { Block } from './events';
+import { SyncStatus } from './entity/SyncStatus';
 
 export class Database {
   _config: ConnectionOptions
@@ -523,6 +524,32 @@ export class Database {
 
   async getEvent (id: string): Promise<Event | undefined> {
     return this._conn.getRepository(Event).findOne(id, { relations: ['block'] });
+  }
+
+  async updateSyncStatus (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return await this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(SyncStatus);
+
+      let entity = await repo.findOne();
+      if (!entity) {
+        entity = repo.create({
+          latestCanonicalBlockHash: blockHash,
+          latestCanonicalBlockNumber: blockNumber
+        });
+      }
+
+      if (blockNumber >= entity.latestCanonicalBlockNumber) {
+        entity.chainHeadBlockHash = blockHash;
+        entity.chainHeadBlockNumber = blockNumber;
+      }
+
+      return await repo.save(entity);
+    });
+  }
+
+  async getSyncStatus (): Promise<SyncStatus | undefined> {
+    const repo = this._conn.getRepository(SyncStatus);
+    return repo.findOne();
   }
 
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {

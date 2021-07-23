@@ -5,6 +5,7 @@ import JSONbig from 'json-bigint';
 import { utils } from 'ethers';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
+import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
@@ -23,6 +24,8 @@ import { Mint } from './entity/Mint';
 import { Burn } from './entity/Burn';
 import { Swap } from './entity/Swap';
 import { PositionSnapshot } from './entity/PositionSnapshot';
+import { SyncStatus } from './entity/SyncStatus';
+import { BlockProgress } from './entity/BlockProgress';
 
 const log = debug('vulcanize:indexer');
 
@@ -37,14 +40,18 @@ export class Indexer {
   _db: Database
   _uniClient: UniClient
   _erc20Client: ERC20Client
+  _ethClient: EthClient
 
-  constructor (db: Database, uniClient: UniClient, erc20Client: ERC20Client) {
+  constructor (db: Database, uniClient: UniClient, erc20Client: ERC20Client, ethClient: EthClient) {
     assert(db);
     assert(uniClient);
+    assert(erc20Client);
+    assert(ethClient);
 
     this._db = db;
     this._uniClient = uniClient;
     this._erc20Client = erc20Client;
+    this._ethClient = ethClient;
   }
 
   getResultEvent (event: Event): ResultEvent {
@@ -96,9 +103,9 @@ export class Indexer {
 
     // TODO: Process proof (proof.data) in event.
     const { contract, tx, block, event } = resultEvent;
-    const { __typename: eventType } = event;
+    const { __typename: eventName } = event;
 
-    switch (eventType) {
+    switch (eventName) {
       case 'PoolCreatedEvent':
         log('Factory PoolCreated event', contract);
         await this._handlePoolCreated(block, contract, tx, event as PoolCreatedEvent);
@@ -145,12 +152,32 @@ export class Indexer {
         break;
 
       default:
+        log('Event not handled', eventName);
         break;
     }
+
+    log('Event processing completed for', eventName);
+  }
+
+  async updateSyncStatus (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return this._db.updateSyncStatus(blockHash, blockNumber);
+  }
+
+  async getSyncStatus (): Promise<SyncStatus | undefined> {
+    return this._db.getSyncStatus();
+  }
+
+  async getBlock (blockHash: string): Promise<any> {
+    const { block } = await this._ethClient.getLogs({ blockHash });
+    return block;
   }
 
   async getEvent (id: string): Promise<Event | undefined> {
     return this._db.getEvent(id);
+  }
+
+  async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
+    return this._db.getBlockProgress(blockHash);
   }
 
   async updateBlockProgress (blockHash: string): Promise<void> {
