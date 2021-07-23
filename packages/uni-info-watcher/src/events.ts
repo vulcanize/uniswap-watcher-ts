@@ -128,17 +128,8 @@ export class EventWatcher {
     assert(!this._subscription, 'subscription already started');
     log('Started watching upstream events...');
 
-    this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
-      const { data: { request: { data: { block } } } } = job;
-      log(`Job onComplete block ${block.hash} ${block.number}`);
-    });
-
-    this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
-      const { data: { request } } = job;
-
-      log(`Job onComplete event ${request.data.id}`);
-    });
-
+    await this._initBlockProcessingOnCompleteHandler();
+    await this._initEventProcessingOnCompleteHandler();
     await this._watchBlocksAtChainHead();
   }
 
@@ -166,6 +157,26 @@ export class EventWatcher {
       };
 
       await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { block });
+    });
+  }
+
+  async _initBlockProcessingOnCompleteHandler (): Promise<void> {
+    this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
+      const { data: { request: { data: { block } } } } = job;
+      log(`Job onComplete block ${block.hash} ${block.number}`);
+    });
+  }
+
+  async _initEventProcessingOnCompleteHandler (): Promise<void> {
+    this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
+      const { data: { request } } = job;
+
+      const dbEvent = await this._indexer.getEvent(request.data.id);
+      assert(dbEvent);
+
+      await this._indexer.updateBlockProgress(dbEvent.block.blockHash);
+
+      log(`Job onComplete event ${request.data.id}`);
     });
   }
 }

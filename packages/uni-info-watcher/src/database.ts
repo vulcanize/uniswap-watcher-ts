@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, FindOneOptions, LessThanOrEqual } from 'typeorm';
+import { Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, FindOneOptions, LessThanOrEqual, Repository } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 import { EventSyncProgress } from './entity/EventProgress';
@@ -23,6 +23,7 @@ import { PositionSnapshot } from './entity/PositionSnapshot';
 import { BlockProgress } from './entity/BlockProgress';
 import { Block } from './events';
 import { SyncStatus } from './entity/SyncStatus';
+import { constants } from '../../util';
 
 export class Database {
   _config: ConnectionOptions
@@ -46,23 +47,23 @@ export class Database {
     return this._conn.close();
   }
 
-  async getFactory ({ id, blockNumber }: DeepPartial<Factory>): Promise<Factory | undefined> {
+  async getFactory ({ id, blockHash }: DeepPartial<Factory>): Promise<Factory | undefined> {
     const repo = this._conn.getRepository(Factory);
 
-    const whereOptions: FindConditions<Factory> = { id };
-
-    if (blockNumber) {
-      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
-    }
-
-    const findOptions: FindOneOptions<Factory> = {
-      where: whereOptions,
+    const findOptions = {
+      where: { id, blockHash },
       order: {
         blockNumber: 'DESC'
       }
     };
 
-    return repo.findOne(findOptions);
+    let entity = await repo.findOne(findOptions as FindOneOptions<Factory>);
+
+    if (!entity && findOptions.where.blockHash) {
+      entity = await this._getPrevVersionEntity(repo, findOptions);
+    }
+
+    return entity;
   }
 
   async getBundle ({ id, blockNumber }: DeepPartial<Bundle>): Promise<Bundle | undefined> {
@@ -569,5 +570,29 @@ export class Database {
         await repo.save(entity);
       }
     });
+  }
+
+  async _getPrevVersionEntity<Entity> (repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
+    const blockRepo = this._conn.getRepository(BlockProgress);
+
+    let block = await blockRepo.findOne({ blockHash: findOptions.where.blockHash });
+    assert(block);
+    const canonicalBlockNumber = block.blockNumber - constants.MAX_REORG_DEPTH;
+
+    while (block.blockNumber > canonicalBlockNumber) {
+      findOptions.where.blockHash = block.parentHash;
+      const entity = await repo.findOne(findOptions);
+
+      if (entity) {
+        return entity;
+      }
+
+      block = await blockRepo.findOne({ blockHash: block.parentHash });
+      assert(block);
+    }
+
+    delete findOptions.where.blockHash;
+    findOptions.where.blockNumber = LessThanOrEqual(canonicalBlockNumber);
+    return repo.findOne(findOptions);
   }
 }

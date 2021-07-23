@@ -129,7 +129,6 @@ export const main = async (): Promise<any> => {
 
     if (!dbEvent.block.isComplete) {
       await indexer.processEvent(dbEvent);
-      await indexer.updateBlockProgress(dbEvent.block.blockHash);
     }
 
     await jobQueue.markComplete(job);

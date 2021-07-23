@@ -222,7 +222,7 @@ export class Indexer {
     }
 
     // Load factory.
-    let factory = await this._db.getFactory({ blockNumber, id: contractAddress });
+    let factory = await this._db.getFactory({ blockHash: block.hash, id: contractAddress });
 
     if (!factory) {
       factory = new Factory();
