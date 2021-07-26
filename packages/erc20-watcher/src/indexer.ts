@@ -4,7 +4,8 @@ import { invert } from 'lodash';
 import { JsonFragment } from '@ethersproject/abi';
 import { DeepPartial } from 'typeorm';
 import JSONbig from 'json-bigint';
-import { ethers, providers } from 'ethers';
+import { ethers } from 'ethers';
+import { BaseProvider } from '@ethersproject/providers';
 import { PubSub } from 'apollo-server-express';
 
 import { EthClient, topictoAddress } from '@vulcanize/ipld-eth-client';
@@ -24,7 +25,7 @@ interface Artifacts {
 
 export interface ValueResult {
   value: string | bigint;
-  proof: {
+  proof?: {
     data: string;
   }
 }
@@ -38,7 +39,7 @@ type EventsResult = Array<{
     value?: BigInt;
     __typename: string;
   }
-  proof: string;
+  proof?: string;
 }>
 
 export class Indexer {
@@ -46,14 +47,14 @@ export class Indexer {
   _ethClient: EthClient
   _pubsub: PubSub
   _getStorageAt: GetStorageAt
-  _ethProvider: providers.JsonRpcProvider
+  _ethProvider: BaseProvider
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
   _serverMode: string
 
-  constructor (db: Database, ethClient: EthClient, ethProvider: providers.JsonRpcProvider, pubsub: PubSub, artifacts: Artifacts, serverMode: string) {
+  constructor (db: Database, ethClient: EthClient, ethProvider: BaseProvider, pubsub: PubSub, artifacts: Artifacts, serverMode: string) {
     assert(db);
     assert(ethClient);
     assert(pubsub);
@@ -85,8 +86,12 @@ export class Indexer {
     let result: ValueResult;
 
     if (this._serverMode === ETH_CALL_MODE) {
-      const data = this._contract.encodeFunctionData('totalSupply');
-      result = await this._ethProvider.send('eth_call', [{ data, to: token }, 'latest']);
+      const contract = new ethers.Contract(token, this._abi, this._ethProvider);
+      const value = await contract.totalSupply({ blockTag: blockHash });
+
+      result = {
+        value: BigInt(value.toString())
+      };
     } else {
       result = await this._getStorageValue(blockHash, token, '_totalSupply');
     }
@@ -97,7 +102,7 @@ export class Indexer {
     return result;
   }
 
-  async balanceOf (blockHash: string, token: string, owner: string): Promise<ValueResult> {
+  async balanceOf (blockHash: string, blockNumber: number, token: string, owner: string): Promise<ValueResult> {
     const entity = await this._db.getBalance({ blockHash, token, owner });
     if (entity) {
       log('balanceOf: db hit');
@@ -109,9 +114,21 @@ export class Indexer {
     }
 
     log('balanceOf: db miss, fetching from upstream server');
-    const result = await this._getStorageValue(blockHash, token, '_balances', owner);
+    let result: ValueResult;
 
-    // log(JSONbig.stringify(result, null, 2));
+    if (this._serverMode === ETH_CALL_MODE) {
+      const contract = new ethers.Contract(token, this._abi, this._ethProvider);
+      // eth_call doesnt support calling method by blockHash https://eth.wiki/json-rpc/API#the-default-block-parameter
+      const value = await contract.balanceOf(owner, { blockTag: blockNumber });
+
+      result = {
+        value: BigInt(value.toString())
+      };
+    } else {
+      result = await this._getStorageValue(blockHash, token, '_balances', owner);
+    }
+
+    log(JSONbig.stringify(result, null, 2));
 
     const { value, proof } = result;
     await this._db.saveBalance({ blockHash, token, owner, value: BigInt(value), proof: JSONbig.stringify(proof) });
@@ -119,7 +136,7 @@ export class Indexer {
     return result;
   }
 
-  async allowance (blockHash: string, token: string, owner: string, spender: string): Promise<ValueResult> {
+  async allowance (blockHash: string, blockNumber: number, token: string, owner: string, spender: string): Promise<ValueResult> {
     const entity = await this._db.getAllowance({ blockHash, token, owner, spender });
     if (entity) {
       log('allowance: db hit');
@@ -131,7 +148,18 @@ export class Indexer {
     }
 
     log('allowance: db miss, fetching from upstream server');
-    const result = await this._getStorageValue(blockHash, token, '_allowances', owner, spender);
+    let result: ValueResult;
+
+    if (this._serverMode === ETH_CALL_MODE) {
+      const contract = new ethers.Contract(token, this._abi, this._ethProvider);
+      const value = await contract.allowance(owner, spender, { blockTag: blockNumber });
+
+      result = {
+        value: BigInt(value.toString())
+      };
+    } else {
+      result = await this._getStorageValue(blockHash, token, '_allowances', owner, spender);
+    }
 
     // log(JSONbig.stringify(result, null, 2));
 
@@ -142,7 +170,16 @@ export class Indexer {
   }
 
   async name (blockHash: string, token: string): Promise<ValueResult> {
-    const result = await this._getStorageValue(blockHash, token, '_name');
+    let result: ValueResult;
+
+    if (this._serverMode === ETH_CALL_MODE) {
+      const contract = new ethers.Contract(token, this._abi, this._ethProvider);
+      const value = await contract.name();
+
+      result = { value };
+    } else {
+      result = await this._getStorageValue(blockHash, token, '_name');
+    }
 
     // log(JSONbig.stringify(result, null, 2));
 
@@ -150,18 +187,37 @@ export class Indexer {
   }
 
   async symbol (blockHash: string, token: string): Promise<ValueResult> {
-    const result = await this._getStorageValue(blockHash, token, '_symbol');
+    let result: ValueResult;
+
+    if (this._serverMode === ETH_CALL_MODE) {
+      const contract = new ethers.Contract(token, this._abi, this._ethProvider);
+      const value = await contract.symbol();
+
+      result = { value };
+    } else {
+      result = await this._getStorageValue(blockHash, token, '_symbol');
+    }
 
     // log(JSONbig.stringify(result, null, 2));
 
     return result;
   }
 
-  async decimals (): Promise<void> {
-    // Not a state variable, uses hardcoded return value in contract function.
-    // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol#L86
+  async decimals (blockHash: string, token: string): Promise<ValueResult> {
+    let result: ValueResult;
 
-    throw new Error('Not implemented.');
+    if (this._serverMode === ETH_CALL_MODE) {
+      const contract = new ethers.Contract(token, this._abi, this._ethProvider);
+      const value = await contract.decimals();
+
+      result = { value };
+    } else {
+      // Not a state variable, uses hardcoded return value in contract function.
+      // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol#L86
+      throw new Error('Not implemented.');
+    }
+
+    return result;
   }
 
   async getEvents (blockHash: string, token: string, name: string | null): Promise<EventsResult> {
@@ -219,7 +275,7 @@ export class Indexer {
     return result;
   }
 
-  async triggerIndexingOnEvent (blockHash: string, token: string, receipt: any, logIndex: number): Promise<void> {
+  async triggerIndexingOnEvent (blockHash: string, blockNumber: number, token: string, receipt: any, logIndex: number): Promise<void> {
     const topics = [];
 
     // We only care about the event type for now.
@@ -238,15 +294,15 @@ export class Indexer {
         // On a transfer, balances for both parties change.
         // Therefore, trigger indexing for both sender and receiver.
         const [from, to] = args;
-        await this.balanceOf(blockHash, token, from);
-        await this.balanceOf(blockHash, token, to);
+        await this.balanceOf(blockHash, blockNumber, token, from);
+        await this.balanceOf(blockHash, blockNumber, token, to);
 
         break;
       }
       case 'Approval': {
         // Update allowance for (owner, spender) combination.
         const [owner, spender] = args;
-        await this.allowance(blockHash, token, owner, spender);
+        await this.allowance(blockHash, blockNumber, token, owner, spender);
 
         break;
       }
@@ -270,9 +326,9 @@ export class Indexer {
     });
   }
 
-  async processEvent (blockHash: string, token: string, receipt: any, logIndex: number): Promise<void> {
+  async processEvent (blockHash: string, blockNumber: number, token: string, receipt: any, logIndex: number): Promise<void> {
     // Trigger indexing of data based on the event.
-    await this.triggerIndexingOnEvent(blockHash, token, receipt, logIndex);
+    await this.triggerIndexingOnEvent(blockHash, blockNumber, token, receipt, logIndex);
 
     // Also trigger downstream event watcher subscriptions.
     await this.publishEventToSubscribers(blockHash, token, logIndex);

@@ -7,7 +7,7 @@ import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 import 'graphql-import-node';
 import { createServer } from 'http';
-import { providers } from 'ethers';
+import { getDefaultProvider } from 'ethers';
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
@@ -59,7 +59,7 @@ export const main = async (): Promise<any> => {
     cache
   });
 
-  const ethProvider = new providers.JsonRpcProvider(rpcProviderEndpoint);
+  const ethProvider = getDefaultProvider(rpcProviderEndpoint);
 
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
   // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
