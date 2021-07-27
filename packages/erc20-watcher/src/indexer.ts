@@ -13,7 +13,7 @@ import { getEventNameTopics, getStorageValue, GetStorageAt, StorageLayout } from
 
 import { Database } from './database';
 import { Event } from './entity/Event';
-import { fetchTokenName, fetchTokenSymbol } from './utils';
+import { fetchTokenDecimals, fetchTokenName, fetchTokenSymbol, fetchTokenTotalSupply } from './utils';
 
 const log = debug('vulcanize:indexer');
 
@@ -87,12 +87,9 @@ export class Indexer {
     let result: ValueResult;
 
     if (this._serverMode === ETH_CALL_MODE) {
-      const contract = new ethers.Contract(token, this._abi, this._ethProvider);
-      const value = await contract.totalSupply({ blockTag: blockHash });
+      const value = await fetchTokenTotalSupply(this._ethProvider, token);
 
-      result = {
-        value: BigInt(value.toString())
-      };
+      result = { value };
     } else {
       result = await this._getStorageValue(blockHash, token, '_totalSupply');
     }
@@ -206,8 +203,7 @@ export class Indexer {
     let result: ValueResult;
 
     if (this._serverMode === ETH_CALL_MODE) {
-      const contract = new ethers.Contract(token, this._abi, this._ethProvider);
-      const value = await contract.decimals();
+      const value = await fetchTokenDecimals(this._ethProvider, token);
 
       result = { value };
     } else {

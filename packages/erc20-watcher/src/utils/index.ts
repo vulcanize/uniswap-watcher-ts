@@ -68,21 +68,42 @@ export const fetchTokenName = async (ethProvider: BaseProvider, tokenAddress: st
   }
 
   return nameValue;
-}
+};
 
 export const fetchTokenTotalSupply = async (ethProvider: BaseProvider, tokenAddress: string): Promise<bigint> => {
   const contract = new Contract(tokenAddress, abi, ethProvider);
   let totalSupplyValue = null;
 
   try {
-    const result = contract.totalSupply();
-    totalSupplyValue = BigInt(result.toString());
+    const result = await contract.totalSupply();
+    totalSupplyValue = result.toString();
   } catch (error) {
-    totalSupplyValue = BigInt(0)
+    totalSupplyValue = 0;
   }
 
-  return totalSupplyValue;
-}
+  return BigInt(totalSupplyValue);
+};
+
+export const fetchTokenDecimals = async (ethProvider: BaseProvider, tokenAddress: string): Promise<bigint> => {
+  const contract = new Contract(tokenAddress, abi, ethProvider);
+
+  // Try types uint8 for decimals.
+  let decimalValue = null;
+
+  try {
+    const result = await contract.decimals();
+    decimalValue = result.toString();
+  } catch (error) {
+    // Try with the static definition.
+    const staticTokenDefinition = StaticTokenDefinition.fromAddress(tokenAddress);
+
+    if (staticTokenDefinition != null) {
+      return staticTokenDefinition.decimals;
+    }
+  }
+
+  return BigInt(decimalValue);
+};
 
 const isNullEthValue = (value: string): boolean => {
   return value === '0x0000000000000000000000000000000000000000000000000000000000000001';
