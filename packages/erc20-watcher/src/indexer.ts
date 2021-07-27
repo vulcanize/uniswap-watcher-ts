@@ -13,7 +13,7 @@ import { getEventNameTopics, getStorageValue, GetStorageAt, StorageLayout } from
 
 import { Database } from './database';
 import { Event } from './entity/Event';
-import { fetchTokenSymbol } from './utils';
+import { fetchTokenName, fetchTokenSymbol } from './utils';
 
 const log = debug('vulcanize:indexer');
 
@@ -174,8 +174,7 @@ export class Indexer {
     let result: ValueResult;
 
     if (this._serverMode === ETH_CALL_MODE) {
-      const contract = new ethers.Contract(token, this._abi, this._ethProvider);
-      const value = await contract.name();
+      const value = await fetchTokenName(this._ethProvider, token);
 
       result = { value };
     } else {
