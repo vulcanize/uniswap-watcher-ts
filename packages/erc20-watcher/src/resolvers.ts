@@ -40,14 +40,14 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
         return indexer.totalSupply(blockHash, token);
       },
 
-      balanceOf: async (_: any, { blockHash, blockNumber, token, owner }: { blockHash: string, blockNumber: number, token: string, owner: string }) => {
+      balanceOf: async (_: any, { blockHash, token, owner }: { blockHash: string, token: string, owner: string }) => {
         log('balanceOf', blockHash, token, owner);
-        return indexer.balanceOf(blockHash, blockNumber, token, owner);
+        return indexer.balanceOf(blockHash, token, owner);
       },
 
-      allowance: async (_: any, { blockHash, blockNumber, token, owner, spender }: { blockHash: string, blockNumber: number, token: string, owner: string, spender: string }) => {
+      allowance: async (_: any, { blockHash, token, owner, spender }: { blockHash: string, token: string, owner: string, spender: string }) => {
         log('allowance', blockHash, token, owner, spender);
-        return indexer.allowance(blockHash, blockNumber, token, owner, spender);
+        return indexer.allowance(blockHash, token, owner, spender);
       },
 
       name: (_: any, { blockHash, token }: { blockHash: string, token: string }) => {

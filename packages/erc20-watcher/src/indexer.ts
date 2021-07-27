@@ -4,7 +4,7 @@ import { invert } from 'lodash';
 import { JsonFragment } from '@ethersproject/abi';
 import { DeepPartial } from 'typeorm';
 import JSONbig from 'json-bigint';
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { BaseProvider } from '@ethersproject/providers';
 import { PubSub } from 'apollo-server-express';
 
@@ -100,7 +100,7 @@ export class Indexer {
     return result;
   }
 
-  async balanceOf (blockHash: string, blockNumber: number, token: string, owner: string): Promise<ValueResult> {
+  async balanceOf (blockHash: string, token: string, owner: string): Promise<ValueResult> {
     const entity = await this._db.getBalance({ blockHash, token, owner });
     if (entity) {
       log('balanceOf: db hit');
@@ -116,6 +116,10 @@ export class Indexer {
 
     if (this._serverMode === ETH_CALL_MODE) {
       const contract = new ethers.Contract(token, this._abi, this._ethProvider);
+      const { block } = await this._ethClient.getBlockByHash(blockHash);
+      const { number } = block;
+      const blockNumber = BigNumber.from(number).toNumber();
+
       // eth_call doesnt support calling method by blockHash https://eth.wiki/json-rpc/API#the-default-block-parameter
       const value = await contract.balanceOf(owner, { blockTag: blockNumber });
 
@@ -134,7 +138,7 @@ export class Indexer {
     return result;
   }
 
-  async allowance (blockHash: string, blockNumber: number, token: string, owner: string, spender: string): Promise<ValueResult> {
+  async allowance (blockHash: string, token: string, owner: string, spender: string): Promise<ValueResult> {
     const entity = await this._db.getAllowance({ blockHash, token, owner, spender });
     if (entity) {
       log('allowance: db hit');
@@ -150,6 +154,9 @@ export class Indexer {
 
     if (this._serverMode === ETH_CALL_MODE) {
       const contract = new ethers.Contract(token, this._abi, this._ethProvider);
+      const { block } = await this._ethClient.getBlockByHash(blockHash);
+      const { number } = block;
+      const blockNumber = BigNumber.from(number).toNumber();
       const value = await contract.allowance(owner, spender, { blockTag: blockNumber });
 
       result = {
@@ -289,15 +296,15 @@ export class Indexer {
         // On a transfer, balances for both parties change.
         // Therefore, trigger indexing for both sender and receiver.
         const [from, to] = args;
-        await this.balanceOf(blockHash, blockNumber, token, from);
-        await this.balanceOf(blockHash, blockNumber, token, to);
+        await this.balanceOf(blockHash, token, from);
+        await this.balanceOf(blockHash, token, to);
 
         break;
       }
       case 'Approval': {
         // Update allowance for (owner, spender) combination.
         const [owner, spender] = args;
-        await this.allowance(blockHash, blockNumber, token, owner, spender);
+        await this.allowance(blockHash, token, owner, spender);
 
         break;
       }

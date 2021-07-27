@@ -86,7 +86,6 @@ type Query {
 
   balanceOf(
     blockHash: String!
-    blockNumber: Int!
     token: String!
 
     owner: String!
@@ -94,7 +93,6 @@ type Query {
 
   allowance(
     blockHash: String!
-    blockNumber: Int!
     token: String!
 
     owner: String!

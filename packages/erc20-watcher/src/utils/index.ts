@@ -4,7 +4,7 @@ import { BaseProvider } from '@ethersproject/providers';
 import { abi } from '../artifacts/ERC20.json';
 import ERC20SymbolBytesABI from '../artifacts/ERC20SymbolBytes.json';
 import ERC20NameBytesABI from '../artifacts/ERC20NameBytes.json';
-import { StaticTokenDefinition } from './staticTokenDefinition';
+import { StaticTokenDefinition } from './static-token-definition';
 
 export const fetchTokenSymbol = async (ethProvider: BaseProvider, tokenAddress: string): Promise<string> => {
   const contract = new Contract(tokenAddress, abi, ethProvider);
