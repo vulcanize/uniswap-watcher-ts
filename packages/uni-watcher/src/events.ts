@@ -4,7 +4,7 @@ import _ from 'lodash';
 import { PubSub } from 'apollo-server-express';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { JobQueue } from '@vulcanize/util';
+import { JobQueue, MAX_REORG_DEPTH } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { BlockProgress } from './entity/BlockProgress';
@@ -16,6 +16,7 @@ export const UniswapEvent = 'uniswap-event';
 export const BlockProgressEvent = 'block-progress-event';
 export const QUEUE_EVENT_PROCESSING = 'event-processing';
 export const QUEUE_BLOCK_PROCESSING = 'block-processing';
+export const QUEUE_CHAIN_PRUNING = 'chain-pruning';
 
 export class EventWatcher {
   _ethClient: EthClient
@@ -45,6 +46,7 @@ export class EventWatcher {
     await this.watchBlocksAtChainHead();
     await this.initBlockProcessingOnCompleteHandler();
     await this.initEventProcessingOnCompleteHandler();
+    await this.initChainPruningOnCompleteHandler();
   }
 
   async watchBlocksAtChainHead (): Promise<void> {
@@ -66,6 +68,13 @@ export class EventWatcher {
       const blockProgress = await this._indexer.getBlockProgress(blockHash);
       if (blockProgress) {
         await this.publishBlockProgressToSubscribers(blockProgress);
+
+        const syncStatus = await this._indexer.getSyncStatus();
+        if (syncStatus && (syncStatus.chainHeadBlockNumber - syncStatus.latestCanonicalBlockNumber) > MAX_REORG_DEPTH) {
+          // Create a job to prune at block height (latestCanonicalBlockNumber + 1)
+          const pruneBlockHeight = syncStatus.latestCanonicalBlockNumber + 1;
+          await this._jobQueue.pushJob(QUEUE_CHAIN_PRUNING, { pruneBlockHeight });
+        }
       }
     });
   }
@@ -93,6 +102,13 @@ export class EventWatcher {
           log(`event ${request.data.id} is too old (${timeElapsedInSeconds}s), not broadcasting to live subscribers`);
         }
       }
+    });
+  }
+
+  async initChainPruningOnCompleteHandler (): Promise<void> {
+    this._jobQueue.onComplete(QUEUE_CHAIN_PRUNING, async (job) => {
+      const { data: { request: { data: { pruneBlockHeight } } } } = job;
+      log(`Job onComplete chain pruning ${pruneBlockHeight}`);
     });
   }
 
