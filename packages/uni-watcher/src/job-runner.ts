@@ -6,12 +6,13 @@ import debug from 'debug';
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { getConfig, JobQueue } from '@vulcanize/util';
+import { getConfig, JobQueue, MAX_REORG_DEPTH } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
 import { UNKNOWN_EVENT_NAME, Event } from './entity/Event';
 import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, QUEUE_CHAIN_PRUNING } from './events';
+import { BlockProgress } from './entity/BlockProgress';
 
 const log = debug('vulcanize:job-runner');
 
@@ -36,13 +37,14 @@ export class JobRunner {
 
       log(`Processing block number ${blockNumber} hash ${blockHash} `);
 
-      // Check if parent block has been processed yet, if not, push a high priority job to process that first and abort.
-      // However, don't go beyond the `latestCanonicalBlockHash` from SyncStatus as we have to assume the reorg can't be that deep.
+      // Init sync status record if none exists.
       let syncStatus = await this._indexer.getSyncStatus();
       if (!syncStatus) {
-        syncStatus = await this._indexer.updateSyncStatus(blockHash, blockNumber);
+        syncStatus = await this._indexer.updateSyncStatusChainHead(blockHash, blockNumber);
       }
 
+      // Check if parent block has been processed yet, if not, push a high priority job to process that first and abort.
+      // However, don't go beyond the `latestCanonicalBlockHash` from SyncStatus as we have to assume the reorg can't be that deep.
       if (blockHash !== syncStatus.latestCanonicalBlockHash) {
         const parent = await this._indexer.getBlockProgress(parentHash);
         if (!parent) {
@@ -142,10 +144,47 @@ export class JobRunner {
 
   async subscribeChainPruningQueue (): Promise<void> {
     await this._jobQueue.subscribe(QUEUE_CHAIN_PRUNING, async (job) => {
-      const { data: { pruneBlockHeight } } = job;
+      const pruneBlockHeight: number = job.data.pruneBlockHeight;
 
       log(`Processing chain pruning at ${pruneBlockHeight}`);
+
+      // Assert we're at a depth where pruning is safe.
+      const syncStatus = await this._indexer.getSyncStatus();
+      assert(syncStatus);
+      assert(syncStatus.latestIndexedBlockNumber >= (pruneBlockHeight + MAX_REORG_DEPTH));
+
+      // Check how many branches there are at the given height/block number.
+      const blocksAtHeight = await this._indexer.getBlocksAtHeight(pruneBlockHeight);
+
+      // Should be at least 1.
+      assert(blocksAtHeight.length);
+
+      // We have more than one branch, so prune all branches that are less than max reorg depth.
+      // The remaining one (with length >= max reorg depth) is the canonical chain.
+      if (blocksAtHeight.length > 1) {
+        for (let i = 0; i < blocksAtHeight.length; i++) {
+          const block = blocksAtHeight[i];
+          const chain = await this.getChainFromAncestor(block, MAX_REORG_DEPTH);
+          if (chain.length < MAX_REORG_DEPTH) {
+            // Mark entire chain as pruned.
+            await this.markChainAsPruned(chain);
+          }
+        }
+      }
+
+      await this._jobQueue.markComplete(job);
     });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getChainFromAncestor (block: BlockProgress, maxHeight: number): Promise<BlockProgress[]> {
+    // TODO: Implement.
+    return [];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async markChainAsPruned (chain: BlockProgress[]): Promise<void> {
+    // TODO: Implement.
   }
 }
 

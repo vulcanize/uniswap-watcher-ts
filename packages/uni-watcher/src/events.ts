@@ -54,7 +54,7 @@ export class EventWatcher {
     this._subscription = await this._ethClient.watchBlocks(async (value) => {
       const { blockHash, blockNumber, parentHash } = _.get(value, 'data.listen.relatedNode');
 
-      await this._indexer.updateSyncStatus(blockHash, blockNumber);
+      await this._indexer.updateSyncStatusChainHead(blockHash, blockNumber);
 
       log('watchBlock', blockHash, blockNumber);
       await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash });
@@ -65,16 +65,21 @@ export class EventWatcher {
     this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
       const { data: { request: { data: { blockHash, blockNumber } } } } = job;
       log(`Job onComplete block ${blockHash} ${blockNumber}`);
+
+      // Update sync progress.
+      const syncStatus = await this._indexer.updateSyncStatusIndexedBlock(blockHash, blockNumber);
+
+      // Create pruning job if required.
+      if (syncStatus && syncStatus.latestIndexedBlockNumber > (syncStatus.latestCanonicalBlockNumber + MAX_REORG_DEPTH)) {
+        // Create a job to prune at block height (latestCanonicalBlockNumber + 1)
+        const pruneBlockHeight = syncStatus.latestCanonicalBlockNumber + 1;
+        await this._jobQueue.pushJob(QUEUE_CHAIN_PRUNING, { pruneBlockHeight });
+      }
+
+      // Publish block progress event.
       const blockProgress = await this._indexer.getBlockProgress(blockHash);
       if (blockProgress) {
         await this.publishBlockProgressToSubscribers(blockProgress);
-
-        const syncStatus = await this._indexer.getSyncStatus();
-        if (syncStatus && (syncStatus.chainHeadBlockNumber - syncStatus.latestCanonicalBlockNumber) > MAX_REORG_DEPTH) {
-          // Create a job to prune at block height (latestCanonicalBlockNumber + 1)
-          const pruneBlockHeight = syncStatus.latestCanonicalBlockNumber + 1;
-          await this._jobQueue.pushJob(QUEUE_CHAIN_PRUNING, { pruneBlockHeight });
-        }
       }
     });
   }

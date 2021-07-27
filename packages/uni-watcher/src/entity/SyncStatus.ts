@@ -20,4 +20,12 @@ export class SyncStatus {
 
   @Column('integer')
   latestCanonicalBlockNumber!: number;
+
+  // Most recent block hash that's been indexed.
+  @Column('varchar', { length: 66 })
+  latestIndexedBlockHash!: string;
+
+  // Most recent block number that's been indexed.
+  @Column('integer')
+  latestIndexedBlockNumber!: number;
 }

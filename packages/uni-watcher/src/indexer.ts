@@ -350,8 +350,12 @@ export class Indexer {
     await this._db.saveEvents(block, dbEvents);
   }
 
-  async updateSyncStatus (blockHash: string, blockNumber: number): Promise<SyncStatus> {
-    return this._db.updateSyncStatus(blockHash, blockNumber);
+  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return this._db.updateSyncStatusIndexedBlock(blockHash, blockNumber);
+  }
+
+  async updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return this._db.updateSyncStatusChainHead(blockHash, blockNumber);
   }
 
   async getSyncStatus (): Promise<SyncStatus | undefined> {
@@ -373,6 +377,10 @@ export class Indexer {
 
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
     return this._db.getBlockProgress(blockHash);
+  }
+
+  async getBlocksAtHeight (height: number): Promise<BlockProgress[]> {
+    return this._db.getBlocksAtHeight(height);
   }
 
   async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {
