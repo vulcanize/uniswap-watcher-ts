@@ -111,11 +111,15 @@ export const main = async (): Promise<any> => {
       }
     }
 
-    const events = await indexer.getOrFetchBlockEvents(block);
+    // Check if block is being already processed.
+    const blockProgress = await indexer.getBlockProgress(block.hash);
+    if (!blockProgress) {
+      const events = await indexer.getOrFetchBlockEvents(block);
 
-    for (let ei = 0; ei < events.length; ei++) {
-      const { id } = events[ei];
-      await jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { id });
+      for (let ei = 0; ei < events.length; ei++) {
+        const { id } = events[ei];
+        await jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { id });
+      }
     }
 
     await jobQueue.markComplete(job);
@@ -155,7 +159,8 @@ export const main = async (): Promise<any> => {
       }
     }
 
-    if (!dbEvent.block.isComplete) {
+    // Check if event is processed.
+    if (!dbEvent.block.isComplete && event.index !== blockProgress.lastProcessedEventIndex) {
       await indexer.processEvent(dbEvent);
     }
 
