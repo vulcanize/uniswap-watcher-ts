@@ -29,14 +29,12 @@ jobs:
         id: vars
         run: |
             echo ::set-output name=sha::$(echo ${GITHUB_SHA:0:7})
-            echo "foo"
-      - name: set REPO_NAME
-        run: echo "REPO_NAME=$(echo ${{ github.repository }})" >> $GITHUB_ENV
+            echo ::set-output name=repo::$(echo ${{ github.repository }})
       - name: Run docker build
         run: make docker-build
       - name: Tag docker image
-        run: docker tag ${REPO_NAME} ghcr.io/${REPO_NAME}:${{steps.vars.outputs.sha}}
+        run: docker tag ${{steps.vars.outputs.repo}} ghcr.io/${{steps.vars.outputs.repo}}:${{steps.vars.outputs.sha}}
       - name: Docker Login
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u vulcanize --password-stdin
       - name: Docker Push
-        run: docker push ghcr.io/${REPO_NAME}:${{steps.vars.outputs.sha}}
+        run: docker push ghcr.io/${{steps.vars.outputs.repo}}:${{steps.vars.outputs.sha}}
