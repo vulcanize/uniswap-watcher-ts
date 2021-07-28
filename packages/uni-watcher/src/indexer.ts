@@ -6,7 +6,7 @@ import assert from 'assert';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { GetStorageAt, getStorageValue, StorageLayout } from '@vulcanize/solidity-mapper';
-import { Config } from '@vulcanize/util';
+import { Config, MAX_REORG_DEPTH } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
@@ -358,6 +358,10 @@ export class Indexer {
     return this._db.updateSyncStatusChainHead(blockHash, blockNumber);
   }
 
+  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return this._db.updateSyncStatusCanonicalBlock(blockHash, blockNumber);
+  }
+
   async getSyncStatus (): Promise<SyncStatus | undefined> {
     return this._db.getSyncStatus();
   }
@@ -379,8 +383,39 @@ export class Indexer {
     return this._db.getBlockProgress(blockHash);
   }
 
-  async getBlocksAtHeight (height: number): Promise<BlockProgress[]> {
-    return this._db.getBlocksAtHeight(height);
+  async getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgress[]> {
+    return this._db.getBlocksAtHeight(height, isPruned);
+  }
+
+  async blockIsAncestor (ancestorBlockHash: string, blockHash: string, maxDepth: number): Promise<boolean> {
+    assert(maxDepth > 0);
+
+    let depth = 0;
+    let currentBlockHash = blockHash;
+    let currentBlock;
+
+    // TODO: Use a hierarchical query to optimize this.
+    while (depth < maxDepth) {
+      depth++;
+
+      currentBlock = await this._db.getBlockProgress(currentBlockHash);
+      if (!currentBlock) {
+        break;
+      } else {
+        if (currentBlock.parentHash === ancestorBlockHash) {
+          return true;
+        }
+
+        // Descend the chain.
+        currentBlockHash = currentBlock.parentHash;
+      }
+    }
+
+    return false;
+  }
+
+  async markBlockAsPruned (block: BlockProgress): Promise<BlockProgress> {
+    return this._db.markBlockAsPruned(block);
   }
 
   async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {

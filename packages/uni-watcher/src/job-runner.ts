@@ -153,38 +153,32 @@ export class JobRunner {
       assert(syncStatus);
       assert(syncStatus.latestIndexedBlockNumber >= (pruneBlockHeight + MAX_REORG_DEPTH));
 
-      // Check how many branches there are at the given height/block number.
-      const blocksAtHeight = await this._indexer.getBlocksAtHeight(pruneBlockHeight);
+      // Check that we haven't already pruned at this depth.
+      if (syncStatus.latestCanonicalBlockNumber >= pruneBlockHeight) {
+        log(`Already pruned at block height ${pruneBlockHeight}, latestCanonicalBlockNumber ${syncStatus.latestCanonicalBlockNumber}`);
+      } else {
+        // Check how many branches there are at the given height/block number.
+        const blocksAtHeight = await this._indexer.getBlocksAtHeight(pruneBlockHeight, false);
 
-      // Should be at least 1.
-      assert(blocksAtHeight.length);
+        // Should be at least 1.
+        assert(blocksAtHeight.length);
 
-      // We have more than one branch, so prune all branches that are less than max reorg depth.
-      // The remaining one (with length >= max reorg depth) is the canonical chain.
-      if (blocksAtHeight.length > 1) {
-        for (let i = 0; i < blocksAtHeight.length; i++) {
-          const block = blocksAtHeight[i];
-          const chain = await this.getChainFromAncestor(block, MAX_REORG_DEPTH);
-          if (chain.length < MAX_REORG_DEPTH) {
-            // Mark entire chain as pruned.
-            await this.markChainAsPruned(chain);
+        // We have more than one node at this height, so prune all nodes not reachable from head.
+        // This will lead to orphaned nodes, which will get pruned at the next height.
+        if (blocksAtHeight.length > 1) {
+          for (let i = 0; i < blocksAtHeight.length; i++) {
+            const block = blocksAtHeight[i];
+            // If this block is not reachable from the latest indexed block, mark it as pruned.
+            const isAncestor = await this._indexer.blockIsAncestor(block.blockHash, syncStatus.latestIndexedBlockHash, MAX_REORG_DEPTH);
+            if (!isAncestor) {
+              await this._indexer.markBlockAsPruned(block);
+            }
           }
         }
       }
 
       await this._jobQueue.markComplete(job);
     });
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getChainFromAncestor (block: BlockProgress, maxHeight: number): Promise<BlockProgress[]> {
-    // TODO: Implement.
-    return [];
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async markChainAsPruned (chain: BlockProgress[]): Promise<void> {
-    // TODO: Implement.
   }
 }
 

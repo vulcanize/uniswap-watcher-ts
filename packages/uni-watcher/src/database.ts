@@ -1,6 +1,6 @@
 import assert from 'assert';
 import _ from 'lodash';
-import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'typeorm';
+import { Connection, ConnectionOptions, createConnection, DeepPartial, In } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
@@ -130,6 +130,22 @@ export class Database {
     });
   }
 
+  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return await this._conn.transaction(async (tx) => {
+      const repo = tx.getRepository(SyncStatus);
+
+      const entity = await repo.findOne();
+      assert(entity);
+
+      if (blockNumber >= entity.latestCanonicalBlockNumber) {
+        entity.latestCanonicalBlockHash = blockHash;
+        entity.latestCanonicalBlockNumber = blockNumber;
+      }
+
+      return await repo.save(entity);
+    });
+  }
+
   async updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatus> {
     return await this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(SyncStatus);
@@ -200,11 +216,17 @@ export class Database {
     });
   }
 
-  async getBlocksAtHeight (height: number): Promise<BlockProgress[]> {
+  async getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgress[]> {
     return this._conn.getRepository(BlockProgress)
       .createQueryBuilder('block_progress')
-      .where('block_number = :height', { height })
+      .where('block_number = :height AND is_pruned = :isPruned', { height, isPruned })
       .getMany();
+  }
+
+  async markBlockAsPruned (block: BlockProgress): Promise<BlockProgress> {
+    const repo = this._conn.getRepository(BlockProgress);
+    block.isPruned = true;
+    return repo.save(block);
   }
 
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {

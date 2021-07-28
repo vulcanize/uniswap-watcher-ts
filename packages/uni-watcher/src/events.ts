@@ -114,6 +114,14 @@ export class EventWatcher {
     this._jobQueue.onComplete(QUEUE_CHAIN_PRUNING, async (job) => {
       const { data: { request: { data: { pruneBlockHeight } } } } = job;
       log(`Job onComplete chain pruning ${pruneBlockHeight}`);
+
+      const blocks = await this._indexer.getBlocksAtHeight(pruneBlockHeight, false);
+
+      // Only one canonical (not pruned) block should exist at the pruned height.
+      assert(blocks.length === 1);
+      const [block] = blocks;
+
+      await this._indexer.updateSyncStatusCanonicalBlock(block.blockHash, block.blockNumber);
     });
   }
 

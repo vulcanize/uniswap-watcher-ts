@@ -12,6 +12,14 @@ export class SyncStatus {
   @Column('integer')
   chainHeadBlockNumber!: number;
 
+  // Most recent block hash that's been indexed.
+  @Column('varchar', { length: 66 })
+  latestIndexedBlockHash!: string;
+
+  // Most recent block number that's been indexed.
+  @Column('integer')
+  latestIndexedBlockNumber!: number;
+
   // Most recent block hash and number that we can consider as part
   // of the canonical/finalized chain. Reorgs older than this block
   // cannot be processed and processing will halt.
@@ -20,12 +28,4 @@ export class SyncStatus {
 
   @Column('integer')
   latestCanonicalBlockNumber!: number;
-
-  // Most recent block hash that's been indexed.
-  @Column('varchar', { length: 66 })
-  latestIndexedBlockHash!: string;
-
-  // Most recent block number that's been indexed.
-  @Column('integer')
-  latestIndexedBlockNumber!: number;
 }
