@@ -27,8 +27,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Get the version
         id: vars
-        run: echo ::set-output name=sha::$(echo ${GITHUB_SHA:0:7})
-        run: echo "foo"
+        run: |
+            echo ::set-output name=sha::$(echo ${GITHUB_SHA:0:7})
+            echo "foo"
       - name: set REPO_NAME
         run: echo "REPO_NAME=$(echo ${{ github.repository }})" >> $GITHUB_ENV
       - name: Run docker build
