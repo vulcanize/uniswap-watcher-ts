@@ -28,6 +28,7 @@ jobs:
       - name: Get the version
         id: vars
         run: echo ::set-output name=sha::$(echo ${GITHUB_SHA:0:7})
+        run: echo "foo"
       - name: set REPO_NAME
         run: echo "REPO_NAME=$(echo ${{ github.repository }})" >> $GITHUB_ENV
       - name: Run docker build
