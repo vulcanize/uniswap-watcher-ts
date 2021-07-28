@@ -1,6 +1,11 @@
+import assert from 'assert';
 import yargs from 'yargs';
 import 'reflect-metadata';
-import { watch } from '../utils/index';
+
+import { Config, getConfig } from '@vulcanize/util';
+
+import { Database } from '../database';
+import { watchContract } from '../utils/index';
 
 (async () => {
   const argv = await yargs.parserConfiguration({
@@ -31,5 +36,15 @@ import { watch } from '../utils/index';
     }
   }).argv;
 
-  await watch(argv.configFile, argv.address, argv.kind, argv.startingBlock);
+  const config: Config = await getConfig(argv.configFile);
+  const { database: dbConfig } = config;
+
+  assert(dbConfig);
+
+  const db = new Database(dbConfig);
+  await db.init();
+
+  await watchContract(db, argv.address, argv.kind, argv.startingBlock);
+
+  await db.close();
 })();
