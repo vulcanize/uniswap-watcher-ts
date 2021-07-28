@@ -29,7 +29,7 @@ jobs:
         id: vars
         run: echo ::set-output name=sha::$(echo ${GITHUB_SHA:0:7})
       - name: set oof
-        run: echo "REPO_NAME=$(echo ${{ github.repository }}" >> $GITHUB_ENV
+        run: echo "REPO_NAME=$(echo ${{ github.repository }})" >> $GITHUB_ENV
       - name: get oof
         run: echo $REPO_NAME
       - name: Run docker build
