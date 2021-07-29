@@ -1,6 +1,6 @@
 import assert from 'assert';
 import _ from 'lodash';
-import { Connection, ConnectionOptions, createConnection, DeepPartial, In } from 'typeorm';
+import { Connection, ConnectionOptions, createConnection, DeepPartial } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';

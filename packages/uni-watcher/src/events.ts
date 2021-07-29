@@ -73,6 +73,7 @@ export class EventWatcher {
       if (syncStatus && syncStatus.latestIndexedBlockNumber > (syncStatus.latestCanonicalBlockNumber + MAX_REORG_DEPTH)) {
         // Create a job to prune at block height (latestCanonicalBlockNumber + 1)
         const pruneBlockHeight = syncStatus.latestCanonicalBlockNumber + 1;
+        // TODO: Move this to the block processing queue to run pruning jobs at a higher priority than block processing jobs.
         await this._jobQueue.pushJob(QUEUE_CHAIN_PRUNING, { pruneBlockHeight });
       }
 

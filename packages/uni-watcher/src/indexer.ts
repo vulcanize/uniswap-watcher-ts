@@ -6,7 +6,7 @@ import assert from 'assert';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { GetStorageAt, getStorageValue, StorageLayout } from '@vulcanize/solidity-mapper';
-import { Config, MAX_REORG_DEPTH } from '@vulcanize/util';
+import { Config } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';

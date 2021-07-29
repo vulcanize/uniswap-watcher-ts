@@ -12,7 +12,6 @@ import { Indexer } from './indexer';
 import { Database } from './database';
 import { UNKNOWN_EVENT_NAME, Event } from './entity/Event';
 import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, QUEUE_CHAIN_PRUNING } from './events';
-import { BlockProgress } from './entity/BlockProgress';
 
 const log = debug('vulcanize:job-runner');
 
