@@ -2,13 +2,16 @@ import { HardhatUserConfig } from 'hardhat/config';
 import '@nomiclabs/hardhat-waffle';
 
 const config: HardhatUserConfig = {
-  solidity: '0.7.6',
-  paths: {
-    sources: './test/Contracts',
-    tests: './src'
+  defaultNetwork: 'localhost',
+  solidity: {
+    compilers: [
+      {
+        version: '0.7.6'
+      }
+    ]
   },
-  mocha: {
-    timeout: 50000
+  paths: {
+    sources: './test/contracts'
   }
 };
 
