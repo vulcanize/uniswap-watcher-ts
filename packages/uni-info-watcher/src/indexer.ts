@@ -14,7 +14,7 @@ import { convertTokenToDecimal, loadTransaction, safeDiv } from './utils';
 import { createTick } from './utils/tick';
 import Decimal from 'decimal.js';
 import { Position } from './entity/Position';
-import { Database, QueryOptions } from './database';
+import { Database, QueryOptions, OrderDirection } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Block, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent } from './events';
 import { Factory } from './entity/Factory';
@@ -36,6 +36,8 @@ export interface ValueResult {
     data: string;
   }
 }
+
+export { OrderDirection };
 
 export class Indexer {
   _db: Database
@@ -193,16 +195,8 @@ export class Indexer {
     return this._db.getBundle({ id, blockHash: block.hash });
   }
 
-  async getBundles (block: BlockHeight, queryOptions: QueryOptions): Promise<Bundle[]> {
-    return this._db.getBundles({ blockHash: block.hash, blockNumber: block.number }, queryOptions);
-  }
-
-  async getBurns (where: Partial<Burn>, queryOptions: QueryOptions): Promise<Burn[]> {
-    return this._db.getBurns(where, queryOptions);
-  }
-
-  async getFactories (block: BlockHeight, queryOptions: QueryOptions): Promise<Factory[]> {
-    return this._db.getFactories({ blockHash: block.hash, blockNumber: block.number }, queryOptions);
+  async getEntities<Entity> (entity: new () => Entity, where: Partial<Entity>, queryOptions: QueryOptions, relations?: string[]): Promise<Entity[]> {
+    return this._db.getEntities(entity, where, queryOptions, relations);
   }
 
   async _fetchAndSaveEvents (block: Block): Promise<void> {
@@ -365,7 +359,7 @@ export class Indexer {
 
     // TODO: In subgraph factory is fetched by hardcoded factory address.
     // Currently fetching first factory in database as only one exists.
-    const [factory] = await this._db.getFactories({ blockHash: block.hash }, { limit: 1 });
+    const [factory] = await this._db.getEntities(Factory, { blockHash: block.hash }, { limit: 1 });
 
     const token0 = pool.token0;
     const token1 = pool.token1;
@@ -501,7 +495,7 @@ export class Indexer {
 
     // TODO: In subgraph factory is fetched by hardcoded factory address.
     // Currently fetching first factory in database as only one exists.
-    const [factory] = await this._db.getFactories({ blockHash: block.hash }, { limit: 1 });
+    const [factory] = await this._db.getEntities(Factory, { blockHash: block.hash }, { limit: 1 });
 
     const token0 = pool.token0;
     const token1 = pool.token1;
@@ -619,7 +613,7 @@ export class Indexer {
 
     // TODO: In subgraph factory is fetched by hardcoded factory address.
     // Currently fetching first factory in database as only one exists.
-    const [factory] = await this._db.getFactories({ blockHash: block.hash }, { limit: 1 });
+    const [factory] = await this._db.getEntities(Factory, { blockHash: block.hash }, { limit: 1 });
 
     const pool = await this._db.getPool({ id: contractAddress, blockHash: block.hash });
     assert(pool);
