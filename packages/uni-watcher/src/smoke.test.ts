@@ -1,8 +1,7 @@
 import { expect, assert } from 'chai';
-import { ethers } from 'hardhat';
-import { Contract, BigNumber, Signer } from 'ethers';
+import { ethers, Contract, Signer } from 'ethers';
 import 'reflect-metadata';
-import '@nomiclabs/hardhat-ethers';
+import 'mocha';
 
 import { Config, getConfig } from '@vulcanize/util';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
@@ -19,6 +18,15 @@ import {
 import { Indexer } from './indexer';
 import { Database } from './database';
 import { watchContract } from './utils/index';
+import { testCreatePool, testInitialize } from '../test/utils';
+import {
+  abi as TESTERC20_ABI,
+  bytecode as TESTERC20_BYTECODE
+} from '../artifacts/test/contracts/TestERC20.sol/TestERC20.json';
+import {
+  abi as TESTUNISWAPV3CALLEE_ABI,
+  bytecode as TESTUNISWAPV3CALLEE_BYTECODE
+} from '../artifacts/test/contracts/TestUniswapV3Callee.sol/TestUniswapV3Callee.json';
 
 const TICK_MIN = -887272;
 const TICK_MAX = 887272;
@@ -32,8 +40,12 @@ describe('uni-watcher', () => {
   let pool: Contract;
 
   let poolAddress: string;
+  let tickLower: number;
+  let tickUpper: number;
   let config: Config;
+  let db: Database;
   let uniClient: UniClient;
+  let ethClient: EthClient;
   let signer: Signer;
   let recipient: string;
 
@@ -41,7 +53,27 @@ describe('uni-watcher', () => {
     const configFile = './environments/local.toml';
     config = await getConfig(configFile);
 
-    const { server: { host, port } } = config;
+    const { database: dbConfig, upstream, server: { host, port } } = config;
+    assert(dbConfig, 'Missing dbConfig.');
+    assert(upstream, 'Missing upstream.');
+    assert(host, 'Missing host.');
+    assert(port, 'Missing port.');
+
+    const { ethServer: { gqlApiEndpoint, gqlPostgraphileEndpoint }, cache: cacheConfig } = upstream;
+    assert(gqlApiEndpoint, 'Missing upstream ethServer.gqlApiEndpoint.');
+    assert(gqlPostgraphileEndpoint, 'Missing upstream ethServer.gqlPostgraphileEndpoint.');
+    assert(cacheConfig, 'Missing dbConfig.');
+
+    db = new Database(dbConfig);
+    await db.init();
+
+    const cache = await getCache(cacheConfig);
+    ethClient = new EthClient({
+      gqlEndpoint: gqlApiEndpoint,
+      gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
+      cache
+    });
+
     const endpoint = `http://${host}:${port}/graphql`;
     const gqlEndpoint = endpoint;
     const gqlSubscriptionEndpoint = endpoint;
@@ -50,8 +82,13 @@ describe('uni-watcher', () => {
       gqlSubscriptionEndpoint
     });
 
-    [signer] = await ethers.getSigners();
+    const provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
+    signer = provider.getSigner();
     recipient = await signer.getAddress();
+  });
+
+  after(async () => {
+    await db.close();
   });
 
   it('should deploy contract factory', async () => {
@@ -64,35 +101,16 @@ describe('uni-watcher', () => {
 
   it('should watch factory contract', async () => {
     // Watch factory contract.
-    const { database: dbConfig } = config;
-    assert(dbConfig, 'Missing dbConfig.');
-
-    const db = new Database(dbConfig);
-    await db.init();
-
     await watchContract(db, factory.address, 'factory', 100);
 
     // Verifying with the db.
-    const { upstream } = config;
-    const { ethServer: { gqlApiEndpoint, gqlPostgraphileEndpoint }, cache: cacheConfig } = upstream;
-    assert(gqlApiEndpoint, 'Missing upstream ethServer.gqlApiEndpoint.');
-    assert(gqlPostgraphileEndpoint, 'Missing upstream ethServer.gqlPostgraphileEndpoint.');
-
-    const cache = await getCache(cacheConfig);
-    const ethClient = new EthClient({
-      gqlEndpoint: gqlApiEndpoint,
-      gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
-      cache
-    });
-
     const indexer = new Indexer(config, db, ethClient);
     assert(await indexer.isUniswapContract(factory.address), 'Factory contract not added to database.');
-    db.close();
   });
 
   it('should deploy 2 tokens', async () => {
     // Deploy 2 tokens.
-    const Token = await ethers.getContractFactory('TestERC20');
+    const Token = new ethers.ContractFactory(TESTERC20_ABI, TESTERC20_BYTECODE, signer);
 
     token0 = await Token.deploy(ethers.BigNumber.from(2).pow(255));
     expect(token0.address).to.not.be.empty;
@@ -101,70 +119,17 @@ describe('uni-watcher', () => {
     expect(token1.address).to.not.be.empty;
   });
 
-  it('should create pool', done => {
-    (async () => {
-      const fee = 500;
+  it('should create pool', async () => {
+    const fee = 500;
 
-      // Subscribe using UniClient.
-      const subscription = await uniClient.watchEvents((value: any) => {
-        expect(value.block).to.not.be.empty;
-        expect(value.tx).to.not.be.empty;
-        expect(value.contract).to.equal(factory.address);
-        expect(value.eventIndex).to.be.a('number');
-
-        expect(value.event.__typename).to.equal('PoolCreatedEvent');
-
-        const tokens = new Set([token0.address, token1.address]);
-        expect(new Set([value.event.token0, value.event.token1])).to.eql(tokens);
-        expect(value.event.fee).to.equal(fee.toString());
-        expect(value.event.tickSpacing).to.not.be.empty;
-        expect(value.event.pool).to.not.be.empty;
-
-        expect(value.proof).to.not.be.empty;
-
-        poolAddress = value.event.pool;
-        pool = new ethers.Contract(poolAddress, POOL_ABI, signer);
-
-        if (subscription) {
-          subscription.unsubscribe();
-        }
-        done();
-      });
-
-      // Create pool.
-      await factory.createPool(token0.address, token1.address, fee);
-    })();
+    pool = await testCreatePool(uniClient, factory, token0, token1, POOL_ABI, signer, fee);
+    poolAddress = pool.address;
   });
 
-  it('should initialize pool', done => {
-    (async () => {
-      const sqrtPrice = '4295128939';
+  it('should initialize pool', async () => {
+    const sqrtPrice = '4295128939';
 
-      // Subscribe using UniClient.
-      const subscription = await uniClient.watchEvents((value: any) => {
-        // Function gets called with previous events. Check for Intialize event.
-        if (value.event.__typename === 'InitializeEvent') {
-          expect(value.block).to.not.be.empty;
-          expect(value.tx).to.not.be.empty;
-          expect(value.contract).to.equal(pool.address);
-          expect(value.eventIndex).to.be.a('number');
-
-          expect(value.event.__typename).to.equal('InitializeEvent');
-          expect(value.event.sqrtPriceX96).to.equal(sqrtPrice);
-          expect(value.event.tick).to.equal(TICK_MIN.toString());
-
-          expect(value.proof).to.not.be.empty;
-
-          if (subscription) {
-            subscription.unsubscribe();
-          }
-          done();
-        }
-      });
-
-      // Pool initialize.
-      await pool.initialize(BigNumber.from(sqrtPrice));
-    })();
+    await testInitialize(uniClient, pool, TICK_MIN, sqrtPrice);
   });
 
   it('should mint specified amount', done => {
@@ -172,13 +137,13 @@ describe('uni-watcher', () => {
       const amount = '10';
       const approveAmount = BigInt(1000000000000000000000000);
 
-      const TestUniswapV3Callee = await ethers.getContractFactory('TestUniswapV3Callee');
+      const TestUniswapV3Callee = new ethers.ContractFactory(TESTUNISWAPV3CALLEE_ABI, TESTUNISWAPV3CALLEE_BYTECODE, signer);
       const poolCallee = await TestUniswapV3Callee.deploy();
 
       const tickSpacing = await pool.tickSpacing();
       // https://github.com/Uniswap/uniswap-v3-core/blob/main/test/UniswapV3Pool.spec.ts#L196
-      const tickLower = getMinTick(tickSpacing);
-      const tickUpper = getMaxTick(tickSpacing);
+      tickLower = getMinTick(tickSpacing);
+      tickUpper = getMaxTick(tickSpacing);
 
       // Approving tokens for TestUniswapV3Callee contract.
       // https://github.com/Uniswap/uniswap-v3-core/blob/main/test/shared/utilities.ts#L187
@@ -216,7 +181,9 @@ describe('uni-watcher', () => {
 
       // Pool mint.
       await poolCallee.mint(pool.address, recipient, BigInt(tickLower), BigInt(tickUpper), BigInt(amount));
-    })();
+    })().catch((error) => {
+      console.error(error);
+    });
   });
 
   it('should burn specified amount', done => {
@@ -255,14 +222,16 @@ describe('uni-watcher', () => {
 
       // Pool burn.
       await pool.burn(BigInt(tickLower), BigInt(tickUpper), BigInt(amount));
-    })();
+    })().catch((error) => {
+      console.error(error);
+    });
   });
 
   it('should swap pool tokens', done => {
     (async () => {
       const sqrtPrice = '4295128938';
 
-      const TestUniswapV3Callee = await ethers.getContractFactory('TestUniswapV3Callee');
+      const TestUniswapV3Callee = new ethers.ContractFactory(TESTUNISWAPV3CALLEE_ABI, TESTUNISWAPV3CALLEE_BYTECODE, signer);
       const poolCallee = await TestUniswapV3Callee.deploy();
 
       // Subscribe using UniClient.
@@ -291,8 +260,9 @@ describe('uni-watcher', () => {
         }
       });
 
-      // Pool swap.
       await poolCallee.swapToLowerSqrtPrice(poolAddress, BigInt(sqrtPrice), recipient);
-    })();
+    })().catch((error) => {
+      console.error(error);
+    });
   });
 });
