@@ -6,6 +6,7 @@ import { Indexer, OrderDirection } from './indexer';
 import { Burn } from './entity/Burn';
 import { Bundle } from './entity/Bundle';
 import { Factory } from './entity/Factory';
+import { Mint } from './entity/Mint';
 
 const log = debug('vulcanize:resolver');
 
@@ -38,13 +39,19 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
       burns: async (_: any, { first = DEFAULT_LIMIT, orderBy, orderDirection, where }: { first: number, orderBy: string, orderDirection: OrderDirection, where: Partial<Burn> }) => {
         log('burns', first, orderBy, orderDirection, where);
 
-        return indexer.getEntities(Burn, where, { limit: first, orderBy, orderDirection }, ['pool']);
+        return indexer.getEntities(Burn, where, { limit: first, orderBy, orderDirection }, ['pool', 'transaction']);
       },
 
       factories: async (_: any, { block = {}, first = DEFAULT_LIMIT }: { first: number, block: BlockHeight }) => {
         log('factories', block, first);
 
         return indexer.getEntities(Factory, { blockHash: block.hash, blockNumber: block.number }, { limit: first });
+      },
+
+      mints: async (_: any, { first = DEFAULT_LIMIT, orderBy, orderDirection, where }: { first: number, orderBy: string, orderDirection: OrderDirection, where: Partial<Burn> }) => {
+        log('burns', first, orderBy, orderDirection, where);
+
+        return indexer.getEntities(Mint, where, { limit: first, orderBy, orderDirection }, ['pool', 'transaction']);
       }
     }
   };
