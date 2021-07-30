@@ -192,11 +192,16 @@ export class Indexer {
   }
 
   async getBundle (id: string, block: BlockHeight): Promise<Bundle | undefined> {
-    return this._db.getBundle({ id, blockHash: block.hash });
+    return this._db.getBundle({ id, blockHash: block.hash, blockNumber: block.number });
+  }
+
+  async getPool (id: string, block: BlockHeight): Promise<Pool | undefined> {
+    return this._db.getPool({ id, blockHash: block.hash, blockNumber: block.number });
   }
 
   async getEntities<Entity> (entity: new () => Entity, where: Partial<Entity>, queryOptions: QueryOptions, relations?: string[]): Promise<Entity[]> {
-    return this._db.getEntities(entity, where, queryOptions, relations);
+    const res = await this._db.getEntities(entity, where, queryOptions, relations);
+    return res;
   }
 
   async _fetchAndSaveEvents (block: Block): Promise<void> {

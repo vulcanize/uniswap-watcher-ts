@@ -25,6 +25,9 @@ import { BlockProgress } from './entity/BlockProgress';
 import { Block } from './events';
 import { SyncStatus } from './entity/SyncStatus';
 
+const DEFAULT_LIMIT = 100;
+const DEFAULT_SKIP = 0;
+
 export enum OrderDirection {
   asc = 'asc',
   desc = 'desc'
@@ -32,6 +35,7 @@ export enum OrderDirection {
 
 export interface QueryOptions {
   limit?: number;
+  skip?: number;
   orderBy?: string;
   orderDirection?: OrderDirection;
 }
@@ -135,12 +139,16 @@ export class Database {
     return entity;
   }
 
-  async getPool ({ id, blockHash }: DeepPartial<Pool>): Promise<Pool | undefined> {
+  async getPool ({ id, blockHash, blockNumber }: DeepPartial<Pool>): Promise<Pool | undefined> {
     const repo = this._conn.getRepository(Pool);
     const whereOptions: FindConditions<Pool> = { id };
 
     if (blockHash) {
       whereOptions.blockHash = blockHash;
+    }
+
+    if (blockNumber) {
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
     }
 
     const findOptions = {
@@ -386,11 +394,11 @@ export class Database {
       selectQueryBuilder = selectQueryBuilder.andWhere(`${tableName}.block_number <= :blockNumber`, { blockNumber });
     }
 
-    const { limit, orderBy, orderDirection } = queryOptions;
+    const { limit = DEFAULT_LIMIT, orderBy, orderDirection, skip = DEFAULT_SKIP } = queryOptions;
 
-    if (limit) {
-      selectQueryBuilder = selectQueryBuilder.limit(limit);
-    }
+    // TODO: Use skip and take methods. Currently throws error when using with join.
+    selectQueryBuilder = selectQueryBuilder.offset(skip)
+      .limit(limit);
 
     if (orderBy) {
       selectQueryBuilder = selectQueryBuilder.addOrderBy(`${tableName}.${orderBy}`, orderDirection === 'desc' ? 'DESC' : 'ASC');
