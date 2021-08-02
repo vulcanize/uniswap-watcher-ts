@@ -1,6 +1,0 @@
-{
-    "timeout": "60000",
-    "bail": true,
-    "exit": true,
-    "require": "ts-node/register"
-}
