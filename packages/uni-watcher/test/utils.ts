@@ -3,6 +3,7 @@ import { expect } from 'chai';
 import 'mocha';
 
 import { Client as UniClient } from '@vulcanize/uni-watcher';
+import { createPool, initializePool } from '@vulcanize/util';
 
 // https://github.com/ethers-io/ethers.js/issues/195
 export function linkLibraries (
@@ -60,8 +61,7 @@ export async function testCreatePool (
         });
 
         // Create pool.
-        const transaction: ContractTransaction = await factory.createPool(token0Address, token1Address, fee);
-        await transaction.wait();
+        await createPool(factory, token0Address, token1Address, fee);
       } catch (error) {
         reject(error);
       }
@@ -92,8 +92,7 @@ export function testInitialize (
         });
 
         // Pool initialize.
-        const transaction: ContractTransaction = await pool.initialize(BigNumber.from(sqrtPrice));
-        await transaction.wait();
+        await initializePool(pool, sqrtPrice);
       })();
     } catch (error) {
       reject(error);

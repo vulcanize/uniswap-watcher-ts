@@ -1,9 +1,8 @@
 import { expect, assert } from 'chai';
 import { ethers, Contract, ContractTransaction, Signer, constants } from 'ethers';
-import 'reflect-metadata';
 import 'mocha';
 
-import { Config, getConfig } from '@vulcanize/util';
+import { Config, getConfig, deployTokens, TESTERC20_ABI } from '@vulcanize/util';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
@@ -43,10 +42,6 @@ import {
   checkDecreaseLiquidityEvent,
   checksCollectEvent
 } from '../test/utils';
-import {
-  abi as TESTERC20_ABI,
-  bytecode as TESTERC20_BYTECODE
-} from '../artifacts/test/contracts/TestERC20.sol/TestERC20.json';
 import {
   abi as TESTUNISWAPV3CALLEE_ABI,
   bytecode as TESTUNISWAPV3CALLEE_BYTECODE
@@ -119,7 +114,8 @@ describe('uni-watcher', () => {
       gqlSubscriptionEndpoint
     });
 
-    const provider = new ethers.providers.JsonRpcProvider('http://localhost:8545');
+    const networkURL = 'http://localhost:8545';
+    const provider = new ethers.providers.JsonRpcProvider(networkURL);
     signer = provider.getSigner();
     recipient = await signer.getAddress();
   });
@@ -147,16 +143,9 @@ describe('uni-watcher', () => {
 
   it('should deploy 2 tokens', async () => {
     // Deploy 2 tokens.
-    const Token = new ethers.ContractFactory(TESTERC20_ABI, TESTERC20_BYTECODE, signer);
 
     // Not initializing global token contract variables just yet; initialized in `create pool` to maintatin order coherency.
-    const token0 = await Token.deploy(ethers.BigNumber.from(2).pow(255));
-    token0Address = token0.address;
-    expect(token0Address).to.not.be.empty;
-
-    const token1 = await Token.deploy(ethers.BigNumber.from(2).pow(255));
-    token1Address = token1.address;
-    expect(token1Address).to.not.be.empty;
+    ({ token0Address, token1Address } = await deployTokens(signer));
   });
 
   it('should create pool', async () => {
