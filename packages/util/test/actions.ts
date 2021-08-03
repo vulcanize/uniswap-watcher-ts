@@ -13,11 +13,9 @@ export const deployTokens = async (signer: Signer): Promise<{token0Address: stri
 
   const token0 = await Token.deploy(ethers.BigNumber.from(2).pow(255));
   const token0Address = token0.address;
-  expect(token0Address).to.not.be.empty;
 
   const token1 = await Token.deploy(ethers.BigNumber.from(2).pow(255));
   const token1Address = token1.address;
-  expect(token1Address).to.not.be.empty;
 
   return { token0Address, token1Address };
 };

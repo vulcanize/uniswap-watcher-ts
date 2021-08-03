@@ -51,6 +51,8 @@ import {
   bytecode as WETH9_BYTECODE
 } from '../artifacts/test/contracts/WETH9.sol/WETH9.json';
 
+const NETWORK_URL = 'http://localhost:8545';
+
 const TICK_MIN = -887272;
 const TICK_MAX = 887272;
 const getMinTick = (tickSpacing: number) => Math.ceil(TICK_MIN / tickSpacing) * tickSpacing;
@@ -114,8 +116,7 @@ describe('uni-watcher', () => {
       gqlSubscriptionEndpoint
     });
 
-    const networkURL = 'http://localhost:8545';
-    const provider = new ethers.providers.JsonRpcProvider(networkURL);
+    const provider = new ethers.providers.JsonRpcProvider(NETWORK_URL);
     signer = provider.getSigner();
     recipient = await signer.getAddress();
   });
@@ -146,6 +147,8 @@ describe('uni-watcher', () => {
 
     // Not initializing global token contract variables just yet; initialized in `create pool` to maintatin order coherency.
     ({ token0Address, token1Address } = await deployTokens(signer));
+    expect(token0Address).to.not.be.empty;
+    expect(token1Address).to.not.be.empty;
   });
 
   it('should create pool', async () => {
