@@ -1,5 +1,4 @@
 import { ethers, Contract, ContractTransaction, Signer, BigNumber } from 'ethers';
-import { expect } from 'chai';
 
 import {
   abi as TESTERC20_ABI,

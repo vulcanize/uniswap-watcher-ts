@@ -23,14 +23,5 @@
                 "allowArgumentsExplicitlyTypedAsAny": true
             }
         ]
-    },
-    "overrides": [
-        {
-            "files": ["test/*.ts"],
-            "rules": {
-              "no-unused-expressions": "off",
-              "no-prototype-builtins":"off"
-            }
-        }
-    ]
+    }
 }
