@@ -472,62 +472,46 @@ export class Database {
     return selectQueryBuilder.getMany();
   }
 
-  async saveFactory (factory: Factory, block: Block, tx?: EntityManager): Promise<Factory> {
-    const queries = async (tx: EntityManager) => {
-      const repo = tx.getRepository(Factory);
-      factory.blockNumber = block.number;
-      factory.blockHash = block.hash;
-      return repo.save(factory);
-    };
-
-    return tx ? queries(tx) : this._conn.transaction(queries);
+  async saveFactory (tx: EntityManager, factory: Factory, block: Block): Promise<Factory> {
+    const repo = tx.getRepository(Factory);
+    factory.blockNumber = block.number;
+    factory.blockHash = block.hash;
+    return repo.save(factory);
   }
 
-  async saveBundle (bundle: Bundle, block: Block): Promise<Bundle> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Bundle);
-      bundle.blockNumber = block.number;
-      bundle.blockHash = block.hash;
-      return repo.save(bundle);
-    });
+  async saveBundle (tx: EntityManager, bundle: Bundle, block: Block): Promise<Bundle> {
+    const repo = tx.getRepository(Bundle);
+    bundle.blockNumber = block.number;
+    bundle.blockHash = block.hash;
+    return repo.save(bundle);
   }
 
-  async savePool (pool: Pool, block: Block): Promise<Pool> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Pool);
-      pool.blockNumber = block.number;
-      pool.blockHash = block.hash;
-      return repo.save(pool);
-    });
+  async savePool (tx: EntityManager, pool: Pool, block: Block): Promise<Pool> {
+    const repo = tx.getRepository(Pool);
+    pool.blockNumber = block.number;
+    pool.blockHash = block.hash;
+    return repo.save(pool);
   }
 
-  async savePoolDayData (poolDayData: PoolDayData, block: Block): Promise<PoolDayData> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(PoolDayData);
-      poolDayData.blockNumber = block.number;
-      poolDayData.blockHash = block.hash;
-      return repo.save(poolDayData);
-    });
+  async savePoolDayData (tx: EntityManager, poolDayData: PoolDayData, block: Block): Promise<PoolDayData> {
+    const repo = tx.getRepository(PoolDayData);
+    poolDayData.blockNumber = block.number;
+    poolDayData.blockHash = block.hash;
+    return repo.save(poolDayData);
   }
 
-  async savePoolHourData (poolHourData: PoolHourData, block: Block): Promise<PoolHourData> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(PoolHourData);
-      poolHourData.blockNumber = block.number;
-      poolHourData.blockHash = block.hash;
-      return repo.save(poolHourData);
-    });
+  async savePoolHourData (tx: EntityManager, poolHourData: PoolHourData, block: Block): Promise<PoolHourData> {
+    const repo = tx.getRepository(PoolHourData);
+    poolHourData.blockNumber = block.number;
+    poolHourData.blockHash = block.hash;
+    return repo.save(poolHourData);
   }
 
-  async saveToken (token: Token, block: Block, tx?: EntityManager): Promise<Token> {
-    const queries = async (tx: EntityManager) => {
-      const repo = tx.getRepository(Token);
-      token.blockNumber = block.number;
-      token.blockHash = block.hash;
-      return repo.save(token);
-    };
-
-    return tx ? queries(tx) : this._conn.transaction(queries);
+  async saveToken (tx: EntityManager, token: Token, block: Block): Promise<Token> {
+    const repo = tx.getRepository(Token);
+    token.blockNumber = block.number;
+    token.blockHash = block.hash;
+    return repo.save(token);
   }
 
   async saveTransaction (transaction: Transaction, block: Block): Promise<Transaction> {
