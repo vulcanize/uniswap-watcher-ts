@@ -10,6 +10,7 @@ const resultEvent = `
   }
   tx {
     hash
+    from
   }
   contract
   eventIndex
