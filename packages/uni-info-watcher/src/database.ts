@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { Brackets, Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, FindOneOptions, In, LessThanOrEqual, Repository } from 'typeorm';
+import { Brackets, Connection, ConnectionOptions, createConnection, DeepPartial, EntityManager, FindConditions, FindOneOptions, In, LessThanOrEqual, Repository } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { MAX_REORG_DEPTH } from '@vulcanize/util';
 
@@ -85,6 +85,10 @@ export class Database {
 
   async close (): Promise<void> {
     return this._conn.close();
+  }
+
+  async createTransaction<T> (callback: (tx: EntityManager) => Promise<T>): Promise<T> {
+    return this._conn.transaction(callback);
   }
 
   async getFactory ({ id, blockHash }: DeepPartial<Factory>): Promise<Factory | undefined> {
@@ -468,13 +472,15 @@ export class Database {
     return selectQueryBuilder.getMany();
   }
 
-  async saveFactory (factory: Factory, block: Block): Promise<Factory> {
-    return this._conn.transaction(async (tx) => {
+  async saveFactory (factory: Factory, block: Block, tx?: EntityManager): Promise<Factory> {
+    const queries = async (tx: EntityManager) => {
       const repo = tx.getRepository(Factory);
       factory.blockNumber = block.number;
       factory.blockHash = block.hash;
       return repo.save(factory);
-    });
+    };
+
+    return tx ? queries(tx) : this._conn.transaction(queries);
   }
 
   async saveBundle (bundle: Bundle, block: Block): Promise<Bundle> {
@@ -513,13 +519,15 @@ export class Database {
     });
   }
 
-  async saveToken (token: Token, block: Block): Promise<Token> {
-    return this._conn.transaction(async (tx) => {
+  async saveToken (token: Token, block: Block, tx?: EntityManager): Promise<Token> {
+    const queries = async (tx: EntityManager) => {
       const repo = tx.getRepository(Token);
       token.blockNumber = block.number;
       token.blockHash = block.hash;
       return repo.save(token);
-    });
+    };
+
+    return tx ? queries(tx) : this._conn.transaction(queries);
   }
 
   async saveTransaction (transaction: Transaction, block: Block): Promise<Transaction> {

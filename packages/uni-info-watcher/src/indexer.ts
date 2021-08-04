@@ -318,9 +318,14 @@ export class Indexer {
     // Skipping adding createdAtTimestamp field as it is not queried in frontend subgraph.
 
     // Save entities to DB.
-    await this._db.saveToken(token0, block);
-    await this._db.saveToken(token1, block);
-    await this._db.saveFactory(factory, block);
+    await this._db.createTransaction(async tx => {
+      assert(token0);
+      await this._db.saveToken(token0, block, tx);
+      assert(token1);
+      await this._db.saveToken(token1, block, tx);
+      assert(factory);
+      await this._db.saveFactory(factory, block, tx);
+    });
   }
 
   /**
