@@ -12,3 +12,12 @@ export const queryFactory = gql`
 {
   factories(first: 1){id}
 }`;
+
+// Get pools filtered by tokens
+export const queryPools = gql`
+query queryPools($tokens: [String!]) {
+  pools(where: { token0_in: $tokens, token1_in: $tokens }) {
+    id,
+    feeTier
+  }
+}`;

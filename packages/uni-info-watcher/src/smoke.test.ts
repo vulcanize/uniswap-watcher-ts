@@ -15,7 +15,8 @@ import {
 
 import {
   queryFactory,
-  queryToken
+  queryToken,
+  queryPools
 } from '../test/queries';
 import { watchEvent } from '../test/utils';
 
@@ -51,13 +52,18 @@ describe('uni-info-watcher', () => {
     // Getting the factory from uni-info-watcher graphQL endpoint.
     const data = await request(endpoint, queryFactory);
     expect(data.factories).to.not.be.empty;
-    const factoryAddress = data.factories[0].id;
 
+    const factoryAddress = data.factories[0].id;
     factory = new ethers.Contract(factoryAddress, FACTORY_ABI, signer);
     expect(factory.address).to.not.be.empty;
   });
 
   describe('PoolCreatedEvent', () => {
+    // NOTE Skipping checking the case where a factory is absent.
+    // NOTE Skipping checking entity updates that cannot be gotten using queries.
+
+    const fee = 500;
+
     before(async () => {
       // Deploy 2 tokens.
       ({ token0Address, token1Address } = await deployTokens(signer));
@@ -69,15 +75,14 @@ describe('uni-info-watcher', () => {
       // Check that token entities are absent.
       request(endpoint, queryToken, { id: token0Address })
         .then(data => {
-          expect(data.token).to.be.null;
+          expect(data.token).to.be.empty;
         });
       request(endpoint, queryToken, { id: token1Address })
         .then(data => {
-          expect(data.token).to.be.null;
+          expect(data.token).to.be.empty;
         });
 
       // Create Pool.
-      const fee = 500;
       await createPool(factory, token0Address, token1Address, fee);
 
       // Wait for PoolCreatedEvent.
@@ -92,12 +97,29 @@ describe('uni-info-watcher', () => {
       // Check that token entities are present.
       request(endpoint, queryToken, { id: token0Address })
         .then(data => {
-          expect(data.token).to.not.be.null;
+          expect(data.token).to.not.be.empty;
         });
       request(endpoint, queryToken, { id: token1Address })
         .then(data => {
-          expect(data.token).to.not.be.null;
+          expect(data.token).to.not.be.empty;
         });
+    });
+
+    it('should create a pool entity', async () => {
+      const variables = {
+        tokens: [token0Address, token1Address]
+      };
+
+      // Getting the pool having deloyed tokens.
+      const data = await request(endpoint, queryPools, variables);
+      expect(data.pools).to.have.lengthOf(1);
+
+      // Initializing the pool variable.
+      const poolAddress = data.pools[0].id;
+      pool = new Contract(poolAddress, POOL_ABI, signer);
+      expect(pool.address).to.not.be.empty;
+
+      expect(data.pools[0].feeTier).to.equal(fee.toString());
     });
   });
 });
