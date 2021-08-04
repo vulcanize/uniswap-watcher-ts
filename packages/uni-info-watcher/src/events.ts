@@ -96,6 +96,8 @@ export interface Block {
 export interface Transaction {
   hash: string;
   from: string;
+  to: string;
+  index: number;
 }
 
 export interface ResultEvent {

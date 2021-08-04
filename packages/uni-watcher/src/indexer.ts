@@ -68,7 +68,7 @@ export class Indexer {
   getResultEvent (event: Event): ResultEvent {
     const block = event.block;
     const eventFields = JSON.parse(event.eventInfo);
-    const { transaction } = JSON.parse(event.extraInfo);
+    const { tx } = JSON.parse(event.extraInfo);
 
     return {
       block: {
@@ -80,9 +80,9 @@ export class Indexer {
 
       tx: {
         hash: event.txHash,
-        from: transaction.src,
-        to: transaction.dst,
-        index: transaction.index
+        from: tx.src,
+        to: tx.dst,
+        index: tx.index
       },
 
       contract: event.contract,
@@ -340,8 +340,8 @@ export class Indexer {
 
       let eventName = UNKNOWN_EVENT_NAME;
       let eventInfo = {};
-      const transaction = transactionMap[txHash];
-      const extraInfo = { topics, data, transaction };
+      const tx = transactionMap[txHash];
+      const extraInfo = { topics, data, tx };
 
       const contract = ethers.utils.getAddress(address);
       const uniContract = await this.isUniswapContract(contract);
