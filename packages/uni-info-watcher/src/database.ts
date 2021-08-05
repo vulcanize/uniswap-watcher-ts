@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { Brackets, Connection, ConnectionOptions, createConnection, DeepPartial, EntityManager, FindConditions, FindOneOptions, In, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
+import { Brackets, Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, FindOneOptions, In, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { MAX_REORG_DEPTH } from '@vulcanize/util';
 
@@ -92,10 +92,6 @@ export class Database {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     return queryRunner;
-  }
-
-  async createTransaction<T> (callback: (tx: EntityManager) => Promise<T>): Promise<T> {
-    return this._conn.transaction(callback);
   }
 
   async getFactory (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Factory>): Promise<Factory | undefined> {
@@ -241,8 +237,8 @@ export class Database {
     return entity;
   }
 
-  async getTick ({ id, blockHash }: DeepPartial<Tick>): Promise<Tick | undefined> {
-    const repo = this._conn.getRepository(Tick);
+  async getTick (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Tick>): Promise<Tick | undefined> {
+    const repo = queryRunner.manager.getRepository(Tick);
     const whereOptions: FindConditions<Tick> = { id };
 
     if (blockHash) {
@@ -264,6 +260,12 @@ export class Database {
     }
 
     return entity;
+  }
+
+  async getTickNoTx ({ id, blockHash }: DeepPartial<Tick>): Promise<Tick | undefined> {
+    const queryRunner = this._conn.createQueryRunner();
+    await queryRunner.connect();
+    return this.getTick(queryRunner, { id, blockHash });
   }
 
   async getPoolDayData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<PoolDayData>): Promise<PoolDayData | undefined> {
@@ -291,8 +293,8 @@ export class Database {
     return entity;
   }
 
-  async getPoolHourData ({ id, blockHash }: DeepPartial<PoolHourData>): Promise<PoolHourData | undefined> {
-    const repo = this._conn.getRepository(PoolHourData);
+  async getPoolHourData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<PoolHourData>): Promise<PoolHourData | undefined> {
+    const repo = queryRunner.manager.getRepository(PoolHourData);
     const whereOptions: FindConditions<PoolHourData> = { id };
 
     if (blockHash) {
@@ -315,8 +317,8 @@ export class Database {
     return entity;
   }
 
-  async getUniswapDayData ({ id, blockHash }: DeepPartial<UniswapDayData>): Promise<UniswapDayData | undefined> {
-    const repo = this._conn.getRepository(UniswapDayData);
+  async getUniswapDayData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<UniswapDayData>): Promise<UniswapDayData | undefined> {
+    const repo = queryRunner.manager.getRepository(UniswapDayData);
     const whereOptions: FindConditions<UniswapDayData> = { id };
 
     if (blockHash) {
@@ -339,8 +341,8 @@ export class Database {
     return entity;
   }
 
-  async getTokenDayData ({ id, blockHash }: DeepPartial<TokenDayData>): Promise<TokenDayData | undefined> {
-    const repo = this._conn.getRepository(TokenDayData);
+  async getTokenDayData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<TokenDayData>): Promise<TokenDayData | undefined> {
+    const repo = queryRunner.manager.getRepository(TokenDayData);
     const whereOptions: FindConditions<TokenDayData> = { id };
 
     if (blockHash) {
@@ -363,8 +365,8 @@ export class Database {
     return entity;
   }
 
-  async getTokenHourData ({ id, blockHash }: DeepPartial<TokenHourData>): Promise<TokenHourData | undefined> {
-    const repo = this._conn.getRepository(TokenHourData);
+  async getTokenHourData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<TokenHourData>): Promise<TokenHourData | undefined> {
+    const repo = queryRunner.manager.getRepository(TokenHourData);
     const whereOptions: FindConditions<TokenHourData> = { id };
 
     if (blockHash) {
@@ -387,8 +389,8 @@ export class Database {
     return entity;
   }
 
-  async getTransaction ({ id, blockHash }: DeepPartial<Transaction>): Promise<Transaction | undefined> {
-    const repo = this._conn.getRepository(Transaction);
+  async getTransaction (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Transaction>): Promise<Transaction | undefined> {
+    const repo = queryRunner.manager.getRepository(Transaction);
     const whereOptions: FindConditions<Transaction> = { id };
 
     if (blockHash) {
@@ -411,8 +413,8 @@ export class Database {
     return entity;
   }
 
-  async getEntities<Entity> (entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: string[] = []): Promise<Entity[]> {
-    const repo = this._conn.getRepository(entity);
+  async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: string[] = []): Promise<Entity[]> {
+    const repo = queryRunner.manager.getRepository(entity);
     const { tableName } = repo.metadata;
 
     let subQuery = repo.createQueryBuilder('subTable')
@@ -533,40 +535,32 @@ export class Database {
     return repo.save(token);
   }
 
-  async saveTransaction (transaction: Transaction, block: Block): Promise<Transaction> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Transaction);
-      transaction.blockNumber = block.number;
-      transaction.blockHash = block.hash;
-      return repo.save(transaction);
-    });
+  async saveTransaction (queryRunner: QueryRunner, transaction: Transaction, block: Block): Promise<Transaction> {
+    const repo = queryRunner.manager.getRepository(Transaction);
+    transaction.blockNumber = block.number;
+    transaction.blockHash = block.hash;
+    return repo.save(transaction);
   }
 
-  async saveUniswapDayData (uniswapDayData: UniswapDayData, block: Block): Promise<UniswapDayData> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(UniswapDayData);
-      uniswapDayData.blockNumber = block.number;
-      uniswapDayData.blockHash = block.hash;
-      return repo.save(uniswapDayData);
-    });
+  async saveUniswapDayData (queryRunner: QueryRunner, uniswapDayData: UniswapDayData, block: Block): Promise<UniswapDayData> {
+    const repo = queryRunner.manager.getRepository(UniswapDayData);
+    uniswapDayData.blockNumber = block.number;
+    uniswapDayData.blockHash = block.hash;
+    return repo.save(uniswapDayData);
   }
 
-  async saveTokenDayData (tokenDayData: TokenDayData, block: Block): Promise<TokenDayData> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(TokenDayData);
-      tokenDayData.blockNumber = block.number;
-      tokenDayData.blockHash = block.hash;
-      return repo.save(tokenDayData);
-    });
+  async saveTokenDayData (queryRunner: QueryRunner, tokenDayData: TokenDayData, block: Block): Promise<TokenDayData> {
+    const repo = queryRunner.manager.getRepository(TokenDayData);
+    tokenDayData.blockNumber = block.number;
+    tokenDayData.blockHash = block.hash;
+    return repo.save(tokenDayData);
   }
 
-  async saveTokenHourData (tokenHourData: TokenHourData, block: Block): Promise<TokenHourData> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(TokenHourData);
-      tokenHourData.blockNumber = block.number;
-      tokenHourData.blockHash = block.hash;
-      return repo.save(tokenHourData);
-    });
+  async saveTokenHourData (queryRunner: QueryRunner, tokenHourData: TokenHourData, block: Block): Promise<TokenHourData> {
+    const repo = queryRunner.manager.getRepository(TokenHourData);
+    tokenHourData.blockNumber = block.number;
+    tokenHourData.blockHash = block.hash;
+    return repo.save(tokenHourData);
   }
 
   async saveTick (queryRunner: QueryRunner, tick: Tick, block: Block): Promise<Tick> {
@@ -576,22 +570,18 @@ export class Database {
     return repo.save(tick);
   }
 
-  async savePosition (position: Position, block: Block): Promise<Position> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Position);
-      position.blockNumber = block.number;
-      position.blockHash = block.hash;
-      return repo.save(position);
-    });
+  async savePosition (queryRunner: QueryRunner, position: Position, block: Block): Promise<Position> {
+    const repo = queryRunner.manager.getRepository(Position);
+    position.blockNumber = block.number;
+    position.blockHash = block.hash;
+    return repo.save(position);
   }
 
-  async savePositionSnapshot (positionSnapshot: PositionSnapshot, block: Block): Promise<PositionSnapshot> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(PositionSnapshot);
-      positionSnapshot.blockNumber = block.number;
-      positionSnapshot.blockHash = block.hash;
-      return repo.save(positionSnapshot);
-    });
+  async savePositionSnapshot (queryRunner: QueryRunner, positionSnapshot: PositionSnapshot, block: Block): Promise<PositionSnapshot> {
+    const repo = queryRunner.manager.getRepository(PositionSnapshot);
+    positionSnapshot.blockNumber = block.number;
+    positionSnapshot.blockHash = block.hash;
+    return repo.save(positionSnapshot);
   }
 
   async saveMint (queryRunner: QueryRunner, mint: Mint, block: Block): Promise<Mint> {

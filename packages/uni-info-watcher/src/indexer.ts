@@ -1,6 +1,6 @@
 import assert from 'assert';
 import debug from 'debug';
-import { DeepPartial } from 'typeorm';
+import { DeepPartial, QueryRunner } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { utils } from 'ethers';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
@@ -190,68 +190,92 @@ export class Indexer {
 
   async getBundle (id: string, block: BlockHeight): Promise<Bundle | undefined> {
     const dbTx = await this._db.createTransactionRunner();
+    let res;
 
     try {
-      return this._db.getBundle(dbTx, { id, blockHash: block.hash, blockNumber: block.number });
+      res = this._db.getBundle(dbTx, { id, blockHash: block.hash, blockNumber: block.number });
+      await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
       throw error;
     } finally {
       await dbTx.release();
     }
+
+    return res;
   }
 
   async getPool (id: string, block: BlockHeight): Promise<Pool | undefined> {
     const dbTx = await this._db.createTransactionRunner();
+    let res;
 
     try {
-      return this._db.getPool(dbTx, { id, blockHash: block.hash, blockNumber: block.number });
+      res = await this._db.getPool(dbTx, { id, blockHash: block.hash, blockNumber: block.number });
+      await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
       throw error;
     } finally {
       await dbTx.release();
     }
+
+    return res;
   }
 
   async getToken (id: string, block: BlockHeight): Promise<Token | undefined> {
     const dbTx = await this._db.createTransactionRunner();
+    let res;
 
     try {
-      return this._db.getToken(dbTx, { id, blockHash: block.hash, blockNumber: block.number });
+      res = this._db.getToken(dbTx, { id, blockHash: block.hash, blockNumber: block.number });
+      await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
       throw error;
     } finally {
       await dbTx.release();
     }
+
+    return res;
   }
 
   async getEntities<Entity> (entity: new () => Entity, block: BlockHeight, where: { [key: string]: any } = {}, queryOptions: QueryOptions, relations?: string[]): Promise<Entity[]> {
-    where = Object.entries(where).reduce((acc: { [key: string]: any }, [fieldWithSuffix, value]) => {
-      const [field, ...suffix] = fieldWithSuffix.split('_');
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
 
-      acc[field] = {
-        value,
-        not: false,
-        operator: 'equals'
-      };
+    try {
+      where = Object.entries(where).reduce((acc: { [key: string]: any }, [fieldWithSuffix, value]) => {
+        const [field, ...suffix] = fieldWithSuffix.split('_');
 
-      let operator = suffix.shift();
+        acc[field] = {
+          value,
+          not: false,
+          operator: 'equals'
+        };
 
-      if (operator === 'not') {
-        acc[field].not = true;
-        operator = suffix.shift();
-      }
+        let operator = suffix.shift();
 
-      if (operator) {
-        acc[field].operator = operator;
-      }
+        if (operator === 'not') {
+          acc[field].not = true;
+          operator = suffix.shift();
+        }
 
-      return acc;
-    }, {});
+        if (operator) {
+          acc[field].operator = operator;
+        }
 
-    const res = await this._db.getEntities(entity, block, where, queryOptions, relations);
+        return acc;
+      }, {});
+
+      res = await this._db.getEntities(dbTx, entity, block, where, queryOptions, relations);
+      dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+
     return res;
   }
 
@@ -332,8 +356,6 @@ export class Indexer {
       let pool = new Pool();
       pool.id = poolAddress;
 
-      assert(token0);
-      assert(token1);
       token0 = await this._db.saveToken(dbTx, token0, block);
       token1 = await this._db.saveToken(dbTx, token1, block);
       pool.token0 = token0;
@@ -355,7 +377,6 @@ export class Indexer {
 
       await this._db.saveToken(dbTx, token0, block);
       await this._db.saveToken(dbTx, token1, block);
-      assert(factory);
       await this._db.saveFactory(dbTx, factory, block);
       await dbTx.commitTransaction();
     } catch (error) {
@@ -447,7 +468,7 @@ export class Indexer {
 
       // TODO: In subgraph factory is fetched by hardcoded factory address.
       // Currently fetching first factory in database as only one exists.
-      const [factory] = await this._db.getEntities(Factory, { hash: block.hash }, {}, { limit: 1 });
+      const [factory] = await this._db.getEntities(dbTx, Factory, { hash: block.hash }, {}, { limit: 1 });
 
       const token0 = pool.token0;
       const token1 = pool.token1;
@@ -500,7 +521,7 @@ export class Indexer {
       factory.totalValueLockedETH = factory.totalValueLockedETH.plus(pool.totalValueLockedETH);
       factory.totalValueLockedUSD = factory.totalValueLockedETH.times(bundle.ethPriceUSD);
 
-      const transaction = await loadTransaction(this._db, { block, tx });
+      const transaction = await loadTransaction(this._db, dbTx, { block, tx });
 
       const mint = new Mint();
       mint.id = transaction.id + '#' + pool.txCount.toString();
@@ -526,8 +547,8 @@ export class Indexer {
       const lowerTickId = poolAddress + '#' + mintEvent.tickLower.toString();
       const upperTickId = poolAddress + '#' + mintEvent.tickUpper.toString();
 
-      let lowerTick = await this._db.getTick({ id: lowerTickId, blockHash: block.hash });
-      let upperTick = await this._db.getTick({ id: upperTickId, blockHash: block.hash });
+      let lowerTick = await this._db.getTick(dbTx, { id: lowerTickId, blockHash: block.hash });
+      let upperTick = await this._db.getTick(dbTx, { id: upperTickId, blockHash: block.hash });
 
       if (!lowerTick) {
         lowerTick = await createTick(this._db, dbTx, lowerTickId, BigInt(lowerTickIdx), pool, block);
@@ -546,7 +567,7 @@ export class Indexer {
       // TODO: Update Tick's volume, fees, and liquidity provider count.
       // Computing these on the tick level requires reimplementing some of the swapping code from v3-core.
 
-      await updateUniswapDayData(this._db, { block, contractAddress });
+      await updateUniswapDayData(this._db, dbTx, { block, contractAddress });
       await updateTokenDayData(this._db, dbTx, token0, { block });
       await updateTokenDayData(this._db, dbTx, token1, { block });
       await updateTokenHourData(this._db, dbTx, token0, { block });
@@ -592,7 +613,7 @@ export class Indexer {
 
       // TODO: In subgraph factory is fetched by hardcoded factory address.
       // Currently fetching first factory in database as only one exists.
-      const [factory] = await this._db.getEntities(Factory, { hash: block.hash }, {}, { limit: 1 });
+      const [factory] = await this._db.getEntities(dbTx, Factory, { hash: block.hash }, {}, { limit: 1 });
 
       const token0 = pool.token0;
       const token1 = pool.token1;
@@ -646,7 +667,7 @@ export class Indexer {
       factory.totalValueLockedUSD = factory.totalValueLockedETH.times(bundle.ethPriceUSD);
 
       // Burn entity.
-      const transaction = await loadTransaction(this._db, { block, tx });
+      const transaction = await loadTransaction(this._db, dbTx, { block, tx });
 
       const burn = new Burn();
       burn.id = transaction.id + '#' + pool.txCount.toString();
@@ -667,8 +688,8 @@ export class Indexer {
       // Tick entities.
       const lowerTickId = poolAddress + '#' + (burnEvent.tickLower).toString();
       const upperTickId = poolAddress + '#' + (burnEvent.tickUpper).toString();
-      const lowerTick = await this._db.getTick({ id: lowerTickId, blockHash: block.hash });
-      const upperTick = await this._db.getTick({ id: upperTickId, blockHash: block.hash });
+      const lowerTick = await this._db.getTick(dbTx, { id: lowerTickId, blockHash: block.hash });
+      const upperTick = await this._db.getTick(dbTx, { id: upperTickId, blockHash: block.hash });
       assert(lowerTick && upperTick);
       const amount = BigInt(burnEvent.amount);
       lowerTick.liquidityGross = BigInt(lowerTick.liquidityGross) - amount;
@@ -676,7 +697,7 @@ export class Indexer {
       upperTick.liquidityGross = BigInt(upperTick.liquidityGross) - amount;
       upperTick.liquidityNet = BigInt(upperTick.liquidityNet) + amount;
 
-      await updateUniswapDayData(this._db, { block, contractAddress });
+      await updateUniswapDayData(this._db, dbTx, { block, contractAddress });
       await updateTokenDayData(this._db, dbTx, token0, { block });
       await updateTokenDayData(this._db, dbTx, token0, { block });
       await updateTokenHourData(this._db, dbTx, token0, { block });
@@ -718,7 +739,7 @@ export class Indexer {
 
       // TODO: In subgraph factory is fetched by hardcoded factory address.
       // Currently fetching first factory in database as only one exists.
-      const [factory] = await this._db.getEntities(Factory, { hash: block.hash }, {}, { limit: 1 });
+      const [factory] = await this._db.getEntities(dbTx, Factory, { hash: block.hash }, {}, { limit: 1 });
 
       const pool = await this._db.getPool(dbTx, { id: contractAddress, blockHash: block.hash });
       assert(pool);
@@ -834,7 +855,7 @@ export class Indexer {
       token1.totalValueLockedUSD = token1.totalValueLocked.times(token1.derivedETH).times(bundle.ethPriceUSD);
 
       // Create Swap event
-      const transaction = await loadTransaction(this._db, { block, tx });
+      const transaction = await loadTransaction(this._db, dbTx, { block, tx });
 
       const swap = new Swap();
       swap.id = transaction.id + '#' + pool.txCount.toString();
@@ -855,7 +876,7 @@ export class Indexer {
       // Skipping update pool fee growth as they are not queried.
 
       // Interval data.
-      const uniswapDayData = await updateUniswapDayData(this._db, { block, contractAddress });
+      const uniswapDayData = await updateUniswapDayData(this._db, dbTx, { block, contractAddress });
       const poolDayData = await updatePoolDayData(this._db, dbTx, { block, contractAddress });
       const poolHourData = await updatePoolHourData(this._db, dbTx, { block, contractAddress });
       const token0DayData = await updateTokenDayData(this._db, dbTx, token0, { block });
@@ -900,9 +921,9 @@ export class Indexer {
 
       await this._db.saveBundle(dbTx, bundle, block);
       await this._db.saveSwap(dbTx, swap, block);
-      await this._db.saveTokenDayData(token0DayData, block);
-      await this._db.saveTokenDayData(token1DayData, block);
-      await this._db.saveUniswapDayData(uniswapDayData, block);
+      await this._db.saveTokenDayData(dbTx, token0DayData, block);
+      await this._db.saveTokenDayData(dbTx, token1DayData, block);
+      await this._db.saveUniswapDayData(dbTx, uniswapDayData, block);
       await this._db.savePoolDayData(dbTx, poolDayData, block);
       await this._db.saveFactory(dbTx, factory, block);
       await this._db.savePool(dbTx, pool, block);
@@ -920,7 +941,7 @@ export class Indexer {
   }
 
   async _handleIncreaseLiquidity (block: Block, contractAddress: string, tx: Transaction, event: IncreaseLiquidityEvent): Promise<void> {
-    const position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
+    let position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
 
     // position was not able to be fetched.
     if (position === null) {
@@ -932,21 +953,36 @@ export class Indexer {
       return;
     }
 
-    const token0 = position.token0;
-    const token1 = position.token1;
-
-    const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
-    const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
-
-    position.liquidity = BigInt(position.liquidity) + BigInt(event.liquidity);
-    position.depositedToken0 = position.depositedToken0.plus(amount0);
-    position.depositedToken1 = position.depositedToken1.plus(amount1);
-
     await this._updateFeeVars(position, block, contractAddress, BigInt(event.tokenId));
+    const dbTx = await this._db.createTransactionRunner();
 
-    await this._db.savePosition(position, block);
+    try {
+      if (!position.transaction) {
+        const transaction = await loadTransaction(this._db, dbTx, { block, tx });
+        position.transaction = transaction;
+        position = await this._db.savePosition(dbTx, position, block);
+      }
 
-    await this._savePositionSnapshot(position, block, tx);
+      const token0 = position.token0;
+      const token1 = position.token1;
+
+      const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
+      const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
+
+      position.liquidity = BigInt(position.liquidity) + BigInt(event.liquidity);
+      position.depositedToken0 = position.depositedToken0.plus(amount0);
+      position.depositedToken1 = position.depositedToken1.plus(amount1);
+
+      await this._db.savePosition(dbTx, position, block);
+
+      await this._savePositionSnapshot(dbTx, position, block, tx);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
   }
 
   async _handleDecreaseLiquidity (block: Block, contractAddress: string, tx: Transaction, event: DecreaseLiquidityEvent): Promise<void> {
@@ -962,20 +998,35 @@ export class Indexer {
       return;
     }
 
-    const token0 = position.token0;
-    const token1 = position.token1;
-    const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
-    const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
-
-    position.liquidity = BigInt(position.liquidity) - BigInt(event.liquidity);
-    position.depositedToken0 = position.depositedToken0.plus(amount0);
-    position.depositedToken1 = position.depositedToken1.plus(amount1);
-
     position = await this._updateFeeVars(position, block, contractAddress, BigInt(event.tokenId));
+    const dbTx = await this._db.createTransactionRunner();
 
-    await this._db.savePosition(position, block);
+    try {
+      if (!position.transaction) {
+        const transaction = await loadTransaction(this._db, dbTx, { block, tx });
+        position.transaction = transaction;
+        position = await this._db.savePosition(dbTx, position, block);
+      }
 
-    await this._savePositionSnapshot(position, block, tx);
+      const token0 = position.token0;
+      const token1 = position.token1;
+      const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
+      const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
+
+      position.liquidity = BigInt(position.liquidity) - BigInt(event.liquidity);
+      position.depositedToken0 = position.depositedToken0.plus(amount0);
+      position.depositedToken1 = position.depositedToken1.plus(amount1);
+
+      await this._db.savePosition(dbTx, position, block);
+
+      await this._savePositionSnapshot(dbTx, position, block, tx);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
   }
 
   async _handleCollect (block: Block, contractAddress: string, tx: Transaction, event: CollectEvent): Promise<void> {
@@ -991,31 +1042,62 @@ export class Indexer {
       return;
     }
 
-    const token0 = position.token0;
-    const token1 = position.token1;
-    const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
-    const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
-    position.collectedFeesToken0 = position.collectedFeesToken0.plus(amount0);
-    position.collectedFeesToken1 = position.collectedFeesToken1.plus(amount1);
-
     position = await this._updateFeeVars(position, block, contractAddress, BigInt(event.tokenId));
+    const dbTx = await this._db.createTransactionRunner();
 
-    await this._db.savePosition(position, block);
+    try {
+      if (!position.transaction) {
+        const transaction = await loadTransaction(this._db, dbTx, { block, tx });
+        position.transaction = transaction;
+        position = await this._db.savePosition(dbTx, position, block);
+      }
 
-    await this._savePositionSnapshot(position, block, tx);
+      const token0 = position.token0;
+      const token1 = position.token1;
+      const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
+      const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
+      position.collectedFeesToken0 = position.collectedFeesToken0.plus(amount0);
+      position.collectedFeesToken1 = position.collectedFeesToken1.plus(amount1);
+
+      await this._db.savePosition(dbTx, position, block);
+
+      await this._savePositionSnapshot(dbTx, position, block, tx);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
   }
 
   async _handleTransfer (block: Block, contractAddress: string, tx: Transaction, event: TransferEvent): Promise<void> {
-    const position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
+    let position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
     // Position was not able to be fetched.
     if (position === null) {
       return;
     }
 
-    position.owner = event.to;
-    await this._db.savePosition(position, block);
+    const dbTx = await this._db.createTransactionRunner();
 
-    await this._savePositionSnapshot(position, block, tx);
+    try {
+      if (!position.transaction) {
+        const transaction = await loadTransaction(this._db, dbTx, { block, tx });
+        position.transaction = transaction;
+        position = await this._db.savePosition(dbTx, position, block);
+      }
+
+      position.owner = event.to;
+      await this._db.savePosition(dbTx, position, block);
+
+      await this._savePositionSnapshot(dbTx, position, block, tx);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
   }
 
   async _getPosition (block: Block, contractAddress: string, tx: Transaction, tokenId: bigint): Promise<Position | null> {
@@ -1050,20 +1132,15 @@ export class Indexer {
         position.token1 = token1;
 
         const [tickLower, tickUpper] = await Promise.all([
-          this._db.getTick({ id: poolAddress.concat('#').concat(nfpmPosition.tickLower.toString()), blockHash }),
-          this._db.getTick({ id: poolAddress.concat('#').concat(nfpmPosition.tickUpper.toString()), blockHash })
+          this._db.getTickNoTx({ id: poolAddress.concat('#').concat(nfpmPosition.tickLower.toString()), blockHash }),
+          this._db.getTickNoTx({ id: poolAddress.concat('#').concat(nfpmPosition.tickUpper.toString()), blockHash })
         ]);
         assert(tickLower && tickUpper);
         position.tickLower = tickLower;
         position.tickUpper = tickUpper;
 
-        const transaction = await loadTransaction(this._db, { block, tx });
-        position.transaction = transaction;
-
         position.feeGrowthInside0LastX128 = BigInt(nfpmPosition.feeGrowthInside0LastX128.toString());
         position.feeGrowthInside1LastX128 = BigInt(nfpmPosition.feeGrowthInside1LastX128.toString());
-
-        position = await this._db.savePosition(position, block);
       }
     }
 
@@ -1081,7 +1158,7 @@ export class Indexer {
     return position;
   }
 
-  async _savePositionSnapshot (position: Position, block: Block, tx: Transaction): Promise<void> {
+  async _savePositionSnapshot (dbTx: QueryRunner, position: Position, block: Block, tx: Transaction): Promise<void> {
     const positionSnapshot = new PositionSnapshot();
     positionSnapshot.id = position.id.concat('#').concat(block.number.toString());
     positionSnapshot.blockNumber = block.number;
@@ -1096,10 +1173,10 @@ export class Indexer {
     positionSnapshot.withdrawnToken1 = position.withdrawnToken1;
     positionSnapshot.collectedFeesToken0 = position.collectedFeesToken0;
     positionSnapshot.collectedFeesToken1 = position.collectedFeesToken1;
-    positionSnapshot.transaction = await loadTransaction(this._db, { block, tx });
+    positionSnapshot.transaction = await loadTransaction(this._db, dbTx, { block, tx });
     positionSnapshot.feeGrowthInside0LastX128 = position.feeGrowthInside0LastX128;
     positionSnapshot.feeGrowthInside1LastX128 = position.feeGrowthInside1LastX128;
 
-    await this._db.savePositionSnapshot(positionSnapshot, block);
+    await this._db.savePositionSnapshot(dbTx, positionSnapshot, block);
   }
 }
