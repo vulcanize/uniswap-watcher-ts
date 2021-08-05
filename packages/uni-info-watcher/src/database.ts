@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { Brackets, Connection, ConnectionOptions, createConnection, DeepPartial, EntityManager, FindConditions, FindOneOptions, In, LessThanOrEqual, Repository } from 'typeorm';
+import { Brackets, Connection, ConnectionOptions, createConnection, DeepPartial, EntityManager, FindConditions, FindOneOptions, In, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { MAX_REORG_DEPTH } from '@vulcanize/util';
 
@@ -87,12 +87,19 @@ export class Database {
     return this._conn.close();
   }
 
+  async createTransactionRunner (): Promise<QueryRunner> {
+    const queryRunner = this._conn.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    return queryRunner;
+  }
+
   async createTransaction<T> (callback: (tx: EntityManager) => Promise<T>): Promise<T> {
     return this._conn.transaction(callback);
   }
 
-  async getFactory ({ id, blockHash }: DeepPartial<Factory>): Promise<Factory | undefined> {
-    const repo = this._conn.getRepository(Factory);
+  async getFactory (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Factory>): Promise<Factory | undefined> {
+    const repo = queryRunner.manager.getRepository(Factory);
     const whereOptions: FindConditions<Factory> = { id };
 
     if (blockHash) {
@@ -115,8 +122,8 @@ export class Database {
     return entity;
   }
 
-  async getBundle ({ id, blockHash, blockNumber }: DeepPartial<Bundle>): Promise<Bundle | undefined> {
-    const repo = this._conn.getRepository(Bundle);
+  async getBundle (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Bundle>): Promise<Bundle | undefined> {
+    const repo = queryRunner.manager.getRepository(Bundle);
     const whereOptions: FindConditions<Bundle> = { id };
 
     if (blockHash) {
@@ -143,8 +150,8 @@ export class Database {
     return entity;
   }
 
-  async getToken ({ id, blockHash }: DeepPartial<Token>): Promise<Token | undefined> {
-    const repo = this._conn.getRepository(Token);
+  async getToken (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Token>): Promise<Token | undefined> {
+    const repo = queryRunner.manager.getRepository(Token);
     const whereOptions: FindConditions<Token> = { id };
 
     if (blockHash) {
@@ -168,8 +175,14 @@ export class Database {
     return entity;
   }
 
-  async getPool ({ id, blockHash, blockNumber }: DeepPartial<Pool>): Promise<Pool | undefined> {
-    const repo = this._conn.getRepository(Pool);
+  async getTokenNoTx ({ id, blockHash }: DeepPartial<Token>): Promise<Token | undefined> {
+    const queryRunner = this._conn.createQueryRunner();
+    await queryRunner.connect();
+    return this.getToken(queryRunner, { id, blockHash });
+  }
+
+  async getPool (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Pool>): Promise<Pool | undefined> {
+    const repo = queryRunner.manager.getRepository(Pool);
     const whereOptions: FindConditions<Pool> = { id };
 
     if (blockHash) {
@@ -195,6 +208,12 @@ export class Database {
     }
 
     return entity;
+  }
+
+  async getPoolNoTx ({ id, blockHash, blockNumber }: DeepPartial<Pool>): Promise<Pool | undefined> {
+    const queryRunner = this._conn.createQueryRunner();
+    await queryRunner.connect();
+    return this.getPool(queryRunner, { id, blockHash, blockNumber });
   }
 
   async getPosition ({ id, blockHash }: DeepPartial<Position>): Promise<Position | undefined> {
@@ -247,8 +266,8 @@ export class Database {
     return entity;
   }
 
-  async getPoolDayData ({ id, blockHash }: DeepPartial<PoolDayData>): Promise<PoolDayData | undefined> {
-    const repo = this._conn.getRepository(PoolDayData);
+  async getPoolDayData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<PoolDayData>): Promise<PoolDayData | undefined> {
+    const repo = queryRunner.manager.getRepository(PoolDayData);
     const whereOptions: FindConditions<PoolDayData> = { id };
 
     if (blockHash) {
@@ -472,43 +491,43 @@ export class Database {
     return selectQueryBuilder.getMany();
   }
 
-  async saveFactory (tx: EntityManager, factory: Factory, block: Block): Promise<Factory> {
-    const repo = tx.getRepository(Factory);
+  async saveFactory (queryRunner: QueryRunner, factory: Factory, block: Block): Promise<Factory> {
+    const repo = queryRunner.manager.getRepository(Factory);
     factory.blockNumber = block.number;
     factory.blockHash = block.hash;
     return repo.save(factory);
   }
 
-  async saveBundle (tx: EntityManager, bundle: Bundle, block: Block): Promise<Bundle> {
-    const repo = tx.getRepository(Bundle);
+  async saveBundle (queryRunner: QueryRunner, bundle: Bundle, block: Block): Promise<Bundle> {
+    const repo = queryRunner.manager.getRepository(Bundle);
     bundle.blockNumber = block.number;
     bundle.blockHash = block.hash;
     return repo.save(bundle);
   }
 
-  async savePool (tx: EntityManager, pool: Pool, block: Block): Promise<Pool> {
-    const repo = tx.getRepository(Pool);
+  async savePool (queryRunner: QueryRunner, pool: Pool, block: Block): Promise<Pool> {
+    const repo = queryRunner.manager.getRepository(Pool);
     pool.blockNumber = block.number;
     pool.blockHash = block.hash;
     return repo.save(pool);
   }
 
-  async savePoolDayData (tx: EntityManager, poolDayData: PoolDayData, block: Block): Promise<PoolDayData> {
-    const repo = tx.getRepository(PoolDayData);
+  async savePoolDayData (queryRunner: QueryRunner, poolDayData: PoolDayData, block: Block): Promise<PoolDayData> {
+    const repo = queryRunner.manager.getRepository(PoolDayData);
     poolDayData.blockNumber = block.number;
     poolDayData.blockHash = block.hash;
     return repo.save(poolDayData);
   }
 
-  async savePoolHourData (tx: EntityManager, poolHourData: PoolHourData, block: Block): Promise<PoolHourData> {
-    const repo = tx.getRepository(PoolHourData);
+  async savePoolHourData (queryRunner: QueryRunner, poolHourData: PoolHourData, block: Block): Promise<PoolHourData> {
+    const repo = queryRunner.manager.getRepository(PoolHourData);
     poolHourData.blockNumber = block.number;
     poolHourData.blockHash = block.hash;
     return repo.save(poolHourData);
   }
 
-  async saveToken (tx: EntityManager, token: Token, block: Block): Promise<Token> {
-    const repo = tx.getRepository(Token);
+  async saveToken (queryRunner: QueryRunner, token: Token, block: Block): Promise<Token> {
+    const repo = queryRunner.manager.getRepository(Token);
     token.blockNumber = block.number;
     token.blockHash = block.hash;
     return repo.save(token);
@@ -550,13 +569,11 @@ export class Database {
     });
   }
 
-  async saveTick (tick: Tick, block: Block): Promise<Tick> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Tick);
-      tick.blockNumber = block.number;
-      tick.blockHash = block.hash;
-      return repo.save(tick);
-    });
+  async saveTick (queryRunner: QueryRunner, tick: Tick, block: Block): Promise<Tick> {
+    const repo = queryRunner.manager.getRepository(Tick);
+    tick.blockNumber = block.number;
+    tick.blockHash = block.hash;
+    return repo.save(tick);
   }
 
   async savePosition (position: Position, block: Block): Promise<Position> {
@@ -577,31 +594,25 @@ export class Database {
     });
   }
 
-  async saveMint (mint: Mint, block: Block): Promise<Mint> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Mint);
-      mint.blockNumber = block.number;
-      mint.blockHash = block.hash;
-      return repo.save(mint);
-    });
+  async saveMint (queryRunner: QueryRunner, mint: Mint, block: Block): Promise<Mint> {
+    const repo = queryRunner.manager.getRepository(Mint);
+    mint.blockNumber = block.number;
+    mint.blockHash = block.hash;
+    return repo.save(mint);
   }
 
-  async saveBurn (burn: Burn, block: Block): Promise<Burn> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Burn);
-      burn.blockNumber = block.number;
-      burn.blockHash = block.hash;
-      return repo.save(burn);
-    });
+  async saveBurn (queryRunner: QueryRunner, burn: Burn, block: Block): Promise<Burn> {
+    const repo = queryRunner.manager.getRepository(Burn);
+    burn.blockNumber = block.number;
+    burn.blockHash = block.hash;
+    return repo.save(burn);
   }
 
-  async saveSwap (swap: Swap, block: Block): Promise<Swap> {
-    return this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Swap);
-      swap.blockNumber = block.number;
-      swap.blockHash = block.hash;
-      return repo.save(swap);
-    });
+  async saveSwap (queryRunner: QueryRunner, swap: Swap, block: Block): Promise<Swap> {
+    const repo = queryRunner.manager.getRepository(Swap);
+    swap.blockNumber = block.number;
+    swap.blockHash = block.hash;
+    return repo.save(swap);
   }
 
   // Returns true if events have already been synced for the (block, token) combination.
