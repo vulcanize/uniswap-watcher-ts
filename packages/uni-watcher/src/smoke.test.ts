@@ -165,6 +165,12 @@ describe('uni-watcher', () => {
     token0 = new Contract(token0Address, TESTERC20_ABI, signer);
     token1Address = await pool.token1();
     token1 = new Contract(token1Address, TESTERC20_ABI, signer);
+
+    // Initializing ticks.
+    const tickSpacing = await pool.tickSpacing();
+    // https://github.com/Uniswap/uniswap-v3-core/blob/main/test/UniswapV3Pool.spec.ts#L196
+    tickLower = getMinTick(tickSpacing);
+    tickUpper = getMaxTick(tickSpacing);
   });
 
   it('should initialize pool', async () => {
@@ -180,11 +186,6 @@ describe('uni-watcher', () => {
 
       // Deploy UniswapV3Callee.
       poolCallee = await deployUniswapV3Callee(signer);
-
-      const tickSpacing = await pool.tickSpacing();
-      // https://github.com/Uniswap/uniswap-v3-core/blob/main/test/UniswapV3Pool.spec.ts#L196
-      tickLower = getMinTick(tickSpacing);
-      tickUpper = getMaxTick(tickSpacing);
 
       await approveToken(token0, poolCallee.address, approveAmount);
       await approveToken(token1, poolCallee.address, approveAmount);
@@ -216,12 +217,6 @@ describe('uni-watcher', () => {
   it('should burn specified amount', done => {
     (async () => {
       const amount = 10;
-
-      // TODO Verify if this is required here or can use previous values?
-      const tickSpacing = await pool.tickSpacing();
-      // https://github.com/Uniswap/uniswap-v3-core/blob/main/test/UniswapV3Pool.spec.ts#L196
-      const tickLower = getMinTick(tickSpacing);
-      const tickUpper = getMaxTick(tickSpacing);
 
       // Subscribe using UniClient.
       const subscription = await uniClient.watchEvents((value: any) => {
@@ -327,6 +322,11 @@ describe('uni-watcher', () => {
       const fee = 3000;
       pool = await testCreatePool(uniClient, factory, token0Address, token1Address, fee, POOL_ABI, signer);
 
+      const tickSpacing = await pool.tickSpacing();
+      // https://github.com/Uniswap/uniswap-v3-core/blob/main/test/UniswapV3Pool.spec.ts#L196
+      tickLower = getMinTick(tickSpacing);
+      tickUpper = getMaxTick(tickSpacing);
+
       const sqrtPrice = '79228162514264337593543950336';
       await testInitialize(uniClient, pool, sqrtPrice, 0);
 
@@ -335,11 +335,6 @@ describe('uni-watcher', () => {
       const amount0Min = 0;
       const amount1Min = 0;
       const deadline = 1634367993;
-
-      const tickSpacing = await pool.tickSpacing();
-      // https://github.com/Uniswap/uniswap-v3-core/blob/main/test/UniswapV3Pool.spec.ts#L196
-      tickLower = getMinTick(tickSpacing);
-      tickUpper = getMaxTick(tickSpacing);
 
       // Approving tokens for NonfungiblePositionManager contract.
       // https://github.com/Uniswap/uniswap-v3-periphery/blob/main/test/NonfungiblePositionManager.spec.ts#L44
@@ -484,7 +479,7 @@ describe('uni-watcher', () => {
     });
   });
 
-  it('should collect fees', done => {
+  xit('should collect fees', done => {
     (async () => {
       const tokenId = 1;
       const amount0Max = 15;

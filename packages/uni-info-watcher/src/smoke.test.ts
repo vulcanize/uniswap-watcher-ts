@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import { ethers, Contract, ContractTransaction, Signer } from 'ethers';
 import { request } from 'graphql-request';
 import 'mocha';
+import _ from 'lodash';
 
 import {
   Config,
@@ -30,7 +31,9 @@ import {
   queryToken,
   queryPoolsByTokens,
   queryPoolById,
-  queryPoolDayData
+  queryPoolDayData,
+  queryMints,
+  queryTicks
 } from '../test/queries';
 
 const NETWORK_RPC_URL = 'http://localhost:8545';
@@ -110,7 +113,7 @@ describe('uni-info-watcher', () => {
       expect(data1.token).to.be.null;
     });
 
-    it('should create pool', async () => {
+    it('should trigger PoolCreatedEvent', async () => {
       // Create Pool.
       createPool(factory, token0Address, token1Address, fee);
 
@@ -119,7 +122,7 @@ describe('uni-info-watcher', () => {
       await watchEvent(uniClient, eventType);
 
       // Sleeping for 5 sec for the entities to be processed.
-      await wait(5000);
+      await wait(10000);
     });
 
     it('should create Token entities', async () => {
@@ -164,7 +167,7 @@ describe('uni-info-watcher', () => {
       expect(data.pool.tick).to.be.null;
     });
 
-    it('should initialize pool', async () => {
+    it('should trigger InitializeEvent', async () => {
       initializePool(pool, sqrtPrice);
 
       // Wait for InitializeEvent.
@@ -209,7 +212,6 @@ describe('uni-info-watcher', () => {
   describe('MintEvent', () => {
     const amount = 10;
     const approveAmount = BigInt(1000000000000000000000000);
-    // TODO See if this needs to be defined here or outer.
     let poolCallee: Contract;
     let tickLower: number;
     let tickUpper: number;
@@ -218,6 +220,7 @@ describe('uni-info-watcher', () => {
     let oldFactory: any;
     let oldToken0: any;
     let oldToken1: any;
+    let oldPool: any;
 
     before(async () => {
       // Deploy UniswapV3Callee.
@@ -237,14 +240,17 @@ describe('uni-info-watcher', () => {
       data = await request(endpoint, queryFactory);
       oldFactory = data.factories[0];
       
-      data = await request(endpoint, queryToken, { id: token0Address });
+      data = await request(endpoint, queryToken, { id: token0.address });
       oldToken0 = data.token;
 
-      data = await request(endpoint, queryToken, { id: token1Address });
+      data = await request(endpoint, queryToken, { id: token1.address });
       oldToken1 = data.token;
+
+      data = await request(endpoint, queryPoolById, { id: pool.address });
+      oldPool = data.pool;
     });
 
-    it('should mint tokens', async () => {
+    it('should trigger MintEvent', async () => {
       // Pool mint.
       const transaction: ContractTransaction = await poolCallee.mint(pool.address, recipient, BigInt(tickLower), BigInt(tickUpper), BigInt(amount));
       await transaction.wait();
@@ -253,17 +259,18 @@ describe('uni-info-watcher', () => {
       const eventType = 'MintEvent';
       await watchEvent(uniClient, eventType);
 
-      // Sleeping for 15 sec for the entities to be processed.
-      await wait(15000);
+      // Sleeping for 20 sec for the entities to be processed.
+      await wait(20000);
     });
 
     it('should update Token entities', async () => {
+      // Check txCount.
       let data: any;
 
-      data = await request(endpoint, queryToken, { id: token0Address });
+      data = await request(endpoint, queryToken, { id: token0.address });
       const newToken0 = data.token;
 
-      data = await request(endpoint, queryToken, { id: token1Address });
+      data = await request(endpoint, queryToken, { id: token1.address });
       const newToken1 = data.token;
 
       expect(newToken0.txCount).to.be.equal((BigInt(oldToken0.txCount) + BigInt(1)).toString());
@@ -271,9 +278,71 @@ describe('uni-info-watcher', () => {
     });
 
     it('should update Factory entity', async () => {
+      // Check txCount.
       const data = await request(endpoint, queryFactory);
       const newFactory = data.factories[0];
       expect(newFactory.txCount).to.be.equal((BigInt(oldFactory.txCount) + BigInt(1)).toString());
+    });
+
+    it('should update Pool entity', async () => {
+      // Check txCount, liquidity.
+      let expectedLiquidity = BigInt(oldPool.liquidity);
+      if (oldPool.tick !== null) {
+        if (
+          BigInt(tickLower) <= BigInt(oldPool.tick) &&
+          BigInt(tickUpper) > BigInt(oldPool.tick)
+        ) {
+          expectedLiquidity = BigInt(oldPool.liquidity) + BigInt(amount);
+        }
+      }
+
+      const data = await request(endpoint, queryPoolById, { id: pool.address });
+      const newPool = data.pool;
+
+      expect(newPool.txCount).to.be.equal((BigInt(oldPool.txCount) + BigInt(1)).toString());
+      expect(BigInt(newPool.liquidity)).to.be.equal(expectedLiquidity);
+    });
+
+    it('should create a Mint entity', async () => {
+      // Check id, owner, sender.
+      // Get the latest Mint.
+      let data: any;
+      const variables = {
+        first: 1,
+        orderBy: 'timestamp',
+        orderDirection: 'desc',
+        pool: pool.address,
+      };
+      data = await request(endpoint, queryMints, variables);
+      expect(data.mints).to.not.be.empty;
+
+      const id: string = data.mints[0].id;
+      const txCountID = id.split('#')[1];
+      const owner = data.mints[0].owner;
+      const sender = data.mints[0].sender;
+
+      data = await request(endpoint, queryPoolById, { id: pool.address });
+      const poolTxCount = data.pool.txCount;
+      const expectedOwner = recipient;
+      const expectedSender = poolCallee.address;
+
+      expect(txCountID).to.be.equal(poolTxCount);
+      expect(owner).to.be.equal(expectedOwner);
+      expect(sender).to.be.equal(expectedSender);
+    });
+
+    it('should create Tick entities', async () => {
+      // Check liquidityGross, liquidityNet.
+      const data = await request(endpoint, queryTicks, { pool: pool.address });
+      expect(data.ticks).to.not.be.empty;
+
+      const lowerTick: any = _.filter(data.ticks, { tickIdx: tickLower.toString() })[0];
+      const upperTick: any = _.filter(data.ticks, { tickIdx: tickUpper.toString() })[0];
+
+      expect(lowerTick.liquidityGross).to.be.equal(amount.toString());
+      expect(lowerTick.liquidityNet).to.be.equal(amount.toString());
+      expect(upperTick.liquidityGross).to.be.equal(amount.toString());
+      expect(upperTick.liquidityNet).to.be.equal(amount.toString());
     });
   });
 });
