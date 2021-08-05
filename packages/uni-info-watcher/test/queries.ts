@@ -3,7 +3,16 @@ import { gql } from 'graphql-request';
 export const queryToken = gql`
 query queryToken($id: ID!) {
   token(id: $id) {
+    derivedETH
+    feesUSD
     id
+    name
+    symbol
+    totalValueLocked
+    totalValueLockedUSD
+    txCount
+    volume
+    volumeUSD
   }
 }`;
 
@@ -12,6 +21,10 @@ export const queryFactory = gql`
 {
   factories(first: 1) {
     id
+    totalFeesUSD
+    totalValueLockedUSD
+    totalVolumeUSD
+    txCount
   }
 }`;
 
@@ -20,6 +33,7 @@ export const queryBundle = gql`
 {
   bundles(first: 1) {
     id
+    ethPriceUSD
   }
 }`;
 
