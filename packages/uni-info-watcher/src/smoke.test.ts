@@ -129,7 +129,7 @@ describe('uni-info-watcher', () => {
       const eventType = 'PoolCreatedEvent';
       await watchEvent(uniClient, eventType);
 
-      // Sleeping for 5 sec for the entities to be processed.
+      // Sleeping for 10 sec for the entities to be processed.
       await wait(10000);
     });
 
