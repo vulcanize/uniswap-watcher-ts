@@ -406,7 +406,7 @@ type Query {
   ): [UniswapDayData!]!
 
   positions(
-    first: Int
+    first: Int = 100
     where: Position_filter
   ): [Position!]!
 }
