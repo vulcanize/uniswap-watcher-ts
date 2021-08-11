@@ -9,7 +9,8 @@
     "test": "mocha -r ts-node/register src/**/*.spec.ts",
     "lint": "eslint .",
     "lighthouse:deploy": "hardhat lighthouse-deploy",
-    "lighthouse:store": "hardhat lighthouse-store"
+    "lighthouse:store": "hardhat lighthouse-store",
+    "smoke-test": "mocha src/smoke.test.ts"
   },
   "dependencies": {
     "@graphql-tools/schema": "^7.1.5",

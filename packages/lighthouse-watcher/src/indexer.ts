@@ -6,7 +6,7 @@ import assert from 'assert';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { Config as BaseConfig } from '@vulcanize/util';
 
-import lighthouseABI from './artifacts/Lighthouse.json';
+import lighthouseABI from './abi/Lighthouse.json';
 
 export const UNKNOWN_EVENT_NAME = '__unknown__';
 

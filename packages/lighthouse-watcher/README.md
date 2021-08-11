@@ -63,3 +63,15 @@ To trigger StorageRequest event locally, run:
 ```bash
 yarn lighthouse:store --lighthouse 0xLighthouseContractAddress --cid testCid --store-config testConfig
 ```
+
+### Smoke test
+
+To run a smoke test:
+
+* Start the server.
+ 
+* Run:
+
+  ```bash
+  $ yarn smoke-test
+  ```
