@@ -1,24 +1,27 @@
 import { task, types } from 'hardhat/config';
 import '@nomiclabs/hardhat-ethers';
-import { ContractTransaction } from 'ethers';
+import { ContractTransaction, utils } from 'ethers';
 
 task('lighthouse-store', 'Call Lighthouse store method')
   .addParam('lighthouse', 'Address of Lighthouse contract', undefined, types.string)
   .addParam('cid', 'store cid', undefined, types.string)
   .addParam('storeConfig', 'store config', undefined, types.string)
+  .addParam('fileCost', 'store fileCost (wei)', undefined, types.float)
   .setAction(async (args, hre) => {
     const {
       lighthouse: lighthouseAddress,
       cid,
-      storeConfig: config
+      storeConfig: config,
+      fileCost
     } = args;
 
     await hre.run('compile');
 
     const Ligthouse = await hre.ethers.getContractFactory('Lighthouse');
     const lighthouse = Ligthouse.attach(lighthouseAddress);
+    const value = utils.parseUnits(String(fileCost), 'wei');
 
-    const transaction: ContractTransaction = await lighthouse.store(cid, config);
+    const transaction: ContractTransaction = await lighthouse.store(cid, config, { value });
 
     const receipt = await transaction.wait();
 

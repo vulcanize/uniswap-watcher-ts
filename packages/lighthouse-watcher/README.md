@@ -61,7 +61,7 @@ subscription {
 To trigger StorageRequest event locally, run:
 
 ```bash
-yarn lighthouse:store --lighthouse 0xLighthouseContractAddress --cid testCid --store-config testConfig
+yarn lighthouse:store --lighthouse 0xLighthouseContractAddress --cid testCid --store-config testConfig --file-cost 10
 ```
 
 ### Smoke test

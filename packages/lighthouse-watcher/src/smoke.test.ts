@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import assert from 'assert';
-import { ethers, Contract, ContractTransaction, Signer } from 'ethers';
+import { ethers, Contract, ContractTransaction, Signer, utils } from 'ethers';
 import 'mocha';
 
 import {
@@ -44,6 +44,7 @@ describe('lighthouse-watcher', () => {
     (async () => {
       const cid = 'testCid';
       const config = 'testConfig';
+      const fileCost = '10';
       const signerAddress = await signer.getAddress();
 
       // Subscribe using UniClient.
@@ -52,7 +53,7 @@ describe('lighthouse-watcher', () => {
           expect(value.event.uploader).to.equal(signerAddress);
           expect(value.event.cid).to.equal(cid);
           expect(value.event.config).to.equal(config);
-          expect(value.event.fileCost).to.equal('0');
+          expect(value.event.fileCost).to.equal(fileCost);
 
           if (subscription) {
             subscription.unsubscribe();
@@ -63,7 +64,8 @@ describe('lighthouse-watcher', () => {
       });
 
       // Pool mint.
-      const transaction: ContractTransaction = await lighthouse.store(cid, config);
+      const value = utils.parseUnits(fileCost, 'wei');
+      const transaction: ContractTransaction = await lighthouse.store(cid, config, { value });
       await transaction.wait();
     })().catch((error) => {
       done(error);
