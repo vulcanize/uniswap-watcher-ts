@@ -3,8 +3,10 @@
 //
 
 import { expect } from 'chai';
+import { ethers } from 'ethers';
 import { request } from 'graphql-request';
 import Decimal from 'decimal.js';
+import { FindConditions, MoreThanOrEqual } from 'typeorm';
 
 import {
   queryFactory,
@@ -17,6 +19,10 @@ import {
   queryTokenHourData,
   queryTransactions
 } from '../test/queries';
+import { TestDatabase } from './test-db';
+import { Block } from '../src/events';
+import { BlockProgress } from '../src/entity/BlockProgress';
+import { OrderDirection } from '../src/indexer';
 
 export const checkUniswapDayData = async (endpoint: string): Promise<void> => {
   // Checked values: date, tvlUSD.
@@ -160,4 +166,59 @@ export const fetchTransaction = async (endpoint: string): Promise<{transaction: 
   expect(transaction.swaps).to.be.an.instanceOf(Array);
 
   return transaction;
+};
+
+export const insertDummyBlockProgress = async (db: TestDatabase): Promise<void> => {
+  // Save a dummy BlockProgress entity at the end of the existing chain.
+
+  const dbTx = await db.createTransactionRunner();
+
+  try {
+    const data = await db.getEntities(dbTx, BlockProgress, {}, {}, { limit: 1, orderBy: 'blockNumber', orderDirection: OrderDirection.desc });
+    const latestBP = data[0];
+
+    const randomByte = ethers.utils.randomBytes(10);
+    const blockHash = ethers.utils.sha256(randomByte);
+    const blockTimestamp = Math.floor(Date.now() / 1000);
+    const parentHash = latestBP.blockHash;
+    const blockNumber = latestBP.blockNumber + 1;
+
+    const block: Block = {
+      number: blockNumber,
+      hash: blockHash,
+      timestamp: blockTimestamp,
+      parentHash
+    };
+    await db.saveEvents(dbTx, block, []);
+
+    await dbTx.commitTransaction();
+  } catch (error) {
+    await dbTx.rollbackTransaction();
+    throw error;
+  } finally {
+    await dbTx.release();
+  }
+};
+
+export const removeDummyBlockProgress = async (db: TestDatabase): Promise<void> => {
+  // Remove the dummy BlockProgress entities.
+
+  const dbTx = await db.createTransactionRunner();
+
+  try {
+    const data = await db.getEntities(dbTx, BlockProgress, {}, {}, { limit: 1, orderBy: 'blockNumber', orderDirection: OrderDirection.desc });
+    const latestBP = data[0];
+
+    const findConditions: FindConditions<BlockProgress> = {
+      blockNumber: MoreThanOrEqual(latestBP.blockNumber)
+    };
+    await db.removeEntities(dbTx, BlockProgress, findConditions);
+
+    dbTx.commitTransaction();
+  } catch (error) {
+    await dbTx.rollbackTransaction();
+    throw error;
+  } finally {
+    await dbTx.release();
+  }
 };
