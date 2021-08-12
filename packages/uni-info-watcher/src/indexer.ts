@@ -206,6 +206,30 @@ export class Indexer {
     return block;
   }
 
+  async getBlocks (where: { [key: string]: any } = {}, queryOptions: QueryOptions): Promise<any> {
+    if (where.timestamp_gt) {
+      where.blockTimestamp_gt = where.timestamp_gt;
+      delete where.timestamp_gt;
+    }
+
+    if (where.timestamp_lt) {
+      where.blockTimestamp_lt = where.timestamp_lt;
+      delete where.timestamp_lt;
+    }
+
+    if (queryOptions.orderBy === 'timestamp') {
+      queryOptions.orderBy = 'blockTimestamp'
+    }
+
+    const blocks = await this.getEntities(BlockProgress, {}, where, queryOptions)
+
+    return blocks.map(block => ({
+      number: block.blockNumber,
+      hash: block.blockHash,
+      timestamp: block.blockTimestamp
+    }))
+  }
+
   async getEvent (id: string): Promise<Event | undefined> {
     return this._db.getEvent(id);
   }

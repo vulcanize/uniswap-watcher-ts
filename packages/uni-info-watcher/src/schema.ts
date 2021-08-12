@@ -163,7 +163,7 @@ type Position {
 type Block {
   number: Int!
   hash: Bytes!
-  timestamp: BigInt!
+  timestamp: Int!
 }
 
 enum OrderDirection {
@@ -275,8 +275,8 @@ input Position_filter {
 }
 
 input Block_filter {
-  timestamp_gt: BigInt
-  timestamp_lt: BigInt
+  timestamp_gt: Int
+  timestamp_lt: Int
 }
 
 enum Block_orderBy {
