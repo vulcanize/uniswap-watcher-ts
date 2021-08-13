@@ -783,11 +783,16 @@ export class Database {
   }
 
   async _getPrevEntityVersion<Entity> (queryRunner: QueryRunner, repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
+    // Check if query is ordered by blockNumber to get the latest entity.
     assert(findOptions.order.blockNumber);
+
+    // Get blockHashes in the frothy region and canonicalBlockNumber from where the frothy region starts.
     const { canonicalBlockNumber, blockHashes } = await this._getBranchInfo(queryRunner, findOptions.where.blockHash);
     findOptions.where.blockHash = In(blockHashes);
     let entity = await repo.findOne(findOptions);
 
+    // If entity not found in frothy region get latest entity in the pruned region.
+    // TODO: Combine query for getting entity from both the regions.
     if (!entity) {
       delete findOptions.where.blockHash;
       findOptions.where.blockNumber = LessThanOrEqual(canonicalBlockNumber);
@@ -798,23 +803,44 @@ export class Database {
   }
 
   async _getBranchInfo (queryRunner: QueryRunner, blockHash: string): Promise<{ canonicalBlockNumber: number, blockHashes: string[] }> {
-    const blockRepo = queryRunner.manager.getRepository(BlockProgress);
-    let block = await blockRepo.findOne({ blockHash });
-    assert(block);
+    // TODO: Use syncStatus.latestCanonicalBlockNumber instead of MAX_REORG_DEPTH after pruning is implemented.
+    const heirerchicalQuery = `
+      WITH RECURSIVE cte_query AS
+      (
+        SELECT
+          block_hash,
+          block_number,
+          parent_hash,
+          1 as depth
+        FROM
+          block_progress
+        WHERE
+          block_hash = $1
+        UNION ALL
+          SELECT
+            b.block_hash,
+            b.block_number,
+            b.parent_hash,
+            c.depth + 1
+          FROM
+            block_progress b
+          INNER JOIN
+            cte_query c ON c.parent_hash = b.block_hash
+          WHERE
+            c.depth < $2
+      )
+      SELECT
+        block_hash, block_number
+      FROM
+        cte_query;
+    `;
 
-    // TODO: Should be calcualted from chainHeadBlockNumber?
-    const canonicalBlockNumber = block.blockNumber - MAX_REORG_DEPTH;
+    // Get blocks in the frothy region using heirarchical query.
+    const blocks = await queryRunner.query(heirerchicalQuery, [blockHash, MAX_REORG_DEPTH]);
+    const blockHashes = blocks.map(({ block_hash: blockHash }: any) => blockHash);
 
-    const syncStatus = await this.getSyncStatus(queryRunner);
-    assert(syncStatus);
-    const blockHashes = [block.blockHash];
-
-    while (block.blockNumber > canonicalBlockNumber && block.blockNumber > syncStatus.latestCanonicalBlockNumber) {
-      blockHash = block.parentHash;
-      block = await blockRepo.findOne({ blockHash });
-      assert(block);
-      blockHashes.push(block.blockHash);
-    }
+    // Canonical block is the block after the last block in frothy region.
+    const canonicalBlockNumber = blocks[blocks.length - 1].block_number + 1;
 
     return { canonicalBlockNumber, blockHashes };
   }
