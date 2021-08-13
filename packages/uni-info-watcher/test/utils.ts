@@ -6,6 +6,7 @@ import { expect } from 'chai';
 import { ethers } from 'ethers';
 import { request } from 'graphql-request';
 import Decimal from 'decimal.js';
+import _ from 'lodash';
 
 import {
   queryFactory,
@@ -208,19 +209,66 @@ export const insertDummyBlockProgress = async (db: TestDatabase, parentBlock?: B
   }
 };
 
+export const insertNDummyBlockProgress = async (db: TestDatabase, numberOfBlocks:number, parentBlock?: Block): Promise<Block[]> => {
+  // Insert n dummy BlockProgress serially after parentBlock.
+
+  const blocksArray: Block[] = [];
+  if (!parentBlock) {
+    const randomByte = ethers.utils.randomBytes(10);
+    const hash = ethers.utils.sha256(randomByte);
+    parentBlock = {
+      number: 0,
+      hash,
+      timestamp: -1,
+      parentHash: ''
+    };
+  }
+
+  let block = parentBlock;
+  for (let i = 0; i < numberOfBlocks; i++) {
+    block = await insertDummyBlockProgress(db, block);
+    blocksArray.push(block);
+  }
+
+  return blocksArray;
+};
+
+export const createBPStructure = async (db: TestDatabase): Promise<Block[][]> => {
+  // Create the BlockProgress test data.
+
+  const blocks: Block[][] = [];
+  const firstSeg = await insertNDummyBlockProgress(db, 10);
+  const secondSeg = await insertNDummyBlockProgress(db, 5, _.last(firstSeg));
+  const thirdSeg = await insertNDummyBlockProgress(db, 11, _.last(firstSeg));
+
+  blocks.push(firstSeg);
+  blocks.push(secondSeg);
+  blocks.push(thirdSeg);
+
+  return blocks;
+};
+
+export const getSampleToken = (): Token => {
+  // Create a token with sample values.
+
+  const randomByte = ethers.utils.randomBytes(20);
+  const tokenAddress = ethers.utils.hexValue(randomByte);
+
+  const token = new Token();
+  token.symbol = 'TEST';
+  token.name = 'TestToken';
+  token.id = tokenAddress;
+  token.totalSupply = new Decimal(0);
+  token.decimals = BigInt(0);
+
+  return token;
+};
+
 export const insertDummyToken = async (db: TestDatabase, block: Block, token?: Token): Promise<Token> => {
   // Save a dummy Token entity at block.
 
   if (!token) {
-    const randomByte = ethers.utils.randomBytes(20);
-    const tokenAddress = ethers.utils.hexValue(randomByte);
-
-    token = new Token();
-    token.symbol = 'TEST';
-    token.name = 'TestToken';
-    token.id = tokenAddress;
-    token.totalSupply = new Decimal(0);
-    token.decimals = BigInt(0);
+    token = getSampleToken();
   }
 
   const dbTx = await db.createTransactionRunner();
