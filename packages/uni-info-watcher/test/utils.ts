@@ -23,6 +23,7 @@ import { TestDatabase } from './test-db';
 import { Block } from '../src/events';
 import { BlockProgress } from '../src/entity/BlockProgress';
 import { OrderDirection } from '../src/indexer';
+import { Token } from '../src/entity/Token';
 
 export const checkUniswapDayData = async (endpoint: string): Promise<void> => {
   // Checked values: date, tvlUSD.
@@ -168,20 +169,28 @@ export const fetchTransaction = async (endpoint: string): Promise<{transaction: 
   return transaction;
 };
 
-export const insertDummyBlockProgress = async (db: TestDatabase): Promise<void> => {
-  // Save a dummy BlockProgress entity at the end of the existing chain.
+export const insertDummyBlockProgress = async (db: TestDatabase, parentBlock?: Block): Promise<Block> => {
+  // Save a dummy BlockProgress entity after parentBP.
 
   const dbTx = await db.createTransactionRunner();
 
   try {
-    const data = await db.getEntities(dbTx, BlockProgress, {}, {}, { limit: 1, orderBy: 'blockNumber', orderDirection: OrderDirection.desc });
-    const latestBP = data[0];
+    if (!parentBlock) {
+      const data = await db.getEntities(dbTx, BlockProgress, {}, {}, { limit: 1, orderBy: 'blockNumber', orderDirection: OrderDirection.desc });
+      const parentBP = data[0];
+      parentBlock = {
+        number: parentBP.blockNumber,
+        hash: parentBP.blockHash,
+        timestamp: parentBP.blockTimestamp,
+        parentHash: parentBP.parentHash
+      };
+    }
 
     const randomByte = ethers.utils.randomBytes(10);
     const blockHash = ethers.utils.sha256(randomByte);
     const blockTimestamp = Math.floor(Date.now() / 1000);
-    const parentHash = latestBP.blockHash;
-    const blockNumber = latestBP.blockNumber + 1;
+    const parentHash = parentBlock.hash;
+    const blockNumber = parentBlock.number + 1;
 
     const block: Block = {
       number: blockNumber,
@@ -192,6 +201,7 @@ export const insertDummyBlockProgress = async (db: TestDatabase): Promise<void> 
     await db.saveEvents(dbTx, block, []);
 
     await dbTx.commitTransaction();
+    return block;
   } catch (error) {
     await dbTx.rollbackTransaction();
     throw error;
@@ -200,19 +210,61 @@ export const insertDummyBlockProgress = async (db: TestDatabase): Promise<void> 
   }
 };
 
-export const removeDummyBlockProgress = async (db: TestDatabase): Promise<void> => {
-  // Remove the dummy BlockProgress entities.
+export const removeDummyBlockProgress = async (db: TestDatabase, blockNumber: number): Promise<void> => {
+  // Remove the dummy BlockProgress entities with blockNumber >= blockNumber.
 
   const dbTx = await db.createTransactionRunner();
 
   try {
-    const data = await db.getEntities(dbTx, BlockProgress, {}, {}, { limit: 1, orderBy: 'blockNumber', orderDirection: OrderDirection.desc });
-    const latestBP = data[0];
-
     const findConditions: FindConditions<BlockProgress> = {
-      blockNumber: MoreThanOrEqual(latestBP.blockNumber)
+      blockNumber: MoreThanOrEqual(blockNumber)
     };
     await db.removeEntities(dbTx, BlockProgress, findConditions);
+
+    dbTx.commitTransaction();
+  } catch (error) {
+    await dbTx.rollbackTransaction();
+    throw error;
+  } finally {
+    await dbTx.release();
+  }
+};
+
+export const insertDummyToken = async (db: TestDatabase, block: Block): Promise<Token> => {
+  const randomByte = ethers.utils.randomBytes(20);
+  const tokenAddress = ethers.utils.hexValue(randomByte);
+
+  let token = new Token();
+  token.symbol = 'unknown';
+  token.name = 'unknown';
+  token.id = tokenAddress;
+  token.totalSupply = new Decimal(0);
+  token.decimals = BigInt(0);
+
+  const dbTx = await db.createTransactionRunner();
+
+  try {
+    token = await db.saveToken(dbTx, token, block);
+    dbTx.commitTransaction();
+    return token;
+  } catch (error) {
+    await dbTx.rollbackTransaction();
+    throw error;
+  } finally {
+    await dbTx.release();
+  }
+};
+
+export const removeDummyToken = async (db: TestDatabase, blockNumber: number): Promise<void> => {
+  // Remove the dummy Token entities with blockNumber >= blockNumber.
+
+  const dbTx = await db.createTransactionRunner();
+
+  try {
+    const findConditions: FindConditions<Token> = {
+      blockNumber: MoreThanOrEqual(blockNumber)
+    };
+    await db.removeEntities(dbTx, Token, findConditions);
 
     dbTx.commitTransaction();
   } catch (error) {
