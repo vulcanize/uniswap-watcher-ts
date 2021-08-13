@@ -10,13 +10,17 @@ import {
 } from '@vulcanize/util';
 
 import { TestDatabase } from '../test/test-db';
-import { insertDummyBlockProgress, removeDummyBlockProgress, insertDummyToken, removeDummyToken } from '../test/utils';
+import { insertDummyBlockProgress, insertDummyToken, removeEntities } from '../test/utils';
 import { Block } from './events';
+import { BlockProgress } from './entity/BlockProgress';
+import { SyncStatus } from './entity/SyncStatus';
+import { Token } from './entity/Token';
 
 describe('getPrevEntityVersion', () => {
   let db: TestDatabase;
-  let firstTestBlock: Block;
-  let lastTestBlock: Block;
+  let tail: Block;
+  let head: Block;
+  let isDbEmptyBeforeTest: boolean;
 
   before(async () => {
     // Get config.
@@ -30,37 +34,44 @@ describe('getPrevEntityVersion', () => {
     db = new TestDatabase(dbConfig);
     await db.init();
 
+    // Check if database is empty.
+    isDbEmptyBeforeTest = await db.isEmpty();
+    assert(isDbEmptyBeforeTest, 'Abort: Database not empty.');
+
     // Insert 21 blocks linearly.
-    firstTestBlock = await insertDummyBlockProgress(db);
-    let block = firstTestBlock;
+    tail = await insertDummyBlockProgress(db);
+    let block = tail;
     for (let i = 0; i < 20; i++) {
       block = await insertDummyBlockProgress(db, block);
     }
-    lastTestBlock = block;
+    head = block;
   });
 
   after(async () => {
-    await removeDummyBlockProgress(db, firstTestBlock.number);
-    db.close();
+    if (isDbEmptyBeforeTest) {
+      await removeEntities(db, BlockProgress);
+      await removeEntities(db, SyncStatus);
+    }
+    await db.close();
   });
 
   afterEach(async () => {
-    await removeDummyToken(db, firstTestBlock.number);
+    await removeEntities(db, Token);
   });
 
   //
   //                     +---+
-  //           head----->| 20|
+  //           head----->| 21|
   //                     +---+
   //                         \
   //                          \
   //                           +---+
-  //                           | 19|
+  //                           | 20|
   //                           +---+
   //                                \
   //                                 \
   //                                  +---+
-  //                                  | 18|
+  //                                  | 19|
   //                                  +---+
   //                                       \
   //                                        \
@@ -69,27 +80,26 @@ describe('getPrevEntityVersion', () => {
   //                                            \
   //                                             \
   //                                              +---+
-  //                                              | 2 |
+  //                                              | 3 |
   //                                              +---+
   //                                                   \
   //                                                    \
   //                                                     +---+
-  //                                                     | 1 |
+  //                                                     | 2 |
   //                                                     +---+
   //                                                          \
   //                                                           \
   //                                                            +---+
-  //                                                  tail----->| 0 |------Token
+  //                                                  tail----->| 1 |------Token
   //                                                            +---+
-  //                                                                 \
   //
   it('should fetch Token in pruned region', async () => {
-    // Insert Token entity at the firstTestBlock.
-    const token = await insertDummyToken(db, firstTestBlock);
+    // Insert a Token entity at the tail.
+    const token = await insertDummyToken(db, tail);
     const dbTx = await db.createTransactionRunner();
 
     try {
-      const searchedToken = await db.getToken(dbTx, { id: token.id, blockHash: lastTestBlock.hash });
+      const searchedToken = await db.getToken(dbTx, { id: token.id, blockHash: head.hash });
       expect(searchedToken).to.not.be.empty;
       expect(searchedToken?.id).to.be.equal(token.id);
       expect(searchedToken?.txCount).to.be.equal(token.txCount.toString());

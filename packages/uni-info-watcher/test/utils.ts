@@ -6,7 +6,6 @@ import { expect } from 'chai';
 import { ethers } from 'ethers';
 import { request } from 'graphql-request';
 import Decimal from 'decimal.js';
-import { FindConditions, MoreThanOrEqual } from 'typeorm';
 
 import {
   queryFactory,
@@ -21,8 +20,6 @@ import {
 } from '../test/queries';
 import { TestDatabase } from './test-db';
 import { Block } from '../src/events';
-import { BlockProgress } from '../src/entity/BlockProgress';
-import { OrderDirection } from '../src/indexer';
 import { Token } from '../src/entity/Token';
 
 export const checkUniswapDayData = async (endpoint: string): Promise<void> => {
@@ -170,19 +167,19 @@ export const fetchTransaction = async (endpoint: string): Promise<{transaction: 
 };
 
 export const insertDummyBlockProgress = async (db: TestDatabase, parentBlock?: Block): Promise<Block> => {
-  // Save a dummy BlockProgress entity after parentBP.
+  // Save a dummy BlockProgress entity after parentBlock.
 
   const dbTx = await db.createTransactionRunner();
 
   try {
     if (!parentBlock) {
-      const data = await db.getEntities(dbTx, BlockProgress, {}, {}, { limit: 1, orderBy: 'blockNumber', orderDirection: OrderDirection.desc });
-      const parentBP = data[0];
+      const randomByte = ethers.utils.randomBytes(10);
+      const hash = ethers.utils.sha256(randomByte);
       parentBlock = {
-        number: parentBP.blockNumber,
-        hash: parentBP.blockHash,
-        timestamp: parentBP.blockTimestamp,
-        parentHash: parentBP.parentHash
+        number: 0,
+        hash,
+        timestamp: -1,
+        parentHash: ''
       };
     }
 
@@ -198,6 +195,7 @@ export const insertDummyBlockProgress = async (db: TestDatabase, parentBlock?: B
       timestamp: blockTimestamp,
       parentHash
     };
+    await db.updateSyncStatus(dbTx, blockHash, blockNumber);
     await db.saveEvents(dbTx, block, []);
 
     await dbTx.commitTransaction();
@@ -210,36 +208,20 @@ export const insertDummyBlockProgress = async (db: TestDatabase, parentBlock?: B
   }
 };
 
-export const removeDummyBlockProgress = async (db: TestDatabase, blockNumber: number): Promise<void> => {
-  // Remove the dummy BlockProgress entities with blockNumber >= blockNumber.
+export const insertDummyToken = async (db: TestDatabase, block: Block, token?: Token): Promise<Token> => {
+  // Save a dummy Token entity at block.
 
-  const dbTx = await db.createTransactionRunner();
+  if (!token) {
+    const randomByte = ethers.utils.randomBytes(20);
+    const tokenAddress = ethers.utils.hexValue(randomByte);
 
-  try {
-    const findConditions: FindConditions<BlockProgress> = {
-      blockNumber: MoreThanOrEqual(blockNumber)
-    };
-    await db.removeEntities(dbTx, BlockProgress, findConditions);
-
-    dbTx.commitTransaction();
-  } catch (error) {
-    await dbTx.rollbackTransaction();
-    throw error;
-  } finally {
-    await dbTx.release();
+    token = new Token();
+    token.symbol = 'TEST';
+    token.name = 'TestToken';
+    token.id = tokenAddress;
+    token.totalSupply = new Decimal(0);
+    token.decimals = BigInt(0);
   }
-};
-
-export const insertDummyToken = async (db: TestDatabase, block: Block): Promise<Token> => {
-  const randomByte = ethers.utils.randomBytes(20);
-  const tokenAddress = ethers.utils.hexValue(randomByte);
-
-  let token = new Token();
-  token.symbol = 'unknown';
-  token.name = 'unknown';
-  token.id = tokenAddress;
-  token.totalSupply = new Decimal(0);
-  token.decimals = BigInt(0);
 
   const dbTx = await db.createTransactionRunner();
 
@@ -255,17 +237,13 @@ export const insertDummyToken = async (db: TestDatabase, block: Block): Promise<
   }
 };
 
-export const removeDummyToken = async (db: TestDatabase, blockNumber: number): Promise<void> => {
-  // Remove the dummy Token entities with blockNumber >= blockNumber.
+export async function removeEntities<Entity> (db: TestDatabase, entity: new () => Entity): Promise<void> {
+  // Remove all entries of the specified entity from database.
 
   const dbTx = await db.createTransactionRunner();
 
   try {
-    const findConditions: FindConditions<Token> = {
-      blockNumber: MoreThanOrEqual(blockNumber)
-    };
-    await db.removeEntities(dbTx, Token, findConditions);
-
+    await db.removeEntities(dbTx, entity);
     dbTx.commitTransaction();
   } catch (error) {
     await dbTx.rollbackTransaction();
@@ -273,4 +251,4 @@ export const removeDummyToken = async (db: TestDatabase, blockNumber: number): P
   } finally {
     await dbTx.release();
   }
-};
+}
