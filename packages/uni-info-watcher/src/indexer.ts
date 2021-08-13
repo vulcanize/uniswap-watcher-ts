@@ -218,16 +218,16 @@ export class Indexer {
     }
 
     if (queryOptions.orderBy === 'timestamp') {
-      queryOptions.orderBy = 'blockTimestamp'
+      queryOptions.orderBy = 'blockTimestamp';
     }
 
-    const blocks = await this.getEntities(BlockProgress, {}, where, queryOptions)
+    const blocks = await this.getEntities(BlockProgress, {}, where, queryOptions);
 
     return blocks.map(block => ({
+      timestamp: block.blockTimestamp,
       number: block.blockNumber,
-      hash: block.blockHash,
-      timestamp: block.blockTimestamp
-    }))
+      hash: block.blockHash
+    }));
   }
 
   async getEvent (id: string): Promise<Event | undefined> {
@@ -314,7 +314,11 @@ export class Indexer {
       where = Object.entries(where).reduce((acc: { [key: string]: any }, [fieldWithSuffix, value]) => {
         const [field, ...suffix] = fieldWithSuffix.split('_');
 
-        acc[field] = {
+        if (!acc[field]) {
+          acc[field] = [];
+        }
+
+        const filter = {
           value,
           not: false,
           operator: 'equals'
@@ -323,13 +327,15 @@ export class Indexer {
         let operator = suffix.shift();
 
         if (operator === 'not') {
-          acc[field].not = true;
+          filter.not = true;
           operator = suffix.shift();
         }
 
         if (operator) {
-          acc[field].operator = operator;
+          filter.operator = operator;
         }
+
+        acc[field].push(filter);
 
         return acc;
       }, {});
