@@ -167,23 +167,12 @@ export const fetchTransaction = async (endpoint: string): Promise<{transaction: 
   return transaction;
 };
 
-export const insertDummyBlockProgress = async (db: TestDatabase, parentBlock?: Block): Promise<Block> => {
-  // Save a dummy BlockProgress entity after parentBlock.
+export const insertDummyBlock = async (db: TestDatabase, parentBlock: Block): Promise<Block> => {
+  // Insert a dummy BlockProgress entity after parentBlock.
 
   const dbTx = await db.createTransactionRunner();
 
   try {
-    if (!parentBlock) {
-      const randomByte = ethers.utils.randomBytes(10);
-      const hash = ethers.utils.sha256(randomByte);
-      parentBlock = {
-        number: 0,
-        hash,
-        timestamp: -1,
-        parentHash: ''
-      };
-    }
-
     const randomByte = ethers.utils.randomBytes(10);
     const blockHash = ethers.utils.sha256(randomByte);
     const blockTimestamp = Math.floor(Date.now() / 1000);
@@ -209,7 +198,7 @@ export const insertDummyBlockProgress = async (db: TestDatabase, parentBlock?: B
   }
 };
 
-export const insertNDummyBlockProgress = async (db: TestDatabase, numberOfBlocks:number, parentBlock?: Block): Promise<Block[]> => {
+export const insertNDummyBlocks = async (db: TestDatabase, numberOfBlocks:number, parentBlock?: Block): Promise<Block[]> => {
   // Insert n dummy BlockProgress serially after parentBlock.
 
   const blocksArray: Block[] = [];
@@ -226,7 +215,7 @@ export const insertNDummyBlockProgress = async (db: TestDatabase, numberOfBlocks
 
   let block = parentBlock;
   for (let i = 0; i < numberOfBlocks; i++) {
-    block = await insertDummyBlockProgress(db, block);
+    block = await insertDummyBlock(db, block);
     blocksArray.push(block);
   }
 
@@ -238,11 +227,11 @@ export const createBlockTree = async (db: TestDatabase): Promise<Block[][]> => {
 
   const blocks: Block[][] = [];
 
-  const firstSeg = await insertNDummyBlockProgress(db, 9);
-  const secondSeg = await insertNDummyBlockProgress(db, 2, _.last(firstSeg));
-  const thirdSeg = await insertNDummyBlockProgress(db, 1, _.last(firstSeg));
-  const fourthSeg = await insertNDummyBlockProgress(db, 11, _.last(thirdSeg));
-  const fifthSeg = await insertNDummyBlockProgress(db, 5, _.last(thirdSeg));
+  const firstSeg = await insertNDummyBlocks(db, 9);
+  const secondSeg = await insertNDummyBlocks(db, 2, _.last(firstSeg));
+  const thirdSeg = await insertNDummyBlocks(db, 1, _.last(firstSeg));
+  const fourthSeg = await insertNDummyBlocks(db, 11, _.last(thirdSeg));
+  const fifthSeg = await insertNDummyBlocks(db, 5, _.last(thirdSeg));
 
   blocks.push(firstSeg);
   blocks.push(secondSeg);
@@ -254,7 +243,7 @@ export const createBlockTree = async (db: TestDatabase): Promise<Block[][]> => {
 };
 
 export const insertDummyToken = async (db: TestDatabase, block: Block, token?: Token): Promise<Token> => {
-  // Save a dummy Token entity at block.
+  // Insert a dummy Token entity at block.
 
   if (!token) {
     const randomByte = ethers.utils.randomBytes(20);
