@@ -237,13 +237,18 @@ export const createBPStructure = async (db: TestDatabase): Promise<Block[][]> =>
   // Create the BlockProgress test data.
 
   const blocks: Block[][] = [];
-  const firstSeg = await insertNDummyBlockProgress(db, 10);
-  const secondSeg = await insertNDummyBlockProgress(db, 5, _.last(firstSeg));
-  const thirdSeg = await insertNDummyBlockProgress(db, 11, _.last(firstSeg));
+
+  const firstSeg = await insertNDummyBlockProgress(db, 9);
+  const secondSeg = await insertNDummyBlockProgress(db, 2, _.last(firstSeg));
+  const thirdSeg = await insertNDummyBlockProgress(db, 1, _.last(firstSeg));
+  const fourthSeg = await insertNDummyBlockProgress(db, 11, _.last(thirdSeg));
+  const fifthSeg = await insertNDummyBlockProgress(db, 5, _.last(thirdSeg));
 
   blocks.push(firstSeg);
   blocks.push(secondSeg);
   blocks.push(thirdSeg);
+  blocks.push(fourthSeg);
+  blocks.push(fifthSeg);
 
   return blocks;
 };
