@@ -19,6 +19,8 @@ export interface SyncStatusInterface {
   id: number;
   chainHeadBlockHash: string;
   chainHeadBlockNumber: number;
+  latestIndexedBlockHash: string;
+  latestIndexedBlockNumber: number;
   latestCanonicalBlockHash: string;
   latestCanonicalBlockNumber: number;
 }
@@ -39,6 +41,10 @@ export interface IndexerInterface {
   getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>
   getEvent (id: string): Promise<EventInterface | undefined>
   updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void>
+  getSyncStatus (): Promise<SyncStatusInterface | undefined>;
+  getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
+  blockIsAncestor (ancestorBlockHash: string, blockHash: string, maxDepth: number): Promise<boolean>;
+  markBlockAsPruned (block: BlockProgressInterface): Promise<BlockProgressInterface>;
 }
 
 export interface EventWatcherInterface {

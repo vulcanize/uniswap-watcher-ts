@@ -10,7 +10,7 @@ import assert from 'assert';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { GetStorageAt, getStorageValue, StorageLayout } from '@vulcanize/solidity-mapper';
-import { Config } from '@vulcanize/util';
+import { Config, IndexerInterface } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
@@ -46,7 +46,7 @@ interface ValueResult {
   }
 }
 
-export class Indexer {
+export class Indexer implements IndexerInterface {
   _config: Config;
   _db: Database
   _ethClient: EthClient

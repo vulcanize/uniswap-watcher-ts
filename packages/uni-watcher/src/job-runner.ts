@@ -10,7 +10,7 @@ import debug from 'debug';
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { getConfig, JobQueue, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, QUEUE_CHAIN_PRUNING } from '@vulcanize/util';
+import { getConfig, JobQueue, pruneChainAtHeight, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, QUEUE_CHAIN_PRUNING } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
@@ -149,36 +149,7 @@ export class JobRunner {
     await this._jobQueue.subscribe(QUEUE_CHAIN_PRUNING, async (job) => {
       const pruneBlockHeight: number = job.data.pruneBlockHeight;
 
-      log(`Processing chain pruning at ${pruneBlockHeight}`);
-
-      // Assert we're at a depth where pruning is safe.
-      const syncStatus = await this._indexer.getSyncStatus();
-      assert(syncStatus);
-      assert(syncStatus.latestIndexedBlockNumber >= (pruneBlockHeight + MAX_REORG_DEPTH));
-
-      // Check that we haven't already pruned at this depth.
-      if (syncStatus.latestCanonicalBlockNumber >= pruneBlockHeight) {
-        log(`Already pruned at block height ${pruneBlockHeight}, latestCanonicalBlockNumber ${syncStatus.latestCanonicalBlockNumber}`);
-      } else {
-        // Check how many branches there are at the given height/block number.
-        const blocksAtHeight = await this._indexer.getBlocksAtHeight(pruneBlockHeight, false);
-
-        // Should be at least 1.
-        assert(blocksAtHeight.length);
-
-        // We have more than one node at this height, so prune all nodes not reachable from head.
-        // This will lead to orphaned nodes, which will get pruned at the next height.
-        if (blocksAtHeight.length > 1) {
-          for (let i = 0; i < blocksAtHeight.length; i++) {
-            const block = blocksAtHeight[i];
-            // If this block is not reachable from the latest indexed block, mark it as pruned.
-            const isAncestor = await this._indexer.blockIsAncestor(block.blockHash, syncStatus.latestIndexedBlockHash, MAX_REORG_DEPTH);
-            if (!isAncestor) {
-              await this._indexer.markBlockAsPruned(block);
-            }
-          }
-        }
-      }
+      await pruneChainAtHeight(pruneBlockHeight, this._indexer, log);
 
       await this._jobQueue.markComplete(job);
     });
