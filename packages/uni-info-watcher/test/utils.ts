@@ -233,8 +233,8 @@ export const insertNDummyBlockProgress = async (db: TestDatabase, numberOfBlocks
   return blocksArray;
 };
 
-export const createBPStructure = async (db: TestDatabase): Promise<Block[][]> => {
-  // Create the BlockProgress test data.
+export const createBlockTree = async (db: TestDatabase): Promise<Block[][]> => {
+  // Create BlockProgress test data.
 
   const blocks: Block[][] = [];
 
@@ -253,27 +253,19 @@ export const createBPStructure = async (db: TestDatabase): Promise<Block[][]> =>
   return blocks;
 };
 
-export const getSampleToken = (): Token => {
-  // Create a token with sample values.
-
-  const randomByte = ethers.utils.randomBytes(20);
-  const tokenAddress = ethers.utils.hexValue(randomByte);
-
-  const token = new Token();
-  token.symbol = 'TEST';
-  token.name = 'TestToken';
-  token.id = tokenAddress;
-  token.totalSupply = new Decimal(0);
-  token.decimals = BigInt(0);
-
-  return token;
-};
-
 export const insertDummyToken = async (db: TestDatabase, block: Block, token?: Token): Promise<Token> => {
   // Save a dummy Token entity at block.
 
   if (!token) {
-    token = getSampleToken();
+    const randomByte = ethers.utils.randomBytes(20);
+    const tokenAddress = ethers.utils.hexValue(randomByte);
+
+    token = new Token();
+    token.symbol = 'TEST';
+    token.name = 'TestToken';
+    token.id = tokenAddress;
+    token.totalSupply = new Decimal(0);
+    token.decimals = BigInt(0);
   }
 
   const dbTx = await db.createTransactionRunner();
