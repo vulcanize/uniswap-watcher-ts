@@ -222,8 +222,44 @@ export const insertNDummyBlocks = async (db: TestDatabase, numberOfBlocks:number
   return blocksArray;
 };
 
-export const createBlockTree = async (db: TestDatabase): Promise<Block[][]> => {
+export const createTestBlockTree = async (db: TestDatabase): Promise<Block[][]> => {
   // Create BlockProgress test data.
+  //
+  //                                     +---+
+  //                           head----->| 21|
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                     +---+            +---+
+  //                                     | 20|            | 15|------Token (token44)
+  //                                     +---+            +---+
+  //                                       |             /
+  //                                       |            /
+  //                                      8 Blocks   3 Blocks
+  //                                       |          /
+  //                                       |         /
+  //                       +---+         +---+  +---+
+  //                       | 11|         | 11|  | 11|
+  //                       +---+         +---+  +---+
+  //                            \          |   /
+  //                             \         |  /
+  //                              +---+  +---+
+  //                              | 10|  | 10|
+  //                              +---+  +---+
+  //                                   \   |
+  //                                    \  |
+  //                                     +---+
+  //                                     | 9 |
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                   7 Blocks
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                           tail----->| 1 |------Token (token00)
+  //                                     +---+        (Target)
+  //
 
   const blocks: Block[][] = [];
 

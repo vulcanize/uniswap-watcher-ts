@@ -11,7 +11,7 @@ import {
 } from '@vulcanize/util';
 
 import { TestDatabase } from '../test/test-db';
-import { createBlockTree, insertDummyToken, removeEntities } from '../test/utils';
+import { createTestBlockTree, insertDummyToken, removeEntities } from '../test/utils';
 import { Block } from './events';
 import { BlockProgress } from './entity/BlockProgress';
 import { SyncStatus } from './entity/SyncStatus';
@@ -41,7 +41,7 @@ describe('getPrevEntityVersion', () => {
     assert(isDbEmptyBeforeTest, 'Abort: Database not empty.');
 
     // Create BlockProgress test data.
-    blocks = await createBlockTree(db);
+    blocks = await createTestBlockTree(db);
     tail = blocks[0][0];
     head = blocks[3][10];
   });
@@ -110,6 +110,82 @@ describe('getPrevEntityVersion', () => {
       expect(searchedToken?.txCount).to.be.equal(token00.txCount.toString());
       expect(searchedToken?.blockNumber).to.be.equal(token00.blockNumber);
       expect(searchedToken?.blockHash).to.be.equal(token00.blockHash);
+
+      dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+  });
+
+  //
+  //                                     +---+
+  //                           head----->| 21|
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                     +---+            +---+
+  //                                     | 20|            | 15|------Token (token44)
+  //                                     +---+            +---+
+  //                                       |             /
+  //                                       |            /
+  //                                      8 Blocks   3 Blocks
+  //                                       |          /
+  //                                       |         /
+  //                       +---+         +---+  +---+
+  //                       | 11|         | 11|  | 11|
+  //                       +---+         +---+  +---+
+  //                            \          |   /
+  //                             \         |  /
+  //                              +---+  +---+
+  //                              | 10|  | 10|
+  //                              +---+  +---+
+  //                                   \   |
+  //                                    \  |
+  //                                     +---+
+  //                                     | 9 |
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                   5 Blocks
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                                     | 3 |------Token (token02)
+  //                                     +---+         (Target)
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                                     | 2 |
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                           tail----->| 1 |------Token (token00)
+  //                                     +---+
+  //
+  it('should fetch updated Token in pruned region', async () => {
+    // Insert a Token entity at the tail and update in pruned region.
+    const token00 = await insertDummyToken(db, tail);
+
+    const token02 = _.cloneDeep(token00);
+    token02.txCount++;
+    await insertDummyToken(db, blocks[0][2], token02);
+
+    const token44 = _.cloneDeep(token00);
+    token44.txCount++;
+    await insertDummyToken(db, blocks[4][4], token44);
+
+    const dbTx = await db.createTransactionRunner();
+    try {
+      const searchedToken = await db.getToken(dbTx, { id: token00.id, blockHash: head.hash });
+      expect(searchedToken).to.not.be.empty;
+      expect(searchedToken?.id).to.be.equal(token02.id);
+      expect(searchedToken?.txCount).to.be.equal(token02.txCount.toString());
+      expect(searchedToken?.blockNumber).to.be.equal(token02.blockNumber);
+      expect(searchedToken?.blockHash).to.be.equal(token02.blockHash);
 
       dbTx.commitTransaction();
     } catch (error) {
@@ -292,7 +368,7 @@ describe('getPrevEntityVersion', () => {
   //                           tail----->| 1 |
   //                                     +---+
   //
-  it('should not fetch the Token in frothy region', async () => {
+  it('should not fetch the Token from a side branch in frothy region', async () => {
     // Insert a Token entity in the frothy region in a side branch.
     const token44 = await insertDummyToken(db, blocks[4][4]);
 
