@@ -7,12 +7,15 @@ import 'reflect-metadata';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
+import { PubSub } from 'apollo-server-express';
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { getConfig, fillBlocks } from '@vulcanize/util';
+import { getConfig, fillBlocks, JobQueue } from '@vulcanize/util';
 
 import { Database } from './database';
+import { Indexer } from './indexer';
+import { EventWatcher } from './events';
 
 const log = debug('vulcanize:server');
 
@@ -63,9 +66,27 @@ export const main = async (): Promise<any> => {
     cache
   });
 
+  const postgraphileClient = new EthClient({
+    gqlEndpoint: gqlPostgraphileEndpoint,
+    cache
+  });
+
+  // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
+  // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
+  const pubsub = new PubSub();
+  const indexer = new Indexer(config, db, ethClient, postgraphileClient);
+
+  const { dbConnectionString, maxCompletionLag } = jobQueueConfig;
+  assert(dbConnectionString, 'Missing job queue db connection string');
+
+  const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag });
+  await jobQueue.start();
+
+  const eventWatcher = new EventWatcher(ethClient, indexer, pubsub, jobQueue);
+
   assert(jobQueueConfig, 'Missing job queue config');
 
-  await fillBlocks(db, ethClient, jobQueueConfig, argv);
+  await fillBlocks(jobQueue, indexer, ethClient, eventWatcher, argv);
 };
 
 main().then(() => {

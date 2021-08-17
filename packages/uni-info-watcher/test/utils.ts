@@ -20,10 +20,10 @@ import {
   queryTokenHourData,
   queryTransactions
 } from '../test/queries';
-import { TestDatabase } from './test-db';
 import { Block } from '../src/events';
 import { Token } from '../src/entity/Token';
 import { BlockProgress } from '../src/entity/BlockProgress';
+import { TestDatabase } from './test-db';
 
 export const checkUniswapDayData = async (endpoint: string): Promise<void> => {
   // Checked values: date, tvlUSD.

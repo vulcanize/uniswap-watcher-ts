@@ -16,11 +16,11 @@ import { Database } from './database';
 import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
 import { BlockProgress } from './entity/BlockProgress';
 import { Contract, KIND_FACTORY, KIND_POOL, KIND_NFPM } from './entity/Contract';
+import { SyncStatus } from './entity/SyncStatus';
 
 import { abi as factoryABI, storageLayout as factoryStorageLayout } from './artifacts/factory.json';
 import { abi as nfpmABI, storageLayout as nfpmStorageLayout } from './artifacts/NonfungiblePositionManager.json';
 import poolABI from './artifacts/pool.json';
-import { SyncStatus } from './entity/SyncStatus';
 
 // TODO: Move to config.
 const MAX_EVENTS_BLOCK_RANGE = 1000;

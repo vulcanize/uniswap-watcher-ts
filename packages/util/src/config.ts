@@ -12,7 +12,7 @@ import { Config as CacheConfig } from '@vulcanize/cache';
 
 const log = debug('vulcanize:config');
 
-export interface jobQueueConfig {
+export interface JobQueueConfig {
   dbConnectionString: string;
   maxCompletionLag: number;
   jobDelay?: number;
@@ -42,7 +42,7 @@ export interface Config {
       gqlSubscriptionEndpoint: string;
     }
   },
-  jobQueue: jobQueueConfig
+  jobQueue: JobQueueConfig
 }
 
 export const getConfig = async (configFile: string): Promise<Config> => {

@@ -8,3 +8,5 @@ export * from './src/job-queue';
 export * from './src/constants';
 export * from './src/index';
 export * from './src/fill';
+export * from './src/events';
+export * from './src/types';

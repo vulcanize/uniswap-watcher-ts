@@ -7,9 +7,11 @@ import debug from 'debug';
 import { DeepPartial, QueryRunner } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { utils } from 'ethers';
+
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@vulcanize/ipld-eth-client';
+import { IndexerInterface } from '@vulcanize/util';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
@@ -42,7 +44,7 @@ export interface ValueResult {
 
 export { OrderDirection, BlockHeight };
 
-export class Indexer {
+export class Indexer implements IndexerInterface {
   _db: Database
   _uniClient: UniClient
   _erc20Client: ERC20Client
