@@ -4,16 +4,16 @@
 
 import assert from 'assert';
 import _ from 'lodash';
-import { Connection, ConnectionOptions, DeepPartial, QueryRunner } from 'typeorm';
+import { Connection, ConnectionOptions, DeepPartial, QueryRunner, FindConditions } from 'typeorm';
 
-import { Database as BaseDatabase } from '@vulcanize/util';
+import { Database as BaseDatabase, DatabaseInterface } from '@vulcanize/util';
 
 import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
 import { Contract } from './entity/Contract';
 import { BlockProgress } from './entity/BlockProgress';
 import { SyncStatus } from './entity/SyncStatus';
 
-export class Database {
+export class Database implements DatabaseInterface {
   _config: ConnectionOptions
   _conn!: Connection
   _baseDatabase: BaseDatabase
@@ -210,5 +210,42 @@ export class Database {
 
       await repo.save(entity);
     }
+  }
+
+  async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<Entity[]> {
+    const repo = queryRunner.manager.getRepository(entity);
+
+    const entities = await repo.find(findConditions);
+    return entities;
+  }
+
+  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void> {
+    const repo = queryRunner.manager.getRepository(entity);
+
+    const entities = await repo.find(findConditions);
+    await repo.remove(entities);
+  }
+
+  async isEntityEmpty<Entity> (entity: new () => Entity): Promise<boolean> {
+    const dbTx = await this.createTransactionRunner();
+    try {
+      const data = await this.getEntities(dbTx, entity);
+
+      if (data.length > 0) {
+        return false;
+      }
+      return true;
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+  }
+
+  async updateSyncStatus (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    // TODO: remove this function from here after the DatabaseInterface is changed.
+    const syncStatus = await this.updateSyncStatusChainHead(queryRunner, blockHash, blockNumber);
+    return syncStatus;
   }
 }

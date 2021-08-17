@@ -10,7 +10,7 @@ import {
   getConfig
 } from '@vulcanize/util';
 
-import { TestDatabase } from '../test/test-db';
+import { Database } from './database';
 import { createTestBlockTree, insertDummyToken, removeEntities } from '../test/utils';
 import { Block } from './events';
 import { BlockProgress } from './entity/BlockProgress';
@@ -18,7 +18,7 @@ import { SyncStatus } from './entity/SyncStatus';
 import { Token } from './entity/Token';
 
 describe('getPrevEntityVersion', () => {
-  let db: TestDatabase;
+  let db: Database;
   let blocks: Block[][];
   let tail: Block;
   let head: Block;
@@ -33,11 +33,15 @@ describe('getPrevEntityVersion', () => {
     assert(dbConfig, 'Missing dbConfig.');
 
     // Initialize database.
-    db = new TestDatabase(dbConfig);
+    db = new Database(dbConfig);
     await db.init();
 
     // Check if database is empty.
-    isDbEmptyBeforeTest = await db.isEmpty();
+    const isBlockProgressEmpty = await db.isEntityEmpty(BlockProgress);
+    const isTokenEmpty = await db.isEntityEmpty(Token);
+    const isSyncStatusEmpty = await db.isEntityEmpty(SyncStatus);
+    isDbEmptyBeforeTest = isBlockProgressEmpty && isTokenEmpty && isSyncStatusEmpty;
+
     assert(isDbEmptyBeforeTest, 'Abort: Database not empty.');
 
     // Create BlockProgress test data.

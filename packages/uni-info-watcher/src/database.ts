@@ -5,7 +5,7 @@
 import assert from 'assert';
 import { Brackets, Connection, ConnectionOptions, DeepPartial, FindConditions, FindOneOptions, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
 
-import { MAX_REORG_DEPTH, Database as BaseDatabase } from '@vulcanize/util';
+import { MAX_REORG_DEPTH, Database as BaseDatabase, DatabaseInterface } from '@vulcanize/util';
 
 import { EventSyncProgress } from './entity/EventProgress';
 import { Factory } from './entity/Factory';
@@ -69,7 +69,7 @@ interface Where {
   }]
 }
 
-export class Database {
+export class Database implements DatabaseInterface {
   _config: ConnectionOptions
   _conn!: Connection
   _baseDatabase: BaseDatabase
@@ -443,7 +443,7 @@ export class Database {
     return entity;
   }
 
-  async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: string[] = []): Promise<Entity[]> {
+  async getUniswapEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: string[] = []): Promise<Entity[]> {
     const repo = queryRunner.manager.getRepository(entity);
     const { tableName } = repo.metadata;
 
@@ -891,5 +891,36 @@ export class Database {
     const canonicalBlockNumber = blocks[blocks.length - 1].block_number + 1;
 
     return { canonicalBlockNumber, blockHashes };
+  }
+
+  async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<Entity[]> {
+    const repo = queryRunner.manager.getRepository(entity);
+
+    const entities = await repo.find(findConditions);
+    return entities;
+  }
+
+  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void> {
+    const repo = queryRunner.manager.getRepository(entity);
+
+    const entities = await repo.find(findConditions);
+    await repo.remove(entities);
+  }
+
+  async isEntityEmpty<Entity> (entity: new () => Entity): Promise<boolean> {
+    const dbTx = await this.createTransactionRunner();
+    try {
+      const data = await this.getEntities(dbTx, entity);
+
+      if (data.length > 0) {
+        return false;
+      }
+      return true;
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
   }
 }

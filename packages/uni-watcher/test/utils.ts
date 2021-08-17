@@ -7,7 +7,9 @@ import { expect } from 'chai';
 import 'mocha';
 
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { createPool, initializePool } from '@vulcanize/util/test';
+import { createPool, initializePool, insertNDummyBlocks } from '@vulcanize/util/test';
+
+import { Database } from '../src/database';
 
 export const testCreatePool = async (
   uniClient: UniClient,
@@ -220,3 +222,66 @@ export const checksCollectEvent = (
   expect(value.event.amount0).to.not.be.empty;
   expect(value.event.amount1).to.not.be.empty;
 };
+
+export const createTestBlockTree = async (db: Database): Promise<any[][]> => {
+  // Create BlockProgress test data.
+  //
+  //                                     +---+
+  //                           head----->| 21|
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                                     | 20|
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                      8 Blocks
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                                     | 11|
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                                     | 10|
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                                     | 9 |
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                   7 Blocks
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                           tail----->| 1 |
+  //                                     +---+
+  //
+
+  const blocks: any[][] = [];
+
+  const firstSeg = await insertNDummyBlocks(db, 21);
+  blocks.push(firstSeg);
+
+  return blocks;
+};
+
+export async function removeEntities<Entity> (db: Database, entity: new () => Entity): Promise<void> {
+  // Remove all entries of the specified entity from database.
+
+  const dbTx = await db.createTransactionRunner();
+
+  try {
+    await db.removeEntities(dbTx, entity);
+    dbTx.commitTransaction();
+  } catch (error) {
+    await dbTx.rollbackTransaction();
+    throw error;
+  } finally {
+    await dbTx.release();
+  }
+}
