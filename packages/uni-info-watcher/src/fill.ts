@@ -10,10 +10,9 @@ import debug from 'debug';
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { getConfig, JobQueue } from '@vulcanize/util';
+import { getConfig, fillBlocks } from '@vulcanize/util';
 
 import { Database } from './database';
-import { QUEUE_BLOCK_PROCESSING } from './events';
 
 const log = debug('vulcanize:server');
 
@@ -66,36 +65,7 @@ export const main = async (): Promise<any> => {
 
   assert(jobQueueConfig, 'Missing job queue config');
 
-  const { dbConnectionString, maxCompletionLag } = jobQueueConfig;
-  assert(dbConnectionString, 'Missing job queue db connection string');
-
-  const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag });
-  await jobQueue.start();
-
-  for (let blockNumber = argv.startBlock; blockNumber <= argv.endBlock; blockNumber++) {
-    log(`Fill block ${blockNumber}`);
-
-    // TODO: Add pause between requests so as to not overwhelm the upsteam server.
-    const result = await ethClient.getBlockWithTransactions({ blockNumber });
-    const { allEthHeaderCids: { nodes: blockNodes } } = result;
-    for (let bi = 0; bi < blockNodes.length; bi++) {
-      const { blockHash, blockNumber, parentHash, timestamp } = blockNodes[bi];
-      const blockProgress = await db.getBlockProgress(blockHash);
-
-      if (blockProgress) {
-        log(`Block number ${blockNumber}, block hash ${blockHash} already known, skip filling`);
-      } else {
-        const block = {
-          hash: blockHash,
-          number: blockNumber,
-          parentHash,
-          timestamp
-        };
-
-        await jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { block });
-      }
-    }
-  }
+  await fillBlocks(db, ethClient, jobQueueConfig, argv);
 };
 
 main().then(() => {

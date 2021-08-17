@@ -87,8 +87,9 @@ export class Indexer {
   }
 
   // Note: Some event names might be unknown at this point, as earlier events might not yet be processed.
-  async getOrFetchBlockEvents (block: Block): Promise<Array<Event>> {
-    const blockProgress = await this._db.getBlockProgress(block.hash);
+  async getOrFetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<Array<Event>> {
+    assert(block.blockHash);
+    const blockProgress = await this._db.getBlockProgress(block.blockHash);
 
     if (!blockProgress) {
       // Fetch and save events first and make a note in the event sync progress table.
@@ -96,7 +97,7 @@ export class Indexer {
       log('getBlockEvents: db miss, fetching from upstream server');
     }
 
-    const events = await this._db.getBlockEvents(block.hash);
+    const events = await this._db.getBlockEvents(block.blockHash);
     log(`getBlockEvents: db hit, num events: ${events.length}`);
 
     return events;
@@ -352,8 +353,9 @@ export class Indexer {
     return res;
   }
 
-  async _fetchAndSaveEvents (block: Block): Promise<void> {
-    const events = await this._uniClient.getEvents(block.hash);
+  async _fetchAndSaveEvents (block: DeepPartial<BlockProgress>): Promise<void> {
+    assert(block.blockHash);
+    const events = await this._uniClient.getEvents(block.blockHash);
     const dbEvents: Array<DeepPartial<Event>> = [];
 
     for (let i = 0; i < events.length; i++) {

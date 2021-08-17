@@ -8,7 +8,7 @@ import _ from 'lodash';
 import { PubSub } from 'apollo-server-express';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { JobQueue, MAX_REORG_DEPTH } from '@vulcanize/util';
+import { JobQueue, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, QUEUE_CHAIN_PRUNING } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { BlockProgress } from './entity/BlockProgress';
@@ -18,9 +18,6 @@ const log = debug('vulcanize:events');
 
 export const UniswapEvent = 'uniswap-event';
 export const BlockProgressEvent = 'block-progress-event';
-export const QUEUE_EVENT_PROCESSING = 'event-processing';
-export const QUEUE_BLOCK_PROCESSING = 'block-processing';
-export const QUEUE_CHAIN_PRUNING = 'chain-pruning';
 
 export class EventWatcher {
   _ethClient: EthClient
@@ -56,12 +53,13 @@ export class EventWatcher {
   async watchBlocksAtChainHead (): Promise<void> {
     log('Started watching upstream blocks...');
     this._subscription = await this._ethClient.watchBlocks(async (value) => {
-      const { blockHash, blockNumber, parentHash } = _.get(value, 'data.listen.relatedNode');
+      const { blockHash, blockNumber, parentHash, timestamp } = _.get(value, 'data.listen.relatedNode');
 
       await this._indexer.updateSyncStatusChainHead(blockHash, blockNumber);
 
       log('watchBlock', blockHash, blockNumber);
-      await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash });
+
+      await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash, timestamp });
     });
   }
 

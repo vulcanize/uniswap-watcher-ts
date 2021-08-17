@@ -6,6 +6,7 @@ import assert from 'assert';
 import debug from 'debug';
 import _ from 'lodash';
 import { EthClient } from '@vulcanize/ipld-eth-client';
+import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING } from '@vulcanize/util';
 
 import { JobQueue } from '../../util';
 import { Indexer } from './indexer';
@@ -115,9 +116,6 @@ export interface ResultEvent {
   }
 }
 
-export const QUEUE_EVENT_PROCESSING = 'event-processing';
-export const QUEUE_BLOCK_PROCESSING = 'block-processing';
-
 export class EventWatcher {
   _subscription?: ZenObservable.Subscription
   _ethClient: EthClient
@@ -155,14 +153,7 @@ export class EventWatcher {
 
       log('watchBlock', blockHash, blockNumber);
 
-      const block = {
-        hash: blockHash,
-        number: blockNumber,
-        parentHash,
-        timestamp
-      };
-
-      await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { block });
+      await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash, timestamp });
     });
   }
 
