@@ -40,10 +40,13 @@ export interface EventInterface {
 export interface IndexerInterface {
   getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>
   getEvent (id: string): Promise<EventInterface | undefined>
-  updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void>
   getSyncStatus (): Promise<SyncStatusInterface | undefined>;
   getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
   blockIsAncestor (ancestorBlockHash: string, blockHash: string, maxDepth: number): Promise<boolean>;
+  updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void>
+  updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
+  updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
+  updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
   markBlockAsPruned (block: BlockProgressInterface): Promise<BlockProgressInterface>;
 }
 

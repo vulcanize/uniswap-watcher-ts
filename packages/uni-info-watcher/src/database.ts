@@ -731,22 +731,50 @@ export class Database {
     }
   }
 
-  async getEvent (id: string): Promise<Event | undefined> {
-    return this._conn.getRepository(Event).findOne(id, { relations: ['block'] });
+  async updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    const repo = queryRunner.manager.getRepository(SyncStatus);
+
+    const entity = await repo.findOne();
+    assert(entity);
+
+    if (blockNumber >= entity.latestIndexedBlockNumber) {
+      entity.latestIndexedBlockHash = blockHash;
+      entity.latestIndexedBlockNumber = blockNumber;
+    }
+
+    return await repo.save(entity);
   }
 
-  async updateSyncStatus (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
+  async updateSyncStatusCanonicalBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    const repo = queryRunner.manager.getRepository(SyncStatus);
+
+    const entity = await repo.findOne();
+    assert(entity);
+
+    if (blockNumber >= entity.latestCanonicalBlockNumber) {
+      entity.latestCanonicalBlockHash = blockHash;
+      entity.latestCanonicalBlockNumber = blockNumber;
+    }
+
+    return await repo.save(entity);
+  }
+
+  async updateSyncStatusChainHead (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
     const repo = queryRunner.manager.getRepository(SyncStatus);
 
     let entity = await repo.findOne();
     if (!entity) {
       entity = repo.create({
+        chainHeadBlockHash: blockHash,
+        chainHeadBlockNumber: blockNumber,
         latestCanonicalBlockHash: blockHash,
-        latestCanonicalBlockNumber: blockNumber
+        latestCanonicalBlockNumber: blockNumber,
+        latestIndexedBlockHash: '',
+        latestIndexedBlockNumber: -1
       });
     }
 
-    if (blockNumber >= entity.latestCanonicalBlockNumber) {
+    if (blockNumber >= entity.chainHeadBlockNumber) {
       entity.chainHeadBlockHash = blockHash;
       entity.chainHeadBlockNumber = blockNumber;
     }
@@ -757,6 +785,23 @@ export class Database {
   async getSyncStatus (queryRunner: QueryRunner): Promise<SyncStatus | undefined> {
     const repo = queryRunner.manager.getRepository(SyncStatus);
     return repo.findOne();
+  }
+
+  async getEvent (id: string): Promise<Event | undefined> {
+    return this._conn.getRepository(Event).findOne(id, { relations: ['block'] });
+  }
+
+  async getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgress[]> {
+    return this._conn.getRepository(BlockProgress)
+      .createQueryBuilder('block_progress')
+      .where('block_number = :height AND is_pruned = :isPruned', { height, isPruned })
+      .getMany();
+  }
+
+  async markBlockAsPruned (queryRunner: QueryRunner, block: BlockProgress): Promise<BlockProgress> {
+    const repo = queryRunner.manager.getRepository(BlockProgress);
+    block.isPruned = true;
+    return repo.save(block);
   }
 
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
