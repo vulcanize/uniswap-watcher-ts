@@ -3,6 +3,7 @@
 //
 
 import { expect, assert } from 'chai';
+import { AssertionError } from 'assert';
 import 'mocha';
 import _ from 'lodash';
 
@@ -105,7 +106,7 @@ describe('chain pruning', () => {
   //                                       |
   //                                       |
   //                                     +---+
-  //                                     | 4 |<------Block to be pruned
+  //                                     | 4 |        ------> Block Height to be pruned
   //                                     +---+
   //                                       |
   //                                       |
@@ -153,7 +154,7 @@ describe('chain pruning', () => {
   //                                    |          /
   //                                    |         /
   //                    +---+         +---+  +----
-  //                    | 4 |         | 4 |  | 4 |          ---->Block Height to be pruned
+  //                    | 4 |         | 4 |  | 4 |          ----> Block Height to be pruned
   //                    +---+         +---+  +---+
   //                         \          |   /
   //                          \         |  /
@@ -170,6 +171,7 @@ describe('chain pruning', () => {
   //                                  +---+
   //                                  | 1 |
   //                                  +---+
+  //
   it('should prune block at height with branches', async () => {
     // Create BlockProgress test data.
     const firstSeg = await insertNDummyBlocks(db, 2);
@@ -192,5 +194,149 @@ describe('chain pruning', () => {
     // Only one canonical (not pruned) block should exist at the pruned height.
     const blocksAfterPruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
     expect(blocksAfterPruning).to.have.lengthOf(1);
+  });
+
+  //
+  //                                  +---+         +---+
+  //                                  | 20|         | 20|
+  //                                  +---+         +---+
+  //                                    |          /
+  //                                    |         /
+  //                                  +---+  +----
+  //                                  | 19|  | 19|
+  //                                  +---+  +---+
+  //                                    |   /
+  //                                    |  /
+  //                                  +----
+  //                                  | 18|
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 17|
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                11 Blocks
+  //                                    |
+  //                                    |
+  //                                  +---+         +---+
+  //                                  | 5 |         | 5 |
+  //                                  +---+         +---+
+  //                                    |          /
+  //                                    |         /
+  //                                  +---+  +----
+  //                                  | 4 |  | 4 |          ----> Block Height to be pruned
+  //                                  +---+  +---+
+  //                                    |   /
+  //                                    |  /
+  //                                  +----
+  //                                  | 3 |
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 2 |
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 1 |
+  //                                  +---+
+  //
+  it('should prune block with multiple branches at chain head', async () => {
+    // Create BlockProgress test data.
+    const firstSeg = await insertNDummyBlocks(db, 3);
+    const secondSeg = await insertNDummyBlocks(db, 2, _.last(firstSeg));
+    expect(_.last(secondSeg).number).to.equal(5);
+    const thirdSeg = await insertNDummyBlocks(db, 15, _.last(firstSeg));
+    const fourthSeg = await insertNDummyBlocks(db, 2, _.last(thirdSeg));
+    expect(_.last(fourthSeg).number).to.equal(20);
+    const fifthSeg = await insertNDummyBlocks(db, 2, _.last(thirdSeg));
+    expect(_.last(fifthSeg).number).to.equal(20);
+    const pruneBlockHeight = 4;
+
+    // Should return multiple blocks that are not pruned.
+    const blocksBeforePruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
+    expect(blocksBeforePruning).to.have.lengthOf(2);
+
+    const job = { data: { pruneBlockHeight } };
+    await jobRunner.pruneChain(job);
+
+    // Only one canonical (not pruned) block should exist at the pruned height.
+    const blocksAfterPruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
+    expect(blocksAfterPruning).to.have.lengthOf(1);
+  });
+
+  //
+  //                                  +---+
+  //                                  | 20|
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 19|
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 18|
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 17|
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                 6 Blocks
+  //                                    |
+  //                                    |
+  //                                  +---+         +---+
+  //                                  | 10|         | 10|
+  //                                  +---+         +---+
+  //                                    |          /
+  //                                    |         /
+  //                                  +---+  +----
+  //                                  | 9 |  | 9 |          ----> Block Height to be pruned
+  //                                  +---+  +---+
+  //                                    |   /
+  //                                    |  /
+  //                                  +---+
+  //                                  | 8 |
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                 6 Blocks
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 1 |
+  //                                  +---+
+  //
+  it('should avoid pruning block at frothy region', async () => {
+    // Create BlockProgress test data.
+    const firstSeg = await insertNDummyBlocks(db, 8);
+    const secondSeg = await insertNDummyBlocks(db, 2, _.last(firstSeg));
+    expect(_.last(secondSeg).number).to.equal(10);
+    const thirdSeg = await insertNDummyBlocks(db, 12, _.last(firstSeg));
+    expect(_.last(thirdSeg).number).to.equal(20);
+    const pruneBlockHeight = 9;
+
+    // Should return multiple blocks that are not pruned.
+    const blocksBeforePruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
+    expect(blocksBeforePruning).to.have.lengthOf(2);
+
+    try {
+      const job = { data: { pruneBlockHeight } };
+      await jobRunner.pruneChain(job);
+      expect.fail('Job Runner should throw error for pruning at frothy region');
+    } catch (error) {
+      expect(error).to.be.instanceof(AssertionError);
+    }
+
+    // No blocks should be pruned at frothy region.
+    const blocksAfterPruning = await indexer.getBlocksAtHeight(pruneBlockHeight, true);
+    expect(blocksAfterPruning).to.have.lengthOf(0);
   });
 });
