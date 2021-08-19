@@ -242,10 +242,4 @@ export class Database implements DatabaseInterface {
       await dbTx.release();
     }
   }
-
-  async updateSyncStatus (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
-    // TODO: remove this function from here after the DatabaseInterface is changed.
-    const syncStatus = await this.updateSyncStatusChainHead(queryRunner, blockHash, blockNumber);
-    return syncStatus;
-  }
 }

@@ -4,6 +4,7 @@
 
 import { expect, assert } from 'chai';
 import 'mocha';
+import _ from 'lodash';
 
 import { getConfig, JobQueue, JobRunner } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
@@ -81,16 +82,16 @@ describe('chain pruning', () => {
 
   //
   //                                     +---+
-  //                           head----->| 21|
+  //                           head----->| 20|
   //                                     +---+
   //                                       |
   //                                       |
   //                                     +---+
-  //                                     | 20|
+  //                                     | 19|
   //                                     +---+
   //                                       |
   //                                       |
-  //                                    14 Blocks
+  //                                    12 Blocks
   //                                       |
   //                                       |
   //                                     +---+
@@ -117,12 +118,73 @@ describe('chain pruning', () => {
   //
   it('should prune a block in chain without branches', async () => {
     // Create BlockProgress test data.
-    await insertNDummyBlocks(db, 21);
+    await insertNDummyBlocks(db, 20);
     const pruneBlockHeight = 4;
 
     // Should return only one block as there are no branches.
     const blocks = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
     expect(blocks).to.have.lengthOf(1);
+
+    const job = { data: { pruneBlockHeight } };
+    await jobRunner.pruneChain(job);
+
+    // Only one canonical (not pruned) block should exist at the pruned height.
+    const blocksAfterPruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
+    expect(blocksAfterPruning).to.have.lengthOf(1);
+  });
+
+  //
+  //                                  +---+
+  //                                  | 20|
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 19|
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                13 Blocks
+  //                                    |
+  //                                    |
+  //                                  +---+         +---+
+  //                                  | 5 |         | 5 |
+  //                                  +---+         +---+
+  //                                    |          /
+  //                                    |         /
+  //                    +---+         +---+  +----
+  //                    | 4 |         | 4 |  | 4 |          ---->Block Height to be pruned
+  //                    +---+         +---+  +---+
+  //                         \          |   /
+  //                          \         |  /
+  //                          +---+   +---+
+  //                          | 3 |   | 3 |
+  //                          +---+   +---+
+  //                                \   |
+  //                                 \  |
+  //                                  +---+
+  //                                  | 2 |
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 1 |
+  //                                  +---+
+  it('should prune block at height with branches', async () => {
+    // Create BlockProgress test data.
+    const firstSeg = await insertNDummyBlocks(db, 2);
+    const secondSeg = await insertNDummyBlocks(db, 2, _.last(firstSeg));
+    expect(_.last(secondSeg).number).to.equal(4);
+    const thirdSeg = await insertNDummyBlocks(db, 1, _.last(firstSeg));
+    const fourthSeg = await insertNDummyBlocks(db, 2, _.last(thirdSeg));
+    expect(_.last(fourthSeg).number).to.equal(5);
+    const fifthSeg = await insertNDummyBlocks(db, 17, _.last(thirdSeg));
+    expect(_.last(fifthSeg).number).to.equal(20);
+    const pruneBlockHeight = 4;
+
+    // Should return multiple blocks that are not pruned.
+    const blocksBeforePruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
+    expect(blocksBeforePruning).to.have.lengthOf(3);
 
     const job = { data: { pruneBlockHeight } };
     await jobRunner.pruneChain(job);
