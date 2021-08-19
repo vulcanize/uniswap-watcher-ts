@@ -171,6 +171,7 @@ export const insertDummyBlock = async (db: DatabaseInterface, parentBlock: any):
 
     await db.updateSyncStatusChainHead(dbTx, blockHash, blockNumber);
     await db.saveEvents(dbTx, block, []);
+    await db.updateSyncStatusIndexedBlock(dbTx, blockHash, blockNumber);
 
     await dbTx.commitTransaction();
 

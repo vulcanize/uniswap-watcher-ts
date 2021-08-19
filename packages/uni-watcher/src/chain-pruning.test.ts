@@ -5,22 +5,21 @@
 import { expect, assert } from 'chai';
 import 'mocha';
 
-import { getConfig } from '@vulcanize/util';
+import { getConfig, JobQueue, JobRunner } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
+import { insertNDummyBlocks } from '@vulcanize/util/test';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
-import { createTestBlockTree, removeEntities } from '../test/utils';
+import { removeEntities } from '../test/utils';
 import { BlockProgress } from './entity/BlockProgress';
 import { SyncStatus } from './entity/SyncStatus';
 
 describe('chain pruning', () => {
   let db: Database;
   let indexer: Indexer;
-  let blocks: any[][];
-  let tail: any;
-  let head: any;
+  let jobRunner: JobRunner;
   let isDbEmptyBeforeTest: boolean;
 
   before(async () => {
@@ -28,7 +27,7 @@ describe('chain pruning', () => {
     const configFile = './environments/local.toml';
     const config = await getConfig(configFile);
 
-    const { upstream, database: dbConfig } = config;
+    const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
     assert(dbConfig, 'Missing database config');
 
@@ -64,23 +63,72 @@ describe('chain pruning', () => {
     indexer = new Indexer(config, db, ethClient, postgraphileClient);
     assert(indexer, 'Could not create indexer object.');
 
-    // Create BlockProgress test data.
-    blocks = await createTestBlockTree(db);
-    tail = blocks[0][0];
-    head = blocks[0][20];
-    expect(tail).to.not.be.empty;
-    expect(head).to.not.be.empty;
+    const jobQueue = new JobQueue(jobQueueConfig);
+
+    jobRunner = new JobRunner(indexer, jobQueue);
   });
 
-  after(async () => {
+  afterEach(async () => {
     if (isDbEmptyBeforeTest) {
       await removeEntities(db, BlockProgress);
       await removeEntities(db, SyncStatus);
     }
+  });
+
+  after(async () => {
     await db.close();
   });
 
-  it('should not do anything', () => {
-    console.log('empty test');
+  //
+  //                                     +---+
+  //                           head----->| 21|
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                                     | 20|
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                    14 Blocks
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                                     | 6 |
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                                     | 5 |
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                                     | 4 |<------Block to be pruned
+  //                                     +---+
+  //                                       |
+  //                                       |
+  //                                   2 Blocks
+  //                                       |
+  //                                       |
+  //                                     +---+
+  //                           tail----->| 1 |
+  //                                     +---+
+  //
+  it('should prune a block in chain without branches', async () => {
+    // Create BlockProgress test data.
+    await insertNDummyBlocks(db, 21);
+    const pruneBlockHeight = 4;
+
+    // Should return only one block as there are no branches.
+    const blocks = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
+    expect(blocks).to.have.lengthOf(1);
+
+    const job = { data: { pruneBlockHeight } };
+    await jobRunner.pruneChain(job);
+
+    // Only one canonical (not pruned) block should exist at the pruned height.
+    const blocksAfterPruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
+    expect(blocksAfterPruning).to.have.lengthOf(1);
   });
 });
