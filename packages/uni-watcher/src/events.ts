@@ -29,14 +29,14 @@ export class EventWatcher implements EventWatcherInterface {
   _subscription?: ZenObservable.Subscription
   _pubsub: PubSub
   _jobQueue: JobQueue
-  _eventWatcher: BaseEventWatcher
+  _baseEventWatcher: BaseEventWatcher
 
   constructor (ethClient: EthClient, indexer: Indexer, pubsub: PubSub, jobQueue: JobQueue) {
     this._ethClient = ethClient;
     this._indexer = indexer;
     this._pubsub = pubsub;
     this._jobQueue = jobQueue;
-    this._eventWatcher = new BaseEventWatcher(this._ethClient, this._indexer, this._pubsub, this._jobQueue);
+    this._baseEventWatcher = new BaseEventWatcher(this._ethClient, this._indexer, this._pubsub, this._jobQueue);
   }
 
   getEventIterator (): AsyncIterator<any> {
@@ -44,7 +44,7 @@ export class EventWatcher implements EventWatcherInterface {
   }
 
   getBlockProgressEventIterator (): AsyncIterator<any> {
-    return this._eventWatcher.getBlockProgressEventIterator();
+    return this._baseEventWatcher.getBlockProgressEventIterator();
   }
 
   async start (): Promise<void> {
@@ -57,25 +57,25 @@ export class EventWatcher implements EventWatcherInterface {
   }
 
   async stop (): Promise<void> {
-    this._eventWatcher.stop();
+    this._baseEventWatcher.stop();
   }
 
   async watchBlocksAtChainHead (): Promise<void> {
     log('Started watching upstream blocks...');
     this._subscription = await this._ethClient.watchBlocks(async (value) => {
-      await this._eventWatcher.blocksHandler(value);
+      await this._baseEventWatcher.blocksHandler(value);
     });
   }
 
   async initBlockProcessingOnCompleteHandler (): Promise<void> {
     this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
-      await this._eventWatcher.blockProcessingCompleteHandler(job);
+      await this._baseEventWatcher.blockProcessingCompleteHandler(job);
     });
   }
 
   async initEventProcessingOnCompleteHandler (): Promise<void> {
     await this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
-      const dbEvent = await this._eventWatcher.eventProcessingCompleteHandler(job);
+      const dbEvent = await this._baseEventWatcher.eventProcessingCompleteHandler(job);
 
       const { data: { request, failed, state, createdOn } } = job;
 
@@ -94,7 +94,7 @@ export class EventWatcher implements EventWatcherInterface {
 
   async initChainPruningOnCompleteHandler (): Promise<void> {
     this._jobQueue.onComplete(QUEUE_CHAIN_PRUNING, async (job) => {
-      await this._eventWatcher.chainPruningCompleteHandler(job);
+      await this._baseEventWatcher.chainPruningCompleteHandler(job);
     });
   }
 

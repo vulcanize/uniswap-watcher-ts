@@ -10,23 +10,24 @@ import debug from 'debug';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { getConfig, JobQueue, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, QUEUE_CHAIN_PRUNING, pruneChainAtHeight } from '@vulcanize/util';
+import { getConfig, JobQueue, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, QUEUE_CHAIN_PRUNING, JobRunner as BaseJobRunner } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
-import { Event } from './entity/Event';
 
 const log = debug('vulcanize:job-runner');
 
 export class JobRunner {
   _indexer: Indexer
   _jobQueue: JobQueue
+  _baseJobRunner: BaseJobRunner
 
   constructor (indexer: Indexer, jobQueue: JobQueue) {
     this._indexer = indexer;
     this._jobQueue = jobQueue;
+    this._baseJobRunner = new BaseJobRunner(this._indexer, this._jobQueue);
   }
 
   async start (): Promise<void> {
@@ -37,50 +38,12 @@ export class JobRunner {
 
   async subscribeBlockProcessingQueue (): Promise<void> {
     await this._jobQueue.subscribe(QUEUE_BLOCK_PROCESSING, async (job) => {
-      const { data: { blockHash, blockNumber, parentHash, timestamp, priority } } = job;
+      await this._baseJobRunner.processBlock(job);
 
-      log(`Processing block number ${blockNumber} hash ${blockHash} `);
-
-      // Init sync status record if none exists.
-      let syncStatus = await this._indexer.getSyncStatus();
-      if (!syncStatus) {
-        syncStatus = await this._indexer.updateSyncStatusChainHead(blockHash, blockNumber);
-      }
-
-      // Check if parent block has been processed yet, if not, push a high priority job to process that first and abort.
-      // However, don't go beyond the `latestCanonicalBlockHash` from SyncStatus as we have to assume the reorg can't be that deep.
-      if (blockHash !== syncStatus.latestCanonicalBlockHash) {
-        const parent = await this._indexer.getBlockProgress(parentHash);
-        if (!parent) {
-          const { number: parentBlockNumber, parent: { hash: grandparentHash }, timestamp: parentTimestamp } = await this._indexer.getBlock(parentHash);
-
-          // Create a higher priority job to index parent block and then abort.
-          // We don't have to worry about aborting as this job will get retried later.
-          const newPriority = (priority || 0) + 1;
-          await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, {
-            blockHash: parentHash,
-            blockNumber: parentBlockNumber,
-            parentHash: grandparentHash,
-            timestamp: parentTimestamp,
-            priority: newPriority
-          }, { priority: newPriority });
-
-          const message = `Parent block number ${parentBlockNumber} hash ${parentHash} of block number ${blockNumber} hash ${blockHash} not fetched yet, aborting`;
-          log(message);
-
-          throw new Error(message);
-        }
-
-        if (parentHash !== syncStatus.latestCanonicalBlockHash && !parent.isComplete) {
-          // Parent block indexing needs to finish before this block can be indexed.
-          const message = `Indexing incomplete for parent block number ${parent.blockNumber} hash ${parentHash} of block number ${blockNumber} hash ${blockHash}, aborting`;
-          log(message);
-
-          throw new Error(message);
-        }
-      }
+      const { data: { blockHash, blockNumber, parentHash, timestamp } } = job;
 
       // Check if block is being already processed.
+      // TODO: Debug issue block getting processed twice without this check. Can reproduce with NFPM.mint().
       const blockProgress = await this._indexer.getBlockProgress(blockHash);
 
       if (!blockProgress) {
@@ -97,43 +60,11 @@ export class JobRunner {
 
   async subscribeEventProcessingQueue (): Promise<void> {
     await this._jobQueue.subscribe(QUEUE_EVENT_PROCESSING, async (job) => {
-      const { data: { id } } = job;
-
-      log(`Processing event ${id}`);
-
-      const dbEvent = await this._indexer.getEvent(id);
-      assert(dbEvent);
-
-      const event: Event = dbEvent;
-
-      // Confirm that the parent block has been completely processed.
-      // We don't have to worry about aborting as this job will get retried later.
-      const parent = await this._indexer.getBlockProgress(event.block.parentHash);
-      if (!parent || !parent.isComplete) {
-        const message = `Abort processing of event ${id} as parent block not processed yet`;
-        throw new Error(message);
-      }
-
-      const blockProgress = await this._indexer.getBlockProgress(event.block.blockHash);
-      assert(blockProgress);
-
-      const events = await this._indexer.getBlockEvents(event.block.blockHash);
-      const eventIndex = events.findIndex((e: any) => e.id === event.id);
-      assert(eventIndex !== -1);
-
-      // Check if previous event in block has been processed exactly before this and abort if not.
-      if (eventIndex > 0) { // Skip the first event in the block.
-        const prevIndex = eventIndex - 1;
-        const prevEvent = events[prevIndex];
-        if (prevEvent.index !== blockProgress.lastProcessedEventIndex) {
-          throw new Error(`Events received out of order for block number ${event.block.blockNumber} hash ${event.block.blockHash},` +
-          ` prev event index ${prevEvent.index}, got event index ${event.index} and lastProcessedEventIndex ${blockProgress.lastProcessedEventIndex}, aborting`);
-        }
-      }
+      const event = await this._baseJobRunner.processEvent(job);
 
       // Check if event is processed.
-      if (!dbEvent.block.isComplete && event.index !== blockProgress.lastProcessedEventIndex) {
-        await this._indexer.processEvent(dbEvent);
+      if (!event.block.isComplete && event.index !== event.block.lastProcessedEventIndex) {
+        await this._indexer.processEvent(event);
       }
 
       await this._jobQueue.markComplete(job);
@@ -142,9 +73,7 @@ export class JobRunner {
 
   async subscribeChainPruningQueue (): Promise<void> {
     await this._jobQueue.subscribe(QUEUE_CHAIN_PRUNING, async (job) => {
-      const pruneBlockHeight: number = job.data.pruneBlockHeight;
-
-      await pruneChainAtHeight(pruneBlockHeight, this._indexer, log);
+      await this._baseJobRunner.pruneChain(job);
 
       await this._jobQueue.markComplete(job);
     });

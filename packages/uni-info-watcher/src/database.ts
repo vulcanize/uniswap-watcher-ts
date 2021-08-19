@@ -3,9 +3,9 @@
 //
 
 import assert from 'assert';
-import { Brackets, Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, FindOneOptions, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
-import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
-import { MAX_REORG_DEPTH } from '@vulcanize/util';
+import { Brackets, Connection, ConnectionOptions, DeepPartial, FindConditions, FindOneOptions, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
+
+import { MAX_REORG_DEPTH, Database as BaseDatabase } from '@vulcanize/util';
 
 import { EventSyncProgress } from './entity/EventProgress';
 import { Factory } from './entity/Factory';
@@ -72,30 +72,24 @@ interface Where {
 export class Database {
   _config: ConnectionOptions
   _conn!: Connection
+  _baseDatabase: BaseDatabase
 
   constructor (config: ConnectionOptions) {
     assert(config);
     this._config = config;
+    this._baseDatabase = new BaseDatabase(this._config);
   }
 
   async init (): Promise<void> {
-    assert(!this._conn);
-
-    this._conn = await createConnection({
-      ...this._config,
-      namingStrategy: new SnakeNamingStrategy()
-    });
+    this._conn = await this._baseDatabase.init();
   }
 
   async close (): Promise<void> {
-    return this._conn.close();
+    return this._baseDatabase.close();
   }
 
   async createTransactionRunner (): Promise<QueryRunner> {
-    const queryRunner = this._conn.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    return queryRunner;
+    return this._baseDatabase.createTransactionRunner();
   }
 
   async getFactory (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Factory>): Promise<Factory | undefined> {
@@ -734,52 +728,19 @@ export class Database {
   async updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
     const repo = queryRunner.manager.getRepository(SyncStatus);
 
-    const entity = await repo.findOne();
-    assert(entity);
-
-    if (blockNumber >= entity.latestIndexedBlockNumber) {
-      entity.latestIndexedBlockHash = blockHash;
-      entity.latestIndexedBlockNumber = blockNumber;
-    }
-
-    return await repo.save(entity);
+    return this._baseDatabase.updateSyncStatusIndexedBlock(repo, blockHash, blockNumber);
   }
 
   async updateSyncStatusCanonicalBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
     const repo = queryRunner.manager.getRepository(SyncStatus);
 
-    const entity = await repo.findOne();
-    assert(entity);
-
-    if (blockNumber >= entity.latestCanonicalBlockNumber) {
-      entity.latestCanonicalBlockHash = blockHash;
-      entity.latestCanonicalBlockNumber = blockNumber;
-    }
-
-    return await repo.save(entity);
+    return this._baseDatabase.updateSyncStatusCanonicalBlock(repo, blockHash, blockNumber);
   }
 
   async updateSyncStatusChainHead (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
     const repo = queryRunner.manager.getRepository(SyncStatus);
 
-    let entity = await repo.findOne();
-    if (!entity) {
-      entity = repo.create({
-        chainHeadBlockHash: blockHash,
-        chainHeadBlockNumber: blockNumber,
-        latestCanonicalBlockHash: blockHash,
-        latestCanonicalBlockNumber: blockNumber,
-        latestIndexedBlockHash: '',
-        latestIndexedBlockNumber: -1
-      });
-    }
-
-    if (blockNumber >= entity.chainHeadBlockNumber) {
-      entity.chainHeadBlockHash = blockHash;
-      entity.chainHeadBlockNumber = blockNumber;
-    }
-
-    return await repo.save(entity);
+    return this._baseDatabase.updateSyncStatusChainHead(repo, blockHash, blockNumber);
   }
 
   async getSyncStatus (queryRunner: QueryRunner): Promise<SyncStatus | undefined> {
@@ -792,16 +753,15 @@ export class Database {
   }
 
   async getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgress[]> {
-    return this._conn.getRepository(BlockProgress)
-      .createQueryBuilder('block_progress')
-      .where('block_number = :height AND is_pruned = :isPruned', { height, isPruned })
-      .getMany();
+    const repo = this._conn.getRepository(BlockProgress);
+
+    return this._baseDatabase.getBlocksAtHeight(repo, height, isPruned);
   }
 
   async markBlockAsPruned (queryRunner: QueryRunner, block: BlockProgress): Promise<BlockProgress> {
     const repo = queryRunner.manager.getRepository(BlockProgress);
-    block.isPruned = true;
-    return repo.save(block);
+
+    return this._baseDatabase.markBlockAsPruned(repo, block);
   }
 
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {

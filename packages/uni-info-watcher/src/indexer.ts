@@ -11,7 +11,7 @@ import { utils } from 'ethers';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { Config, IndexerInterface, wait } from '@vulcanize/util';
+import { Config, IndexerInterface, wait, Indexer as BaseIndexer } from '@vulcanize/util';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
@@ -50,6 +50,7 @@ export class Indexer implements IndexerInterface {
   _erc20Client: ERC20Client
   _ethClient: EthClient
   _config: Config
+  _baseIndexer: BaseIndexer
 
   constructor (db: Database, uniClient: UniClient, erc20Client: ERC20Client, ethClient: EthClient, config: Config) {
     assert(db);
@@ -62,6 +63,7 @@ export class Indexer implements IndexerInterface {
     this._erc20Client = erc20Client;
     this._ethClient = ethClient;
     this._config = config;
+    this._baseIndexer = new BaseIndexer(this._db);
   }
 
   getResultEvent (event: Event): ResultEvent {
@@ -177,54 +179,15 @@ export class Indexer implements IndexerInterface {
   }
 
   async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      res = await this._db.updateSyncStatusIndexedBlock(dbTx, blockHash, blockNumber);
-      await dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-
-    return res;
+    return this._baseIndexer.updateSyncStatusIndexedBlock(blockHash, blockNumber);
   }
 
   async updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatus> {
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      res = await this._db.updateSyncStatusChainHead(dbTx, blockHash, blockNumber);
-      await dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-
-    return res;
+    return this._baseIndexer.updateSyncStatusChainHead(blockHash, blockNumber);
   }
 
   async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      res = await this._db.updateSyncStatusCanonicalBlock(dbTx, blockHash, blockNumber);
-      await dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-
-    return res;
+    return this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber);
   }
 
   async getSyncStatus (): Promise<SyncStatus | undefined> {
@@ -282,51 +245,15 @@ export class Indexer implements IndexerInterface {
   }
 
   async getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgress[]> {
-    return this._db.getBlocksAtHeight(height, isPruned);
+    return this._baseIndexer.getBlocksAtHeight(height, isPruned);
   }
 
   async blockIsAncestor (ancestorBlockHash: string, blockHash: string, maxDepth: number): Promise<boolean> {
-    assert(maxDepth > 0);
-
-    let depth = 0;
-    let currentBlockHash = blockHash;
-    let currentBlock;
-
-    // TODO: Use a hierarchical query to optimize this.
-    while (depth < maxDepth) {
-      depth++;
-
-      currentBlock = await this._db.getBlockProgress(currentBlockHash);
-      if (!currentBlock) {
-        break;
-      } else {
-        if (currentBlock.parentHash === ancestorBlockHash) {
-          return true;
-        }
-
-        // Descend the chain.
-        currentBlockHash = currentBlock.parentHash;
-      }
-    }
-
-    return false;
+    return this._baseIndexer.blockIsAncestor(ancestorBlockHash, blockHash, maxDepth);
   }
 
   async markBlockAsPruned (block: BlockProgress): Promise<BlockProgress> {
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      res = await this._db.markBlockAsPruned(dbTx, block);
-      await dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-
-    return res;
+    return this._baseIndexer.markBlockAsPruned(block);
   }
 
   async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {
