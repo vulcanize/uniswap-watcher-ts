@@ -204,4 +204,44 @@ export class Database {
     const entities = await repo.find(findConditions);
     await repo.remove(entities);
   }
+
+  async getAncestorBlockHash (blockHash: string, depth: number): Promise<string> {
+    const heirerchicalQuery = `
+      WITH RECURSIVE cte_query AS
+      (
+        SELECT
+          block_hash,
+          block_number,
+          parent_hash,
+          0 as depth
+        FROM
+          block_progress
+        WHERE
+          block_hash = $1
+        UNION ALL
+          SELECT
+            b.block_hash,
+            b.block_number,
+            b.parent_hash,
+            c.depth + 1
+          FROM
+            block_progress b
+          INNER JOIN
+            cte_query c ON c.parent_hash = b.block_hash
+          WHERE
+            c.depth < $2
+      )
+      SELECT
+        block_hash, block_number
+      FROM
+        cte_query
+      ORDER BY block_number ASC
+      LIMIT 1;
+    `;
+
+    // Get ancestor block hash using heirarchical query.
+    const [{ block_hash: ancestorBlockHash }] = await this._conn.query(heirerchicalQuery, [blockHash, depth]);
+
+    return ancestorBlockHash;
+  }
 }

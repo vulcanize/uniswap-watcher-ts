@@ -176,4 +176,8 @@ export class Database implements DatabaseInterface {
   async isEntityEmpty<Entity> (entity: new () => Entity): Promise<boolean> {
     return this._baseDatabase.isEntityEmpty(entity);
   }
+
+  async getAncestorBlockHash (blockHash: string, depth: number): Promise<string> {
+    return this._baseDatabase.getAncestorBlockHash(blockHash, depth);
+  }
 }

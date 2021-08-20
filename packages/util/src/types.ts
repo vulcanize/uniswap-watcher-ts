@@ -47,6 +47,7 @@ export interface IndexerInterface {
   getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
   getBlockEvents (blockHash: string): Promise<Array<EventInterface>>
   blockIsAncestor (ancestorBlockHash: string, blockHash: string, maxDepth: number): Promise<boolean>;
+  getAncestorBlockHash (blockHash: string, depth: number): Promise<string>
   updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void>
   updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
   updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
@@ -67,6 +68,7 @@ export interface DatabaseInterface {
   getBlockEvents (blockHash: string): Promise<EventInterface[]>;
   getEvent (id: string): Promise<EventInterface | undefined>
   getSyncStatus (queryRunner: QueryRunner): Promise<SyncStatusInterface | undefined>
+  getAncestorBlockHash (blockHash: string, depth: number): Promise<string>
   markBlockAsPruned (queryRunner: QueryRunner, block: BlockProgressInterface): Promise<BlockProgressInterface>;
   updateBlockProgress (queryRunner: QueryRunner, blockHash: string, lastProcessedEventIndex: number): Promise<void>
   updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatusInterface>;

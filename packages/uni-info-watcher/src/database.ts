@@ -742,6 +742,22 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.updateBlockProgress(repo, blockHash, lastProcessedEventIndex);
   }
 
+  async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<Entity[]> {
+    return this._baseDatabase.getEntities(queryRunner, entity, findConditions);
+  }
+
+  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void> {
+    return this._baseDatabase.removeEntities(queryRunner, entity, findConditions);
+  }
+
+  async isEntityEmpty<Entity> (entity: new () => Entity): Promise<boolean> {
+    return this._baseDatabase.isEntityEmpty(entity);
+  }
+
+  async getAncestorBlockHash (blockHash: string, depth: number): Promise<string> {
+    return this._baseDatabase.getAncestorBlockHash(blockHash, depth);
+  }
+
   async _getPrevEntityVersion<Entity> (queryRunner: QueryRunner, repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
     // Check whether query is ordered by blockNumber to get the latest entity.
     assert(findOptions.order.blockNumber);
@@ -846,17 +862,5 @@ export class Database implements DatabaseInterface {
     const canonicalBlockNumber = blocks[blocks.length - 1].block_number + 1;
 
     return { canonicalBlockNumber, blockHashes };
-  }
-
-  async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<Entity[]> {
-    return this._baseDatabase.getEntities(queryRunner, entity, findConditions);
-  }
-
-  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void> {
-    return this._baseDatabase.removeEntities(queryRunner, entity, findConditions);
-  }
-
-  async isEntityEmpty<Entity> (entity: new () => Entity): Promise<boolean> {
-    return this._baseDatabase.isEntityEmpty(entity);
   }
 }

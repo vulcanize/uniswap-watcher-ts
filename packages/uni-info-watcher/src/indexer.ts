@@ -324,6 +324,10 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
+  async getAncestorBlockHash (blockHash: string, depth: number): Promise<string> {
+    return this._baseIndexer.getAncestorBlockHash(blockHash, depth);
+  }
+
   async _fetchAndSaveEvents (block: DeepPartial<BlockProgress>): Promise<void> {
     assert(block.blockHash);
     const events = await this._uniClient.getEvents(block.blockHash);

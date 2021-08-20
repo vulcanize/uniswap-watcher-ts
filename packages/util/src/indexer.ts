@@ -185,4 +185,8 @@ export class Indexer {
   async getBlockEvents (blockHash: string): Promise<Array<EventInterface>> {
     return this._db.getBlockEvents(blockHash);
   }
+
+  async getAncestorBlockHash (blockHash: string, depth: number): Promise<string> {
+    return this._db.getAncestorBlockHash(blockHash, depth);
+  }
 }

@@ -506,6 +506,15 @@ export class Indexer implements IndexerInterface {
     };
   }
 
+  async getContract (type: string): Promise<any> {
+    const contract = await this._db.getLatestContract(type);
+    return contract;
+  }
+
+  async getAncestorBlockHash (blockHash: string, depth: number): Promise<string> {
+    return this._baseIndexer.getAncestorBlockHash(blockHash, depth);
+  }
+
   // TODO: Move into base/class or framework package.
   async _getStorageValue (storageLayout: StorageLayout, blockHash: string, token: string, variable: string, ...mappingKeys: any[]): Promise<ValueResult> {
     return getStorageValue(
@@ -516,10 +525,5 @@ export class Indexer implements IndexerInterface {
       variable,
       ...mappingKeys
     );
-  }
-
-  async getContract (type: string): Promise<any> {
-    const contract = await this._db.getLatestContract(type);
-    return contract;
   }
 }
