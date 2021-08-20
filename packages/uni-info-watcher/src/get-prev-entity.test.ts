@@ -9,9 +9,10 @@ import _ from 'lodash';
 import {
   getConfig
 } from '@vulcanize/util';
+import { removeEntities } from '@vulcanize/util/test';
 
 import { Database } from './database';
-import { createTestBlockTree, insertDummyToken, removeEntities } from '../test/utils';
+import { createTestBlockTree, insertDummyToken } from '../test/utils';
 import { Block } from './events';
 import { BlockProgress } from './entity/BlockProgress';
 import { SyncStatus } from './entity/SyncStatus';

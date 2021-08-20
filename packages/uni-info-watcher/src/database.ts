@@ -894,33 +894,14 @@ export class Database implements DatabaseInterface {
   }
 
   async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<Entity[]> {
-    const repo = queryRunner.manager.getRepository(entity);
-
-    const entities = await repo.find(findConditions);
-    return entities;
+    return this._baseDatabase.getEntities(queryRunner, entity, findConditions);
   }
 
   async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void> {
-    const repo = queryRunner.manager.getRepository(entity);
-
-    const entities = await repo.find(findConditions);
-    await repo.remove(entities);
+    return this._baseDatabase.removeEntities(queryRunner, entity, findConditions);
   }
 
   async isEntityEmpty<Entity> (entity: new () => Entity): Promise<boolean> {
-    const dbTx = await this.createTransactionRunner();
-    try {
-      const data = await this.getEntities(dbTx, entity);
-
-      if (data.length > 0) {
-        return false;
-      }
-      return true;
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
+    return this._baseDatabase.isEntityEmpty(entity);
   }
 }

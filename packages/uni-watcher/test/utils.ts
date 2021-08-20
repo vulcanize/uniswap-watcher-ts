@@ -9,8 +9,6 @@ import 'mocha';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { createPool, initializePool } from '@vulcanize/util/test';
 
-import { Database } from '../src/database';
-
 export const testCreatePool = async (
   uniClient: UniClient,
   factory: Contract,
@@ -222,19 +220,3 @@ export const checksCollectEvent = (
   expect(value.event.amount0).to.not.be.empty;
   expect(value.event.amount1).to.not.be.empty;
 };
-
-export async function removeEntities<Entity> (db: Database, entity: new () => Entity): Promise<void> {
-  // Remove all entries of the specified entity from database.
-
-  const dbTx = await db.createTransactionRunner();
-
-  try {
-    await db.removeEntities(dbTx, entity);
-    dbTx.commitTransaction();
-  } catch (error) {
-    await dbTx.rollbackTransaction();
-    throw error;
-  } finally {
-    await dbTx.release();
-  }
-}

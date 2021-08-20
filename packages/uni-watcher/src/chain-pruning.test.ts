@@ -10,11 +10,10 @@ import _ from 'lodash';
 import { getConfig, JobQueue, JobRunner } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { insertNDummyBlocks } from '@vulcanize/util/test';
+import { insertNDummyBlocks, removeEntities } from '@vulcanize/util/test';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
-import { removeEntities } from '../test/utils';
 import { BlockProgress } from './entity/BlockProgress';
 import { SyncStatus } from './entity/SyncStatus';
 
@@ -22,7 +21,6 @@ describe('chain pruning', () => {
   let db: Database;
   let indexer: Indexer;
   let jobRunner: JobRunner;
-  let isDbEmptyBeforeTest: boolean;
 
   before(async () => {
     // Get config.
@@ -40,7 +38,7 @@ describe('chain pruning', () => {
     // Check if database is empty.
     const isBlockProgressEmpty = await db.isEntityEmpty(BlockProgress);
     const isSyncStatusEmpty = await db.isEntityEmpty(SyncStatus);
-    isDbEmptyBeforeTest = isBlockProgressEmpty && isSyncStatusEmpty;
+    const isDbEmptyBeforeTest = isBlockProgressEmpty && isSyncStatusEmpty;
 
     assert(isDbEmptyBeforeTest, 'Abort: Database not empty.');
 
@@ -71,10 +69,8 @@ describe('chain pruning', () => {
   });
 
   afterEach(async () => {
-    if (isDbEmptyBeforeTest) {
-      await removeEntities(db, BlockProgress);
-      await removeEntities(db, SyncStatus);
-    }
+    await removeEntities(db, BlockProgress);
+    await removeEntities(db, SyncStatus);
   });
 
   after(async () => {
@@ -182,6 +178,10 @@ describe('chain pruning', () => {
     expect(_.last(fourthSeg).number).to.equal(5);
     const fifthSeg = await insertNDummyBlocks(db, 17, _.last(thirdSeg));
     expect(_.last(fifthSeg).number).to.equal(20);
+
+    const expectedCanonicalBlock = fifthSeg[0];
+    const expectedPrunedBlocks = [secondSeg[1], fourthSeg[0]];
+
     const pruneBlockHeight = 4;
 
     // Should return multiple blocks that are not pruned.
@@ -194,6 +194,16 @@ describe('chain pruning', () => {
     // Only one canonical (not pruned) block should exist at the pruned height.
     const blocksAfterPruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
     expect(blocksAfterPruning).to.have.lengthOf(1);
+
+    // Assert that correct block is canonical.
+    expect(blocksAfterPruning[0].blockHash).to.equal(expectedCanonicalBlock.hash);
+
+    // Assert that correct blocks are pruned.
+    const prunedBlocks = await indexer.getBlocksAtHeight(pruneBlockHeight, true);
+    expect(prunedBlocks).to.have.lengthOf(2);
+    const prunedBlockHashes = prunedBlocks.map(({ blockHash }) => blockHash);
+    const expectedPrunedBlockHashes = expectedPrunedBlocks.map(({ hash }) => hash);
+    expect(prunedBlockHashes).to.have.members(expectedPrunedBlockHashes);
   });
 
   //
@@ -254,6 +264,10 @@ describe('chain pruning', () => {
     expect(_.last(fourthSeg).number).to.equal(20);
     const fifthSeg = await insertNDummyBlocks(db, 2, _.last(thirdSeg));
     expect(_.last(fifthSeg).number).to.equal(20);
+
+    const expectedCanonicalBlock = thirdSeg[0];
+    const expectedPrunedBlock = secondSeg[0];
+
     const pruneBlockHeight = 4;
 
     // Should return multiple blocks that are not pruned.
@@ -266,6 +280,76 @@ describe('chain pruning', () => {
     // Only one canonical (not pruned) block should exist at the pruned height.
     const blocksAfterPruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
     expect(blocksAfterPruning).to.have.lengthOf(1);
+    expect(blocksAfterPruning[0].blockHash).to.equal(expectedCanonicalBlock.hash);
+
+    // Assert that correct blocks are pruned.
+    const prunedBlocks = await indexer.getBlocksAtHeight(pruneBlockHeight, true);
+    expect(prunedBlocks).to.have.lengthOf(1);
+    expect(prunedBlocks[0].blockHash).to.equal(expectedPrunedBlock.hash);
+  });
+
+  //
+  //                                  +---+
+  //                                  | 21|                 ----> Latest Indexed
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 20|
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                15 Blocks
+  //                                    |
+  //                                    |
+  //                    +---+         +---+
+  //                    | 4 |         | 4 |
+  //                    +---+         +---+
+  //                         \          |
+  //                          \         |
+  //                          +---+   +---+
+  //                          | 3 |   | 3 |                 ----> Block Height to be pruned
+  //                          +---+   +---+
+  //                                \   |
+  //                                 \  |
+  //                                  +---+
+  //                                  | 2 |
+  //                                  +---+
+  //                                    |
+  //                                    |
+  //                                  +---+
+  //                                  | 1 |
+  //                                  +---+
+  //
+  it('should prune block at depth greater than max reorg depth from latest indexed block', async () => {
+    // Create BlockProgress test data.
+    const firstSeg = await insertNDummyBlocks(db, 2);
+    const secondSeg = await insertNDummyBlocks(db, 2, _.last(firstSeg));
+    expect(_.last(secondSeg).number).to.equal(4);
+    const thirdSeg = await insertNDummyBlocks(db, 19, _.last(firstSeg));
+    expect(_.last(thirdSeg).number).to.equal(21);
+
+    const expectedCanonicalBlock = thirdSeg[0];
+    const expectedPrunedBlock = secondSeg[0];
+
+    const pruneBlockHeight = 3;
+
+    // Should return multiple blocks that are not pruned.
+    const blocksBeforePruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
+    expect(blocksBeforePruning).to.have.lengthOf(2);
+
+    const job = { data: { pruneBlockHeight } };
+    await jobRunner.pruneChain(job);
+
+    // Only one canonical (not pruned) block should exist at the pruned height.
+    const blocksAfterPruning = await indexer.getBlocksAtHeight(pruneBlockHeight, false);
+    expect(blocksAfterPruning).to.have.lengthOf(1);
+    expect(blocksAfterPruning[0].blockHash).to.equal(expectedCanonicalBlock.hash);
+
+    // Assert that correct blocks are pruned.
+    const prunedBlocks = await indexer.getBlocksAtHeight(pruneBlockHeight, true);
+    expect(prunedBlocks).to.have.lengthOf(1);
+    expect(prunedBlocks[0].blockHash).to.equal(expectedPrunedBlock.hash);
   });
 
   //
@@ -279,17 +363,7 @@ describe('chain pruning', () => {
   //                                  +---+
   //                                    |
   //                                    |
-  //                                  +---+
-  //                                  | 18|
-  //                                  +---+
-  //                                    |
-  //                                    |
-  //                                  +---+
-  //                                  | 17|
-  //                                  +---+
-  //                                    |
-  //                                    |
-  //                                 6 Blocks
+  //                                 8 Blocks
   //                                    |
   //                                    |
   //                                  +---+         +---+
@@ -314,7 +388,7 @@ describe('chain pruning', () => {
   //                                  | 1 |
   //                                  +---+
   //
-  it('should avoid pruning block at frothy region', async () => {
+  it('should avoid pruning block in frothy region', async () => {
     // Create BlockProgress test data.
     const firstSeg = await insertNDummyBlocks(db, 8);
     const secondSeg = await insertNDummyBlocks(db, 2, _.last(firstSeg));

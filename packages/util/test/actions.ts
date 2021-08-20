@@ -216,3 +216,19 @@ export const insertNDummyBlocks = async (db: DatabaseInterface, numberOfBlocks:n
 
   return blocksArray;
 };
+
+export async function removeEntities<Entity> (db: DatabaseInterface, entity: new () => Entity): Promise<void> {
+  // Remove all entries of the specified entity from database.
+
+  const dbTx = await db.createTransactionRunner();
+
+  try {
+    await db.removeEntities(dbTx, entity);
+    dbTx.commitTransaction();
+  } catch (error) {
+    await dbTx.rollbackTransaction();
+    throw error;
+  } finally {
+    await dbTx.release();
+  }
+}
