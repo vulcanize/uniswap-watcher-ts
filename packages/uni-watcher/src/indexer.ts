@@ -422,7 +422,20 @@ export class Indexer implements IndexerInterface {
   }
 
   async getSyncStatus (): Promise<SyncStatus | undefined> {
-    return this._db.getSyncStatus();
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
+
+    try {
+      res = await this._db.getSyncStatus(dbTx);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+
+    return res;
   }
 
   async getBlock (blockHash: string): Promise<any> {
