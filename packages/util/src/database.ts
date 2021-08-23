@@ -3,7 +3,7 @@
 //
 
 import assert from 'assert';
-import { Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, QueryRunner, Repository } from 'typeorm';
+import { Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, In, QueryRunner, Repository } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 import { BlockProgressInterface, EventInterface, SyncStatusInterface } from './types';
@@ -115,9 +115,10 @@ export class Database {
     }
   }
 
-  async markBlockAsPruned (repo: Repository<BlockProgressInterface>, block: BlockProgressInterface): Promise<BlockProgressInterface> {
-    block.isPruned = true;
-    return repo.save(block);
+  async markBlocksAsPruned (repo: Repository<BlockProgressInterface>, blocks: BlockProgressInterface[]): Promise<void> {
+    const ids = blocks.map(({ id }) => id);
+
+    await repo.update({ id: In(ids) }, { isPruned: true });
   }
 
   async getEvent (repo: Repository<EventInterface>, id: string): Promise<EventInterface | undefined> {
@@ -205,7 +206,7 @@ export class Database {
     await repo.remove(entities);
   }
 
-  async getAncestorBlockHash (blockHash: string, depth: number): Promise<string> {
+  async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
     const heirerchicalQuery = `
       WITH RECURSIVE cte_query AS
       (

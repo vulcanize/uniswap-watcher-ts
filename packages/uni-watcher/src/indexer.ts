@@ -445,12 +445,8 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getBlocksAtHeight(height, isPruned);
   }
 
-  async blockIsAncestor (ancestorBlockHash: string, blockHash: string, maxDepth: number): Promise<boolean> {
-    return this._baseIndexer.blockIsAncestor(ancestorBlockHash, blockHash, maxDepth);
-  }
-
-  async markBlockAsPruned (block: BlockProgress): Promise<BlockProgress> {
-    return this._baseIndexer.markBlockAsPruned(block);
+  async markBlocksAsPruned (blocks: BlockProgress[]): Promise<void> {
+    return this._baseIndexer.markBlocksAsPruned(blocks);
   }
 
   async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {
@@ -511,8 +507,8 @@ export class Indexer implements IndexerInterface {
     return contract;
   }
 
-  async getAncestorBlockHash (blockHash: string, depth: number): Promise<string> {
-    return this._baseIndexer.getAncestorBlockHash(blockHash, depth);
+  async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
+    return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
   // TODO: Move into base/class or framework package.
