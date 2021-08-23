@@ -47,6 +47,7 @@ export interface IndexerInterface {
   getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
   getBlockEvents (blockHash: string): Promise<Array<EventInterface>>
   getAncestorAtDepth (blockHash: string, depth: number): Promise<string>
+  getOrFetchBlockEvents (block: DeepPartial<BlockProgressInterface>): Promise<Array<EventInterface>>
   updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void>
   updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
   updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>

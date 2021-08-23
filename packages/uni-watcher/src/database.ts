@@ -32,16 +32,6 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.close();
   }
 
-  async createTransactionRunner (): Promise<QueryRunner> {
-    return this._baseDatabase.createTransactionRunner();
-  }
-
-  async getBlockEvents (blockHash: string): Promise<Event[]> {
-    const repo = this._conn.getRepository(Event);
-
-    return this._baseDatabase.getBlockEvents(repo, blockHash);
-  }
-
   async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
     const blockNumbers = _.range(fromBlockNumber, toBlockNumber + 1);
     const expected = blockNumbers.length;
@@ -69,6 +59,50 @@ export class Database implements DatabaseInterface {
       .getMany();
 
     return events;
+  }
+
+  async saveEventEntity (queryRunner: QueryRunner, entity: Event): Promise<Event> {
+    const repo = queryRunner.manager.getRepository(Event);
+    return await repo.save(entity);
+  }
+
+  async getContract (address: string): Promise<Contract | undefined> {
+    return this._conn.getRepository(Contract)
+      .createQueryBuilder('contract')
+      .where('address = :address', { address })
+      .getOne();
+  }
+
+  async getLatestContract (kind: string): Promise<Contract | undefined> {
+    return this._conn.getRepository(Contract)
+      .createQueryBuilder('contract')
+      .where('kind = :kind', { kind })
+      .orderBy('id', 'DESC')
+      .getOne();
+  }
+
+  async saveContract (queryRunner: QueryRunner, address: string, kind: string, startingBlock: number): Promise<void> {
+    const repo = queryRunner.manager.getRepository(Contract);
+
+    const numRows = await repo
+      .createQueryBuilder()
+      .where('address = :address', { address })
+      .getCount();
+
+    if (numRows === 0) {
+      const entity = repo.create({ address, kind, startingBlock });
+      await repo.save(entity);
+    }
+  }
+
+  async createTransactionRunner (): Promise<QueryRunner> {
+    return this._baseDatabase.createTransactionRunner();
+  }
+
+  async getBlockEvents (blockHash: string): Promise<Event[]> {
+    const repo = this._conn.getRepository(Event);
+
+    return this._baseDatabase.getBlockEvents(repo, blockHash);
   }
 
   async saveEvents (queryRunner: QueryRunner, block: DeepPartial<BlockProgress>, events: DeepPartial<Event>[]): Promise<void> {
@@ -106,40 +140,6 @@ export class Database implements DatabaseInterface {
     const repo = this._conn.getRepository(Event);
 
     return this._baseDatabase.getEvent(repo, id);
-  }
-
-  async saveEventEntity (queryRunner: QueryRunner, entity: Event): Promise<Event> {
-    const repo = queryRunner.manager.getRepository(Event);
-    return await repo.save(entity);
-  }
-
-  async getContract (address: string): Promise<Contract | undefined> {
-    return this._conn.getRepository(Contract)
-      .createQueryBuilder('contract')
-      .where('address = :address', { address })
-      .getOne();
-  }
-
-  async getLatestContract (kind: string): Promise<Contract | undefined> {
-    return this._conn.getRepository(Contract)
-      .createQueryBuilder('contract')
-      .where('kind = :kind', { kind })
-      .orderBy('id', 'DESC')
-      .getOne();
-  }
-
-  async saveContract (queryRunner: QueryRunner, address: string, kind: string, startingBlock: number): Promise<void> {
-    const repo = queryRunner.manager.getRepository(Contract);
-
-    const numRows = await repo
-      .createQueryBuilder()
-      .where('address = :address', { address })
-      .getCount();
-
-    if (numRows === 0) {
-      const entity = repo.create({ address, kind, startingBlock });
-      await repo.save(entity);
-    }
   }
 
   async getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgress[]> {

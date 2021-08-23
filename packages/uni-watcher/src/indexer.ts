@@ -102,15 +102,6 @@ export class Indexer implements IndexerInterface {
     };
   }
 
-  // Note: Some event names might be unknown at this point, as earlier events might not yet be processed.
-  async getOrFetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<Array<Event>> {
-    return this._baseIndexer.getOrFetchBlockEvents(block, this._fetchAndSaveEvents.bind(this));
-  }
-
-  async getBlockEvents (blockHash: string): Promise<Array<Event>> {
-    return this._baseIndexer.getBlockEvents(blockHash);
-  }
-
   async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<Event>> {
     if (contract) {
       const uniContract = await this.isUniswapContract(contract);
@@ -304,6 +295,86 @@ export class Indexer implements IndexerInterface {
     return { eventName, eventInfo };
   }
 
+  async saveEventEntity (dbEvent: Event): Promise<Event> {
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
+
+    try {
+      res = this._db.saveEventEntity(dbTx, dbEvent);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+
+    return res;
+  }
+
+  async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
+    return this._db.getProcessedBlockCountForRange(fromBlockNumber, toBlockNumber);
+  }
+
+  async getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<Event>> {
+    if (toBlockNumber <= fromBlockNumber) {
+      throw new Error('toBlockNumber should be greater than fromBlockNumber');
+    }
+
+    if ((toBlockNumber - fromBlockNumber) > MAX_EVENTS_BLOCK_RANGE) {
+      throw new Error(`Max range (${MAX_EVENTS_BLOCK_RANGE}) exceeded`);
+    }
+
+    return this._db.getEventsInRange(fromBlockNumber, toBlockNumber);
+  }
+
+  async position (blockHash: string, tokenId: string): Promise<any> {
+    const nfpmContract = await this._db.getLatestContract('nfpm');
+    assert(nfpmContract, 'No NFPM contract watched.');
+    const { value, proof } = await this._getStorageValue(nfpmStorageLayout, blockHash, nfpmContract.address, '_positions', BigInt(tokenId));
+
+    return {
+      ...value,
+      proof
+    };
+  }
+
+  async poolIdToPoolKey (blockHash: string, poolId: string): Promise<any> {
+    const nfpmContract = await this._db.getLatestContract('nfpm');
+    assert(nfpmContract, 'No NFPM contract watched.');
+    const { value, proof } = await this._getStorageValue(nfpmStorageLayout, blockHash, nfpmContract.address, '_poolIdToPoolKey', BigInt(poolId));
+
+    return {
+      ...value,
+      proof
+    };
+  }
+
+  async getPool (blockHash: string, token0: string, token1: string, fee: string): Promise<any> {
+    const factoryContract = await this._db.getLatestContract('factory');
+    assert(factoryContract, 'No Factory contract watched.');
+    const { value, proof } = await this._getStorageValue(factoryStorageLayout, blockHash, factoryContract.address, 'getPool', token0, token1, BigInt(fee));
+
+    return {
+      pool: value,
+      proof
+    };
+  }
+
+  async getContract (type: string): Promise<any> {
+    const contract = await this._db.getLatestContract(type);
+    return contract;
+  }
+
+  // Note: Some event names might be unknown at this point, as earlier events might not yet be processed.
+  async getOrFetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<Array<Event>> {
+    return this._baseIndexer.getOrFetchBlockEvents(block, this._fetchAndSaveEvents.bind(this));
+  }
+
+  async getBlockEvents (blockHash: string): Promise<Array<Event>> {
+    return this._baseIndexer.getBlockEvents(blockHash);
+  }
+
   async _fetchAndSaveEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<void> {
     assert(blockHash);
     let { block, logs } = await this._ethClient.getLogs({ blockHash });
@@ -420,23 +491,6 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getEvent(id);
   }
 
-  async saveEventEntity (dbEvent: Event): Promise<Event> {
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      res = this._db.saveEventEntity(dbTx, dbEvent);
-      await dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-
-    return res;
-  }
-
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
     return this._baseIndexer.getBlockProgress(blockHash);
   }
@@ -451,60 +505,6 @@ export class Indexer implements IndexerInterface {
 
   async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {
     return this._baseIndexer.updateBlockProgress(blockHash, lastProcessedEventIndex);
-  }
-
-  async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
-    return this._db.getProcessedBlockCountForRange(fromBlockNumber, toBlockNumber);
-  }
-
-  async getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<Event>> {
-    if (toBlockNumber <= fromBlockNumber) {
-      throw new Error('toBlockNumber should be greater than fromBlockNumber');
-    }
-
-    if ((toBlockNumber - fromBlockNumber) > MAX_EVENTS_BLOCK_RANGE) {
-      throw new Error(`Max range (${MAX_EVENTS_BLOCK_RANGE}) exceeded`);
-    }
-
-    return this._db.getEventsInRange(fromBlockNumber, toBlockNumber);
-  }
-
-  async position (blockHash: string, tokenId: string): Promise<any> {
-    const nfpmContract = await this._db.getLatestContract('nfpm');
-    assert(nfpmContract, 'No NFPM contract watched.');
-    const { value, proof } = await this._getStorageValue(nfpmStorageLayout, blockHash, nfpmContract.address, '_positions', BigInt(tokenId));
-
-    return {
-      ...value,
-      proof
-    };
-  }
-
-  async poolIdToPoolKey (blockHash: string, poolId: string): Promise<any> {
-    const nfpmContract = await this._db.getLatestContract('nfpm');
-    assert(nfpmContract, 'No NFPM contract watched.');
-    const { value, proof } = await this._getStorageValue(nfpmStorageLayout, blockHash, nfpmContract.address, '_poolIdToPoolKey', BigInt(poolId));
-
-    return {
-      ...value,
-      proof
-    };
-  }
-
-  async getPool (blockHash: string, token0: string, token1: string, fee: string): Promise<any> {
-    const factoryContract = await this._db.getLatestContract('factory');
-    assert(factoryContract, 'No Factory contract watched.');
-    const { value, proof } = await this._getStorageValue(factoryStorageLayout, blockHash, factoryContract.address, 'getPool', token0, token1, BigInt(fee));
-
-    return {
-      pool: value,
-      proof
-    };
-  }
-
-  async getContract (type: string): Promise<any> {
-    const contract = await this._db.getLatestContract(type);
-    return contract;
   }
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
