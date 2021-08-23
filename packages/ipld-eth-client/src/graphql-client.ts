@@ -8,7 +8,7 @@ import fetch from 'cross-fetch';
 import { SubscriptionClient } from 'subscriptions-transport-ws';
 import ws from 'ws';
 
-import { ApolloClient, NormalizedCacheObject, split, HttpLink, InMemoryCache, DocumentNode, TypedDocumentNode, from } from '@apollo/client/core';
+import { ApolloClient, NormalizedCacheObject, split, HttpLink, InMemoryCache, DocumentNode, TypedDocumentNode, from, FetchPolicy } from '@apollo/client/core';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { WebSocketLink } from '@apollo/client/link/ws';
 
@@ -22,9 +22,11 @@ export interface GraphQLConfig {
 export class GraphQLClient {
   _config: GraphQLConfig;
   _client: ApolloClient<NormalizedCacheObject>;
+  _fetchPolicy: FetchPolicy;
 
-  constructor (config: GraphQLConfig) {
+  constructor (config: GraphQLConfig, fetchPolicy: FetchPolicy = 'cache-first') {
     this._config = config;
+    this._fetchPolicy = fetchPolicy;
 
     const { gqlEndpoint, gqlSubscriptionEndpoint } = config;
 
@@ -88,7 +90,7 @@ export class GraphQLClient {
   }
 
   async query (query: DocumentNode | TypedDocumentNode, variables: { [key: string]: any }): Promise<any> {
-    const { data: result } = await this._client.query({ query, variables });
+    const { data: result } = await this._client.query({ query, variables, fetchPolicy: this._fetchPolicy });
 
     return result;
   }

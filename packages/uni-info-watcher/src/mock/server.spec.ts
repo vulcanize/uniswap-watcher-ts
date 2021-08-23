@@ -6,11 +6,11 @@ import 'mocha';
 import { expect } from 'chai';
 import { GraphQLClient } from 'graphql-request';
 
-import { queryBundle } from '../queries';
+import { queryBundles } from '../queries';
 import { Data } from './data';
 
 describe('server', () => {
-  const client = new GraphQLClient('http://localhost:3003/graphql');
+  const client = new GraphQLClient('http://localhost:3004/graphql');
   const data = Data.getInstance();
 
   it('query bundle', async () => {
@@ -21,7 +21,7 @@ describe('server', () => {
       const { id, blockNumber, ethPriceUSD } = bundles[i];
 
       // Bundle query.
-      const result = await client.request(queryBundle, { id, blockNumber });
+      const result = await client.request(queryBundles, { first: 1, block: { number: blockNumber } });
       expect(result.bundle.id).to.equal(id);
       expect(result.bundle.ethPriceUSD).to.equal(ethPriceUSD);
     }

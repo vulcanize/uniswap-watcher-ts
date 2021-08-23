@@ -4,6 +4,29 @@
 
 import { gql } from 'graphql-request';
 
+const resultPool = `
+{
+  id,
+  feeTier,
+  liquidity,
+  sqrtPrice,
+  tick,
+  token0 {
+    id
+  },
+  token0Price,
+  token1 {
+    id
+  },
+  token1Price,
+  totalValueLockedToken0,
+  totalValueLockedToken1,
+  totalValueLockedUSD,
+  txCount,
+  volumeUSD,
+}
+`;
+
 export const queryToken = gql`
 query queryToken($id: ID!, $block: Block_height) {
   token(id: $id, block: $block) {
@@ -42,26 +65,12 @@ query queryBundles($block: Block_height, $first: Int) {
 // Getting Pool by id.
 export const queryPoolById = gql`
 query queryPoolById($id: ID!) {
-  pool(id: $id) {
-    feeTier
-    id
-    liquidity
-    sqrtPrice
-    tick
-    token0
-    token0Price
-    token1
-    token1Price
-    totalValueLockedToken0
-    totalValueLockedToken1
-    totalValueLockedUSD
-    txCount
-    volumeUSD
-  }
+  pool(id: $id) 
+    ${resultPool}
 }`;
 
 export const queryTicks = gql`
-query queryTicksByPool($skip: Int, $first: Int, $where: Tick_filter, $block: Block_height) {
+query queryTicks($skip: Int, $first: Int, $where: Tick_filter, $block: Block_height) {
   ticks(skip: $skip, first: $first, where: $where, block: $block) {
     id
     liquidityGross
@@ -72,49 +81,50 @@ query queryTicksByPool($skip: Int, $first: Int, $where: Tick_filter, $block: Blo
   }
 }`;
 
-// Getting Pool(s) filtered by tokens.
-export const queryPoolsByTokens = gql`
-query queryPoolsByTokens($tokens: [String!]) {
-  pools(where: { token0_in: $tokens, token1_in: $tokens }) {
-    id,
-    feeTier
-  }
+// Getting Pool(s).
+export const queryPools = gql`
+query queryPools($where: Pool_filter, $first: Int, $orderBy: Pool_orderBy, $orderDirection: OrderDirection) {
+  pools(where: $where, first: $first, orderBy: $orderBy, orderDirection: $orderDirection)
+    ${resultPool}
 }`;
 
 // Getting UniswapDayData(s).
-export const queryUniswapDayData = gql`
-query queryUniswapDayData($first: Int, $orderBy: UniswapDayData_orderBy, $orderDirection: OrderDirection) {
-  uniswapDayDatas(first: $first, orderBy: $orderBy, orderDirection: $orderDirection) {
+export const queryUniswapDayDatas = gql`
+query queryUniswapDayDatas($first: Int, $skip: Int, $orderBy: UniswapDayData_orderBy, $orderDirection: OrderDirection, $where: UniswapDayData_filter) {
+  uniswapDayDatas(first: $first, skip: $skip, orderBy: $orderBy, orderDirection: $orderDirection, where: $where) {
     id,
     date,
-    tvlUSD
+    tvlUSD,
+    volumeUSD
   }
 }`;
 
-// Getting PoolDayData(s) filtered by pool and ordered by date.
-export const queryPoolDayData = gql`
-query queryPoolDayData($first: Int, $orderBy: PoolDayData_orderBy, $orderDirection: OrderDirection, $pool: String) {
-  poolDayDatas(first: $first, orderBy: $orderBy, orderDirection: $orderDirection, where: { pool: $pool }) {
+// Getting PoolDayData(s).
+export const queryPoolDayDatas = gql`
+query queryPoolDayDatas($first: Int, $skip: Int, $orderBy: PoolDayData_orderBy, $orderDirection: OrderDirection, $where: PoolDayData_filter) {
+  poolDayDatas(first: $first, skip: $skip, orderBy: $orderBy, orderDirection: $orderDirection, where: $where) {
     id,
     date,
-    tvlUSD
+    tvlUSD,
+    volumeUSD
   }
 }`;
 
-// Getting TokenDayDatas(s) filtered by token and ordered by date.
-export const queryTokenDayData = gql`
-query queryTokenDayData($first: Int, $orderBy: TokenDayData_orderBy, $orderDirection: OrderDirection, $token: String) {
-  tokenDayDatas(first: $first, orderBy: $orderBy, orderDirection: $orderDirection, where: { token: $token }) {
+// Getting TokenDayDatas(s).
+export const queryTokenDayDatas = gql`
+query queryTokenDayData($first: Int, $skip: Int, $orderBy: TokenDayData_orderBy, $orderDirection: OrderDirection, $where: TokenDayData_filter) {
+  tokenDayDatas(first: $first, skip: $skip, orderBy: $orderBy, orderDirection: $orderDirection, where: $where) {
     id,
     date,
-    totalValueLockedUSD
+    totalValueLockedUSD,
+    volumeUSD
   }
 }`;
 
-// Getting TokenDayDatas(s) filtered by token and ordered by date.
-export const queryTokenHourData = gql`
-query queryTokenHourData($first: Int, $orderBy: TokenHourData_orderBy, $orderDirection: OrderDirection, $token: String) {
-  tokenHourDatas(first: $first, orderBy: $orderBy, orderDirection: $orderDirection, where: { token: $token }) {
+// Getting TokenDayDatas(s).
+export const queryTokenHourDatas = gql`
+query queryTokenHourData($first: Int, $skip: Int, $orderBy: TokenHourData_orderBy, $orderDirection: OrderDirection, $where: TokenHourData_filter) {
+  tokenHourDatas(first: $first, skip: $skip, orderBy: $orderBy, orderDirection: $orderDirection, where: $where) {
     id,
     low,
     high,
@@ -124,24 +134,18 @@ query queryTokenHourData($first: Int, $orderBy: TokenHourData_orderBy, $orderDir
   }
 }`;
 
-// Getting mint(s) filtered by pool, tokens and ordered by timestamp.
+// Getting mint(s).
 export const queryMints = gql`
 query queryMints(
   $first: Int,
   $orderBy: Mint_orderBy,
   $orderDirection: OrderDirection,
-  $pool: String,
-  $token0: String,
-  $token1: String) {
+  $where: Mint_filter) {
     mints(
       first: $first,
       orderBy: $orderBy,
       orderDirection: $orderDirection,
-      where: {
-        pool: $pool,
-        token0: $token0,
-        token1: $token1
-      }) {
+      where: $where) {
         amount0,
         amount1,
         amountUSD,
@@ -159,24 +163,18 @@ query queryMints(
       }
 }`;
 
-// Getting burns(s) filtered by pool, tokens and ordered by timestamp.
+// Getting burns(s).
 export const queryBurns = gql`
 query queryBurns(
   $first: Int,
   $orderBy: Burn_orderBy,
   $orderDirection: OrderDirection,
-  $pool: String,
-  $token0: String,
-  $token1: String) {
+  $where: Burn_filter) {
     burns(
       first: $first,
       orderBy: $orderBy,
       orderDirection: $orderDirection,
-      where: {
-        pool: $pool,
-        token0: $token0,
-        token1: $token1
-      }) {
+      where: $where) {
         amount0,
         amount1,
         amountUSD,
@@ -193,24 +191,18 @@ query queryBurns(
       }
 }`;
 
-// Getting burns(s) filtered by pool, tokens and ordered by timestamp.
+// Getting swap(s) .
 export const querySwaps = gql`
 query querySwaps(
   $first: Int,
   $orderBy: Swap_orderBy,
   $orderDirection: OrderDirection,
-  $pool: String,
-  $token0: String,
-  $token1: String) {
+  $where: Swap_filter) {
     swaps(
       first: $first,
       orderBy: $orderBy,
       orderDirection: $orderDirection,
-      where: {
-        pool: $pool,
-        token0: $token0,
-        token1: $token1
-      }) {
+      where: $where) {
         amount0,
         amount1,
         amountUSD,
@@ -226,7 +218,7 @@ query querySwaps(
       }
 }`;
 
-// Getting transactions(s) ordered by timestamp.
+// Getting transactions(s).
 export const queryTransactions = gql`
 query queryTransactions(
   $first: Int,
@@ -256,10 +248,10 @@ query queryTransactions(
       }
 }`;
 
-// Getting position filtered by id.
+// Getting positions.
 export const queryPositions = gql`
-query queryPositions($first: Int, $id: ID) {
-  positions(first: $first, where: { id: $id }) {
+query queryPositions($first: Int, $where: Position_filter) {
+  positions(first: $first, where: $where) {
     id,
     pool {
       id
