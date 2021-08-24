@@ -2,20 +2,36 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { gql, FetchPolicy } from '@apollo/client/core';
+import { gql } from '@apollo/client/core';
 import { GraphQLClient, GraphQLConfig } from '@vulcanize/ipld-eth-client';
 
 import { BlockHeight, OrderDirection } from './indexer';
-import { queryBundles, queryBurns, queryFactories, queryMints, queryPoolById, queryPoolDayDatas, queryPools, queryPositions, querySwaps, queryTicks, queryToken, queryTokenDayDatas, queryTokenHourDatas, queryTransactions, queryUniswapDayDatas } from './queries';
+import {
+  queryBundles,
+  queryBurns,
+  queryFactories,
+  queryMints,
+  queryPoolById,
+  queryPoolDayDatas,
+  queryPools,
+  queryPositions,
+  querySwaps,
+  queryTicks,
+  queryToken,
+  queryTokenDayDatas,
+  queryTokenHourDatas,
+  queryTransactions,
+  queryUniswapDayDatas
+} from './queries';
 
 export class Client {
   _config: GraphQLConfig;
   _client: GraphQLClient;
 
-  constructor (config: GraphQLConfig, fetchPolicy?: FetchPolicy) {
+  constructor (config: GraphQLConfig) {
     this._config = config;
 
-    this._client = new GraphQLClient(config, fetchPolicy);
+    this._client = new GraphQLClient(config);
   }
 
   async getToken (tokenId: string, block?: BlockHeight): Promise<any> {

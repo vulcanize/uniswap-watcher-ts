@@ -676,6 +676,23 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.createTransactionRunner();
   }
 
+  async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
+    const repo = this._conn.getRepository(BlockProgress);
+
+    return this._baseDatabase.getProcessedBlockCountForRange(repo, fromBlockNumber, toBlockNumber);
+  }
+
+  async getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<Event>> {
+    const repo = this._conn.getRepository(Event);
+
+    return this._baseDatabase.getEventsInRange(repo, fromBlockNumber, toBlockNumber);
+  }
+
+  async saveEventEntity (queryRunner: QueryRunner, entity: Event): Promise<Event> {
+    const repo = queryRunner.manager.getRepository(Event);
+    return this._baseDatabase.saveEventEntity(repo, entity);
+  }
+
   async getBlockEvents (blockHash: string): Promise<Event[]> {
     const repo = this._conn.getRepository(Event);
 

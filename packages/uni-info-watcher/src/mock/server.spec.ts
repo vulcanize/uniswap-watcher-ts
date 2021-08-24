@@ -21,9 +21,9 @@ describe('server', () => {
       const { id, blockNumber, ethPriceUSD } = bundles[i];
 
       // Bundle query.
-      const result = await client.request(queryBundles, { first: 1, block: { number: blockNumber } });
-      expect(result.bundle.id).to.equal(id);
-      expect(result.bundle.ethPriceUSD).to.equal(ethPriceUSD);
+      const [bundle] = await client.request(queryBundles, { first: 1, block: { number: blockNumber } });
+      expect(bundle.id).to.equal(id);
+      expect(bundle.ethPriceUSD).to.equal(ethPriceUSD);
     }
   });
 });

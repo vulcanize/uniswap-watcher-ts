@@ -10,9 +10,17 @@ import debug from 'debug';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { getConfig, JobQueue, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, QUEUE_CHAIN_PRUNING, JobRunner as BaseJobRunner, JobQueueConfig } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
+import {
+  getConfig,
+  JobQueue,
+  QUEUE_BLOCK_PROCESSING,
+  QUEUE_EVENT_PROCESSING,
+  QUEUE_CHAIN_PRUNING,
+  JobRunner as BaseJobRunner,
+  JobQueueConfig
+} from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { Database } from './database';

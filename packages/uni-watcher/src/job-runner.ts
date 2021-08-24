@@ -10,7 +10,15 @@ import debug from 'debug';
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { getConfig, JobQueue, JobRunner as BaseJobRunner, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, QUEUE_CHAIN_PRUNING, JobQueueConfig } from '@vulcanize/util';
+import {
+  getConfig,
+  JobQueue,
+  JobRunner as BaseJobRunner,
+  QUEUE_BLOCK_PROCESSING,
+  QUEUE_EVENT_PROCESSING,
+  QUEUE_CHAIN_PRUNING,
+  JobQueueConfig
+} from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { Database } from './database';

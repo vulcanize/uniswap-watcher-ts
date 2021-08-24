@@ -81,13 +81,10 @@ describe('uni-info-watcher', () => {
 
     gqlEndpoint = endpoint;
     gqlSubscriptionEndpoint = endpoint;
-    client = new Client(
-      {
-        gqlEndpoint,
-        gqlSubscriptionEndpoint
-      },
-      'no-cache'
-    );
+    client = new Client({
+      gqlEndpoint,
+      gqlSubscriptionEndpoint
+    });
   });
 
   it('should have a Factory entity', async () => {

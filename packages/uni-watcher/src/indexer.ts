@@ -22,9 +22,6 @@ import { abi as factoryABI, storageLayout as factoryStorageLayout } from './arti
 import { abi as nfpmABI, storageLayout as nfpmStorageLayout } from './artifacts/NonfungiblePositionManager.json';
 import poolABI from './artifacts/pool.json';
 
-// TODO: Move to config.
-const MAX_EVENTS_BLOCK_RANGE = 1000;
-
 const log = debug('vulcanize:indexer');
 
 type ResultEvent = {
@@ -295,39 +292,6 @@ export class Indexer implements IndexerInterface {
     return { eventName, eventInfo };
   }
 
-  async saveEventEntity (dbEvent: Event): Promise<Event> {
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      res = this._db.saveEventEntity(dbTx, dbEvent);
-      await dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-
-    return res;
-  }
-
-  async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
-    return this._db.getProcessedBlockCountForRange(fromBlockNumber, toBlockNumber);
-  }
-
-  async getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<Event>> {
-    if (toBlockNumber <= fromBlockNumber) {
-      throw new Error('toBlockNumber should be greater than fromBlockNumber');
-    }
-
-    if ((toBlockNumber - fromBlockNumber) > MAX_EVENTS_BLOCK_RANGE) {
-      throw new Error(`Max range (${MAX_EVENTS_BLOCK_RANGE}) exceeded`);
-    }
-
-    return this._db.getEventsInRange(fromBlockNumber, toBlockNumber);
-  }
-
   async position (blockHash: string, tokenId: string): Promise<any> {
     const nfpmContract = await this._db.getLatestContract('nfpm');
     assert(nfpmContract, 'No NFPM contract watched.');
@@ -366,6 +330,18 @@ export class Indexer implements IndexerInterface {
     return contract;
   }
 
+  async saveEventEntity (dbEvent: Event): Promise<Event> {
+    return this._baseIndexer.saveEventEntity(dbEvent);
+  }
+
+  async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
+    return this._baseIndexer.getProcessedBlockCountForRange(fromBlockNumber, toBlockNumber);
+  }
+
+  async getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<Event>> {
+    return this._baseIndexer.getEventsInRange(fromBlockNumber, toBlockNumber);
+  }
+
   // Note: Some event names might be unknown at this point, as earlier events might not yet be processed.
   async getOrFetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<Array<Event>> {
     return this._baseIndexer.getOrFetchBlockEvents(block, this._fetchAndSaveEvents.bind(this));
@@ -373,6 +349,50 @@ export class Indexer implements IndexerInterface {
 
   async getBlockEvents (blockHash: string): Promise<Array<Event>> {
     return this._baseIndexer.getBlockEvents(blockHash);
+  }
+
+  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return this._baseIndexer.updateSyncStatusIndexedBlock(blockHash, blockNumber);
+  }
+
+  async updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return this._baseIndexer.updateSyncStatusChainHead(blockHash, blockNumber);
+  }
+
+  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
+    return this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber);
+  }
+
+  async getSyncStatus (): Promise<SyncStatus | undefined> {
+    return this._baseIndexer.getSyncStatus();
+  }
+
+  async getBlock (blockHash: string): Promise<any> {
+    return this._baseIndexer.getBlock(blockHash);
+  }
+
+  async getEvent (id: string): Promise<Event | undefined> {
+    return this._baseIndexer.getEvent(id);
+  }
+
+  async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
+    return this._baseIndexer.getBlockProgress(blockHash);
+  }
+
+  async getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgress[]> {
+    return this._baseIndexer.getBlocksAtHeight(height, isPruned);
+  }
+
+  async markBlocksAsPruned (blocks: BlockProgress[]): Promise<void> {
+    return this._baseIndexer.markBlocksAsPruned(blocks);
+  }
+
+  async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {
+    return this._baseIndexer.updateBlockProgress(blockHash, lastProcessedEventIndex);
+  }
+
+  async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
+    return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
   async _fetchAndSaveEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<void> {
@@ -465,50 +485,6 @@ export class Indexer implements IndexerInterface {
     } finally {
       await dbTx.release();
     }
-  }
-
-  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
-    return this._baseIndexer.updateSyncStatusIndexedBlock(blockHash, blockNumber);
-  }
-
-  async updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatus> {
-    return this._baseIndexer.updateSyncStatusChainHead(blockHash, blockNumber);
-  }
-
-  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
-    return this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber);
-  }
-
-  async getSyncStatus (): Promise<SyncStatus | undefined> {
-    return this._baseIndexer.getSyncStatus();
-  }
-
-  async getBlock (blockHash: string): Promise<any> {
-    return this._baseIndexer.getBlock(blockHash);
-  }
-
-  async getEvent (id: string): Promise<Event | undefined> {
-    return this._baseIndexer.getEvent(id);
-  }
-
-  async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
-    return this._baseIndexer.getBlockProgress(blockHash);
-  }
-
-  async getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgress[]> {
-    return this._baseIndexer.getBlocksAtHeight(height, isPruned);
-  }
-
-  async markBlocksAsPruned (blocks: BlockProgress[]): Promise<void> {
-    return this._baseIndexer.markBlocksAsPruned(blocks);
-  }
-
-  async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {
-    return this._baseIndexer.updateBlockProgress(blockHash, lastProcessedEventIndex);
-  }
-
-  async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
-    return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
   // TODO: Move into base/class or framework package.

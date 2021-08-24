@@ -5,7 +5,15 @@
 import { gql } from '@apollo/client/core';
 import { GraphQLClient, GraphQLConfig } from '@vulcanize/ipld-eth-client';
 
-import { queryGetPool, queryPoolIdToPoolKey, queryPosition, queryEvents, subscribeEvents, queryGetContract, queryEventsInRange } from './queries';
+import {
+  queryGetPool,
+  queryPoolIdToPoolKey,
+  queryPosition,
+  queryEvents,
+  subscribeEvents,
+  queryGetContract,
+  queryEventsInRange
+} from './queries';
 
 export class Client {
   _config: GraphQLConfig;
