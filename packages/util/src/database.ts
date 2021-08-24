@@ -3,11 +3,12 @@
 //
 
 import assert from 'assert';
-import { Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, In, QueryRunner, Repository } from 'typeorm';
+import { Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, In, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import _ from 'lodash';
 
 import { BlockProgressInterface, EventInterface, SyncStatusInterface } from './types';
+import { MAX_REORG_DEPTH } from './constants';
 
 const UNKNOWN_EVENT_NAME = '__unknown__';
 
@@ -278,5 +279,109 @@ export class Database {
 
   async saveEventEntity (repo: Repository<EventInterface>, entity: EventInterface): Promise<EventInterface> {
     return await repo.save(entity);
+  }
+
+  async getPrevEntityVersion<Entity> (queryRunner: QueryRunner, repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
+    // Check whether query is ordered by blockNumber to get the latest entity.
+    assert(findOptions.order.blockNumber);
+
+    // Hierarchical query for getting the entity in the frothy region.
+    const heirerchicalQuery = `
+      WITH RECURSIVE cte_query AS
+      (
+        SELECT
+          b.block_hash,
+          b.block_number,
+          b.parent_hash,
+          1 as depth,
+          e.id
+        FROM
+          block_progress b
+          LEFT JOIN
+            ${repo.metadata.tableName} e ON e.block_hash = b.block_hash
+        WHERE
+          b.block_hash = $1
+        UNION ALL
+          SELECT
+            b.block_hash,
+            b.block_number,
+            b.parent_hash,
+            c.depth + 1,
+            e.id
+          FROM
+            block_progress b
+            LEFT JOIN
+              ${repo.metadata.tableName} e
+              ON e.block_hash = b.block_hash
+              AND e.id = $2
+            INNER JOIN
+              cte_query c ON c.parent_hash = b.block_hash
+            WHERE
+              c.id IS NULL AND c.depth < $3
+      )
+      SELECT
+        block_hash, block_number, id
+      FROM
+        cte_query
+      ORDER BY block_number ASC
+      LIMIT 1;
+    `;
+
+    // Fetching blockHash for previous entity in frothy region.
+    const [{ block_hash: blockHash, block_number: blockNumber, id }] = await queryRunner.query(heirerchicalQuery, [findOptions.where.blockHash, findOptions.where.id, MAX_REORG_DEPTH]);
+
+    if (id) {
+      // Entity found in frothy region.
+      findOptions.where.blockHash = blockHash;
+      return repo.findOne(findOptions);
+    }
+
+    // If entity not found in frothy region get latest entity in the pruned region.
+    delete findOptions.where.blockHash;
+    const canonicalBlockNumber = blockNumber + 1;
+    findOptions.where.blockNumber = LessThanOrEqual(canonicalBlockNumber);
+    return repo.findOne(findOptions);
+  }
+
+  async getFrothyRegion (queryRunner: QueryRunner, blockHash: string): Promise<{ canonicalBlockNumber: number, blockHashes: string[] }> {
+    const heirerchicalQuery = `
+      WITH RECURSIVE cte_query AS
+      (
+        SELECT
+          block_hash,
+          block_number,
+          parent_hash,
+          1 as depth
+        FROM
+          block_progress
+        WHERE
+          block_hash = $1
+        UNION ALL
+          SELECT
+            b.block_hash,
+            b.block_number,
+            b.parent_hash,
+            c.depth + 1
+          FROM
+            block_progress b
+          INNER JOIN
+            cte_query c ON c.parent_hash = b.block_hash
+          WHERE
+            c.depth < $2
+      )
+      SELECT
+        block_hash, block_number
+      FROM
+        cte_query;
+    `;
+
+    // Get blocks in the frothy region using heirarchical query.
+    const blocks = await queryRunner.query(heirerchicalQuery, [blockHash, MAX_REORG_DEPTH]);
+    const blockHashes = blocks.map(({ block_hash: blockHash }: any) => blockHash);
+
+    // Canonical block is the block after the last block in frothy region.
+    const canonicalBlockNumber = blocks[blocks.length - 1].block_number + 1;
+
+    return { canonicalBlockNumber, blockHashes };
   }
 }

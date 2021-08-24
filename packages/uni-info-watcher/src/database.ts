@@ -3,11 +3,19 @@
 //
 
 import assert from 'assert';
-import { Brackets, Connection, ConnectionOptions, DeepPartial, FindConditions, FindOneOptions, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
+import {
+  Brackets,
+  Connection,
+  ConnectionOptions,
+  DeepPartial,
+  FindConditions,
+  FindOneOptions,
+  LessThanOrEqual,
+  QueryRunner
+} from 'typeorm';
 
-import { MAX_REORG_DEPTH, Database as BaseDatabase, DatabaseInterface } from '@vulcanize/util';
+import { Database as BaseDatabase, DatabaseInterface } from '@vulcanize/util';
 
-import { EventSyncProgress } from './entity/EventProgress';
 import { Factory } from './entity/Factory';
 import { Pool } from './entity/Pool';
 import { Event } from './entity/Event';
@@ -106,7 +114,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<Factory>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -134,7 +142,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<Bundle>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -159,7 +167,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<Token>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -202,7 +210,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<Pool>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -246,7 +254,7 @@ export class Database implements DatabaseInterface {
       entity = await repo.findOne(findOptions as FindOneOptions<Position>);
 
       if (!entity && findOptions.where.blockHash) {
-        entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+        entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
       }
     } finally {
       await queryRunner.release();
@@ -274,7 +282,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<Tick>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -313,7 +321,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<PoolDayData>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -337,7 +345,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<PoolHourData>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -361,7 +369,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<UniswapDayData>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -385,7 +393,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<TokenDayData>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -409,7 +417,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<TokenHourData>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -433,7 +441,7 @@ export class Database implements DatabaseInterface {
     let entity = await repo.findOne(findOptions as FindOneOptions<Transaction>);
 
     if (!entity && findOptions.where.blockHash) {
-      entity = await this._getPrevEntityVersion(queryRunner, repo, findOptions);
+      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
     return entity;
@@ -448,7 +456,7 @@ export class Database implements DatabaseInterface {
       .where(`subTable.id = ${tableName}.id`);
 
     if (block.hash) {
-      const { canonicalBlockNumber, blockHashes } = await this._getFrothyRegion(queryRunner, block.hash);
+      const { canonicalBlockNumber, blockHashes } = await this._baseDatabase.getFrothyRegion(queryRunner, block.hash);
 
       subQuery = subQuery
         .andWhere(new Brackets(qb => {
@@ -634,44 +642,6 @@ export class Database implements DatabaseInterface {
     return repo.save(swap);
   }
 
-  // Returns true if events have already been synced for the (block, token) combination.
-  async didSyncEvents ({ blockHash, token }: { blockHash: string, token: string }): Promise<boolean> {
-    const numRows = await this._conn.getRepository(EventSyncProgress)
-      .createQueryBuilder()
-      .where('block_hash = :blockHash AND token = :token', {
-        blockHash,
-        token
-      })
-      .getCount();
-
-    return numRows > 0;
-  }
-
-  async getEvents ({ blockHash, token }: { blockHash: string, token: string }): Promise<Event[]> {
-    return this._conn.getRepository(Event)
-      .createQueryBuilder('event')
-      .innerJoinAndSelect('event.block', 'block')
-      .where('block_hash = :blockHash AND token = :token', {
-        blockHash,
-        token
-      })
-      .addOrderBy('event.id', 'ASC')
-      .getMany();
-  }
-
-  async getEventsByName ({ blockHash, token, eventName }: { blockHash: string, token: string, eventName: string }): Promise<Event[] | undefined> {
-    return this._conn.getRepository(Event)
-      .createQueryBuilder('event')
-      .innerJoinAndSelect('event.block', 'block')
-      .where('block_hash = :blockHash AND token = :token AND :eventName = :eventName', {
-        blockHash,
-        token,
-        eventName
-      })
-      .addOrderBy('event.id', 'ASC')
-      .getMany();
-  }
-
   async createTransactionRunner (): Promise<QueryRunner> {
     return this._baseDatabase.createTransactionRunner();
   }
@@ -773,111 +743,5 @@ export class Database implements DatabaseInterface {
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
     return this._baseDatabase.getAncestorAtDepth(blockHash, depth);
-  }
-
-  async _getPrevEntityVersion<Entity> (queryRunner: QueryRunner, repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
-    // Check whether query is ordered by blockNumber to get the latest entity.
-    assert(findOptions.order.blockNumber);
-
-    // Hierarchical query for getting the entity in the frothy region.
-    // TODO: Use syncStatus.latestCanonicalBlockNumber instead of MAX_REORG_DEPTH after pruning is implemented.
-    const heirerchicalQuery = `
-      WITH RECURSIVE cte_query AS
-      (
-        SELECT
-          b.block_hash,
-          b.block_number,
-          b.parent_hash,
-          1 as depth,
-          e.id
-        FROM
-          block_progress b
-          LEFT JOIN
-            ${repo.metadata.tableName} e ON e.block_hash = b.block_hash
-        WHERE
-          b.block_hash = $1
-        UNION ALL
-          SELECT
-            b.block_hash,
-            b.block_number,
-            b.parent_hash,
-            c.depth + 1,
-            e.id
-          FROM
-            block_progress b
-            LEFT JOIN
-              ${repo.metadata.tableName} e
-              ON e.block_hash = b.block_hash
-              AND e.id = $2
-            INNER JOIN
-              cte_query c ON c.parent_hash = b.block_hash
-            WHERE
-              c.id IS NULL AND c.depth < $3
-      )
-      SELECT
-        block_hash, block_number, id
-      FROM
-        cte_query
-      ORDER BY block_number ASC
-      LIMIT 1;
-    `;
-
-    // Fetching blockHash for previous entity in frothy region.
-    const [{ block_hash: blockHash, block_number: blockNumber, id }] = await queryRunner.query(heirerchicalQuery, [findOptions.where.blockHash, findOptions.where.id, MAX_REORG_DEPTH]);
-
-    if (id) {
-      // Entity found in frothy region.
-      findOptions.where.blockHash = blockHash;
-      return repo.findOne(findOptions);
-    }
-
-    // If entity not found in frothy region get latest entity in the pruned region.
-    delete findOptions.where.blockHash;
-    const canonicalBlockNumber = blockNumber + 1;
-    findOptions.where.blockNumber = LessThanOrEqual(canonicalBlockNumber);
-    return repo.findOne(findOptions);
-  }
-
-  async _getFrothyRegion (queryRunner: QueryRunner, blockHash: string): Promise<{ canonicalBlockNumber: number, blockHashes: string[] }> {
-    // TODO: Use syncStatus.latestCanonicalBlockNumber instead of MAX_REORG_DEPTH after pruning is implemented.
-    const heirerchicalQuery = `
-      WITH RECURSIVE cte_query AS
-      (
-        SELECT
-          block_hash,
-          block_number,
-          parent_hash,
-          1 as depth
-        FROM
-          block_progress
-        WHERE
-          block_hash = $1
-        UNION ALL
-          SELECT
-            b.block_hash,
-            b.block_number,
-            b.parent_hash,
-            c.depth + 1
-          FROM
-            block_progress b
-          INNER JOIN
-            cte_query c ON c.parent_hash = b.block_hash
-          WHERE
-            c.depth < $2
-      )
-      SELECT
-        block_hash, block_number
-      FROM
-        cte_query;
-    `;
-
-    // Get blocks in the frothy region using heirarchical query.
-    const blocks = await queryRunner.query(heirerchicalQuery, [blockHash, MAX_REORG_DEPTH]);
-    const blockHashes = blocks.map(({ block_hash: blockHash }: any) => blockHash);
-
-    // Canonical block is the block after the last block in frothy region.
-    const canonicalBlockNumber = blocks[blocks.length - 1].block_number + 1;
-
-    return { canonicalBlockNumber, blockHashes };
   }
 }
