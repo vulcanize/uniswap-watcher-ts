@@ -3,7 +3,16 @@
 //
 
 import assert from 'assert';
-import { Connection, ConnectionOptions, createConnection, DeepPartial, FindConditions, In, LessThanOrEqual, QueryRunner, Repository } from 'typeorm';
+import {
+  Connection,
+  ConnectionOptions,
+  createConnection,
+  DeepPartial,
+  FindConditions,
+  In,
+  QueryRunner,
+  Repository
+} from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import _ from 'lodash';
 
@@ -266,7 +275,7 @@ export class Database {
   async getEventsInRange (repo: Repository<EventInterface>, fromBlockNumber: number, toBlockNumber: number): Promise<Array<EventInterface>> {
     const events = repo.createQueryBuilder('event')
       .innerJoinAndSelect('event.block', 'block')
-      .where('block_number >= :fromBlockNumber AND block_number <= :toBlockNumber AND event_name <> :eventName', {
+      .where('block_number >= :fromBlockNumber AND block_number <= :toBlockNumber AND event_name <> :eventName AND is_pruned = false', {
         fromBlockNumber,
         toBlockNumber,
         eventName: UNKNOWN_EVENT_NAME
@@ -282,9 +291,6 @@ export class Database {
   }
 
   async getPrevEntityVersion<Entity> (queryRunner: QueryRunner, repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
-    // Check whether query is ordered by blockNumber to get the latest entity.
-    assert(findOptions.order.blockNumber);
-
     // Hierarchical query for getting the entity in the frothy region.
     const heirerchicalQuery = `
       WITH RECURSIVE cte_query AS
@@ -333,13 +339,22 @@ export class Database {
     if (id) {
       // Entity found in frothy region.
       findOptions.where.blockHash = blockHash;
-      return repo.findOne(findOptions);
+    } else {
+      // If entity not found in frothy region get latest entity in the pruned region.
+      // Filter out entities from pruned blocks.
+      const canonicalBlockNumber = blockNumber + 1;
+      const entityInPrunedRegion:any = await repo.createQueryBuilder('entity')
+        .innerJoinAndSelect('block_progress', 'block', 'block.block_hash = entity.block_hash')
+        .where('block.is_pruned = false')
+        .andWhere('entity.id = :id', { id: findOptions.where.id })
+        .andWhere('entity.block_number <= :canonicalBlockNumber', { canonicalBlockNumber })
+        .orderBy('entity.block_number', 'DESC')
+        .limit(1)
+        .getOne();
+
+      findOptions.where.blockHash = entityInPrunedRegion?.blockHash;
     }
 
-    // If entity not found in frothy region get latest entity in the pruned region.
-    delete findOptions.where.blockHash;
-    const canonicalBlockNumber = blockNumber + 1;
-    findOptions.where.blockNumber = LessThanOrEqual(canonicalBlockNumber);
     return repo.findOne(findOptions);
   }
 
