@@ -4,6 +4,7 @@
 
 import assert from 'assert';
 import {
+  Brackets,
   Connection,
   ConnectionOptions,
   createConnection,
@@ -16,10 +17,49 @@ import {
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import _ from 'lodash';
 
-import { BlockProgressInterface, EventInterface, SyncStatusInterface } from './types';
+import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
 import { MAX_REORG_DEPTH } from './constants';
 
 const UNKNOWN_EVENT_NAME = '__unknown__';
+const DEFAULT_LIMIT = 100;
+const DEFAULT_SKIP = 0;
+
+const OPERATOR_MAP = {
+  equals: '=',
+  gt: '>',
+  lt: '<',
+  gte: '>=',
+  lte: '<=',
+  in: 'IN',
+  contains: 'LIKE',
+  starts: 'LIKE',
+  ends: 'LIKE'
+};
+
+export interface BlockHeight {
+  number?: number;
+  hash?: string;
+}
+
+export enum OrderDirection {
+  asc = 'asc',
+  desc = 'desc'
+}
+
+export interface QueryOptions {
+  limit?: number;
+  skip?: number;
+  orderBy?: string;
+  orderDirection?: OrderDirection;
+}
+
+export interface Where {
+  [key: string]: [{
+    value: any;
+    not: boolean;
+    operator: keyof typeof OPERATOR_MAP;
+  }]
+}
 
 export class Database {
   _config: ConnectionOptions
@@ -290,6 +330,89 @@ export class Database {
     return await repo.save(entity);
   }
 
+  async getModelEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: string[] = []): Promise<Entity[]> {
+    const repo = queryRunner.manager.getRepository(entity);
+    const { tableName } = repo.metadata;
+
+    let subQuery = repo.createQueryBuilder('subTable')
+      .select('MAX(subTable.block_number)')
+      .where(`subTable.id = ${tableName}.id`);
+
+    if (block.hash) {
+      const { canonicalBlockNumber, blockHashes } = await this.getFrothyRegion(queryRunner, block.hash);
+
+      subQuery = subQuery
+        .andWhere(new Brackets(qb => {
+          qb.where('subTable.block_hash IN (:...blockHashes)', { blockHashes })
+            .orWhere('subTable.block_number <= :canonicalBlockNumber', { canonicalBlockNumber });
+        }));
+    }
+
+    if (block.number) {
+      subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
+    }
+
+    let selectQueryBuilder = repo.createQueryBuilder(tableName)
+      .where(`${tableName}.block_number IN (${subQuery.getQuery()})`)
+      .setParameters(subQuery.getParameters());
+
+    relations.forEach(relation => {
+      selectQueryBuilder = selectQueryBuilder.leftJoinAndSelect(`${repo.metadata.tableName}.${relation}`, relation);
+    });
+
+    Object.entries(where).forEach(([field, filters]) => {
+      filters.forEach((filter, index) => {
+        // Form the where clause.
+        const { not, operator, value } = filter;
+        const columnMetadata = repo.metadata.findColumnWithPropertyName(field);
+        assert(columnMetadata);
+        let whereClause = `${tableName}.${columnMetadata.propertyAliasName} `;
+
+        if (not) {
+          if (operator === 'equals') {
+            whereClause += '!';
+          } else {
+            whereClause += 'NOT ';
+          }
+        }
+
+        whereClause += `${OPERATOR_MAP[operator]} `;
+
+        if (['contains', 'starts'].some(el => el === operator)) {
+          whereClause += '%:';
+        } else if (operator === 'in') {
+          whereClause += '(:...';
+        } else {
+          whereClause += ':';
+        }
+
+        const variableName = `${field}${index}`;
+        whereClause += variableName;
+
+        if (['contains', 'ends'].some(el => el === operator)) {
+          whereClause += '%';
+        } else if (operator === 'in') {
+          whereClause += ')';
+        }
+
+        selectQueryBuilder = selectQueryBuilder.andWhere(whereClause, { [variableName]: value });
+      });
+    });
+
+    const { limit = DEFAULT_LIMIT, orderBy, orderDirection, skip = DEFAULT_SKIP } = queryOptions;
+
+    selectQueryBuilder = selectQueryBuilder.skip(skip)
+      .take(limit);
+
+    if (orderBy) {
+      const columnMetadata = repo.metadata.findColumnWithPropertyName(orderBy);
+      assert(columnMetadata);
+      selectQueryBuilder = selectQueryBuilder.orderBy(`${tableName}.${columnMetadata.propertyAliasName}`, orderDirection === 'desc' ? 'DESC' : 'ASC');
+    }
+
+    return selectQueryBuilder.getMany();
+  }
+
   async getPrevEntityVersion<Entity> (queryRunner: QueryRunner, repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
     // Hierarchical query for getting the entity in the frothy region.
     const heirerchicalQuery = `
@@ -398,5 +521,17 @@ export class Database {
     const canonicalBlockNumber = blocks[blocks.length - 1].block_number + 1;
 
     return { canonicalBlockNumber, blockHashes };
+  }
+
+  async saveContract (repo: Repository<ContractInterface>, address: string, startingBlock: number, kind?: string): Promise<void> {
+    const numRows = await repo
+      .createQueryBuilder()
+      .where('address = :address', { address })
+      .getCount();
+
+    if (numRows === 0) {
+      const entity = repo.create({ address, kind, startingBlock });
+      await repo.save(entity);
+    }
   }
 }

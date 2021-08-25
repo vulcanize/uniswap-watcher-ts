@@ -4,7 +4,6 @@
 
 import assert from 'assert';
 import {
-  Brackets,
   Connection,
   ConnectionOptions,
   DeepPartial,
@@ -14,7 +13,13 @@ import {
   QueryRunner
 } from 'typeorm';
 
-import { Database as BaseDatabase, DatabaseInterface } from '@vulcanize/util';
+import {
+  Database as BaseDatabase,
+  DatabaseInterface,
+  BlockHeight,
+  QueryOptions,
+  Where
+} from '@vulcanize/util';
 
 import { Factory } from './entity/Factory';
 import { Pool } from './entity/Pool';
@@ -36,46 +41,6 @@ import { PositionSnapshot } from './entity/PositionSnapshot';
 import { BlockProgress } from './entity/BlockProgress';
 import { Block } from './events';
 import { SyncStatus } from './entity/SyncStatus';
-
-const DEFAULT_LIMIT = 100;
-const DEFAULT_SKIP = 0;
-
-const OPERATOR_MAP = {
-  equals: '=',
-  gt: '>',
-  lt: '<',
-  gte: '>=',
-  lte: '<=',
-  in: 'IN',
-  contains: 'LIKE',
-  starts: 'LIKE',
-  ends: 'LIKE'
-};
-
-export interface BlockHeight {
-  number?: number;
-  hash?: string;
-}
-
-export enum OrderDirection {
-  asc = 'asc',
-  desc = 'desc'
-}
-
-export interface QueryOptions {
-  limit?: number;
-  skip?: number;
-  orderBy?: string;
-  orderDirection?: OrderDirection;
-}
-
-interface Where {
-  [key: string]: [{
-    value: any;
-    not: boolean;
-    operator: keyof typeof OPERATOR_MAP;
-  }]
-}
 
 export class Database implements DatabaseInterface {
   _config: ConnectionOptions
@@ -447,87 +412,8 @@ export class Database implements DatabaseInterface {
     return entity;
   }
 
-  async getUniswapEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: string[] = []): Promise<Entity[]> {
-    const repo = queryRunner.manager.getRepository(entity);
-    const { tableName } = repo.metadata;
-
-    let subQuery = repo.createQueryBuilder('subTable')
-      .select('MAX(subTable.block_number)')
-      .where(`subTable.id = ${tableName}.id`);
-
-    if (block.hash) {
-      const { canonicalBlockNumber, blockHashes } = await this._baseDatabase.getFrothyRegion(queryRunner, block.hash);
-
-      subQuery = subQuery
-        .andWhere(new Brackets(qb => {
-          qb.where('subTable.block_hash IN (:...blockHashes)', { blockHashes })
-            .orWhere('subTable.block_number <= :canonicalBlockNumber', { canonicalBlockNumber });
-        }));
-    }
-
-    if (block.number) {
-      subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
-    }
-
-    let selectQueryBuilder = repo.createQueryBuilder(tableName)
-      .where(`${tableName}.block_number IN (${subQuery.getQuery()})`)
-      .setParameters(subQuery.getParameters());
-
-    relations.forEach(relation => {
-      selectQueryBuilder = selectQueryBuilder.leftJoinAndSelect(`${repo.metadata.tableName}.${relation}`, relation);
-    });
-
-    Object.entries(where).forEach(([field, filters]) => {
-      filters.forEach((filter, index) => {
-        // Form the where clause.
-        const { not, operator, value } = filter;
-        const columnMetadata = repo.metadata.findColumnWithPropertyName(field);
-        assert(columnMetadata);
-        let whereClause = `${tableName}.${columnMetadata.propertyAliasName} `;
-
-        if (not) {
-          if (operator === 'equals') {
-            whereClause += '!';
-          } else {
-            whereClause += 'NOT ';
-          }
-        }
-
-        whereClause += `${OPERATOR_MAP[operator]} `;
-
-        if (['contains', 'starts'].some(el => el === operator)) {
-          whereClause += '%:';
-        } else if (operator === 'in') {
-          whereClause += '(:...';
-        } else {
-          whereClause += ':';
-        }
-
-        const variableName = `${field}${index}`;
-        whereClause += variableName;
-
-        if (['contains', 'ends'].some(el => el === operator)) {
-          whereClause += '%';
-        } else if (operator === 'in') {
-          whereClause += ')';
-        }
-
-        selectQueryBuilder = selectQueryBuilder.andWhere(whereClause, { [variableName]: value });
-      });
-    });
-
-    const { limit = DEFAULT_LIMIT, orderBy, orderDirection, skip = DEFAULT_SKIP } = queryOptions;
-
-    selectQueryBuilder = selectQueryBuilder.skip(skip)
-      .take(limit);
-
-    if (orderBy) {
-      const columnMetadata = repo.metadata.findColumnWithPropertyName(orderBy);
-      assert(columnMetadata);
-      selectQueryBuilder = selectQueryBuilder.orderBy(`${tableName}.${columnMetadata.propertyAliasName}`, orderDirection === 'desc' ? 'DESC' : 'ASC');
-    }
-
-    return selectQueryBuilder.getMany();
+  async getModelEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: string[] = []): Promise<Entity[]> {
+    return this._baseDatabase.getModelEntities(queryRunner, entity, block, where, queryOptions, relations);
   }
 
   async saveFactory (queryRunner: QueryRunner, factory: Factory, block: Block): Promise<Factory> {
