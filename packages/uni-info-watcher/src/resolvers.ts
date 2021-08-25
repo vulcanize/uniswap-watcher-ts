@@ -114,10 +114,10 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getToken(id, block);
       },
 
-      tokens: async (_: any, { orderBy, orderDirection, where }: { orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      tokens: async (_: any, { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
         log('tokens', orderBy, orderDirection, where);
 
-        return indexer.getEntities(Token, {}, where, { orderBy, orderDirection });
+        return indexer.getEntities(Token, block, where, { limit: first, orderBy, orderDirection });
       },
 
       tokenDayDatas: async (_: any, { first, skip, orderBy, orderDirection, where }: { first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
