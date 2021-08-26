@@ -11,7 +11,7 @@ import { utils } from 'ethers';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight } from '@vulcanize/util';
+import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight, Relation } from '@vulcanize/util';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
@@ -255,7 +255,7 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
-  async getEntities<Entity> (entity: new () => Entity, block: BlockHeight, where: { [key: string]: any } = {}, queryOptions: QueryOptions, relations?: string[]): Promise<Entity[]> {
+  async getEntities<Entity> (entity: new () => Entity, block: BlockHeight, where: { [key: string]: any } = {}, queryOptions: QueryOptions, relations?: Relation[]): Promise<Entity[]> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
