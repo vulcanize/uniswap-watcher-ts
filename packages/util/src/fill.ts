@@ -35,7 +35,7 @@ export const fillBlocks = async (
       if (blockProgress) {
         log(`Block number ${blockNumber}, block hash ${blockHash} already known, skip filling`);
       } else {
-        await jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash, timestamp });
+        await jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash, timestamp, kind: 'index' });
       }
     }
   }
