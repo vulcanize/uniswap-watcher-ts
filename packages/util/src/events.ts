@@ -11,7 +11,8 @@ import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { JobQueue } from './job-queue';
 import { BlockProgressInterface, EventInterface, IndexerInterface } from './types';
-import { QUEUE_BLOCK_PROCESSING, MAX_REORG_DEPTH } from './constants';
+import { QUEUE_BLOCK_PROCESSING, MAX_REORG_DEPTH, JOB_KIND_PRUNE, JOB_KIND_INDEX } from './constants';
+import { createPruningJob } from './common';
 
 const log = debug('vulcanize:events');
 
@@ -42,57 +43,24 @@ export class EventWatcher {
 
     log('watchBlock', blockHash, blockNumber);
 
-    await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { blockHash, blockNumber, parentHash, timestamp, kind: 'index' });
+    await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { kind: JOB_KIND_INDEX, blockHash, blockNumber, parentHash, timestamp });
   }
 
   async blockProcessingCompleteHandler (job: any): Promise<void> {
-    const { data: { request: { data: { blockHash, blockNumber, kind, pruneBlockHeight, priority } } } } = job;
-    log(`Job onComplete ${kind} block ${blockHash} ${blockNumber}`);
+    const { data: { request: { data } } } = job;
+    const { kind } = data;
 
     switch (kind) {
-      case 'index': {
-        // Update sync progress.
-        const syncStatus = await this._indexer.updateSyncStatusIndexedBlock(blockHash, blockNumber);
-
-        // Create pruning job if required.
-        if (syncStatus && syncStatus.latestIndexedBlockNumber > (syncStatus.latestCanonicalBlockNumber + MAX_REORG_DEPTH)) {
-          // Create a job to prune at block height (latestCanonicalBlockNumber + 1)
-          const pruneBlockHeight = syncStatus.latestCanonicalBlockNumber + 1;
-          const newPriority = (priority || 0) + 1;
-          await this._jobQueue.pushJob(
-            QUEUE_BLOCK_PROCESSING,
-            {
-              pruneBlockHeight,
-              kind: 'prune',
-              priority: newPriority
-            },
-            { priority: newPriority }
-          );
-        }
-
-        // Publish block progress event.
-        const blockProgress = await this._indexer.getBlockProgress(blockHash);
-        if (blockProgress) {
-          await this.publishBlockProgressToSubscribers(blockProgress);
-        }
-
+      case JOB_KIND_INDEX:
+        this._handleIndexingComplete(data);
         break;
-      }
 
-      case 'prune': {
-        const blocks = await this._indexer.getBlocksAtHeight(pruneBlockHeight, false);
-
-        // Only one canonical (not pruned) block should exist at the pruned height.
-        assert(blocks.length === 1);
-        const [block] = blocks;
-
-        await this._indexer.updateSyncStatusCanonicalBlock(block.blockHash, block.blockNumber);
-
+      case JOB_KIND_PRUNE:
+        this._handlePruningComplete(data);
         break;
-      }
 
       default:
-        break;
+        throw new Error(`Invalid Job kind ${kind} in complete handler of QUEUE_BLOCK_PROCESSING.`);
     }
   }
 
@@ -124,6 +92,38 @@ export class EventWatcher {
         isComplete
       }
     });
+  }
+
+  async _handleIndexingComplete (jobData: any): Promise<void> {
+    const { blockHash, blockNumber, priority } = jobData;
+    log(`Job onComplete indexing block ${blockHash} ${blockNumber}`);
+
+    // Update sync progress.
+    const syncStatus = await this._indexer.updateSyncStatusIndexedBlock(blockHash, blockNumber);
+
+    // Create pruning job if required.
+    if (syncStatus && syncStatus.latestIndexedBlockNumber > (syncStatus.latestCanonicalBlockNumber + MAX_REORG_DEPTH)) {
+      await createPruningJob(this._jobQueue, syncStatus.latestCanonicalBlockNumber, priority);
+    }
+
+    // Publish block progress event.
+    const blockProgress = await this._indexer.getBlockProgress(blockHash);
+    if (blockProgress) {
+      await this.publishBlockProgressToSubscribers(blockProgress);
+    }
+  }
+
+  async _handlePruningComplete (jobData: any): Promise<void> {
+    const { pruneBlockHeight } = jobData;
+    log(`Job onComplete pruning at height ${pruneBlockHeight}`);
+
+    const blocks = await this._indexer.getBlocksAtHeight(pruneBlockHeight, false);
+
+    // Only one canonical (not pruned) block should exist at the pruned height.
+    assert(blocks.length === 1);
+    const [block] = blocks;
+
+    await this._indexer.updateSyncStatusCanonicalBlock(block.blockHash, block.blockNumber);
   }
 
   async stop (): Promise<void> {

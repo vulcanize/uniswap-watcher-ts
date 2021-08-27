@@ -5,9 +5,10 @@
 import assert from 'assert';
 import debug from 'debug';
 import { wait } from '.';
+import { createPruningJob } from './common';
 
 import { JobQueueConfig } from './config';
-import { MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING } from './constants';
+import { JOB_KIND_INDEX, JOB_KIND_PRUNE, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING } from './constants';
 import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
 
@@ -31,15 +32,16 @@ export class JobRunner {
     assert(syncStatus);
 
     switch (kind) {
-      case 'prune':
-        await this._pruneChain(job, syncStatus);
-        break;
-
-      case 'index':
+      case JOB_KIND_INDEX:
         await this._indexBlock(job, syncStatus);
         break;
 
+      case JOB_KIND_PRUNE:
+        await this._pruneChain(job, syncStatus);
+        break;
+
       default:
+        log(`Invalid Job kind ${kind} in QUEUE_BLOCK_PROCESSING.`);
         break;
     }
   }
@@ -122,21 +124,9 @@ export class JobRunner {
     const { data: { blockHash, blockNumber, parentHash, priority, timestamp } } = job;
     log(`Processing block number ${blockNumber} hash ${blockHash} `);
 
-    // Check if chain pruning is caught up to latest indexed block.
-    if (syncStatus.latestIndexedBlockNumber - syncStatus.latestCanonicalBlockNumber > MAX_REORG_DEPTH) {
-      const newPriority = (priority || 0) + 1;
-
-      this._jobQueue.pushJob(
-        QUEUE_BLOCK_PROCESSING,
-        {
-          pruneBlockHeight: syncStatus.latestCanonicalBlockNumber + 1,
-          kind: 'prune',
-          priority: newPriority
-        },
-        {
-          priority: newPriority
-        }
-      );
+    // Check if chain pruning is caught up.
+    if ((syncStatus.latestIndexedBlockNumber - syncStatus.latestCanonicalBlockNumber) > MAX_REORG_DEPTH) {
+      await createPruningJob(this._jobQueue, syncStatus.latestCanonicalBlockNumber, priority);
 
       const message = `Chain pruning not caught up yet, latest canonical block number ${syncStatus.latestCanonicalBlockNumber} and latest indexed block number ${syncStatus.latestIndexedBlockNumber}`;
       log(message);
@@ -155,12 +145,12 @@ export class JobRunner {
         // We don't have to worry about aborting as this job will get retried later.
         const newPriority = (priority || 0) + 1;
         await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, {
+          kind: JOB_KIND_INDEX,
           blockHash: parentHash,
           blockNumber: parentBlockNumber,
           parentHash: grandparentHash,
           timestamp: parentTimestamp,
-          priority: newPriority,
-          kind: 'index'
+          priority: newPriority
         }, { priority: newPriority });
 
         const message = `Parent block number ${parentBlockNumber} hash ${parentHash} of block number ${blockNumber} hash ${blockHash} not fetched yet, aborting`;
