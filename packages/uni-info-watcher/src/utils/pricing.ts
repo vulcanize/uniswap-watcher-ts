@@ -47,7 +47,7 @@ const MINIMUM_ETH_LOCKED = new Decimal(52);
 const Q192 = 2 ** 192;
 
 // Constants used in demo.
-const DEMO_USDC_POOL_TOKEN0_PRICE = '3166.678797208607118938152642314623';
+const ETH_PRICE_IN_USD = '3200.00';
 
 export const sqrtPriceX96ToTokenPrices = (sqrtPriceX96: bigint, token0: Token, token1: Token): Decimal[] => {
   const num = new Decimal((sqrtPriceX96 * sqrtPriceX96).toString());
@@ -66,8 +66,8 @@ export const sqrtPriceX96ToTokenPrices = (sqrtPriceX96: bigint, token0: Token, t
 export const getEthPriceInUSD = async (db: Database, dbTx: QueryRunner, block: Block, isDemo: boolean): Promise<Decimal> => {
   if (isDemo) {
     // For demo purpose in local development.
-    const usdcPoolToken0Price = new Decimal(DEMO_USDC_POOL_TOKEN0_PRICE);
-    return usdcPoolToken0Price;
+    const ethPriceInUSD = new Decimal(ETH_PRICE_IN_USD);
+    return ethPriceInUSD;
   }
 
   // Fetch eth prices for each stablecoin.
