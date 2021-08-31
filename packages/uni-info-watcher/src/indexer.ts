@@ -514,7 +514,7 @@ export class Indexer implements IndexerInterface {
       // Update ETH price now that prices could have changed.
       const bundle = await this._db.getBundle(dbTx, { id: '1', blockHash: block.hash });
       assert(bundle);
-      bundle.ethPriceUSD = await getEthPriceInUSD(this._db, dbTx, block);
+      bundle.ethPriceUSD = await getEthPriceInUSD(this._db, dbTx, block, this._isDemo);
 
       // Update token prices.
       const [token0, token1] = await Promise.all([
@@ -524,8 +524,8 @@ export class Indexer implements IndexerInterface {
 
       assert(token0 && token1, 'Pool tokens not found.');
 
-      token0.derivedETH = await findEthPerToken(token0);
-      token1.derivedETH = await findEthPerToken(token1);
+      token0.derivedETH = await findEthPerToken(this._db, dbTx, token0, this._isDemo);
+      token1.derivedETH = await findEthPerToken(this._db, dbTx, token1, this._isDemo);
 
       pool.token0 = token0;
       pool.token1 = token1;
@@ -948,10 +948,10 @@ export class Indexer implements IndexerInterface {
       pool.token1Price = prices[1];
 
       // Update USD pricing.
-      bundle.ethPriceUSD = await getEthPriceInUSD(this._db, dbTx, block);
+      bundle.ethPriceUSD = await getEthPriceInUSD(this._db, dbTx, block, this._isDemo);
       bundle = await this._db.saveBundle(dbTx, bundle, block);
-      token0.derivedETH = await findEthPerToken(token0);
-      token1.derivedETH = await findEthPerToken(token1);
+      token0.derivedETH = await findEthPerToken(this._db, dbTx, token0, this._isDemo);
+      token1.derivedETH = await findEthPerToken(this._db, dbTx, token1, this._isDemo);
 
       /**
        * Things afffected by new USD rates.
