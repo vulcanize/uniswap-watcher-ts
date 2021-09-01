@@ -102,7 +102,7 @@ export const main = async (): Promise<any> => {
 };
 
 main().then(() => {
-  log('Starting server...');
+  console.log('Starting server...');
 }).catch(err => {
   log(err);
 });

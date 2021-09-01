@@ -15,14 +15,14 @@
   synchronize = true
   logging = false
 
-  entities = [ "dist/entity/**/*.js" ]
-  migrations = [ "dist/migration/**/*.js" ]
-  subscribers = [ "dist/subscriber/**/*.js" ]
+  entities = [ "src/entity/**/*.ts" ]
+  migrations = [ "src/migration/**/*.ts" ]
+  subscribers = [ "src/subscriber/**/*.ts" ]
 
   [database.cli]
-    entitiesDir = "dist/entity"
-    migrationsDir = "dist/migration"
-    subscribersDir = "dist/subscriber"
+    entitiesDir = "src/entity"
+    migrationsDir = "src/migration"
+    subscribersDir = "src/subscriber"
 
 [upstream]
   [upstream.ethServer]

@@ -44,6 +44,7 @@ import {
   checksCollectEvent
 } from '../test/utils';
 
+const CONFIG_FILE = './environments/local.dev.toml';
 const NETWORK_RPC_URL = 'http://localhost:8545';
 
 describe('uni-watcher', () => {
@@ -68,8 +69,7 @@ describe('uni-watcher', () => {
   let recipient: string;
 
   before(async () => {
-    const configFile = './environments/local.toml';
-    config = await getConfig(configFile);
+    config = await getConfig(CONFIG_FILE);
 
     const { database: dbConfig, upstream, server: { host, port } } = config;
     assert(dbConfig, 'Missing dbConfig.');

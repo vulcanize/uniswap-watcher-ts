@@ -1,29 +1,27 @@
 [server]
   host = "127.0.0.1"
-  port = 3002
+  port = 3003
 
 [database]
   type = "postgres"
   host = "localhost"
   port = 5432
-  database = "address-watcher"
+  database = "uni-watcher"
   username = "postgres"
   password = "postgres"
   synchronize = true
   logging = false
 
-  entities = [ "dist/entity/**/*.js" ]
-  migrations = [ "dist/migration/**/*.js" ]
-  subscribers = [ "dist/subscriber/**/*.js" ]
+  entities = [ "src/entity/**/*.ts" ]
+  migrations = [ "src/migration/**/*.ts" ]
+  subscribers = [ "src/subscriber/**/*.ts" ]
 
   [database.cli]
-    entitiesDir = "dist/entity"
-    migrationsDir = "dist/migration"
-    subscribersDir = "dist/subscriber"
+    entitiesDir = "src/entity"
+    migrationsDir = "src/migration"
+    subscribersDir = "src/subscriber"
 
 [upstream]
-  traceProviderEndpoint = "http://127.0.0.1:8545"
-
   [upstream.ethServer]
     gqlApiEndpoint = "http://127.0.0.1:8082/graphql"
     gqlPostgraphileEndpoint = "http://127.0.0.1:5000/graphql"
@@ -34,5 +32,6 @@
     deleteOnStart = false
 
 [jobQueue]
-  dbConnectionString = "postgres://postgres:postgres@localhost/address-watcher-job-queue"
+  dbConnectionString = "postgres://postgres:postgres@localhost/uni-watcher-job-queue"
   maxCompletionLagInSecs = 300
+  jobDelayInMilliSecs = 100

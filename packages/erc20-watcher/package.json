@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "description": "ERC20 Watcher",
   "private": true,
-  "main": "index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "server": "node dist/server",
     "server:dev": "DEBUG=vulcanize:* nodemon --watch src src/server.ts -f environments/local.dev.toml",
-    "server:mock": "MOCK=1 nodemon src/server.ts -f environments/local.toml",
+    "server:mock": "MOCK=1 nodemon src/server.ts -f environments/local.dev.toml",
     "test": "mocha -r ts-node/register src/**/*.spec.ts",
     "lint": "eslint .",
     "build": "tsc",

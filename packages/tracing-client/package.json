@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "ETH VM tracing client",
   "private": true,
-  "main": "index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "test": "mocha -r ts-node/register src/**/*.spec.ts",
     "build": "tsc",

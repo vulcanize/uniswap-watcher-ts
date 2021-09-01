@@ -73,7 +73,7 @@ export const main = async (): Promise<any> => {
 };
 
 main().then(() => {
-  log('Starting job runner...');
+  console.log('Starting job runner...');
 }).catch(err => {
   log(err);
 });

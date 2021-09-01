@@ -97,14 +97,14 @@ export const main = async (): Promise<any> => {
   server.installSubscriptionHandlers(httpServer);
 
   httpServer.listen(port, host, () => {
-    log(`Server is listening on host ${host} port ${port}`);
+    console.log(`Server is listening on host ${host} port ${port}`);
   });
 
   return { app, server };
 };
 
 main().then(() => {
-  log('Starting server...');
+  console.log('Starting server...');
 }).catch(err => {
   log(err);
 });
