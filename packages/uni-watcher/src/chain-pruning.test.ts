@@ -17,7 +17,7 @@ import { Database } from './database';
 import { BlockProgress } from './entity/BlockProgress';
 import { SyncStatus } from './entity/SyncStatus';
 
-const CONFIG_FILE = './environments/local.dev.toml';
+const CONFIG_FILE = './environments/local.toml';
 
 describe('chain pruning', () => {
   let db: Database;

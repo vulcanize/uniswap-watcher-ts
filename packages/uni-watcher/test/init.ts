@@ -21,7 +21,7 @@ import {
 import { Database } from '../src/database';
 import { watchContract } from '../src/utils/index';
 
-const CONFIG_FILE = './environments/local.dev.toml';
+const CONFIG_FILE = './environments/local.toml';
 const NETWORK_RPC_URL = 'http://localhost:8545';
 
 const deployFactoryContract = async (db: Database, signer: Signer): Promise<Contract> => {

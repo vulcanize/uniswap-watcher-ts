@@ -8,11 +8,11 @@
     "test": "mocha -r ts-node/register src/**/*.spec.ts",
     "build": "tsc",
     "server": "node dist/server.js",
-    "server:dev": "DEBUG=vulcanize:* nodemon --watch src src/server.ts -f environments/local.dev.toml",
+    "server:dev": "DEBUG=vulcanize:* nodemon --watch src src/server.ts",
     "job-runner": "node dist/job-runner.js",
-    "job-runner:dev": "DEBUG=vulcanize:* nodemon --watch src src/job-runner.ts -f environments/local.dev.toml",
+    "job-runner:dev": "DEBUG=vulcanize:* nodemon --watch src src/job-runner.ts",
     "fill": "node dist/fill.js",
-    "fill:dev": "DEBUG=vulcanize:* ts-node src/fill.ts -f environments/local.dev.toml"
+    "fill:dev": "DEBUG=vulcanize:* ts-node src/fill.ts"
   },
   "repository": {
     "type": "git",

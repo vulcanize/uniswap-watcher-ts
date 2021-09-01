@@ -42,7 +42,7 @@ import {
   fetchTransaction
 } from '../test/utils';
 
-const CONFIG_FILE = './environments/local.dev.toml';
+const CONFIG_FILE = './environments/local.toml';
 const NETWORK_RPC_URL = 'http://localhost:8545';
 
 describe('uni-info-watcher', () => {

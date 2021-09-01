@@ -18,7 +18,7 @@ import { BlockProgress } from './entity/BlockProgress';
 import { SyncStatus } from './entity/SyncStatus';
 import { Token } from './entity/Token';
 
-const CONFIG_FILE = './environments/local.dev.toml';
+const CONFIG_FILE = './environments/local.toml';
 
 describe('getPrevEntityVersion', () => {
   let db: Database;
