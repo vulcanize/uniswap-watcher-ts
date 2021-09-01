@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "test": "mocha -r ts-node/register src/**/*.spec.ts",
     "build": "tsc",
-    "server": "node dist/server.js",
+    "server": "DEBUG=vulcanize:* node dist/server.js",
     "server:dev": "DEBUG=vulcanize:* nodemon --watch src src/server.ts",
     "smoke-test": "mocha src/smoke.test.ts",
     "lighthouse:deploy": "hardhat lighthouse-deploy",

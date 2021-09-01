@@ -20,7 +20,6 @@ import {
   approveToken,
   NFPM_ABI
 } from '@vulcanize/util/test';
-import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import {
@@ -30,6 +29,7 @@ import {
   abi as POOL_ABI
 } from '@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json';
 
+import { Client as UniClient } from './client';
 import { Indexer } from './indexer';
 import { Database } from './database';
 import {

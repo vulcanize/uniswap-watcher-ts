@@ -24,10 +24,13 @@ yarn build
 Run the watcher:
 
 ```bash
-yarn run server -f environments/local.toml
+yarn run server
 
 # For development.
 yarn run server:dev
+
+# For specifying config file.
+yarn run server -f environments/local.toml
 ```
 
 GQL console: http://localhost:3001/graphql

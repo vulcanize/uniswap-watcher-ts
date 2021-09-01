@@ -5,7 +5,6 @@
 import { Contract, ethers, Signer } from 'ethers';
 import assert from 'assert';
 
-import { Client as UniClient } from '@vulcanize/uni-watcher';
 import {
   getConfig
 } from '@vulcanize/util';
@@ -18,6 +17,7 @@ import {
   bytecode as FACTORY_BYTECODE
 } from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
 
+import { Client as UniClient } from '../src/client';
 import { Database } from '../src/database';
 import { watchContract } from '../src/utils/index';
 

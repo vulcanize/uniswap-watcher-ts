@@ -101,6 +101,9 @@ Build the files in packages:
 
 ```bash
 yarn build
+
+# To watch for changes and build (used in development).
+yarn build:watch
 ```
 
 To run any watcher, `cd` into their package folder and run:

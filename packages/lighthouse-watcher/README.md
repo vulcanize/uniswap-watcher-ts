@@ -26,10 +26,13 @@ $ yarn build
 Run the server:
 
 ```bash
-$ yarn server -f environments/local.toml
+$ yarn server
 
 # For development.
 $ yarn server:dev
+
+# For specifying config file.
+$ yarn server -f environments/local.toml
 ```
 
 ## Test

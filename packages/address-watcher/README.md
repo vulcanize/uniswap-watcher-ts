@@ -49,23 +49,32 @@ yarn build
 GQL server:
 
 ```
-yarn server -f environments/local.toml
+yarn server
 
 # For development.
 yarn server:dev
+
+# For specifying config file.
+yarn server -f environments/local.toml
 ```
 
 Job runner for processing the tracing requests queue:
 
 ```
-yarn job-runner -f environments/local.toml
+yarn job-runner
 
 # For development.
 yarn job-runner:dev
+
+# For specifying config file.
+yarn job-runner -f environments/local.toml
 ```
 
 To fill a block range:
 
 ```
-yarn fill -f environments/local.toml --startBlock 1 --endBlock 1000
+yarn fill --start-block 1 --end-block 1000
+
+# For specifying config file.
+yarn fill -f environments/local.toml --start-block 1 --end-block 1000
 ```
