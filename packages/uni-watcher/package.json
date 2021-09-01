@@ -5,21 +5,21 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
+    "lint": "eslint .",
+    "test": "mocha src/**/*.spec.ts",
+    "test:init": "ts-node test/init.ts",
+    "test:chain-pruning": "mocha src/chain-pruning.test.ts",
+    "build": "tsc",
     "server": "node dist/server.js",
     "server:dev": "DEBUG=vulcanize:* nodemon --watch src src/server.ts -f environments/local.dev.toml",
     "server:mock": "MOCK=1 nodemon src/server.ts -f environments/local.toml.dev",
     "job-runner": "node dist/job-runner.js",
     "job-runner:dev": "DEBUG=vulcanize:* nodemon --watch src src/job-runner.ts -f environments/local.dev.toml",
+    "smoke-test": "yarn test:init && mocha src/smoke.test.ts",
     "fill": "node dist/fill.js",
     "fill:dev": "DEBUG=vulcanize:* ts-node src/fill.ts -f environments/local.dev.toml",
-    "test": "mocha src/**/*.spec.ts",
-    "lint": "eslint .",
-    "build": "tsc",
     "watch:contract": "node dist/cli/watch-contract.js",
-    "watch:contract:dev": "ts-node src/cli/watch-contract.ts --configFile environments/local.dev.toml",
-    "test:init": "ts-node test/init.ts",
-    "smoke-test": "yarn test:init && mocha src/smoke.test.ts",
-    "test:chain-pruning": "mocha src/chain-pruning.test.ts"
+    "watch:contract:dev": "ts-node src/cli/watch-contract.ts --configFile environments/local.dev.toml"
   },
   "repository": {
     "type": "git",

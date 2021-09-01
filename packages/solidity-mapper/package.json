@@ -28,11 +28,11 @@
     "typescript": "^4.3.2"
   },
   "scripts": {
-    "build": "tsc",
+    "lint": "eslint .",
     "test": "hardhat test",
+    "build": "tsc",
     "test:geth-rpc": "hardhat --network private test",
-    "test:ipld-gql": "IPLD_GQL=true hardhat --network private test",
-    "lint": "eslint ."
+    "test:ipld-gql": "IPLD_GQL=true hardhat --network private test"
   },
   "dependencies": {
     "dotenv": "^10.0.0"

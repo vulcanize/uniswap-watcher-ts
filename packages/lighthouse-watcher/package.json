@@ -5,14 +5,14 @@
   "license": "AGPL-3.0",
   "private": true,
   "scripts": {
+    "lint": "eslint .",
+    "test": "mocha -r ts-node/register src/**/*.spec.ts",
+    "build": "tsc",
     "server": "node dist/server.js",
     "server:dev": "DEBUG=vulcanize:* nodemon --watch src src/server.ts -f environments/local.toml",
-    "test": "mocha -r ts-node/register src/**/*.spec.ts",
-    "lint": "eslint .",
-    "lighthouse:deploy": "hardhat lighthouse-deploy",
-    "lighthouse:store": "hardhat lighthouse-store",
     "smoke-test": "mocha src/smoke.test.ts",
-    "build": "tsc"
+    "lighthouse:deploy": "hardhat lighthouse-deploy",
+    "lighthouse:store": "hardhat lighthouse-store"
   },
   "dependencies": {
     "@graphql-tools/schema": "^7.1.5",

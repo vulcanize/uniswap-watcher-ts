@@ -5,9 +5,9 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
+    "lint": "eslint .",
     "test": "mocha -r ts-node/register src/**/*.spec.ts",
-    "build": "tsc",
-    "lint": "eslint ."
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
