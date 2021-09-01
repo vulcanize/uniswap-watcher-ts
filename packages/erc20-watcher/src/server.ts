@@ -97,5 +97,6 @@ export const main = async (): Promise<any> => {
 main().then(() => {
   log('Starting server...');
 }).catch(err => {
+  console.error(err);
   log(err);
 });
