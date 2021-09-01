@@ -16,6 +16,7 @@ import { Database } from '../database';
     'parse-numbers': false
   }).options({
     configFile: {
+      alias: 'f',
       type: 'string',
       require: true,
       demandOption: true,

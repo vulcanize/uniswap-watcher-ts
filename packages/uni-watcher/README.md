@@ -37,16 +37,28 @@ Update `environments/local.toml` with database connection settings for both the 
 
 ## Run
 
+Build files:
+
+```bash
+$ yarn build
+```
+
 Run the server:
 
 ```bash
-$ yarn server
+$ yarn server -f environments/local.toml
+
+# For development.
+$ yarn server:dev
 ```
 
 Start the job runner:
 
 ```bash
-$ yarn job-runner
+$ yarn job-runner -f environments/local.toml
+
+# For development.
+$ yarn job-runner:dev
 ```
 
 Start watching the factory contract:
@@ -54,7 +66,7 @@ Start watching the factory contract:
 Example:
 
 ```bash
-$ yarn watch:contract --address 0xfE0034a874c2707c23F91D7409E9036F5e08ac34 --kind factory --startingBlock 100
+$ yarn watch:contract -f environments/local.toml --address 0xfE0034a874c2707c23F91D7409E9036F5e08ac34 --kind factory --startingBlock 100
 ```
 
 Start watching the NonFungiblePositionManager contract:
@@ -62,19 +74,19 @@ Start watching the NonFungiblePositionManager contract:
 Example:
 
 ```bash
-$ yarn watch:contract --address 0xB171168C0df9457Ff3E3D795aE25Bf4f41e2FFE3 --kind nfpm --startingBlock 100
+$ yarn watch:contract -f environments/local.toml --address 0xB171168C0df9457Ff3E3D795aE25Bf4f41e2FFE3 --kind nfpm --startingBlock 100
 ```
 
 To fill a block range:
 
 ```bash
-$ yarn fill --startBlock <from-block> --endBlock <to-block>
+$ yarn fill -f environments/local.toml --startBlock <from-block> --endBlock <to-block>
 ```
 
 Example:
 
 ```bash
-$ yarn fill --startBlock 1000 --endBlock 2000
+$ yarn fill -f environments/local.toml --startBlock 1000 --endBlock 2000
 ```
 
 ## Test

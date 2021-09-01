@@ -17,10 +17,19 @@ Use the Lighthouse contract address and set `environments/local.toml` to watch t
 
 ## Run
 
+Build files:
+
+```bash
+$ yarn build
+```
+
 Run the server:
 
 ```bash
-$ yarn server
+$ yarn server -f environments/local.toml
+
+# For development.
+$ yarn server:dev
 ```
 
 ## Test

@@ -38,15 +38,26 @@ Update `environments/local.toml` with database connection settings for both the 
 
 ### Run
 
+* Build files:
+  ```bash
+  $ yarn build
+  ```
+
 * Start the server:
   ```bash
-  $ yarn server
+  $ yarn server -f environments/local.toml
+
+  # For development.
+  $ yarn server:dev
   ```
 
 * Start the job runner:
 
   ```bash
-  $ yarn job-runner
+  $ yarn job-runner -f environments/local.toml
+
+  # For development.
+  $ yarn job-runner:dev
   ```
 
 * Run `yarn server:mock` to run server with mock data.

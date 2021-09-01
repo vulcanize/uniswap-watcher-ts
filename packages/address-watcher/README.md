@@ -40,21 +40,32 @@ Update the `upstream` config in `environments/local.toml` and provide the `ipld-
 
 Run the following scripts in different terminals.
 
+Build files:
+
+```
+yarn build
+```
 
 GQL server:
 
 ```
-yarn server
+yarn server -f environments/local.toml
+
+# For development.
+yarn server:dev
 ```
 
 Job runner for processing the tracing requests queue:
 
 ```
-yarn job-runner
+yarn job-runner -f environments/local.toml
+
+# For development.
+yarn job-runner:dev
 ```
 
 To fill a block range:
 
 ```
-yarn fill --startBlock 1 --endBlock 1000
+yarn fill -f environments/local.toml --startBlock 1 --endBlock 1000
 ```

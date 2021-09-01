@@ -16,6 +16,7 @@ import { watchContract } from '../utils/index';
     'parse-numbers': false
   }).options({
     configFile: {
+      alias: 'f',
       type: 'string',
       require: true,
       demandOption: true,
