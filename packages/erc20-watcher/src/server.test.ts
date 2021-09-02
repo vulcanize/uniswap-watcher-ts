@@ -16,9 +16,9 @@ import {
   queryBalanceOf,
   queryAllowance,
   queryEvents
-} from '../queries';
+} from './queries';
 
-import { blocks, tokens as tokenInfo } from './data';
+import { blocks, tokens as tokenInfo } from './mock/data';
 
 const testCases: {
   balanceOf: any[],

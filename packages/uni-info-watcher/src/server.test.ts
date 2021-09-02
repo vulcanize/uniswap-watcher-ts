@@ -6,8 +6,8 @@ import 'mocha';
 import { expect } from 'chai';
 import { GraphQLClient } from 'graphql-request';
 
-import { queryBundles } from '../queries';
-import { Data } from './data';
+import { queryBundles } from './queries';
+import { Data } from './mock/data';
 
 describe('server', () => {
   const client = new GraphQLClient('http://localhost:3004/graphql');

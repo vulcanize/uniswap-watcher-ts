@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "lint": "eslint .",
-    "test": "mocha src/**/*.spec.ts",
+    "test": "mocha src/**/*.test.ts",
     "test:init": "ts-node test/init.ts",
     "test:chain-pruning": "mocha src/chain-pruning.test.ts",
     "build": "tsc",

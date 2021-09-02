@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "lint": "eslint .",
-    "test": "mocha -r ts-node/register src/**/*.spec.ts",
+    "test": "mocha -r ts-node/register src/**/*.test.ts",
     "build": "tsc",
     "server": "DEBUG=vulcanize:* node dist/server",
     "server:dev": "DEBUG=vulcanize:* nodemon --watch src src/server.ts",

@@ -25,8 +25,9 @@
   },
   "scripts": {
     "lint": "eslint .",
-    "test": "mocha -r ts-node/register src/**/*.spec.ts",
+    "test": "mocha src/**/*.test.ts",
     "test:gpev": "mocha src/get-prev-entity.test.ts",
+    "test:server": "mocha src/server.test.ts",
     "build": "tsc",
     "server": "DEBUG=vulcanize:* node dist/server.js",
     "server:dev": "DEBUG=vulcanize:* nodemon --watch src src/server.ts",
