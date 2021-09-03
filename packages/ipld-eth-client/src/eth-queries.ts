@@ -80,11 +80,6 @@ subscription SubscriptionReceipt {
   listen(topic: "receipt_cids") {
     relatedNode {
       ... on ReceiptCid {
-        logContracts
-        topic0S
-        topic1S
-        topic2S
-        topic3S
         contract
         ethTransactionCidByTxId {
           txHash
