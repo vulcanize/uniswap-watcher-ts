@@ -34,11 +34,23 @@ export class EventWatcher {
       const receipt = _.get(value, 'data.listen.relatedNode');
       log('watchLogs', JSON.stringify(receipt, null, 2));
 
-      // Check if this log is for a contract we care about.
-      const { logContracts } = receipt;
-      if (logContracts && logContracts.length) {
-        for (let logIndex = 0; logIndex < logContracts.length; logIndex++) {
-          const contractAddress = logContracts[logIndex];
+      const {
+        logCidsByReceiptId: {
+          nodes: logs
+        },
+        cid,
+        postStatus
+      } = receipt;
+
+      if (!postStatus) {
+        log(`Skipping processing logs for receipt ${cid} due to failed transaction.`);
+      }
+
+      if (logs && logs.length) {
+        for (let logIndex = 0; logIndex < logs.length; logIndex++) {
+          const { address: contractAddress } = logs[logIndex];
+
+          // Check if this log is for a contract we care about.
           const isWatchedContract = await this._indexer.isWatchedContract(contractAddress);
           if (isWatchedContract) {
             // TODO: Move processing to background task runner.
@@ -47,7 +59,7 @@ export class EventWatcher {
             await this._indexer.getEvents(blockHash, contractAddress, null);
 
             // Trigger other indexer methods based on event topic.
-            await this._indexer.processEvent(blockHash, blockNumber, contractAddress, receipt, logIndex);
+            await this._indexer.processEvent(blockHash, blockNumber, contractAddress, logs, logIndex);
           }
         }
       }

@@ -431,40 +431,47 @@ export class Indexer implements IndexerInterface {
         },
         transaction: {
           hash: txHash
-        }
+        },
+        receiptCID,
+        status
       } = logObj;
 
-      let eventName = UNKNOWN_EVENT_NAME;
-      let eventInfo = {};
-      const tx = transactionMap[txHash];
-      const extraInfo = { topics, data, tx };
+      if (status) {
+        let eventName = UNKNOWN_EVENT_NAME;
+        let eventInfo = {};
+        const tx = transactionMap[txHash];
+        const extraInfo = { topics, data, tx };
 
-      const contract = ethers.utils.getAddress(address);
-      const uniContract = await this.isUniswapContract(contract);
+        const contract = ethers.utils.getAddress(address);
+        const uniContract = await this.isUniswapContract(contract);
 
-      if (uniContract) {
-        const eventDetails = this.parseEventNameAndArgs(uniContract.kind, logObj);
-        eventName = eventDetails.eventName;
-        eventInfo = eventDetails.eventInfo;
-      }
+        if (uniContract) {
+          const eventDetails = this.parseEventNameAndArgs(uniContract.kind, logObj);
+          eventName = eventDetails.eventName;
+          eventInfo = eventDetails.eventInfo;
+        }
 
-      dbEvents.push({
-        index: logIndex,
-        txHash,
-        contract,
-        eventName,
-        eventInfo: JSONbig.stringify(eventInfo),
-        extraInfo: JSONbig.stringify(extraInfo),
-        proof: JSONbig.stringify({
-          data: JSONbig.stringify({
-            blockHash,
-            receipt: {
-              cid,
-              ipldBlock
-            }
+        dbEvents.push({
+          index: logIndex,
+          txHash,
+          contract,
+          eventName,
+          eventInfo: JSONbig.stringify(eventInfo),
+          extraInfo: JSONbig.stringify(extraInfo),
+          proof: JSONbig.stringify({
+            data: JSONbig.stringify({
+              blockHash,
+              receiptCID,
+              log: {
+                cid,
+                ipldBlock
+              }
+            })
           })
-        })
-      });
+        });
+      } else {
+        log(`Skipping event for receipt ${receiptCID} due to failed transaction.`);
+      }
     }
 
     const dbTx = await this._db.createTransactionRunner();

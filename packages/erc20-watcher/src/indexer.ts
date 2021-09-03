@@ -279,15 +279,15 @@ export class Indexer {
     return result;
   }
 
-  async triggerIndexingOnEvent (blockHash: string, blockNumber: number, token: string, receipt: any, logIndex: number): Promise<void> {
+  async triggerIndexingOnEvent (blockHash: string, blockNumber: number, token: string, logs: any[], logIndex: number): Promise<void> {
     const topics = [];
 
     // We only care about the event type for now.
     const data = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-    topics.push(receipt.topic0S[logIndex]);
-    topics.push(receipt.topic1S[logIndex]);
-    topics.push(receipt.topic2S[logIndex]);
+    topics.push(logs[logIndex].topic0);
+    topics.push(logs[logIndex].topic1);
+    topics.push(logs[logIndex].topic2);
 
     const { name: eventName, args } = this._contract.parseLog({ topics, data });
     log(`trigger indexing on event: ${eventName} ${args}`);
@@ -330,9 +330,9 @@ export class Indexer {
     });
   }
 
-  async processEvent (blockHash: string, blockNumber: number, token: string, receipt: any, logIndex: number): Promise<void> {
+  async processEvent (blockHash: string, blockNumber: number, token: string, logs: any[], logIndex: number): Promise<void> {
     // Trigger indexing of data based on the event.
-    await this.triggerIndexingOnEvent(blockHash, blockNumber, token, receipt, logIndex);
+    await this.triggerIndexingOnEvent(blockHash, blockNumber, token, logs, logIndex);
 
     // Also trigger downstream event watcher subscriptions.
     await this.publishEventToSubscribers(blockHash, token, logIndex);
@@ -369,48 +369,56 @@ export class Indexer {
     const eventNameToTopic = getEventNameTopics(this._abi);
     const logTopicToEventName = invert(eventNameToTopic);
 
-    const dbEvents = logs.map((log: any) => {
-      const { topics, data: value, cid, ipldBlock } = log;
-
-      const [topic0, topic1, topic2] = topics;
-
-      const eventName = logTopicToEventName[topic0];
-      const address1 = topictoAddress(topic1);
-      const address2 = topictoAddress(topic2);
-
-      const event: DeepPartial<Event> = {
-        blockHash,
-        token,
-        eventName,
-
-        proof: JSONbig.stringify({
-          data: JSONbig.stringify({
-            blockHash,
-            receipt: {
-              cid,
-              ipldBlock
-            }
-          })
-        })
-      };
-
-      switch (eventName) {
-        case 'Transfer': {
-          event.transferFrom = address1;
-          event.transferTo = address2;
-          event.transferValue = BigInt(value);
-          break;
-        }
-        case 'Approval': {
-          event.approvalOwner = address1;
-          event.approvalSpender = address2;
-          event.approvalValue = BigInt(value);
-          break;
-        }
+    const dbEvents = logs.filter((log: any) => {
+      if (!log.status) {
+        log(`Skipping event for receipt ${log.receiptCID} due to failed transaction.`);
       }
 
-      return event;
-    });
+      return log.status;
+    })
+      .map((log: any) => {
+        const { topics, data: value, cid, ipldBlock, receiptCID } = log;
+
+        const [topic0, topic1, topic2] = topics;
+
+        const eventName = logTopicToEventName[topic0];
+        const address1 = topictoAddress(topic1);
+        const address2 = topictoAddress(topic2);
+
+        const event: DeepPartial<Event> = {
+          blockHash,
+          token,
+          eventName,
+
+          proof: JSONbig.stringify({
+            data: JSONbig.stringify({
+              blockHash,
+              receiptCID,
+              log: {
+                cid,
+                ipldBlock
+              }
+            })
+          })
+        };
+
+        switch (eventName) {
+          case 'Transfer': {
+            event.transferFrom = address1;
+            event.transferTo = address2;
+            event.transferValue = BigInt(value);
+            break;
+          }
+          case 'Approval': {
+            event.approvalOwner = address1;
+            event.approvalSpender = address2;
+            event.approvalValue = BigInt(value);
+            break;
+          }
+        }
+
+        return event;
+      });
 
     await this._db.saveEvents({ blockHash, token, events: dbEvents });
   }

@@ -28,6 +28,8 @@ query getLogs($blockHash: Bytes32!, $contract: Address) {
     index
     cid
     ipldBlock
+    receiptCID
+    status
   }
   block(hash: $blockHash) {
     number
@@ -81,12 +83,35 @@ subscription SubscriptionReceipt {
     relatedNode {
       ... on ReceiptCid {
         contract
+
         ethTransactionCidByTxId {
           txHash
           ethHeaderCidByHeaderId {
             blockHash
             blockNumber
             parentHash
+          }
+        }
+
+        cid
+        postStatus
+
+        logCidsByReceiptId {
+          nodes {
+            address
+            index
+
+            topic0
+            topic1
+            topic2
+            topic3
+
+            logData
+
+            leafCid
+            blockByLeafMhKey {
+              data
+            }
           }
         }
       }
