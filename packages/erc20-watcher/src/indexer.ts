@@ -279,15 +279,16 @@ export class Indexer {
     return result;
   }
 
-  async triggerIndexingOnEvent (blockHash: string, blockNumber: number, token: string, logs: any[], logIndex: number): Promise<void> {
+  async triggerIndexingOnEvent (blockHash: string, eventLog: any): Promise<void> {
     const topics = [];
+    const token = eventLog.address;
 
     // We only care about the event type for now.
     const data = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-    topics.push(logs[logIndex].topic0);
-    topics.push(logs[logIndex].topic1);
-    topics.push(logs[logIndex].topic2);
+    topics.push(eventLog.topic0);
+    topics.push(eventLog.topic1);
+    topics.push(eventLog.topic2);
 
     const { name: eventName, args } = this._contract.parseLog({ topics, data });
     log(`trigger indexing on event: ${eventName} ${args}`);
@@ -330,12 +331,12 @@ export class Indexer {
     });
   }
 
-  async processEvent (blockHash: string, blockNumber: number, token: string, logs: any[], logIndex: number): Promise<void> {
+  async processEvent (blockHash: string, log: any, logIndex: number): Promise<void> {
     // Trigger indexing of data based on the event.
-    await this.triggerIndexingOnEvent(blockHash, blockNumber, token, logs, logIndex);
+    await this.triggerIndexingOnEvent(blockHash, log);
 
     // Also trigger downstream event watcher subscriptions.
-    await this.publishEventToSubscribers(blockHash, token, logIndex);
+    await this.publishEventToSubscribers(blockHash, log.address, logIndex);
   }
 
   async isWatchedContract (address : string): Promise<boolean> {
@@ -349,6 +350,73 @@ export class Indexer {
     await this._db.saveContract(ethers.utils.getAddress(address), startingBlock);
 
     return true;
+  }
+
+  async saveEventsFromLogs (receiptCID: string, blockHash: string, logs: any[]): Promise<void> {
+    const eventNameToTopic = getEventNameTopics(this._abi);
+    const logTopicToEventName = invert(eventNameToTopic);
+
+    const dbEvents = logs.map((log: any) => {
+      const { topic0, topic1, topic2, logData, cid, blockByLeafMhKey: { data: ipldBlock }, address } = log;
+
+      const eventName = logTopicToEventName[topic0];
+      const address1 = topictoAddress(topic1);
+      const address2 = topictoAddress(topic2);
+
+      const event: DeepPartial<Event> = {
+        blockHash,
+        token: address,
+        eventName,
+
+        proof: JSONbig.stringify({
+          data: JSONbig.stringify({
+            blockHash,
+            receiptCID,
+            log: {
+              cid,
+              ipldBlock
+            }
+          })
+        })
+      };
+
+      const value = logData.replace('\\', 0);
+
+      switch (eventName) {
+        case 'Transfer': {
+          event.transferFrom = address1;
+          event.transferTo = address2;
+          event.transferValue = BigInt(value);
+          break;
+        }
+        case 'Approval': {
+          event.approvalOwner = address1;
+          event.approvalSpender = address2;
+          event.approvalValue = BigInt(value);
+          break;
+        }
+      }
+
+      return event;
+    });
+
+    const tokenEvents = dbEvents.reduce((acc: { [key:string]: DeepPartial<Event>[]}, event: DeepPartial<Event>) => {
+      assert(event.token);
+
+      if (!acc[event.token]) {
+        acc[event.token] = [];
+      }
+
+      acc[event.token].push(event);
+
+      return acc;
+    }, {});
+
+    for (const token in tokenEvents) {
+      const events = tokenEvents[token];
+
+      await this._db.saveEvents({ blockHash, token, events });
+    }
   }
 
   // TODO: Move into base/class or framework package.

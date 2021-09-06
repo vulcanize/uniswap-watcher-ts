@@ -39,7 +39,8 @@ export class EventWatcher {
           nodes: logs
         },
         cid,
-        postStatus
+        postStatus,
+        ethTransactionCidByTxId
       } = receipt;
 
       if (!postStatus) {
@@ -47,20 +48,23 @@ export class EventWatcher {
       }
 
       if (logs && logs.length) {
-        for (let logIndex = 0; logIndex < logs.length; logIndex++) {
-          const { address: contractAddress } = logs[logIndex];
-
+        const contractLogPromises = logs.map(async (log: any) => {
           // Check if this log is for a contract we care about.
-          const isWatchedContract = await this._indexer.isWatchedContract(contractAddress);
-          if (isWatchedContract) {
-            // TODO: Move processing to background task runner.
+          const isWatchedContract = await this._indexer.isWatchedContract(log.address);
 
-            const { ethTransactionCidByTxId: { ethHeaderCidByHeaderId: { blockHash, blockNumber } } } = receipt;
-            await this._indexer.getEvents(blockHash, contractAddress, null);
+          return isWatchedContract ? log : null;
+        });
 
-            // Trigger other indexer methods based on event topic.
-            await this._indexer.processEvent(blockHash, blockNumber, contractAddress, logs, logIndex);
-          }
+        let contractLogs: any[] = await Promise.all(contractLogPromises);
+        contractLogs = contractLogs.filter(contractLog => contractLog);
+
+        const { ethHeaderCidByHeaderId: { blockHash } } = ethTransactionCidByTxId;
+        await this._indexer.saveEventsFromLogs(cid, blockHash, contractLogs);
+
+        for (let logIndex = 0; logIndex < contractLogs.length; logIndex++) {
+          const contractLog = contractLogs[logIndex];
+
+          await this._indexer.processEvent(blockHash, contractLog, logIndex);
         }
       }
     });
