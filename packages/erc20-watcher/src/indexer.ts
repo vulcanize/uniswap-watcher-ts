@@ -23,6 +23,9 @@ const log = debug('vulcanize:indexer');
 
 const ETH_CALL_MODE = 'eth_call';
 
+const TRANSFER_EVENT = 'Transfer';
+const APPROVAL_EVENT = 'Approval';
+
 interface Artifacts {
   abi: JsonFragment[];
   storageLayout: StorageLayout;
@@ -250,13 +253,13 @@ export class Indexer {
         } = {};
 
         switch (e.eventName) {
-          case 'Transfer': {
+          case TRANSFER_EVENT: {
             eventFields.from = e.transferFrom;
             eventFields.to = e.transferTo;
             eventFields.value = e.transferValue;
             break;
           }
-          case 'Approval': {
+          case APPROVAL_EVENT: {
             eventFields.owner = e.approvalOwner;
             eventFields.spender = e.approvalSpender;
             eventFields.value = e.approvalValue;
@@ -295,7 +298,7 @@ export class Indexer {
 
     // What data we index depends on the kind of event.
     switch (eventName) {
-      case 'Transfer': {
+      case TRANSFER_EVENT: {
         // On a transfer, balances for both parties change.
         // Therefore, trigger indexing for both sender and receiver.
         const [from, to] = args;
@@ -304,7 +307,7 @@ export class Indexer {
 
         break;
       }
-      case 'Approval': {
+      case APPROVAL_EVENT: {
         // Update allowance for (owner, spender) combination.
         const [owner, spender] = args;
         await this.allowance(blockHash, token, owner, spender);
@@ -383,13 +386,13 @@ export class Indexer {
       const value = logData.replace('\\', 0);
 
       switch (eventName) {
-        case 'Transfer': {
+        case TRANSFER_EVENT: {
           event.transferFrom = address1;
           event.transferTo = address2;
           event.transferValue = BigInt(value);
           break;
         }
-        case 'Approval': {
+        case APPROVAL_EVENT: {
           event.approvalOwner = address1;
           event.approvalSpender = address2;
           event.approvalValue = BigInt(value);
