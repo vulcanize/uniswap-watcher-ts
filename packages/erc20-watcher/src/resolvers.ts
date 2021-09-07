@@ -6,7 +6,9 @@ import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 
-import { Indexer, ValueResult } from './indexer';
+import { ValueResult } from '@vulcanize/util';
+
+import { Indexer } from './indexer';
 import { UNKNOWN_EVENT_NAME } from './entity/Event';
 import { EventWatcher } from './events';
 

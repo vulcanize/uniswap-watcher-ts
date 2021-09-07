@@ -11,8 +11,8 @@ import { BigNumber, ethers } from 'ethers';
 import { BaseProvider } from '@ethersproject/providers';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
-import { EventInterface, Indexer as BaseIndexer } from '@vulcanize/util';
+import { StorageLayout } from '@vulcanize/solidity-mapper';
+import { EventInterface, Indexer as BaseIndexer, ValueResult } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
@@ -29,13 +29,6 @@ const ETH_CALL_MODE = 'eth_call';
 const TRANSFER_EVENT = 'Transfer';
 const APPROVAL_EVENT = 'Approval';
 
-export interface ValueResult {
-  value: string | bigint;
-  proof?: {
-    data: string;
-  }
-}
-
 interface EventResult {
   event: {
     from?: string;
@@ -51,7 +44,6 @@ interface EventResult {
 export class Indexer {
   _db: Database
   _ethClient: EthClient
-  _getStorageAt: GetStorageAt
   _ethProvider: BaseProvider
   _baseIndexer: BaseIndexer
 
@@ -67,7 +59,6 @@ export class Indexer {
     this._db = db;
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
-    this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
     this._serverMode = serverMode;
     this._baseIndexer = new BaseIndexer(this._db, this._ethClient);
 
@@ -95,27 +86,6 @@ export class Indexer {
     };
   }
 
-  async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<Event>> {
-    if (contract) {
-      const watchedContract = await this.isWatchedContract(contract);
-      if (!watchedContract) {
-        throw new Error('Not a watched contract');
-      }
-    }
-
-    const events = await this._db.getBlockEvents(blockHash);
-    log(`getEvents: db hit, num events: ${events.length}`);
-
-    // Filtering.
-    const result = events
-      // TODO: Filter using db WHERE condition on contract.
-      .filter(event => !contract || contract === event.contract)
-      // TODO: Filter using db WHERE condition when name is not empty.
-      .filter(event => !name || name === event.eventName);
-
-    return result;
-  }
-
   async totalSupply (blockHash: string, token: string): Promise<ValueResult> {
     let result: ValueResult;
 
@@ -124,7 +94,7 @@ export class Indexer {
 
       result = { value };
     } else {
-      result = await this._getStorageValue(blockHash, token, '_totalSupply');
+      result = await this._baseIndexer.getStorageValue(this._storageLayout, blockHash, token, '_totalSupply');
     }
 
     // https://github.com/GoogleChromeLabs/jsbi/issues/30#issuecomment-521460510
@@ -159,7 +129,7 @@ export class Indexer {
         value: BigInt(value.toString())
       };
     } else {
-      result = await this._getStorageValue(blockHash, token, '_balances', owner);
+      result = await this._baseIndexer.getStorageValue(this._storageLayout, blockHash, token, '_balances', owner);
     }
 
     log(JSONbig.stringify(result, null, 2));
@@ -194,7 +164,7 @@ export class Indexer {
         value: BigInt(value.toString())
       };
     } else {
-      result = await this._getStorageValue(blockHash, token, '_allowances', owner, spender);
+      result = await this._baseIndexer.getStorageValue(this._storageLayout, blockHash, token, '_allowances', owner, spender);
     }
 
     // log(JSONbig.stringify(result, null, 2));
@@ -213,7 +183,7 @@ export class Indexer {
 
       result = { value };
     } else {
-      result = await this._getStorageValue(blockHash, token, '_name');
+      result = await this._baseIndexer.getStorageValue(this._storageLayout, blockHash, token, '_name');
     }
 
     // log(JSONbig.stringify(result, null, 2));
@@ -229,7 +199,7 @@ export class Indexer {
 
       result = { value };
     } else {
-      result = await this._getStorageValue(blockHash, token, '_symbol');
+      result = await this._baseIndexer.getStorageValue(this._storageLayout, blockHash, token, '_symbol');
     }
 
     // log(JSONbig.stringify(result, null, 2));
@@ -318,15 +288,19 @@ export class Indexer {
     return { eventName, eventInfo };
   }
 
-  async isWatchedContract (address : string): Promise<Contract | undefined> {
-    return this._db.getContract(ethers.utils.getAddress(address));
-  }
-
   async watchContract (address: string, startingBlock: number): Promise<boolean> {
     // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
     await this._db.saveContract(ethers.utils.getAddress(address), startingBlock);
 
     return true;
+  }
+
+  async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<Event>> {
+    return this._baseIndexer.getEventsByFilter(blockHash, contract, name);
+  }
+
+  async isWatchedContract (address : string): Promise<Contract | undefined> {
+    return this._baseIndexer.isWatchedContract(address);
   }
 
   async saveEventEntity (dbEvent: Event): Promise<Event> {
@@ -383,18 +357,6 @@ export class Indexer {
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
-  }
-
-  // TODO: Move into base/class or framework package.
-  async _getStorageValue (blockHash: string, token: string, variable: string, ...mappingKeys: string[]): Promise<ValueResult> {
-    return getStorageValue(
-      this._storageLayout,
-      this._getStorageAt,
-      blockHash,
-      token,
-      variable,
-      ...mappingKeys
-    );
   }
 
   async _fetchAndSaveEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<void> {

@@ -540,6 +540,12 @@ export class Database {
     return { canonicalBlockNumber, blockHashes };
   }
 
+  async getContract (repo: Repository<ContractInterface>, address: string): Promise<ContractInterface | undefined> {
+    return repo.createQueryBuilder('contract')
+      .where('address = :address', { address })
+      .getOne();
+  }
+
   async saveContract (repo: Repository<ContractInterface>, address: string, startingBlock: number, kind?: string): Promise<void> {
     const numRows = await repo
       .createQueryBuilder()

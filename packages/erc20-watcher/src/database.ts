@@ -76,33 +76,10 @@ export class Database {
     return repo.save(entity);
   }
 
-  async getEvents ({ blockHash, token }: { blockHash: string, token: string }): Promise<Event[]> {
-    return this._conn.getRepository(Event)
-      .createQueryBuilder('event')
-      .where('block_hash = :blockHash AND token = :token', {
-        blockHash,
-        token
-      })
-      .addOrderBy('id', 'ASC')
-      .getMany();
-  }
-
-  async getEventsByName ({ blockHash, token, eventName }: { blockHash: string, token: string, eventName: string }): Promise<Event[] | undefined> {
-    return this._conn.getRepository(Event)
-      .createQueryBuilder('event')
-      .where('block_hash = :blockHash AND token = :token AND event_name = :eventName', {
-        blockHash,
-        token,
-        eventName
-      })
-      .getMany();
-  }
-
   async getContract (address: string): Promise<Contract | undefined> {
-    return this._conn.getRepository(Contract)
-      .createQueryBuilder('contract')
-      .where('address = :address', { address })
-      .getOne();
+    const repo = this._conn.getRepository(Contract);
+
+    return this._baseDatabase.getContract(repo, address);
   }
 
   async createTransactionRunner (): Promise<QueryRunner> {

@@ -23,7 +23,6 @@ import {
 
 import { Indexer } from './indexer';
 import { Database } from './database';
-import { UNKNOWN_EVENT_NAME } from './entity/Event';
 
 const log = debug('vulcanize:job-runner');
 
@@ -57,25 +56,9 @@ export class JobRunner {
     await this._jobQueue.subscribe(QUEUE_EVENT_PROCESSING, async (job) => {
       const event = await this._baseJobRunner.processEvent(job);
 
-      let dbEvent;
-      const { data: { id } } = job;
-
       const watchedContract = await this._indexer.isWatchedContract(event.contract);
       if (watchedContract) {
-        // We might not have parsed this event yet. This can happen if the contract was added
-        // as a result of a previous event in the same block.
-        if (event.eventName === UNKNOWN_EVENT_NAME) {
-          const logObj = JSON.parse(event.extraInfo);
-          const { eventName, eventInfo } = this._indexer.parseEventNameAndArgs(watchedContract.kind, logObj);
-          event.eventName = eventName;
-          event.eventInfo = JSON.stringify(eventInfo);
-          dbEvent = await this._indexer.saveEventEntity(event);
-        }
-
-        dbEvent = await this._indexer.getEvent(id);
-        assert(dbEvent);
-
-        await this._indexer.processEvent(dbEvent);
+        await this._indexer.processEvent(event);
       }
 
       await this._jobQueue.markComplete(job);
