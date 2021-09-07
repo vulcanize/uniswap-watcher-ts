@@ -7,10 +7,12 @@ import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 
 import { Indexer, ValueResult } from './indexer';
+import { UNKNOWN_EVENT_NAME } from './entity/Event';
+import { EventWatcher } from './events';
 
 const log = debug('vulcanize:resolver');
 
-export const createResolvers = async (indexer: Indexer): Promise<any> => {
+export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatcher): Promise<any> => {
   assert(indexer);
 
   return {
@@ -26,7 +28,7 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
 
     Subscription: {
       onTokenEvent: {
-        subscribe: () => indexer.getEventIterator()
+        subscribe: () => eventWatcher.getEventIterator()
       }
     },
 
@@ -71,7 +73,15 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
 
       events: async (_: any, { blockHash, token, name }: { blockHash: string, token: string, name: string }) => {
         log('events', blockHash, token, name || '');
-        return indexer.getEvents(blockHash, token, name);
+
+        const block = await indexer.getBlockProgress(blockHash);
+        if (!block || !block.isComplete) {
+          throw new Error(`Block hash ${blockHash} number ${block?.blockNumber} not processed yet`);
+        }
+
+        const events = await indexer.getEventsByFilter(blockHash, token, name);
+        return events.filter(event => event.eventName !== UNKNOWN_EVENT_NAME)
+          .map(event => indexer.getResultEvent(event));
       }
     }
   };
