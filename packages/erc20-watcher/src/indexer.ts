@@ -307,6 +307,14 @@ export class Indexer {
     return this._baseIndexer.saveEventEntity(dbEvent);
   }
 
+  async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
+    return this._baseIndexer.getProcessedBlockCountForRange(fromBlockNumber, toBlockNumber);
+  }
+
+  async getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<Event>> {
+    return this._baseIndexer.getEventsInRange(fromBlockNumber, toBlockNumber);
+  }
+
   async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
     return this._baseIndexer.updateSyncStatusIndexedBlock(blockHash, blockNumber);
   }

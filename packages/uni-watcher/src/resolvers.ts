@@ -77,7 +77,8 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         }
 
         const events = await indexer.getEventsInRange(fromBlockNumber, toBlockNumber);
-        return events.map(event => indexer.getResultEvent(event));
+        return events.filter(event => event.eventName !== UNKNOWN_EVENT_NAME)
+          .map(event => indexer.getResultEvent(event));
       },
 
       position: (_: any, { blockHash, tokenId }: { blockHash: string, tokenId: string }) => {
