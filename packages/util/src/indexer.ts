@@ -3,7 +3,7 @@
 //
 
 import assert from 'assert';
-import { DeepPartial } from 'typeorm';
+import { DeepPartial, FindConditions, Not } from 'typeorm';
 import debug from 'debug';
 import { ethers } from 'ethers';
 
@@ -11,6 +11,7 @@ import { EthClient } from '@vulcanize/ipld-eth-client';
 import { GetStorageAt, getStorageValue, StorageLayout } from '@vulcanize/solidity-mapper';
 
 import { BlockProgressInterface, DatabaseInterface, EventInterface, SyncStatusInterface, ContractInterface } from './types';
+import { UNKNOWN_EVENT_NAME } from './constants';
 
 const MAX_EVENTS_BLOCK_RANGE = 1000;
 
@@ -177,17 +178,22 @@ export class Indexer {
       }
     }
 
-    const events = await this._db.getBlockEvents(blockHash);
+    const where: FindConditions<EventInterface> = {
+      eventName: Not(UNKNOWN_EVENT_NAME)
+    };
+
+    if (contract) {
+      where.contract = contract;
+    }
+
+    if (name) {
+      where.eventName = name;
+    }
+
+    const events = await this._db.getBlockEvents(blockHash, where);
     log(`getEvents: db hit, num events: ${events.length}`);
 
-    // Filtering.
-    const result = events
-      // TODO: Filter using db WHERE condition on contract.
-      .filter(event => !contract || contract === event.contract)
-      // TODO: Filter using db WHERE condition when name is not empty.
-      .filter(event => !name || name === event.eventName);
-
-    return result;
+    return events;
   }
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
