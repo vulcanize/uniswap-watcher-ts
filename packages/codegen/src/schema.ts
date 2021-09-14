@@ -18,10 +18,67 @@ export class Schema {
     this._typeMapping = new Map();
     this._events = [];
 
-    this.addBasicTypes();
+    this._addBasicTypes();
   }
 
-  addBasicTypes (): void {
+  addQuery (name: string, params: Array<any>, returnType: string): void {
+    // TODO: This function gets called twice for a query because of function declaration in interface and definition in contract.
+    // TODO: Handle cases where returnType/params type is an array.
+    const queryObject: any = {};
+    queryObject[name] = {
+      type: this._composer.getOTC(this._outputTypeMapping.get(returnType)).NonNull,
+      args: {
+        blockHash: 'String!',
+        token: 'String!'
+      }
+    };
+    if (params.length > 0) {
+      queryObject[name].args = params.reduce((acc, curr) => {
+        acc[curr.name] = this._typeMapping.get(curr.type) + '!';
+        return acc;
+      }, queryObject[name].args);
+    }
+
+    this._composer.Query.addFields(queryObject);
+  }
+
+  addEventType (name: string, params: Array<any>): void {
+    name = name + 'Event';
+
+    const typeObject: any = {};
+    typeObject.name = name;
+    typeObject.fields = {};
+
+    if (params.length > 0) {
+      typeObject.fields = params.reduce((acc, curr) => {
+        acc[curr.name] = this._typeMapping.get(curr.type) + '!';
+        return acc;
+      }, typeObject.fields);
+    }
+
+    this._composer.createObjectTC(typeObject);
+
+    this._events.push(name);
+
+    if (this._events.length === 1) {
+      this._addEventsRelatedTypes();
+      this._addEventsQuery();
+      this._addEventSubscription();
+    } else {
+      this._addToEventUnion(name);
+    }
+  }
+
+  buildSchema (): GraphQLSchema {
+    return this._composer.buildSchema();
+  }
+
+  exportSchema (outStream: Writable): void {
+    const schema = printSchema(this.buildSchema());
+    outStream.write(schema);
+  }
+
+  _addBasicTypes (): void {
     this._composer.createScalarTC({
       name: 'BigInt'
     });
@@ -53,13 +110,14 @@ export class Schema {
     this._outputTypeMapping.set('uint8', 'ResultUInt256');
     this._outputTypeMapping.set('uint256', 'ResultUInt256');
 
+    // TODO Get typemapping from ethersjs.
     this._typeMapping.set('string', 'String');
     this._typeMapping.set('uint8', 'Int');
     this._typeMapping.set('uint256', 'BigInt');
     this._typeMapping.set('address', 'String');
   }
 
-  addEventsRelatedTypes (): void {
+  _addEventsRelatedTypes (): void {
     // Create the Event union type.
     const eventName = 'Event';
     const typeObject: any = {};
@@ -92,28 +150,7 @@ export class Schema {
     });
   }
 
-  addQuery (name: string, params: Array<any>, returnType: string): void {
-    // TODO: This function gets called twice for a query because of function declaration in interface and definition in contract.
-    // TODO: Handle cases where returnType/params type is an array.
-    const queryObject: any = {};
-    queryObject[name] = {
-      type: this._composer.getOTC(this._outputTypeMapping.get(returnType)).NonNull,
-      args: {
-        blockHash: 'String!',
-        token: 'String!'
-      }
-    };
-    if (params.length > 0) {
-      queryObject[name].args = params.reduce((acc, curr) => {
-        acc[curr.name] = this._typeMapping.get(curr.type) + '!';
-        return acc;
-      }, queryObject[name].args);
-    }
-
-    this._composer.Query.addFields(queryObject);
-  }
-
-  addEventsQuery (): void {
+  _addEventsQuery (): void {
     this._composer.Query.addFields({
       events: {
         type: [this._composer.getOTC('ResultEvent').NonNull],
@@ -126,50 +163,14 @@ export class Schema {
     });
   }
 
-  addEventSubscription (): void {
+  _addEventSubscription (): void {
     this._composer.Subscription.addFields({
       onEvent: () => this._composer.getOTC('WatchedEvent').NonNull
     });
   }
 
-  addToEventUnion (event: string): void {
+  _addToEventUnion (event: string): void {
     const eventUnion = this._composer.getUTC('Event');
     eventUnion.addType(this._composer.getOTC(event));
-  }
-
-  addEventType (name: string, params: Array<any>): void {
-    name = name + 'Event';
-
-    const typeObject: any = {};
-    typeObject.name = name;
-    typeObject.fields = {};
-
-    if (params.length > 0) {
-      typeObject.fields = params.reduce((acc, curr) => {
-        acc[curr.name] = this._typeMapping.get(curr.type) + '!';
-        return acc;
-      }, typeObject.fields);
-    }
-
-    this._composer.createObjectTC(typeObject);
-
-    this._events.push(name);
-
-    if (this._events.length === 1) {
-      this.addEventsRelatedTypes();
-      this.addEventsQuery();
-      this.addEventSubscription();
-    } else {
-      this.addToEventUnion(name);
-    }
-  }
-
-  buildSchema (): GraphQLSchema {
-    return this._composer.buildSchema();
-  }
-
-  exportSchema (outStream: Writable): void {
-    const schema = printSchema(this.buildSchema());
-    outStream.write(schema);
   }
 }
