@@ -1,0 +1,54 @@
+type Query {
+  totalSupply(blockHash: String!, token: String!): ResultUInt256!
+  balanceOf(blockHash: String!, token: String!, account: String!): ResultUInt256!
+  allowance(blockHash: String!, token: String!, owner: String!, spender: String!): ResultUInt256!
+  events(blockHash: String!, token: String!, name: String): [ResultEvent!]
+  name(blockHash: String!, token: String!): ResultString!
+  symbol(blockHash: String!, token: String!): ResultString!
+  decimals(blockHash: String!, token: String!): ResultUInt256!
+}
+
+type ResultUInt256 {
+  value: BigInt!
+  proof: Proof
+}
+
+scalar BigInt
+
+type Proof {
+  data: String!
+}
+
+type ResultEvent {
+  event: Event!
+  proof: Proof
+}
+
+union Event = TransferEvent | ApprovalEvent
+
+type TransferEvent {
+  from: String!
+  to: String!
+  value: BigInt!
+}
+
+type ApprovalEvent {
+  owner: String!
+  spender: String!
+  value: BigInt!
+}
+
+type ResultString {
+  value: String!
+  proof: Proof
+}
+
+type Subscription {
+  onEvent: WatchedEvent!
+}
+
+type WatchedEvent {
+  blockHash: String!
+  token: String!
+  event: ResultEvent!
+}
