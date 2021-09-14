@@ -10,6 +10,9 @@ import { hideBin } from 'yargs/helpers';
 
 import { Visitor } from './visitor';
 
+const MODE_ETH_CALL = 'eth_call';
+const MODE_STORAGE = 'storage';
+
 const main = async (): Promise<void> => {
   const argv = await yargs(hideBin(process.argv))
     .option('input-file', {
@@ -26,24 +29,25 @@ const main = async (): Promise<void> => {
     .option('mode', {
       alias: 'm',
       type: 'string',
-      default: 'eth_call'
+      default: MODE_ETH_CALL,
+      choices: [MODE_ETH_CALL, MODE_STORAGE]
     })
     .argv;
 
-  const data = readFileSync(path.resolve(__dirname, argv['input-file'])).toString();
+  const data = readFileSync(path.resolve(argv['input-file'])).toString();
   const ast = parse(data);
 
   const visitor = new Visitor();
 
   visit(ast, {
-    FunctionDefinition: visitor.functionDefinitionVisitor,
-    EventDefinition: visitor.eventDefinitionVisitor
+    FunctionDefinition: visitor.functionDefinitionVisitor.bind(visitor),
+    EventDefinition: visitor.eventDefinitionVisitor.bind(visitor)
   });
 
-  const outStream = argv['output-file'] ? createWriteStream(path.resolve(__dirname, argv['output-file'])) : process.stdout;
+  const outStream = argv['output-file'] ? createWriteStream(path.resolve(argv['output-file'])) : process.stdout;
   visitor.schema.exportSchema(outStream);
 };
 
-main().then().catch(err => {
+main().catch(err => {
   console.error(err);
 });

@@ -3,8 +3,13 @@
 //
 
 import { GraphQLSchema, printSchema } from 'graphql';
-import { SchemaComposer, schemaComposer } from 'graphql-compose';
+import { SchemaComposer } from 'graphql-compose';
 import { Writable } from 'stream';
+
+export interface Param {
+  name: string;
+  type: string;
+}
 
 export class Schema {
   _composer: SchemaComposer;
@@ -13,7 +18,7 @@ export class Schema {
   _events: Array<string>;
 
   constructor () {
-    this._composer = schemaComposer;
+    this._composer = new SchemaComposer();
     this._outputTypeMapping = new Map();
     this._typeMapping = new Map();
     this._events = [];
@@ -21,10 +26,10 @@ export class Schema {
     this._addBasicTypes();
   }
 
-  addQuery (name: string, params: Array<any>, returnType: string): void {
+  addQuery (name: string, params: Array<Param>, returnType: string): void {
     // TODO: This function gets called twice for a query because of function declaration in interface and definition in contract.
     // TODO: Handle cases where returnType/params type is an array.
-    const queryObject: any = {};
+    const queryObject: { [key: string]: any; } = {};
     queryObject[name] = {
       type: this._composer.getOTC(this._outputTypeMapping.get(returnType)).NonNull,
       args: {
@@ -42,7 +47,7 @@ export class Schema {
     this._composer.Query.addFields(queryObject);
   }
 
-  addEventType (name: string, params: Array<any>): void {
+  addEventType (name: string, params: Array<Param>): void {
     name = name + 'Event';
 
     const typeObject: any = {};

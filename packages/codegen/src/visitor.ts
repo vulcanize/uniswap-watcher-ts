@@ -11,7 +11,7 @@ export class Visitor {
     this.schema = new Schema();
   }
 
-  functionDefinitionVisitor = (node: any): void => {
+  functionDefinitionVisitor (node: any): void {
     if (node.stateMutability === 'view' && (node.visibility === 'external' || node.visibility === 'public')) {
       const name = node.name;
       const params = node.parameters.map((item: any) => {
@@ -23,7 +23,7 @@ export class Visitor {
     }
   }
 
-  eventDefinitionVisitor = (node: any): void => {
+  eventDefinitionVisitor (node: any): void {
     const name = node.name;
     const params = node.parameters.map((item: any) => {
       return { name: item.name, type: item.typeName.name };
