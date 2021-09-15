@@ -69,13 +69,12 @@ export class Schema {
     this._composer.createObjectTC(typeObject);
 
     this._events.push(name);
+    this._addToEventUnion(name);
 
     if (this._events.length === 1) {
       this._addEventsRelatedTypes();
       this._addEventsQuery();
       this._addEventSubscription();
-    } else {
-      this._addToEventUnion(name);
     }
   }
 
@@ -91,12 +90,12 @@ export class Schema {
   }
 
   _addBasicTypes (): void {
-    // Create a scalar type composer to add the required scalar in the schema composer.
+    // Create a scalar type composer to add the scalar BigInt in the schema composer.
     this._composer.createScalarTC({
       name: 'BigInt'
     });
 
-    // Create a type composer to add the required type in the schema composer.
+    // Create a type composer to add the type Proof in the schema composer.
     this._composer.createObjectTC({
       name: 'Proof',
       fields: {
@@ -133,24 +132,13 @@ export class Schema {
   }
 
   _addEventsRelatedTypes (): void {
-    // Create the Event union .
-    const eventName = 'Event';
-    const typeObject: any = {};
-    typeObject.name = eventName;
-    typeObject.types = Array.from(this._events, (event) => {
-      return this._composer.getOTC(event);
-    });
-
-    // Create a union type composer to add the required union in the schema composer using typeObject.
-    this._composer.createUnionTC(typeObject);
-
     // Create the ResultEvent type.
     const resultEventName = 'ResultEvent';
     this._composer.createObjectTC({
       name: resultEventName,
       fields: {
         // Get type composer object for Event union from the schema composer.
-        event: () => this._composer.getUTC(eventName).NonNull,
+        event: () => this._composer.getUTC('Event').NonNull,
         proof: () => this._composer.getOTC('Proof')
       }
     });
@@ -188,8 +176,8 @@ export class Schema {
   }
 
   _addToEventUnion (event: string): void {
-    // Get type composer object for Event union from the schema composer.
-    const eventUnion = this._composer.getUTC('Event');
+    // Get (or create if doesn't exist) type composer object for Event union from the schema composer.
+    const eventUnion = this._composer.getOrCreateUTC('Event');
     // Add a new type to the union.
     eventUnion.addType(this._composer.getOTC(event));
   }
