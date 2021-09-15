@@ -2,6 +2,7 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
+import { Writable } from 'stream';
 import { Schema } from './schema';
 
 export class Visitor {
@@ -11,6 +12,10 @@ export class Visitor {
     this._schema = new Schema();
   }
 
+  /**
+   * Visitor function for function definitions.
+   * @param node ASTNode for a function definition.
+   */
   functionDefinitionVisitor (node: any): void {
     if (node.stateMutability === 'view' && (node.visibility === 'external' || node.visibility === 'public')) {
       const name = node.name;
@@ -25,6 +30,10 @@ export class Visitor {
     }
   }
 
+  /**
+   * Visitor function for event definitions.
+   * @param node ASTNode for an event definition.
+   */
   eventDefinitionVisitor (node: any): void {
     const name = node.name;
     const params = node.parameters.map((item: any) => {
@@ -34,7 +43,11 @@ export class Visitor {
     this._schema.addEventType(name, params);
   }
 
-  exportSchema (outputFile?: string): void {
-    this._schema.exportSchema(outputFile);
+  /**
+   * Writes schema to a stream.
+   * @param outStream A writable output stream to write the schema to.
+   */
+  exportSchema (outStream: Writable): void {
+    this._schema.exportSchema(outStream);
   }
 }

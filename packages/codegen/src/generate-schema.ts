@@ -2,7 +2,7 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { readFileSync } from 'fs';
+import { readFileSync, createWriteStream } from 'fs';
 import path from 'path';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
@@ -45,7 +45,8 @@ const main = async (): Promise<void> => {
     EventDefinition: visitor.eventDefinitionVisitor.bind(visitor)
   });
 
-  visitor.exportSchema(argv['output-file']);
+  const outStream = argv['output-file'] ? createWriteStream(path.resolve(argv['output-file'])) : process.stdout;
+  visitor.exportSchema(outStream);
 };
 
 main().catch(err => {
