@@ -3,7 +3,7 @@
 //
 
 import { Writable } from 'stream';
-import { Schema } from './schema';
+import { Schema, Param } from './schema';
 
 export class Visitor {
   _schema: Schema;
@@ -28,6 +28,31 @@ export class Visitor {
 
       this._schema.addQuery(name, params, returnType);
     }
+  }
+
+  /**
+   * Visitor function for state variable declarations.
+   * @param node ASTNode for a state variable declaration.
+   */
+  stateVariableDeclarationVisitor (node: any): void {
+    // TODO Handle multiples variables in a single line.
+    // TODO Handle array types.
+    let name: string = node.variables[0].name;
+    name = (name[0] === '_') ? name.substring(1) : name;
+
+    const params: Param[] = [];
+
+    let typeName = node.variables[0].typeName;
+    let numParams = 0;
+    while (typeName.type === 'Mapping') {
+      params.push({ name: 'key' + numParams.toString(), type: typeName.keyType.name });
+      typeName = typeName.valueType;
+      numParams++;
+    }
+
+    const returnType = typeName.name;
+
+    this._schema.addQuery(name, params, returnType);
   }
 
   /**

@@ -10,7 +10,7 @@
 
     * `input-file`: Input contract file (must be a flattened contract file) path (required).
     * `output-file`: Schema output file path (logs output using `stdout` if not provided).
-    * `mode`: Contract variables access mode (default: `eth_call`).
+    * `mode`: Contract variables access mode (default: `storage`).
 
   Example: 
   

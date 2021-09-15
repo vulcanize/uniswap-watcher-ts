@@ -30,7 +30,7 @@ const main = async (): Promise<void> => {
     .option('mode', {
       alias: 'm',
       type: 'string',
-      default: MODE_ETH_CALL,
+      default: MODE_STORAGE,
       choices: [MODE_ETH_CALL, MODE_STORAGE]
     })
     .argv;
@@ -38,12 +38,28 @@ const main = async (): Promise<void> => {
   const data = readFileSync(path.resolve(argv['input-file'])).toString();
   const ast = parse(data);
 
+  // Filter out library nodes.
+  ast.children = ast.children.filter((element) => {
+    if (element.type === 'ContractDefinition' && element.kind === 'library') {
+      return false;
+    } else {
+      return true;
+    }
+  });
+
   const visitor = new Visitor();
 
-  visit(ast, {
-    FunctionDefinition: visitor.functionDefinitionVisitor.bind(visitor),
-    EventDefinition: visitor.eventDefinitionVisitor.bind(visitor)
-  });
+  if (argv.mode === MODE_ETH_CALL) {
+    visit(ast, {
+      FunctionDefinition: visitor.functionDefinitionVisitor.bind(visitor),
+      EventDefinition: visitor.eventDefinitionVisitor.bind(visitor)
+    });
+  } else {
+    visit(ast, {
+      StateVariableDeclaration: visitor.stateVariableDeclarationVisitor.bind(visitor),
+      EventDefinition: visitor.eventDefinitionVisitor.bind(visitor)
+    });
+  }
 
   const outStream = argv['output-file'] ? createWriteStream(path.resolve(argv['output-file'])) : process.stdout;
   visitor.exportSchema(outStream);
