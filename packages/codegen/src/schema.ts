@@ -104,6 +104,14 @@ export class Schema {
     });
 
     this._composer.createObjectTC({
+      name: 'ResultBoolean',
+      fields: {
+        value: 'Boolean!',
+        proof: () => this._composer.getOTC('Proof')
+      }
+    });
+
+    this._composer.createObjectTC({
       name: 'ResultString',
       fields: {
         value: 'String!',
@@ -121,14 +129,18 @@ export class Schema {
     });
 
     this._outputTypeMapping.set('string', 'ResultString');
+    this._outputTypeMapping.set('address', 'ResultString');
     this._outputTypeMapping.set('uint8', 'ResultUInt256');
     this._outputTypeMapping.set('uint256', 'ResultUInt256');
+    this._outputTypeMapping.set('bool', 'ResultBoolean');
 
     // TODO Get typemapping from ethersjs.
     this._typeMapping.set('string', 'String');
     this._typeMapping.set('uint8', 'Int');
     this._typeMapping.set('uint256', 'BigInt');
     this._typeMapping.set('address', 'String');
+    this._typeMapping.set('bool', 'Boolean');
+    this._typeMapping.set('bytes4', 'Int');
   }
 
   _addEventsRelatedTypes (): void {
@@ -149,7 +161,7 @@ export class Schema {
       name: watchedEventName,
       fields: {
         blockHash: 'String!',
-        token: 'String!',
+        contractAddress: 'String!',
         event: () => this._composer.getOTC(resultEventName).NonNull
       }
     });
