@@ -5,10 +5,10 @@
 import { Schema } from './schema';
 
 export class Visitor {
-  schema: Schema;
+  _schema: Schema;
 
   constructor () {
-    this.schema = new Schema();
+    this._schema = new Schema();
   }
 
   functionDefinitionVisitor (node: any): void {
@@ -17,9 +17,11 @@ export class Visitor {
       const params = node.parameters.map((item: any) => {
         return { name: item.name, type: item.typeName.name };
       });
+
+      // TODO Handle multiple return parameters and array return type.
       const returnType = node.returnParameters[0].typeName.name;
 
-      this.schema.addQuery(name, params, returnType);
+      this._schema.addQuery(name, params, returnType);
     }
   }
 
@@ -29,6 +31,10 @@ export class Visitor {
       return { name: item.name, type: item.typeName.name };
     });
 
-    this.schema.addEventType(name, params);
+    this._schema.addEventType(name, params);
+  }
+
+  exportSchema (outputFile?: string): void {
+    this._schema.exportSchema(outputFile);
   }
 }

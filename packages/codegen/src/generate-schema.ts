@@ -2,11 +2,12 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { parse, visit } from '@solidity-parser/parser';
-import { readFileSync, createWriteStream } from 'fs';
+import { readFileSync } from 'fs';
 import path from 'path';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
+
+import { parse, visit } from '@solidity-parser/parser';
 
 import { Visitor } from './visitor';
 
@@ -44,8 +45,7 @@ const main = async (): Promise<void> => {
     EventDefinition: visitor.eventDefinitionVisitor.bind(visitor)
   });
 
-  const outStream = argv['output-file'] ? createWriteStream(path.resolve(argv['output-file'])) : process.stdout;
-  visitor.schema.exportSchema(outStream);
+  visitor.exportSchema(argv['output-file']);
 };
 
 main().catch(err => {

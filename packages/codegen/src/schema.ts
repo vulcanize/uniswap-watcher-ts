@@ -4,7 +4,9 @@
 
 import { GraphQLSchema, printSchema } from 'graphql';
 import { SchemaComposer } from 'graphql-compose';
+import { createWriteStream } from 'fs';
 import { Writable } from 'stream';
+import path from 'path';
 
 export interface Param {
   name: string;
@@ -27,16 +29,17 @@ export class Schema {
   }
 
   addQuery (name: string, params: Array<Param>, returnType: string): void {
-    // TODO: This function gets called twice for a query because of function declaration in interface and definition in contract.
     // TODO: Handle cases where returnType/params type is an array.
     const queryObject: { [key: string]: any; } = {};
     queryObject[name] = {
+      // Get type composer object for return type from the schema composer.
       type: this._composer.getOTC(this._outputTypeMapping.get(returnType)).NonNull,
       args: {
         blockHash: 'String!',
-        token: 'String!'
+        contractAddress: 'String!'
       }
     };
+
     if (params.length > 0) {
       queryObject[name].args = params.reduce((acc, curr) => {
         acc[curr.name] = this._typeMapping.get(curr.type) + '!';
@@ -44,6 +47,7 @@ export class Schema {
       }, queryObject[name].args);
     }
 
+    // Add a query to the schema composer using queryObject.
     this._composer.Query.addFields(queryObject);
   }
 
@@ -61,6 +65,7 @@ export class Schema {
       }, typeObject.fields);
     }
 
+    // Create a type composer to add the required type in the schema composer.
     this._composer.createObjectTC(typeObject);
 
     this._events.push(name);
@@ -78,16 +83,20 @@ export class Schema {
     return this._composer.buildSchema();
   }
 
-  exportSchema (outStream: Writable): void {
+  exportSchema (outputFile?: string): void {
+    const outStream: Writable = outputFile ? createWriteStream(path.resolve(outputFile)) : process.stdout;
+    // Get schema as a string from GraphQLSchema.
     const schema = printSchema(this.buildSchema());
     outStream.write(schema);
   }
 
   _addBasicTypes (): void {
+    // Create a scalar type composer to add the required scalar in the schema composer.
     this._composer.createScalarTC({
       name: 'BigInt'
     });
 
+    // Create a type composer to add the required type in the schema composer.
     this._composer.createObjectTC({
       name: 'Proof',
       fields: {
@@ -106,6 +115,7 @@ export class Schema {
     this._composer.createObjectTC({
       name: 'ResultUInt256',
       fields: {
+        // Get type composer object for BigInt scalar from the schema composer.
         value: () => this._composer.getSTC('BigInt').NonNull,
         proof: () => this._composer.getOTC('Proof')
       }
@@ -123,7 +133,7 @@ export class Schema {
   }
 
   _addEventsRelatedTypes (): void {
-    // Create the Event union type.
+    // Create the Event union .
     const eventName = 'Event';
     const typeObject: any = {};
     typeObject.name = eventName;
@@ -131,6 +141,7 @@ export class Schema {
       return this._composer.getOTC(event);
     });
 
+    // Create a union type composer to add the required union in the schema composer using typeObject.
     this._composer.createUnionTC(typeObject);
 
     // Create the ResultEvent type.
@@ -138,6 +149,7 @@ export class Schema {
     this._composer.createObjectTC({
       name: resultEventName,
       fields: {
+        // Get type composer object for Event union from the schema composer.
         event: () => this._composer.getUTC(eventName).NonNull,
         proof: () => this._composer.getOTC('Proof')
       }
@@ -161,7 +173,7 @@ export class Schema {
         type: [this._composer.getOTC('ResultEvent').NonNull],
         args: {
           blockHash: 'String!',
-          token: 'String!',
+          contractAddress: 'String!',
           name: 'String'
         }
       }
@@ -169,13 +181,16 @@ export class Schema {
   }
 
   _addEventSubscription (): void {
+    // Add a subscription to the schema composer.
     this._composer.Subscription.addFields({
       onEvent: () => this._composer.getOTC('WatchedEvent').NonNull
     });
   }
 
   _addToEventUnion (event: string): void {
+    // Get type composer object for Event union from the schema composer.
     const eventUnion = this._composer.getUTC('Event');
+    // Add a new type to the union.
     eventUnion.addType(this._composer.getOTC(event));
   }
 }
