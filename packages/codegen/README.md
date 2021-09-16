@@ -1,5 +1,13 @@
 # Code Generator
 
+## Setup
+
+* Run the following command to install required packages:
+
+  ```bash
+  yarn
+  ```
+
 ## Run
 
 * Run the following command to generate a flattened contract file from a contract file:
@@ -41,13 +49,19 @@
 
 ## Demo
 
+* Install required packages:
+
+  ```bash
+  yarn
+  ```
+
 * Flatten a contract file:
 
   ```bash
+  # Note: Currently, relative path for input-file-path doesn't work. Use absolute path.
   yarn codegen:flatten ~/watcher-ts/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol ./flattened
   ```
 
-  Note: Currently, relative path for input-file-path doesn't work.
 
 * Generate schema from the flattened contract file:
   
@@ -60,3 +74,10 @@
   ```bash
   yarn codegen:gql --input-file https://git.io/Jupci --output-file ./ERC721-schema.gql --mode eth_call
   ```
+
+## References
+
+* [ERC20 schema generation (eth_call mode).](https://git.io/JuhN2)
+* [ERC20 schema generation (storage mode).](https://git.io/JuhNr)
+* [ERC721 schema generation (eth_call mode).](https://git.io/JuhNK)
+* [ERC721 schema generation (storage mode).](https://git.io/JuhN1)
