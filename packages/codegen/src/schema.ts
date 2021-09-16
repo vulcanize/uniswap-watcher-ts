@@ -35,7 +35,7 @@ export class Schema {
     const queryObject: { [key: string]: any; } = {};
     queryObject[name] = {
       // Get type composer object for return type from the schema composer.
-      type: this._composer.getOTC('Result' + this._typeMapping.get(returnType)).NonNull,
+      type: this._composer.getOTC(`Result${this._typeMapping.get(returnType)}`).NonNull,
       args: {
         blockHash: 'String!',
         contractAddress: 'String!'
@@ -59,7 +59,7 @@ export class Schema {
    * @param params Event parameters.
    */
   addEventType (name: string, params: Array<Param>): void {
-    name = name + 'Event';
+    name = `${name}Event`;
 
     const typeObject: any = {};
     typeObject.name = name;

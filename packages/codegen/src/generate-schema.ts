@@ -3,6 +3,7 @@
 //
 
 import { readFileSync, createWriteStream } from 'fs';
+import fetch from 'node-fetch';
 import path from 'path';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
@@ -19,7 +20,7 @@ const main = async (): Promise<void> => {
     .option('input-file', {
       alias: 'i',
       demandOption: true,
-      describe: 'Input contract file path.',
+      describe: 'Input contract file path or an url.',
       type: 'string'
     })
     .option('output-file', {
@@ -35,17 +36,18 @@ const main = async (): Promise<void> => {
     })
     .argv;
 
-  const data = readFileSync(path.resolve(argv['input-file'])).toString();
+  let data: string;
+  if (argv['input-file'].startsWith('http')) {
+    const response = await fetch(argv['input-file']);
+    data = await response.text();
+  } else {
+    data = readFileSync(path.resolve(argv['input-file'])).toString();
+  }
+
   const ast = parse(data);
 
   // Filter out library nodes.
-  ast.children = ast.children.filter((element) => {
-    if (element.type === 'ContractDefinition' && element.kind === 'library') {
-      return false;
-    } else {
-      return true;
-    }
-  });
+  ast.children = ast.children.filter(child => !(child.type === 'ContractDefinition' && child.kind === 'library'));
 
   const visitor = new Visitor();
 

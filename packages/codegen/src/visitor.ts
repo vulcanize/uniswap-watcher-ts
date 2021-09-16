@@ -38,14 +38,17 @@ export class Visitor {
     // TODO Handle multiples variables in a single line.
     // TODO Handle array types.
     let name: string = node.variables[0].name;
-    name = (name[0] === '_') ? name.substring(1) : name;
+    name = name.startsWith('_') ? name.substring(1) : name;
 
     const params: Param[] = [];
 
     let typeName = node.variables[0].typeName;
     let numParams = 0;
+
+    // If the variable type is mapping, extract key as a param:
+    // Eg. mapping(address => mapping(address => uint256)) private _allowances;
     while (typeName.type === 'Mapping') {
-      params.push({ name: 'key' + numParams.toString(), type: typeName.keyType.name });
+      params.push({ name: `key${numParams.toString()}`, type: typeName.keyType.name });
       typeName = typeName.valueType;
       numParams++;
     }
