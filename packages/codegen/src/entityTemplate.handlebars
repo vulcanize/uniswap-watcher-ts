@@ -1,0 +1,11 @@
+import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
+
+@Entity()
+{{indexHelper indexOn}}
+
+export class {{className}} {
+	@PrimaryGeneratedColumn()
+	id!: number;
+
+	{{columnHelper columns}}
+}
