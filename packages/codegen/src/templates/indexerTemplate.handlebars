@@ -1,0 +1,116 @@
+//
+// Copyright 2021 Vulcanize, Inc.
+//
+
+import assert from 'assert';
+import debug from 'debug';
+import { invert } from 'lodash';
+import { JsonFragment } from '@ethersproject/abi';
+import { DeepPartial } from 'typeorm';
+import JSONbig from 'json-bigint';
+import { BigNumber, ethers, Contract } from 'ethers';
+import { BaseProvider } from '@ethersproject/providers';
+import { PubSub } from 'apollo-server-express';
+
+import { EthClient, topictoAddress } from '@vulcanize/ipld-eth-client';
+import { getEventNameTopics, getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
+
+import { Database } from './database';
+import { Event } from './entity/Event';
+import { fetchTokenDecimals, fetchTokenName, fetchTokenSymbol, fetchTokenTotalSupply } from './utils';
+
+const log = debug('vulcanize:indexer');
+
+const ETH_CALL_MODE = 'eth_call';
+
+interface Artifacts {
+  abi: JsonFragment[];
+  storageLayout: StorageLayout;
+}
+
+export interface ValueResult {
+  value: string | bigint;
+  proof?: {
+    data: string;
+  }
+}
+
+export class Indexer {
+  _db: Database
+  _ethClient: EthClient
+  _pubsub: PubSub
+  _getStorageAt: GetStorageAt
+  _ethProvider: BaseProvider
+
+  _abi: JsonFragment[]
+  _storageLayout: StorageLayout
+  _contract: ethers.utils.Interface
+  _serverMode: string
+
+  constructor (db: Database, ethClient: EthClient, ethProvider: BaseProvider, pubsub: PubSub, artifacts: Artifacts, serverMode: string) {
+    assert(db);
+    assert(ethClient);
+    assert(pubsub);
+    assert(artifacts);
+
+    const { abi, storageLayout } = artifacts;
+
+    assert(abi);
+    assert(storageLayout);
+
+    this._db = db;
+    this._ethClient = ethClient;
+    this._ethProvider = ethProvider;
+    this._pubsub = pubsub;
+    this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
+    this._serverMode = serverMode;
+
+    this._abi = abi;
+    this._storageLayout = storageLayout;
+
+    this._contract = new ethers.utils.Interface(this._abi);
+  }
+
+  getEventIterator (): AsyncIterator<any> {
+    return this._pubsub.asyncIterator(['event']);
+  }
+
+  {{#each queries}}
+  async {{this.name}} (blockHash: string, contractAddress: string
+    {{~#each this.params}}, {{this.name~}}: {{this.type~}} {{/each}}): Promise<ValueResult> {
+    const contract = new Contract(contractAddress, this._abi, this._ethProvider);
+    let value = null;
+
+    {{~#if this.params}}
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = BigNumber.from(number).toNumber();
+    value = await contract.{{this.name}}(
+    {{~#each this.params}}{{this.name}}, {{/each}}{ blockTag: blockNumber });
+    {{else}}
+
+    value = await contract.{{this.name}}();
+    {{/if}}
+
+    value = value.toString();
+    {{~#compare this.returnType 'bigint'}}
+
+    value = BigInt(value);
+    {{else}}
+    {{~#compare ../this.returnType 'number'}}
+
+    value = BigInt(value);
+    {{/compare}}
+    {{/compare}}
+
+    const result: ValueResult = { value };
+    // log(JSONbig.stringify(result, null, 2));
+    return result;
+  }
+  {{~#unless @last}}
+
+
+  {{/unless}}
+  {{/each}}
+
+}

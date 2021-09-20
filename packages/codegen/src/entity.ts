@@ -3,10 +3,13 @@
 //
 
 import fs from 'fs';
+import path from 'path';
 import Handlebars from 'handlebars';
 
+const TEMPLATE_FILE = './templates/entityTemplate.handlebars';
+
 const main = async (): Promise<void> => {
-  const templateString = fs.readFileSync('src/templates/entityTemplate.handlebars').toString();
+  const templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
 
   // TODO Replace registerHelper implementation with inbuilt helpers.
   Handlebars.registerHelper('indexHelper', function (context) {
@@ -28,7 +31,8 @@ const main = async (): Promise<void> => {
       toReturn = `${toReturn}@Column('`;
       // TODO Prepare a GraphQL -> postgres typemapping.
       toReturn = `${toReturn}${context[i].columnType}', `;
-      // Use #if for misc properties.
+      // TODO Use #if for misc properties.
+      // TODO Specify length for strings according to contract variable type.
       toReturn = context[i].length ? `${toReturn}{ length: ${context[i].length} })\n` : ')\n';
       // TODO Prepare a GraphQL -> ts typemapping.
       toReturn = `${toReturn}\t${context[i].columnName}!: ${context[i].columnType};\n\n\t`;

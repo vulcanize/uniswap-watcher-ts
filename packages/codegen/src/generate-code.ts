@@ -25,13 +25,18 @@ const main = async (): Promise<void> => {
       type: 'string'
     })
     .option('schema-file', {
-      alias: 's',
+      alias: 'sf',
       describe: 'Schema output file path.',
       type: 'string'
     })
     .option('resolvers-file', {
-      alias: 'r',
+      alias: 'rf',
       describe: 'Resolvers output file path.',
+      type: 'string'
+    })
+    .option('indexer-file', {
+      alias: 'if',
+      describe: 'Indexer output file path.',
       type: 'string'
     })
     .option('mode', {
@@ -89,6 +94,11 @@ const main = async (): Promise<void> => {
     ? createWriteStream(path.resolve(argv['resolvers-file']))
     : process.stdout;
   visitor.exportResolvers(outStream);
+
+  outStream = argv['indexer-file']
+    ? createWriteStream(path.resolve(argv['indexer-file']))
+    : process.stdout;
+  visitor.exportIndexer(outStream);
 };
 
 main().catch(err => {

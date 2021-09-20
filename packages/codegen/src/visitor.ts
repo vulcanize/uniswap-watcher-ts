@@ -3,18 +3,21 @@
 //
 
 import { Writable } from 'stream';
-import { Resolvers } from './resolvers';
 
+import { Indexer } from './indexer';
+import { Resolvers } from './resolvers';
 import { Schema } from './schema';
 import { Param } from './utils/types';
 
 export class Visitor {
   _schema: Schema;
   _resolvers: Resolvers;
+  _indexer: Indexer;
 
   constructor () {
     this._schema = new Schema();
     this._resolvers = new Resolvers();
+    this._indexer = new Indexer();
   }
 
   /**
@@ -33,6 +36,7 @@ export class Visitor {
 
       this._schema.addQuery(name, params, returnType);
       this._resolvers.addQuery(name, params, returnType);
+      this._indexer.addQuery(name, params, returnType);
     }
   }
 
@@ -63,6 +67,7 @@ export class Visitor {
 
     this._schema.addQuery(name, params, returnType);
     this._resolvers.addQuery(name, params, returnType);
+    this._indexer.addQuery(name, params, returnType);
   }
 
   /**
@@ -88,5 +93,9 @@ export class Visitor {
 
   exportResolvers (outStream: Writable): void {
     this._resolvers.exportResolvers(outStream);
+  }
+
+  exportIndexer (outStream: Writable): void {
+    this._indexer.exportIndexer(outStream);
   }
 }
