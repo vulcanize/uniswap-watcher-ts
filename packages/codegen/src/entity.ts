@@ -1,9 +1,14 @@
+//
+// Copyright 2021 Vulcanize, Inc.
+//
+
 import fs from 'fs';
 import Handlebars from 'handlebars';
 
 const main = async (): Promise<void> => {
-  const templateString = fs.readFileSync('src/entityTemplate.handlebars').toString();
+  const templateString = fs.readFileSync('src/templates/entityTemplate.handlebars').toString();
 
+  // TODO Replace registerHelper implementation with inbuilt helpers.
   Handlebars.registerHelper('indexHelper', function (context) {
     let toReturn = '';
 
@@ -30,13 +35,13 @@ const main = async (): Promise<void> => {
     return new Handlebars.SafeString(toReturn);
   });
 
-  const temp = Handlebars.compile(templateString);
+  const template = Handlebars.compile(templateString);
   const obj = {
     indexOn: [
       {
         columns: [
           'blockHash',
-          'token'
+          'contractAddress'
         ],
         unique: true
       }
@@ -49,13 +54,13 @@ const main = async (): Promise<void> => {
         length: 66
       },
       {
-        columnName: 'token',
+        columnName: 'contractAddress',
         columnType: 'string',
         length: 42
       }
     ]
   };
-  console.log(temp(obj));
+  console.log(template(obj));
 };
 
 main().catch(err => {

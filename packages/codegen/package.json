@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint .",
-    "codegen:gql": "ts-node src/generate-schema.ts"
+    "codegen": "ts-node src/generate-code.ts"
   },
   "repository": {
     "type": "git",

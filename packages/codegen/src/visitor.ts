@@ -2,7 +2,9 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
+import { GraphQLSchema } from 'graphql';
 import { Writable } from 'stream';
+
 import { Schema, Param } from './schema';
 
 export class Visitor {
@@ -77,5 +79,9 @@ export class Visitor {
    */
   exportSchema (outStream: Writable): void {
     this._schema.exportSchema(outStream);
+  }
+
+  getSchema (): GraphQLSchema {
+    return this._schema.buildSchema();
   }
 }

@@ -99,8 +99,8 @@ export class Schema {
    */
   exportSchema (outStream: Writable): void {
     // Get schema as a string from GraphQLSchema.
-    const schema = printSchema(this.buildSchema());
-    outStream.write(schema);
+    const schemaString = printSchema(this.buildSchema());
+    outStream.write(schemaString);
   }
 
   /**

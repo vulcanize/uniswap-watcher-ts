@@ -12,6 +12,7 @@ import { flatten } from '@poanet/solidity-flattener';
 import { parse, visit } from '@solidity-parser/parser';
 
 import { Visitor } from './visitor';
+import { Resolvers } from './resolvers';
 
 const MODE_ETH_CALL = 'eth_call';
 const MODE_STORAGE = 'storage';
@@ -24,9 +25,14 @@ const main = async (): Promise<void> => {
       describe: 'Input contract file path or an url.',
       type: 'string'
     })
-    .option('output-file', {
-      alias: 'o',
+    .option('schema-file', {
+      alias: 's',
       describe: 'Schema output file path.',
+      type: 'string'
+    })
+    .option('resolvers-file', {
+      alias: 'r',
+      describe: 'Resolvers output file path.',
       type: 'string'
     })
     .option('mode', {
@@ -62,6 +68,7 @@ const main = async (): Promise<void> => {
   ast.children = ast.children.filter(child => !(child.type === 'ContractDefinition' && child.kind === 'library'));
 
   const visitor = new Visitor();
+  const resolvers = new Resolvers();
 
   if (argv.mode === MODE_ETH_CALL) {
     visit(ast, {
@@ -75,10 +82,18 @@ const main = async (): Promise<void> => {
     });
   }
 
-  const outStream = argv['output-file']
-    ? createWriteStream(path.resolve(argv['output-file']))
+  let outStream = argv['schema-file']
+    ? createWriteStream(path.resolve(argv['schema-file']))
     : process.stdout;
   visitor.exportSchema(outStream);
+
+  const schema = visitor.getSchema();
+  resolvers.processSchema(schema);
+
+  outStream = argv['resolvers-file']
+    ? createWriteStream(path.resolve(argv['resolvers-file']))
+    : process.stdout;
+  resolvers.exportResolvers(outStream);
 };
 
 main().catch(err => {
