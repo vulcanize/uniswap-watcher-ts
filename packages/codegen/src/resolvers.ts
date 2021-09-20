@@ -3,14 +3,15 @@
 //
 
 import fs from 'fs';
+import path from 'path';
 import { Writable } from 'stream';
 import Handlebars from 'handlebars';
-import { GraphQLSchema } from 'graphql';
+import assert from 'assert';
 
-export interface Param {
-  name: string;
-  type: string;
-}
+import { getTsForSol } from './utils/typemappings';
+import { Param } from './utils/types';
+
+const TEMPLATE_FILE = './templates/resolversTemplate.handlebars';
 
 export class Resolvers {
   _queries: Array<any>;
@@ -18,11 +19,26 @@ export class Resolvers {
 
   constructor () {
     this._queries = [];
-    this._templateString = fs.readFileSync('src/templates/resolversTemplate.handlebars').toString();
+    this._templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
   }
 
-  processSchema (schema: GraphQLSchema): void {
-    // Use methods like this._addQuery() to build up the object.
+  addQuery (name: string, params: Array<Param>, returnType: string): void {
+    const queryObject = {
+      name,
+      params,
+      returnType
+    };
+
+    queryObject.params = queryObject.params.map((param) => {
+      const tsParamType = getTsForSol(param.type);
+      assert(tsParamType);
+      param.type = tsParamType;
+      return param;
+    });
+
+    if (this._queries.filter(query => query.name === queryObject.name).length === 0) {
+      this._queries.push(queryObject);
+    }
   }
 
   exportResolvers (outStream: Writable): void {
@@ -36,13 +52,5 @@ export class Resolvers {
     return {
       queries: this._queries
     };
-  }
-
-  _addQuery (name: string, params: Array<Param>, returnType: string): void {
-    this._queries.push({
-      name,
-      params,
-      returnType
-    });
   }
 }

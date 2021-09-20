@@ -28,6 +28,7 @@ const main = async (): Promise<void> => {
       toReturn = `${toReturn}@Column('`;
       // TODO Prepare a GraphQL -> postgres typemapping.
       toReturn = `${toReturn}${context[i].columnType}', `;
+      // Use #if for misc properties.
       toReturn = context[i].length ? `${toReturn}{ length: ${context[i].length} })\n` : ')\n';
       // TODO Prepare a GraphQL -> ts typemapping.
       toReturn = `${toReturn}\t${context[i].columnName}!: ${context[i].columnType};\n\n\t`;

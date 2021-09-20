@@ -4,8 +4,8 @@ import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 {{indexHelper indexOn}}
 
 export class {{className}} {
-	@PrimaryGeneratedColumn()
-	id!: number;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-	{{columnHelper columns}}
+  {{columnHelper columns}}
 }

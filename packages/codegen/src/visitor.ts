@@ -2,16 +2,19 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { GraphQLSchema } from 'graphql';
 import { Writable } from 'stream';
+import { Resolvers } from './resolvers';
 
-import { Schema, Param } from './schema';
+import { Schema } from './schema';
+import { Param } from './utils/types';
 
 export class Visitor {
   _schema: Schema;
+  _resolvers: Resolvers;
 
   constructor () {
     this._schema = new Schema();
+    this._resolvers = new Resolvers();
   }
 
   /**
@@ -29,6 +32,7 @@ export class Visitor {
       const returnType = node.returnParameters[0].typeName.name;
 
       this._schema.addQuery(name, params, returnType);
+      this._resolvers.addQuery(name, params, returnType);
     }
   }
 
@@ -58,6 +62,7 @@ export class Visitor {
     const returnType = typeName.name;
 
     this._schema.addQuery(name, params, returnType);
+    this._resolvers.addQuery(name, params, returnType);
   }
 
   /**
@@ -81,7 +86,7 @@ export class Visitor {
     this._schema.exportSchema(outStream);
   }
 
-  getSchema (): GraphQLSchema {
-    return this._schema.buildSchema();
+  exportResolvers (outStream: Writable): void {
+    this._resolvers.exportResolvers(outStream);
   }
 }

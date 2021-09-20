@@ -12,7 +12,6 @@ import { flatten } from '@poanet/solidity-flattener';
 import { parse, visit } from '@solidity-parser/parser';
 
 import { Visitor } from './visitor';
-import { Resolvers } from './resolvers';
 
 const MODE_ETH_CALL = 'eth_call';
 const MODE_STORAGE = 'storage';
@@ -68,7 +67,6 @@ const main = async (): Promise<void> => {
   ast.children = ast.children.filter(child => !(child.type === 'ContractDefinition' && child.kind === 'library'));
 
   const visitor = new Visitor();
-  const resolvers = new Resolvers();
 
   if (argv.mode === MODE_ETH_CALL) {
     visit(ast, {
@@ -87,13 +85,10 @@ const main = async (): Promise<void> => {
     : process.stdout;
   visitor.exportSchema(outStream);
 
-  const schema = visitor.getSchema();
-  resolvers.processSchema(schema);
-
   outStream = argv['resolvers-file']
     ? createWriteStream(path.resolve(argv['resolvers-file']))
     : process.stdout;
-  resolvers.exportResolvers(outStream);
+  visitor.exportResolvers(outStream);
 };
 
 main().catch(err => {
