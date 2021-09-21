@@ -3,25 +3,13 @@
 //
 
 import assert from 'assert';
-import debug from 'debug';
-import { invert } from 'lodash';
 import { JsonFragment } from '@ethersproject/abi';
-import { DeepPartial } from 'typeorm';
-import JSONbig from 'json-bigint';
 import { BigNumber, ethers, Contract } from 'ethers';
 import { BaseProvider } from '@ethersproject/providers';
 import { PubSub } from 'apollo-server-express';
 
-import { EthClient, topictoAddress } from '@vulcanize/ipld-eth-client';
-import { getEventNameTopics, getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
-
-import { Database } from './database';
-import { Event } from './entity/Event';
-import { fetchTokenDecimals, fetchTokenName, fetchTokenSymbol, fetchTokenTotalSupply } from './utils';
-
-const log = debug('vulcanize:indexer');
-
-const ETH_CALL_MODE = 'eth_call';
+import { EthClient } from '@vulcanize/ipld-eth-client';
+import { getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
 
 interface Artifacts {
   abi: JsonFragment[];
@@ -36,7 +24,6 @@ export interface ValueResult {
 }
 
 export class Indexer {
-  _db: Database
   _ethClient: EthClient
   _pubsub: PubSub
   _getStorageAt: GetStorageAt
@@ -47,8 +34,7 @@ export class Indexer {
   _contract: ethers.utils.Interface
   _serverMode: string
 
-  constructor (db: Database, ethClient: EthClient, ethProvider: BaseProvider, pubsub: PubSub, artifacts: Artifacts, serverMode: string) {
-    assert(db);
+  constructor (ethClient: EthClient, ethProvider: BaseProvider, pubsub: PubSub, artifacts: Artifacts, serverMode: string) {
     assert(ethClient);
     assert(pubsub);
     assert(artifacts);
@@ -58,7 +44,6 @@ export class Indexer {
     assert(abi);
     assert(storageLayout);
 
-    this._db = db;
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
     this._pubsub = pubsub;
@@ -75,42 +60,42 @@ export class Indexer {
     return this._pubsub.asyncIterator(['event']);
   }
 
-  {{#each queries}}
-  async {{this.name}} (blockHash: string, contractAddress: string
-    {{~#each this.params}}, {{this.name~}}: {{this.type~}} {{/each}}): Promise<ValueResult> {
+  {{#each queries as | query |}}
+  async {{query.name}} (blockHash: string, contractAddress: string
+    {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}}): Promise<ValueResult> {
     const contract = new Contract(contractAddress, this._abi, this._ethProvider);
     let value = null;
 
-    {{~#if this.params}}
+    {{~#if query.params}}
 
     const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
     const blockNumber = BigNumber.from(number).toNumber();
-    value = await contract.{{this.name}}(
-    {{~#each this.params}}{{this.name}}, {{/each}}{ blockTag: blockNumber });
+    value = await contract.{{query.name}}(
+    {{~#each query.params}}{{this.name}}, {{/each}}{ blockTag: blockNumber });
     {{else}}
 
-    value = await contract.{{this.name}}();
+    value = await contract.{{query.name}}();
     {{/if}}
 
+    {{~#compare query.returnType 'bigint'}}
+
     value = value.toString();
-    {{~#compare this.returnType 'bigint'}}
-
     value = BigInt(value);
-    {{else}}
-    {{~#compare ../this.returnType 'number'}}
-
-    value = BigInt(value);
-    {{/compare}}
     {{/compare}}
 
     const result: ValueResult = { value };
-    // log(JSONbig.stringify(result, null, 2));
     return result;
   }
-  {{~#unless @last}}
 
-
-  {{/unless}}
   {{/each}}
-
+  async _getStorageValue (blockHash: string, contractAddress: string, variable: string, ...mappingKeys: string[]): Promise<ValueResult> {
+    return getStorageValue(
+      this._storageLayout,
+      this._getStorageAt,
+      blockHash,
+      contractAddress,
+      variable,
+      ...mappingKeys
+    );
+  }
 }

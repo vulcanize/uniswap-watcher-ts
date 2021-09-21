@@ -7,9 +7,11 @@ import path from 'path';
 import assert from 'assert';
 import Handlebars from 'handlebars';
 import { Writable } from 'stream';
+import _ from 'lodash';
 
 import { getTsForSol } from './utils/typemappings';
 import { Param } from './utils/types';
+import { compareHelper } from './utils/compareHelper';
 
 const TEMPLATE_FILE = './templates/indexerTemplate.handlebars';
 
@@ -21,41 +23,18 @@ export class Indexer {
     this._queries = [];
     this._templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
 
-    // TODO Refactor this helper code in a common folder.
-    // http://doginthehat.com.au/2012/02/comparison-block-helper-for-handlebars-templates/
-    Handlebars.registerHelper('compare', (lvalue, rvalue, options) => {
-      assert(lvalue && rvalue, "Handlerbars Helper 'compare' needs 2 parameters");
-
-      const operator: string = options.hash.operator || '===';
-
-      const operators: Map<string, (l:any, r:any) => boolean> = new Map();
-
-      // eslint-disable-next-line eqeqeq
-      operators.set('==', function (l: any, r: any) { return l == r; });
-      operators.set('===', function (l: any, r: any) { return l === r; });
-      operators.set('!=', function (l: any, r: any) { return l !== r; });
-      operators.set('<', function (l: any, r: any) { return l < r; });
-      operators.set('>', function (l: any, r: any) { return l > r; });
-      operators.set('<=', function (l: any, r: any) { return l <= r; });
-      operators.set('>=', function (l: any, r: any) { return l >= r; });
-
-      const operatorFunction = operators.get(operator);
-      assert(operatorFunction, "Handlerbars Helper 'compare' doesn't know the operator " + operator);
-      const result = operatorFunction(lvalue, rvalue);
-
-      if (result) {
-        return options.fn(this);
-      } else {
-        return options.inverse(this);
-      }
-    });
+    Handlebars.registerHelper('compare', compareHelper);
   }
 
   addQuery (name: string, params: Array<Param>, returnType: string): void {
+    if (this._queries.filter(query => query.name === name).length !== 0) {
+      return;
+    }
+
     const queryObject = {
-      name,
-      params,
-      returnType
+      name: _.cloneDeep(name),
+      params: _.cloneDeep(params),
+      returnType: _.cloneDeep(returnType)
     };
 
     queryObject.params = queryObject.params.map((param) => {
@@ -69,9 +48,7 @@ export class Indexer {
     assert(tsReturnType);
     queryObject.returnType = tsReturnType;
 
-    if (this._queries.filter(query => query.name === queryObject.name).length === 0) {
-      this._queries.push(queryObject);
-    }
+    this._queries.push(queryObject);
   }
 
   exportIndexer (outStream: Writable): void {

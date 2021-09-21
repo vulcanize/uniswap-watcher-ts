@@ -21,6 +21,7 @@ const main = async (): Promise<void> => {
       toReturn = `${toReturn}']`;
       toReturn = `${toReturn} { unique: ${context[i].unique} })`;
     }
+
     return new Handlebars.SafeString(toReturn);
   });
 
@@ -29,14 +30,18 @@ const main = async (): Promise<void> => {
 
     for (let i = 0; i < context.length; i++) {
       toReturn = `${toReturn}@Column('`;
+
       // TODO Prepare a GraphQL -> postgres typemapping.
       toReturn = `${toReturn}${context[i].columnType}', `;
+
       // TODO Use #if for misc properties.
       // TODO Specify length for strings according to contract variable type.
       toReturn = context[i].length ? `${toReturn}{ length: ${context[i].length} })\n` : ')\n';
+
       // TODO Prepare a GraphQL -> ts typemapping.
       toReturn = `${toReturn}\t${context[i].columnName}!: ${context[i].columnType};\n\n\t`;
     }
+
     return new Handlebars.SafeString(toReturn);
   });
 

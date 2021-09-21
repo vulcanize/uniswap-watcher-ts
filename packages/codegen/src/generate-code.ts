@@ -2,7 +2,7 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { readFileSync, createWriteStream } from 'fs';
+import fs from 'fs';
 import fetch from 'node-fetch';
 import path from 'path';
 import yargs from 'yargs';
@@ -24,19 +24,9 @@ const main = async (): Promise<void> => {
       describe: 'Input contract file path or an url.',
       type: 'string'
     })
-    .option('schema-file', {
-      alias: 'sf',
-      describe: 'Schema output file path.',
-      type: 'string'
-    })
-    .option('resolvers-file', {
-      alias: 'rf',
-      describe: 'Resolvers output file path.',
-      type: 'string'
-    })
-    .option('indexer-file', {
-      alias: 'if',
-      describe: 'Indexer output file path.',
+    .option('output-folder', {
+      alias: 'o',
+      describe: 'Output folder path.',
       type: 'string'
     })
     .option('mode', {
@@ -62,7 +52,7 @@ const main = async (): Promise<void> => {
   } else {
     data = argv.flatten
       ? await flatten(path.resolve(argv['input-file']))
-      : readFileSync(path.resolve(argv['input-file'])).toString();
+      : fs.readFileSync(path.resolve(argv['input-file'])).toString();
   }
 
   // Get the abstract syntax tree for the flattened contract.
@@ -85,18 +75,24 @@ const main = async (): Promise<void> => {
     });
   }
 
-  let outStream = argv['schema-file']
-    ? createWriteStream(path.resolve(argv['schema-file']))
+  let outputDir = '';
+  if (argv['output-folder']) {
+    outputDir = path.resolve(__dirname, argv['output-folder']);
+    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  let outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'schema.gql'))
     : process.stdout;
   visitor.exportSchema(outStream);
 
-  outStream = argv['resolvers-file']
-    ? createWriteStream(path.resolve(argv['resolvers-file']))
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'resolvers.ts'))
     : process.stdout;
   visitor.exportResolvers(outStream);
 
-  outStream = argv['indexer-file']
-    ? createWriteStream(path.resolve(argv['indexer-file']))
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'indexer.ts'))
     : process.stdout;
   visitor.exportIndexer(outStream);
 };

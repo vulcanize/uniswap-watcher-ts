@@ -7,6 +7,7 @@ import path from 'path';
 import { Writable } from 'stream';
 import Handlebars from 'handlebars';
 import assert from 'assert';
+import _ from 'lodash';
 
 import { getTsForSol } from './utils/typemappings';
 import { Param } from './utils/types';
@@ -23,10 +24,15 @@ export class Resolvers {
   }
 
   addQuery (name: string, params: Array<Param>, returnType: string): void {
+    // console.log(this._queries.filter(query => query.name === name).length);
+    if (this._queries.filter(query => query.name === name).length !== 0) {
+      return;
+    }
+
     const queryObject = {
-      name,
-      params,
-      returnType
+      name: _.cloneDeep(name),
+      params: _.cloneDeep(params),
+      returnType: _.cloneDeep(returnType)
     };
 
     queryObject.params = queryObject.params.map((param) => {
@@ -36,21 +42,15 @@ export class Resolvers {
       return param;
     });
 
-    if (this._queries.filter(query => query.name === queryObject.name).length === 0) {
-      this._queries.push(queryObject);
-    }
+    this._queries.push(queryObject);
   }
 
   exportResolvers (outStream: Writable): void {
     const template = Handlebars.compile(this._templateString);
-    const obj = this._prepareObject();
-    const resolvers = template(obj);
-    outStream.write(resolvers);
-  }
-
-  _prepareObject (): any {
-    return {
+    const obj = {
       queries: this._queries
     };
+    const resolvers = template(obj);
+    outStream.write(resolvers);
   }
 }
