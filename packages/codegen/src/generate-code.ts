@@ -12,6 +12,11 @@ import { flatten } from '@poanet/solidity-flattener';
 import { parse, visit } from '@solidity-parser/parser';
 
 import { Visitor } from './visitor';
+import { exportServer } from './server';
+import { exportConfig } from './config';
+import { exportArtifacts } from './artifacts';
+import { exportPackage } from './package';
+import { exportTSConfig } from './tsconfig';
 
 const MODE_ETH_CALL = 'eth_call';
 const MODE_STORAGE = 'storage';
@@ -22,6 +27,12 @@ const main = async (): Promise<void> => {
       alias: 'i',
       demandOption: true,
       describe: 'Input contract file path or an url.',
+      type: 'string'
+    })
+    .option('contract-name', {
+      alias: 'c',
+      demandOption: true,
+      describe: 'Main contract name.',
       type: 'string'
     })
     .option('output-folder', {
@@ -79,22 +90,58 @@ const main = async (): Promise<void> => {
   if (argv['output-folder']) {
     outputDir = path.resolve(__dirname, argv['output-folder']);
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+    const environmentsFolder = path.join(outputDir, 'environments');
+    if (!fs.existsSync(environmentsFolder)) fs.mkdirSync(environmentsFolder);
+
+    const artifactsFolder = path.join(outputDir, 'src/artifacts');
+    if (!fs.existsSync(artifactsFolder)) fs.mkdirSync(artifactsFolder, { recursive: true });
   }
 
   let outStream = outputDir
-    ? fs.createWriteStream(path.join(outputDir, 'schema.gql'))
+    ? fs.createWriteStream(path.join(outputDir, 'src/schema.gql'))
     : process.stdout;
   visitor.exportSchema(outStream);
 
   outStream = outputDir
-    ? fs.createWriteStream(path.join(outputDir, 'resolvers.ts'))
+    ? fs.createWriteStream(path.join(outputDir, 'src/resolvers.ts'))
     : process.stdout;
   visitor.exportResolvers(outStream);
 
   outStream = outputDir
-    ? fs.createWriteStream(path.join(outputDir, 'indexer.ts'))
+    ? fs.createWriteStream(path.join(outputDir, 'src/indexer.ts'))
     : process.stdout;
   visitor.exportIndexer(outStream);
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'src/server.ts'))
+    : process.stdout;
+  exportServer(outStream);
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'environments/local.toml'))
+    : process.stdout;
+  exportConfig(outStream);
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'src/artifacts/abi.json'))
+    : process.stdout;
+  exportArtifacts(
+    path.basename(argv['input-file']),
+    data,
+    outStream,
+    argv['contract-name']
+  );
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'package.json'))
+    : process.stdout;
+  exportPackage(path.basename(outputDir), outStream);
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'tsconfig.json'))
+    : process.stdout;
+  exportTSConfig(outStream);
 };
 
 main().catch(err => {
