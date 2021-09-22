@@ -89,7 +89,7 @@ const main = async (): Promise<void> => {
 
   let outputDir = '';
   if (argv['output-folder']) {
-    outputDir = path.resolve(__dirname, argv['output-folder']);
+    outputDir = path.resolve(argv['output-folder']);
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
     const environmentsFolder = path.join(outputDir, 'environments');

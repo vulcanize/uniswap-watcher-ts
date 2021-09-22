@@ -77,11 +77,11 @@ export class Indexer {
     value = await contract.{{query.name}}();
     {{/if}}
 
-    {{~#compare query.returnType 'bigint'}}
+    {{~#if (compare query.returnType 'bigint')}}
 
     value = value.toString();
     value = BigInt(value);
-    {{/compare}}
+    {{/if}}
 
     const result: ValueResult = { value };
     return result;

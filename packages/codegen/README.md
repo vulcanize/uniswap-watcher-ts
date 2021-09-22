@@ -10,14 +10,15 @@
 
 ## Run
 
-* Run the following command to generate schema from a contract file:
+* Run the following command to generate a watcher from a contract file:
 
   ```bash
-  yarn codegen:gql --input-file <input-file-path> --output-file [output-file-path] --mode [eth_call | storage] --flatten [true | false]
+  yarn codegen -i <input-file-path> -c <contract-name> -o [output-folder] -m [eth_call | storage] -f [true | false]
   ```
 
     * `input-file`(alias: `i`): Input contract file path or an URL (required).
-    * `output-file`(alias: `o`): Schema output file path (logs output using `stdout` if not provided).
+    * `contract-name`(alias: `c`): Main contract name (required).
+    * `output-folder`(alias: `o`): Output folder path. (logs output using `stdout` if not provided).
     * `mode`(alias: `m`): Code generation mode (default: `storage`).
     * `flatten`(alias: `f`): Flatten the input contract file (default: `true`).
 
@@ -26,11 +27,11 @@
   Examples:
   
   ```bash
-  yarn codegen:gql --input-file ./test/examples/contracts/ERC20.sol --output-file ./ERC20-schema.gql --mode eth_call
+  yarn codegen -i ./test/examples/contracts/ERC20.sol -c ERC20 -o ../ERC20-watcher -m eth_call
   ```
 
   ```bash
-  yarn codegen:gql --input-file https://git.io/Jupci --output-file ./ERC721-schema.gql --mode storage
+  yarn codegen -i https://git.io/Jupci -c ERC721 -o ../ERC721-watcher -m storage
   ```
 
 ## Demo
@@ -41,16 +42,16 @@
   yarn
   ```
 
-* Generate schema from a contract file:
+* Generate a watcher from a contract file:
   
   ```bash
-  yarn codegen:gql --input-file ../../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol --output-file ./ERC20-schema.gql --mode storage
+  yarn codegen -i ../../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol -c ERC20 -o ../new-watcher -m eth_call
   ```
 
-* Generate schema from a flattened contract file from an URL:
+* Generate a watcher from a flattened contract file from an URL:
   
   ```bash
-  yarn codegen:gql --input-file https://git.io/Jupci --output-file ./ERC721-schema.gql --mode eth_call
+  yarn codegen -i https://git.io/Jupci -c ERC721 -o ../new-watcher -m storage
   ```
 
 ## References

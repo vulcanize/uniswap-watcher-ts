@@ -24,7 +24,6 @@ export class Resolvers {
   }
 
   addQuery (name: string, params: Array<Param>, returnType: string): void {
-    // console.log(this._queries.filter(query => query.name === name).length);
     if (this._queries.filter(query => query.name === name).length !== 0) {
       return;
     }
