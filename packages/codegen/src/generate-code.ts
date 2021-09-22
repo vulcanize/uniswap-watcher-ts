@@ -11,6 +11,7 @@ import { flatten } from '@poanet/solidity-flattener';
 
 import { parse, visit } from '@solidity-parser/parser';
 
+import { MODE_ETH_CALL, MODE_STORAGE, MODE_ALL } from './utils/constants';
 import { Visitor } from './visitor';
 import { exportServer } from './server';
 import { exportConfig } from './config';
@@ -18,9 +19,6 @@ import { exportArtifacts } from './artifacts';
 import { exportPackage } from './package';
 import { exportTSConfig } from './tsconfig';
 import { exportReadme } from './readme';
-
-const MODE_ETH_CALL = 'eth_call';
-const MODE_STORAGE = 'storage';
 
 const main = async (): Promise<void> => {
   const argv = await yargs(hideBin(process.argv))
@@ -46,7 +44,7 @@ const main = async (): Promise<void> => {
       describe: 'Code generation mode.',
       type: 'string',
       default: MODE_STORAGE,
-      choices: [MODE_ETH_CALL, MODE_STORAGE]
+      choices: [MODE_ETH_CALL, MODE_STORAGE, MODE_ALL]
     })
     .option('flatten', {
       alias: 'f',

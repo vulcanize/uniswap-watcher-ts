@@ -10,7 +10,7 @@ import { BigNumber, ethers, Contract } from 'ethers';
 import { BaseProvider } from '@ethersproject/providers';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { StorageLayout } from '@vulcanize/solidity-mapper';
+import { getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
 import { ValueResult } from '@vulcanize/util';
 
 import { Database } from './database';
@@ -21,6 +21,7 @@ const log = debug('vulcanize:indexer');
 export class Indexer {
   _db: Database
   _ethClient: EthClient
+  _getStorageAt: GetStorageAt
   _ethProvider: BaseProvider
 
   _abi: JsonFragment[]
@@ -35,6 +36,7 @@ export class Indexer {
     this._db = db;
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
+    this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
     this._serverMode = serverMode;
 
     const { abi, storageLayout } = artifacts;
@@ -51,6 +53,7 @@ export class Indexer {
   {{#each queries as | query |}}
   async {{query.name}} (blockHash: string, contractAddress: string
     {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}}): Promise<ValueResult> {
+
     const entity = await this._db.get{{capitalize query.name tillIndex=1}}({ blockHash, contractAddress
     {{~#each query.params}}, {{this.name~}} {{~/each}} });
     if (entity) {
@@ -64,19 +67,14 @@ export class Indexer {
 
     log('{{query.name}}: db miss, fetching from upstream server');
 
-    const contract = new Contract(contractAddress, this._abi, this._ethProvider);
-    let value = null;
+    {{~#if (compare query.mode @root.constants.MODE_ETH_CALL)}}
 
-    {{~#if query.params}}
+    const contract = new Contract(contractAddress, this._abi, this._ethProvider);
 
     const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
     const blockNumber = BigNumber.from(number).toNumber();
-    value = await contract.{{query.name}}(
+    let value = await contract.{{query.name}}(
     {{~#each query.params}}{{this.name}}, {{/each}}{ blockTag: blockNumber });
-    {{else}}
-
-    value = await contract.{{query.name}}();
-    {{/if}}
 
     {{~#if (compare query.returnType 'bigint')}}
 
@@ -85,14 +83,40 @@ export class Indexer {
     {{/if}}
 
     const result: ValueResult = { value };
-    const { proof } = result;
+    {{/if}}
+
+    {{~#if (compare query.mode @root.constants.MODE_STORAGE)}}
+
+    const result = await this._getStorageValue(
+      this._storageLayout,
+      blockHash,
+      contractAddress,
+      '{{query.name}}'{{#if query.params.length}},{{/if}}
+      {{#each query.params}}
+      {{this.name}}{{#unless @last}},{{/unless}}
+      {{/each}}
+    );
+    {{/if}}
+
+    const { proof, value } = result;
     await this._db.save{{capitalize query.name tillIndex=1}}({ blockHash, contractAddress
     {{~#each query.params}}, {{this.name~}} {{/each}}, value, proof: JSONbig.stringify(proof) });
-  
+
     return result;
   }
   {{#unless @last}}
 
   {{/unless}}
   {{/each}}
+
+  async _getStorageValue (storageLayout: StorageLayout, blockHash: string, contractAddress: string, variable: string, ...mappingKeys: any[]): Promise<ValueResult> {
+    return getStorageValue(
+      storageLayout,
+      this._getStorageAt,
+      blockHash,
+      contractAddress,
+      variable,
+      ...mappingKeys
+    );
+  }
 }

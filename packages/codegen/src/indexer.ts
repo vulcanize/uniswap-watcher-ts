@@ -12,6 +12,7 @@ import _ from 'lodash';
 import { getTsForSol } from './utils/type-mappings';
 import { Param } from './utils/types';
 import { compareHelper, capitalizeHelper } from './utils/handlebar-helpers';
+import { MODE_ETH_CALL, MODE_STORAGE } from './utils/constants';
 
 const TEMPLATE_FILE = './templates/indexer-template.handlebars';
 
@@ -29,20 +30,22 @@ export class Indexer {
 
   /**
    * Stores the query to be passed to the template.
+   * @param mode Code generation mode.
    * @param name Name of the query.
    * @param params Parameters to the query.
    * @param returnType Return type for the query.
    */
-  addQuery (name: string, params: Array<Param>, returnType: string): void {
+  addQuery (mode: string, name: string, params: Array<Param>, returnType: string): void {
     // Check if the query is already added.
     if (this._queries.some(query => query.name === name)) {
       return;
     }
 
     const queryObject = {
-      name: name,
+      name,
       params: _.cloneDeep(params),
-      returnType: returnType
+      returnType,
+      mode
     };
 
     queryObject.params = queryObject.params.map((param) => {
@@ -66,10 +69,16 @@ export class Indexer {
    */
   exportIndexer (outStream: Writable, inputFileName: string): void {
     const template = Handlebars.compile(this._templateString);
+
     const obj = {
       inputFileName,
-      queries: this._queries
+      queries: this._queries,
+      constants: {
+        MODE_ETH_CALL,
+        MODE_STORAGE
+      }
     };
+
     const indexer = template(obj);
     outStream.write(indexer);
   }
