@@ -9,9 +9,11 @@ import { Writable } from 'stream';
 
 const TEMPLATE_FILE = './templates/serverTemplate.handlebars';
 
-export function exportServer (outStream: Writable): void {
+export function exportServer (outStream: Writable, inputFileName: string): void {
   const templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
   const template = Handlebars.compile(templateString);
-  const server = template({});
+  const server = template({
+    inputFileName
+  });
   outStream.write(server);
 }

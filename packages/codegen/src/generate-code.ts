@@ -65,6 +65,7 @@ const main = async (): Promise<void> => {
       ? await flatten(path.resolve(argv['input-file']))
       : fs.readFileSync(path.resolve(argv['input-file'])).toString();
   }
+  const inputFileName = path.basename(argv['input-file'], '.sol');
 
   // Get the abstract syntax tree for the flattened contract.
   const ast = parse(data);
@@ -116,7 +117,7 @@ const main = async (): Promise<void> => {
   outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'src/server.ts'))
     : process.stdout;
-  exportServer(outStream);
+  exportServer(outStream, inputFileName);
 
   outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'environments/local.toml'))
@@ -124,12 +125,12 @@ const main = async (): Promise<void> => {
   exportConfig(outStream);
 
   outStream = outputDir
-    ? fs.createWriteStream(path.join(outputDir, 'src/artifacts/abi.json'))
+    ? fs.createWriteStream(path.join(outputDir, 'src/artifacts/', `${inputFileName}.json`))
     : process.stdout;
   exportArtifacts(
-    path.basename(argv['input-file']),
-    data,
     outStream,
+    data,
+    `${inputFileName}.sol`,
     argv['contract-name']
   );
 

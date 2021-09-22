@@ -1,14 +1,14 @@
 import solc from 'solc';
 import { Writable } from 'stream';
 
-export function exportArtifacts (contractFileName: string, contractContent: string, outStream: Writable, contractName: string): void {
+export function exportArtifacts (outStream: Writable, contractContent: string, contractFileName: string, contractName: string): void {
   const input: any = {
     language: 'Solidity',
     sources: {},
     settings: {
       outputSelection: {
         '*': {
-          '*': ['*']
+          '*': ['abi', 'storageLayout']
         }
       }
     }
