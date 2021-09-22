@@ -4,6 +4,7 @@
 
 const _solToTs: Map<string, string> = new Map();
 const _tsToGql: Map<string, string> = new Map();
+const _tsToPg: Map<string, string> = new Map();
 
 // TODO Get typemapping from ethersjs.
 _solToTs.set('string', 'string');
@@ -18,6 +19,11 @@ _tsToGql.set('number', 'Int');
 _tsToGql.set('bigint', 'BigInt');
 _tsToGql.set('boolean', 'Boolean');
 
+_tsToPg.set('string', 'varchar');
+_tsToPg.set('number', 'numeric');
+_tsToPg.set('bigint', 'numeric');
+_tsToPg.set('boolean', 'boolean');
+
 function getTsForSol (solType: string): string | undefined {
   return _solToTs.get(solType);
 }
@@ -26,4 +32,8 @@ function getGqlForTs (tsType: string): string | undefined {
   return _tsToGql.get(tsType);
 }
 
-export { getTsForSol, getGqlForTs };
+function getPgForTs (tsType: string): string | undefined {
+  return _tsToPg.get(tsType);
+}
+
+export { getTsForSol, getGqlForTs, getPgForTs };

@@ -97,6 +97,9 @@ const main = async (): Promise<void> => {
 
     const artifactsFolder = path.join(outputDir, 'src/artifacts');
     if (!fs.existsSync(artifactsFolder)) fs.mkdirSync(artifactsFolder, { recursive: true });
+
+    const entitiesFolder = path.join(outputDir, 'src/entities');
+    if (!fs.existsSync(entitiesFolder)) fs.mkdirSync(entitiesFolder, { recursive: true });
   }
 
   let outStream = outputDir
@@ -143,6 +146,11 @@ const main = async (): Promise<void> => {
     ? fs.createWriteStream(path.join(outputDir, 'tsconfig.json'))
     : process.stdout;
   exportTSConfig(outStream);
+
+  const entityDir = outputDir
+    ? path.join(outputDir, 'src/entities')
+    : '';
+  visitor.exportEntities(entityDir);
 };
 
 main().catch(err => {

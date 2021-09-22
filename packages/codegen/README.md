@@ -13,7 +13,7 @@
 * Run the following command to generate a watcher from a contract file:
 
   ```bash
-  yarn codegen -i <input-file-path> -c <contract-name> -o [output-folder] -m [eth_call | storage] -f [true | false]
+  yarn codegen --input-file <input-file-path> --contract-name <contract-name> --output-folder [output-folder] --mode [eth_call | storage] --flatten [true | false]
   ```
 
     * `input-file`(alias: `i`): Input contract file path or an URL (required).
@@ -27,11 +27,11 @@
   Examples:
   
   ```bash
-  yarn codegen -i ./test/examples/contracts/ERC20.sol -c ERC20 -o ../ERC20-watcher -m eth_call
+  yarn codegen --input-file ./test/examples/contracts/ERC20.sol --contract-name ERC20 --output-folder ../my-erc20-watcher --mode eth_call
   ```
 
   ```bash
-  yarn codegen -i https://git.io/Jupci -c ERC721 -o ../ERC721-watcher -m storage
+  yarn codegen --input-file https://git.io/Jupci --contract-name ERC721 --output-folder ../my-erc721-watcher --mode storage
   ```
 
 ## Demo
@@ -45,13 +45,13 @@
 * Generate a watcher from a contract file:
   
   ```bash
-  yarn codegen -i ../../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol -c ERC20 -o ../new-watcher -m eth_call
+  yarn codegen --input-file ../../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol --contract-name ERC20 --output-folder ../demo-erc20-watcher --mode eth_call
   ```
 
 * Generate a watcher from a flattened contract file from an URL:
   
   ```bash
-  yarn codegen -i https://git.io/Jupci -c ERC721 -o ../new-watcher -m storage
+  yarn codegen --input-file https://git.io/Jupci --contract-name ERC721 --output-folder ../demo-erc721-watcher --mode storage
   ```
 
 ## References

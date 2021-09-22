@@ -27,10 +27,12 @@ export class Indexer {
   }
 
   addQuery (name: string, params: Array<Param>, returnType: string): void {
+    // TODO Use array.some()
     if (this._queries.filter(query => query.name === name).length !== 0) {
       return;
     }
 
+    // TODO No unnecessary cloning.
     const queryObject = {
       name: _.cloneDeep(name),
       params: _.cloneDeep(params),

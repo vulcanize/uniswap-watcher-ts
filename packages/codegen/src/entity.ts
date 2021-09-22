@@ -4,75 +4,83 @@
 
 import fs from 'fs';
 import path from 'path';
+import assert from 'assert';
 import Handlebars from 'handlebars';
+import { Writable } from 'stream';
+
+import { getTsForSol, getPgForTs } from './utils/typemappings';
+import { Param } from './utils/types';
 
 const TEMPLATE_FILE = './templates/entityTemplate.handlebars';
 
-const main = async (): Promise<void> => {
-  const templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
+export class Entity {
+  _entities: Array<any>;
+  _templateString: string;
 
-  // TODO Replace registerHelper implementation with inbuilt helpers.
-  Handlebars.registerHelper('indexHelper', function (context) {
-    let toReturn = '';
+  constructor () {
+    this._entities = [];
+    this._templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
+  }
 
-    for (let i = 0; i < context.length; i++) {
-      toReturn = `${toReturn}@Index(['`;
-      toReturn = `${toReturn}${context[i].columns.join('\', \'')}`;
-      toReturn = `${toReturn}']`;
-      toReturn = `${toReturn} { unique: ${context[i].unique} })`;
+  addQuery (name: string, params: Array<Param>, returnType: string): void {
+    if (this._entities.filter(entity => entity.name === name).length !== 0) {
+      return;
     }
 
-    return new Handlebars.SafeString(toReturn);
-  });
+    const entityObject: any = {
+      // Capitalize the first letter of name.
+      className: `${name.charAt(0).toUpperCase()}${name.slice(1)}`,
+      indexOn: {},
+      columns: [{}],
+      returnType: returnType
+    };
 
-  Handlebars.registerHelper('columnHelper', function (context) {
-    let toReturn = '';
+    entityObject.indexOn.columns = params.map((param) => {
+      return param.name;
+    });
+    entityObject.indexOn.unique = true;
 
-    for (let i = 0; i < context.length; i++) {
-      toReturn = `${toReturn}@Column('`;
+    entityObject.columns = params.map((param) => {
+      const length = param.type === 'address' ? 42 : null;
+      const name = param.name;
 
-      // TODO Prepare a GraphQL -> postgres typemapping.
-      toReturn = `${toReturn}${context[i].columnType}', `;
+      const tsType = getTsForSol(param.type);
+      assert(tsType);
 
-      // TODO Use #if for misc properties.
-      // TODO Specify length for strings according to contract variable type.
-      toReturn = context[i].length ? `${toReturn}{ length: ${context[i].length} })\n` : ')\n';
+      const pgType = getPgForTs(tsType);
+      assert(pgType);
 
-      // TODO Prepare a GraphQL -> ts typemapping.
-      toReturn = `${toReturn}\t${context[i].columnName}!: ${context[i].columnType};\n\n\t`;
-    }
+      return {
+        name,
+        pgType,
+        tsType,
+        length
+      };
+    });
 
-    return new Handlebars.SafeString(toReturn);
-  });
+    const tsReturnType = getTsForSol(returnType);
+    assert(tsReturnType);
 
-  const template = Handlebars.compile(templateString);
-  const obj = {
-    indexOn: [
-      {
-        columns: [
-          'blockHash',
-          'contractAddress'
-        ],
-        unique: true
-      }
-    ],
-    className: 'Allowance',
-    columns: [
-      {
-        columnName: 'blockHash',
-        columnType: 'string',
-        length: 66
-      },
-      {
-        columnName: 'contractAddress',
-        columnType: 'string',
-        length: 42
-      }
-    ]
-  };
-  console.log(template(obj));
-};
+    const pgReturnType = getPgForTs(tsReturnType);
+    assert(pgReturnType);
 
-main().catch(err => {
-  console.error(err);
-});
+    entityObject.columns.push({
+      name: 'value',
+      pgType: pgReturnType,
+      tsType: tsReturnType
+    });
+
+    this._entities.push(entityObject);
+  }
+
+  exportEntities (entityDir: string): void {
+    const template = Handlebars.compile(this._templateString);
+    this._entities.forEach(entityObj => {
+      const entity = template(entityObj);
+      const outStream: Writable = entityDir
+        ? fs.createWriteStream(path.join(entityDir, `${entityObj.className}.ts`))
+        : process.stdout;
+      outStream.write(entity);
+    });
+  }
+}

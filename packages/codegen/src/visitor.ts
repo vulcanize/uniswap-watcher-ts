@@ -4,6 +4,7 @@
 
 import { Writable } from 'stream';
 
+import { Entity } from './entity';
 import { Indexer } from './indexer';
 import { Resolvers } from './resolvers';
 import { Schema } from './schema';
@@ -13,11 +14,13 @@ export class Visitor {
   _schema: Schema;
   _resolvers: Resolvers;
   _indexer: Indexer;
+  _entity: Entity
 
   constructor () {
     this._schema = new Schema();
     this._resolvers = new Resolvers();
     this._indexer = new Indexer();
+    this._entity = new Entity();
   }
 
   /**
@@ -37,6 +40,7 @@ export class Visitor {
       this._schema.addQuery(name, params, returnType);
       this._resolvers.addQuery(name, params, returnType);
       this._indexer.addQuery(name, params, returnType);
+      this._entity.addQuery(name, params, returnType);
     }
   }
 
@@ -68,6 +72,7 @@ export class Visitor {
     this._schema.addQuery(name, params, returnType);
     this._resolvers.addQuery(name, params, returnType);
     this._indexer.addQuery(name, params, returnType);
+    this._entity.addQuery(name, params, returnType);
   }
 
   /**
@@ -97,5 +102,9 @@ export class Visitor {
 
   exportIndexer (outStream: Writable): void {
     this._indexer.exportIndexer(outStream);
+  }
+
+  exportEntities (entityDir: string): void {
+    this._entity.exportEntities(entityDir);
   }
 }
