@@ -31,7 +31,7 @@
   ```
 
   ```bash
-  yarn codegen --input-file https://git.io/Jupci --contract-name ERC721 --output-folder ../my-erc721-watcher --mode storage
+  yarn codegen --input-file https://git.io/Jupci --contract-name ERC721 --output-folder ../my-erc721-watcher --mode eth_call
   ```
 
 ## Demo
@@ -53,7 +53,7 @@
 * Generate a watcher from a flattened contract file from an URL:
   
   ```bash
-  yarn codegen --input-file https://git.io/Jupci --contract-name ERC721 --output-folder ../demo-erc721-watcher --mode storage
+  yarn codegen --input-file https://git.io/Jupci --contract-name ERC721 --output-folder ../demo-erc721-watcher --mode eth_call
   ```
 
 ## References
