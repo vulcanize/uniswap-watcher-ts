@@ -11,7 +11,7 @@ import _ from 'lodash';
 
 import { getTsForSol } from './utils/typemappings';
 import { Param } from './utils/types';
-import { capitalizeHelper } from './utils/capitalizeHelper';
+import { capitalizeHelper } from './utils/handlebarHelpers';
 
 const TEMPLATE_FILE = './templates/databaseTemplate.handlebars';
 

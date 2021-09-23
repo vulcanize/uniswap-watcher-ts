@@ -17,6 +17,7 @@ import { exportConfig } from './config';
 import { exportArtifacts } from './artifacts';
 import { exportPackage } from './package';
 import { exportTSConfig } from './tsconfig';
+import { exportReadme } from './readme';
 
 const MODE_ETH_CALL = 'eth_call';
 const MODE_STORAGE = 'storage';
@@ -166,6 +167,11 @@ function generateWatcher (data: string, visitor: Visitor, argv: any) {
     ? path.join(outputDir, 'src/entity')
     : '';
   visitor.exportEntities(entityDir);
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'README.md'))
+    : process.stdout;
+  exportReadme(path.basename(outputDir), argv['contract-name'], outStream);
 }
 
 main().catch(err => {

@@ -48,6 +48,8 @@
   yarn codegen --input-file ../../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol --contract-name ERC20 --output-folder ../demo-erc20-watcher --mode eth_call
   ```
 
+  This will create a folder called `demo-erc20-watcher` containing the generated code at the specified path. Follow the steps in `demo-erc20-watcher/README.md` to setup and run the generated watcher.
+
 * Generate a watcher from a flattened contract file from an URL:
   
   ```bash

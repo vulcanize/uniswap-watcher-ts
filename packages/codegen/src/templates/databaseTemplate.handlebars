@@ -69,5 +69,4 @@ export class Database {
   _getColumn (entityName: string, propertyName: string) {
     return this._conn.getMetadata(entityName).findColumnWithPropertyName(propertyName)?.databaseName
   }
-
 }

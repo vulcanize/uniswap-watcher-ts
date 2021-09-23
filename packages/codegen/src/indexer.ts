@@ -11,8 +11,7 @@ import _ from 'lodash';
 
 import { getTsForSol } from './utils/typemappings';
 import { Param } from './utils/types';
-import { compareHelper } from './utils/compareHelper';
-import { capitalizeHelper } from './utils/capitalizeHelper';
+import { compareHelper, capitalizeHelper } from './utils/handlebarHelpers';
 
 const TEMPLATE_FILE = './templates/indexerTemplate.handlebars';
 
