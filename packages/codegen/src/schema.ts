@@ -7,7 +7,7 @@ import { GraphQLSchema, printSchema } from 'graphql';
 import { SchemaComposer } from 'graphql-compose';
 import { Writable } from 'stream';
 
-import { getTsForSol, getGqlForTs } from './utils/typemappings';
+import { getTsForSol, getGqlForTs } from './utils/type-mappings';
 import { Param } from './utils/types';
 
 export class Schema {

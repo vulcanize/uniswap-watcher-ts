@@ -9,11 +9,11 @@ import Handlebars from 'handlebars';
 import { Writable } from 'stream';
 import _ from 'lodash';
 
-import { getTsForSol } from './utils/typemappings';
+import { getTsForSol } from './utils/type-mappings';
 import { Param } from './utils/types';
-import { capitalizeHelper } from './utils/handlebarHelpers';
+import { capitalizeHelper } from './utils/handlebar-helpers';
 
-const TEMPLATE_FILE = './templates/databaseTemplate.handlebars';
+const TEMPLATE_FILE = './templates/database-template.handlebars';
 
 export class Database {
   _queries: Array<any>;

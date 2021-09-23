@@ -9,11 +9,11 @@ import Handlebars from 'handlebars';
 import { Writable } from 'stream';
 import _ from 'lodash';
 
-import { getTsForSol } from './utils/typemappings';
+import { getTsForSol } from './utils/type-mappings';
 import { Param } from './utils/types';
-import { compareHelper, capitalizeHelper } from './utils/handlebarHelpers';
+import { compareHelper, capitalizeHelper } from './utils/handlebar-helpers';
 
-const TEMPLATE_FILE = './templates/indexerTemplate.handlebars';
+const TEMPLATE_FILE = './templates/indexer-template.handlebars';
 
 export class Indexer {
   _queries: Array<any>;

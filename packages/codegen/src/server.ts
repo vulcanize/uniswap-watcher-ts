@@ -7,7 +7,7 @@ import path from 'path';
 import Handlebars from 'handlebars';
 import { Writable } from 'stream';
 
-const TEMPLATE_FILE = './templates/serverTemplate.handlebars';
+const TEMPLATE_FILE = './templates/server-template.handlebars';
 
 export function exportServer (outStream: Writable): void {
   const templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();

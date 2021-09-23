@@ -9,10 +9,10 @@ import Handlebars from 'handlebars';
 import assert from 'assert';
 import _ from 'lodash';
 
-import { getTsForSol } from './utils/typemappings';
+import { getTsForSol } from './utils/type-mappings';
 import { Param } from './utils/types';
 
-const TEMPLATE_FILE = './templates/resolversTemplate.handlebars';
+const TEMPLATE_FILE = './templates/resolvers-template.handlebars';
 
 export class Resolvers {
   _queries: Array<any>;

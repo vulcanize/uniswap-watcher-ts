@@ -8,10 +8,10 @@ import assert from 'assert';
 import Handlebars from 'handlebars';
 import { Writable } from 'stream';
 
-import { getTsForSol, getPgForTs } from './utils/typemappings';
+import { getTsForSol, getPgForTs } from './utils/type-mappings';
 import { Param } from './utils/types';
 
-const TEMPLATE_FILE = './templates/entityTemplate.handlebars';
+const TEMPLATE_FILE = './templates/entity-template.handlebars';
 
 export class Entity {
   _entities: Array<any>;
