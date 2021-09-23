@@ -19,6 +19,7 @@ import { exportArtifacts } from './artifacts';
 import { exportPackage } from './package';
 import { exportTSConfig } from './tsconfig';
 import { exportReadme } from './readme';
+import { exportEvents } from './events';
 
 const main = async (): Promise<void> => {
   const argv = await yargs(hideBin(process.argv))
@@ -172,6 +173,11 @@ function generateWatcher (data: string, visitor: Visitor, argv: any) {
     ? fs.createWriteStream(path.join(outputDir, 'README.md'))
     : process.stdout;
   exportReadme(path.basename(outputDir), argv['contract-name'], outStream);
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'src/events.ts'))
+    : process.stdout;
+  exportEvents(outStream);
 }
 
 main().catch(err => {
