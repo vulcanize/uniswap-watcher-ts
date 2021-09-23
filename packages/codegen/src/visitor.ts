@@ -101,18 +101,35 @@ export class Visitor {
     this._schema.exportSchema(outStream);
   }
 
+  /**
+   * Writes the resolvers file generated from a template to a stream.
+   * @param outStream A writable output stream to write the resolvers file to.
+   */
   exportResolvers (outStream: Writable): void {
     this._resolvers.exportResolvers(outStream);
   }
 
+  /**
+   * Writes the indexer file generated from a template to a stream.
+   * @param outStream A writable output stream to write the indexer file to.
+   * @param inputFileName Input contract file name to be passed to the template.
+   */
   exportIndexer (outStream: Writable, inputFileName: string): void {
     this._indexer.exportIndexer(outStream, inputFileName);
   }
 
+  /**
+   * Writes the generated entity files in the given directory.
+   * @param entityDir Directory to write the entities to.
+   */
   exportEntities (entityDir: string): void {
     this._entity.exportEntities(entityDir);
   }
 
+  /**
+   * Writes the database file generated from a template to a stream.
+   * @param outStream A writable output stream to write the database file to.
+   */
   exportDatabase (outStream: Writable): void {
     this._database.exportDatabase(outStream);
   }

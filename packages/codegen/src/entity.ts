@@ -22,6 +22,12 @@ export class Entity {
     this._templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
   }
 
+  /**
+   * Creates an entity object from the query and stores to be passed to the template.
+   * @param name Name of the query.
+   * @param params Parameters to the query.
+   * @param returnType Return type for the query.
+   */
   addQuery (name: string, params: Array<Param>, returnType: string): void {
     // Check if the query is already added.
     if (this._entities.some(entity => entity.className.toLowerCase() === name.toLowerCase())) {
@@ -74,6 +80,10 @@ export class Entity {
     this._entities.push(entityObject);
   }
 
+  /**
+   * Writes the generated entity files in the given directory.
+   * @param entityDir Directory to write the entities to.
+   */
   exportEntities (entityDir: string): void {
     const template = Handlebars.compile(this._templateString);
     this._entities.forEach(entityObj => {

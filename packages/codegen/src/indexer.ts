@@ -27,6 +27,12 @@ export class Indexer {
     Handlebars.registerHelper('capitalize', capitalizeHelper);
   }
 
+  /**
+   * Stores the query to be passed to the template.
+   * @param name Name of the query.
+   * @param params Parameters to the query.
+   * @param returnType Return type for the query.
+   */
   addQuery (name: string, params: Array<Param>, returnType: string): void {
     // Check if the query is already added.
     if (this._queries.some(query => query.name === name)) {
@@ -53,6 +59,11 @@ export class Indexer {
     this._queries.push(queryObject);
   }
 
+  /**
+   * Writes the indexer file generated from a template to a stream.
+   * @param outStream A writable output stream to write the indexer file to.
+   * @param inputFileName Input contract file name to be passed to the template.
+   */
   exportIndexer (outStream: Writable, inputFileName: string): void {
     const template = Handlebars.compile(this._templateString);
     const obj = {

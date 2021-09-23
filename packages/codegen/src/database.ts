@@ -26,6 +26,12 @@ export class Database {
     Handlebars.registerHelper('capitalize', capitalizeHelper);
   }
 
+  /**
+   * Stores the query to be passed to the template.
+   * @param name Name of the query.
+   * @param params Parameters to the query.
+   * @param returnType Return type for the query.
+   */
   addQuery (name: string, params: Array<Param>, returnType: string): void {
     // Check if the query is already added.
     if (this._queries.some(query => query.name === name)) {
@@ -52,6 +58,10 @@ export class Database {
     this._queries.push(queryObject);
   }
 
+  /**
+   * Writes the database file generated from a template to a stream.
+   * @param outStream A writable output stream to write the database file to.
+   */
   exportDatabase (outStream: Writable): void {
     const template = Handlebars.compile(this._templateString);
     const obj = {
