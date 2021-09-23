@@ -18,6 +18,7 @@ export function exportArtifacts (outStream: Writable, contractContent: string, c
     content: contractContent
   };
 
+  // Get artifacts for the required contract.
   const output = JSON.parse(solc.compile(JSON.stringify(input))).contracts[contractFileName][contractName];
   outStream.write(JSON.stringify(output, null, 2));
 }

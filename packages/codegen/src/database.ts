@@ -11,12 +11,11 @@ import _ from 'lodash';
 
 import { getTsForSol } from './utils/typemappings';
 import { Param } from './utils/types';
-import { compareHelper } from './utils/compareHelper';
 import { capitalizeHelper } from './utils/capitalizeHelper';
 
-const TEMPLATE_FILE = './templates/indexerTemplate.handlebars';
+const TEMPLATE_FILE = './templates/databaseTemplate.handlebars';
 
-export class Indexer {
+export class Database {
   _queries: Array<any>;
   _templateString: string;
 
@@ -24,7 +23,6 @@ export class Indexer {
     this._queries = [];
     this._templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
 
-    Handlebars.registerHelper('compare', compareHelper);
     Handlebars.registerHelper('capitalize', capitalizeHelper);
   }
 
@@ -54,13 +52,12 @@ export class Indexer {
     this._queries.push(queryObject);
   }
 
-  exportIndexer (outStream: Writable, inputFileName: string): void {
+  exportDatabase (outStream: Writable): void {
     const template = Handlebars.compile(this._templateString);
     const obj = {
-      inputFileName,
       queries: this._queries
     };
-    const indexer = template(obj);
-    outStream.write(indexer);
+    const database = template(obj);
+    outStream.write(database);
   }
 }

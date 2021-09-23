@@ -65,17 +65,22 @@ const main = async (): Promise<void> => {
       ? await flatten(path.resolve(argv['input-file']))
       : fs.readFileSync(path.resolve(argv['input-file'])).toString();
   }
-  const inputFileName = path.basename(argv['input-file'], '.sol');
 
+  const visitor = new Visitor();
+
+  parseAndVisit(data, visitor, argv.mode);
+
+  generateWatcher(data, visitor, argv);
+};
+
+function parseAndVisit (data: string, visitor: Visitor, mode: string) {
   // Get the abstract syntax tree for the flattened contract.
   const ast = parse(data);
 
   // Filter out library nodes.
   ast.children = ast.children.filter(child => !(child.type === 'ContractDefinition' && child.kind === 'library'));
 
-  const visitor = new Visitor();
-
-  if (argv.mode === MODE_ETH_CALL) {
+  if (mode === MODE_ETH_CALL) {
     visit(ast, {
       FunctionDefinition: visitor.functionDefinitionVisitor.bind(visitor),
       EventDefinition: visitor.eventDefinitionVisitor.bind(visitor)
@@ -86,7 +91,10 @@ const main = async (): Promise<void> => {
       EventDefinition: visitor.eventDefinitionVisitor.bind(visitor)
     });
   }
+}
 
+function generateWatcher (data: string, visitor: Visitor, argv: any) {
+  // Prepare directory structure for the watcher.
   let outputDir = '';
   if (argv['output-folder']) {
     outputDir = path.resolve(argv['output-folder']);
@@ -98,9 +106,11 @@ const main = async (): Promise<void> => {
     const artifactsFolder = path.join(outputDir, 'src/artifacts');
     if (!fs.existsSync(artifactsFolder)) fs.mkdirSync(artifactsFolder, { recursive: true });
 
-    const entitiesFolder = path.join(outputDir, 'src/entities');
+    const entitiesFolder = path.join(outputDir, 'src/entity');
     if (!fs.existsSync(entitiesFolder)) fs.mkdirSync(entitiesFolder, { recursive: true });
   }
+
+  const inputFileName = path.basename(argv['input-file'], '.sol');
 
   let outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'src/schema.gql'))
@@ -115,17 +125,17 @@ const main = async (): Promise<void> => {
   outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'src/indexer.ts'))
     : process.stdout;
-  visitor.exportIndexer(outStream);
+  visitor.exportIndexer(outStream, inputFileName);
 
   outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'src/server.ts'))
     : process.stdout;
-  exportServer(outStream, inputFileName);
+  exportServer(outStream);
 
   outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'environments/local.toml'))
     : process.stdout;
-  exportConfig(outStream);
+  exportConfig(path.basename(outputDir), outStream);
 
   outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'src/artifacts/', `${inputFileName}.json`))
@@ -138,6 +148,11 @@ const main = async (): Promise<void> => {
   );
 
   outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'src/database.ts'))
+    : process.stdout;
+  visitor.exportDatabase(outStream);
+
+  outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'package.json'))
     : process.stdout;
   exportPackage(path.basename(outputDir), outStream);
@@ -148,10 +163,10 @@ const main = async (): Promise<void> => {
   exportTSConfig(outStream);
 
   const entityDir = outputDir
-    ? path.join(outputDir, 'src/entities')
+    ? path.join(outputDir, 'src/entity')
     : '';
   visitor.exportEntities(entityDir);
-};
+}
 
 main().catch(err => {
   console.error(err);

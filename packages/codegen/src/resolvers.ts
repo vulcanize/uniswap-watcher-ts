@@ -24,14 +24,15 @@ export class Resolvers {
   }
 
   addQuery (name: string, params: Array<Param>, returnType: string): void {
-    if (this._queries.filter(query => query.name === name).length !== 0) {
+    // Check if the query is already added.
+    if (this._queries.some(query => query.name === name)) {
       return;
     }
 
     const queryObject = {
-      name: _.cloneDeep(name),
+      name: name,
       params: _.cloneDeep(params),
-      returnType: _.cloneDeep(returnType)
+      returnType: returnType
     };
 
     queryObject.params = queryObject.params.map((param) => {

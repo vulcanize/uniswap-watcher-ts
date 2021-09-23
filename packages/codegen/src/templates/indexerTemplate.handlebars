@@ -4,51 +4,42 @@
 
 import assert from 'assert';
 import { JsonFragment } from '@ethersproject/abi';
+import JSONbig from 'json-bigint';
 import { BigNumber, ethers, Contract } from 'ethers';
 import { BaseProvider } from '@ethersproject/providers';
-import { PubSub } from 'apollo-server-express';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
+import { StorageLayout } from '@vulcanize/solidity-mapper';
+import { Indexer as BaseIndexer, ValueResult } from '@vulcanize/util';
 
-interface Artifacts {
-  abi: JsonFragment[];
-  storageLayout: StorageLayout;
-}
-
-export interface ValueResult {
-  value: string | bigint;
-  proof?: {
-    data: string;
-  }
-}
+import { Database } from './database';
+import artifacts from './artifacts/{{inputFileName}}.json';
 
 export class Indexer {
+  _db: Database
   _ethClient: EthClient
-  _pubsub: PubSub
-  _getStorageAt: GetStorageAt
   _ethProvider: BaseProvider
+  _baseIndexer: BaseIndexer
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
   _serverMode: string
 
-  constructor (ethClient: EthClient, ethProvider: BaseProvider, pubsub: PubSub, artifacts: Artifacts, serverMode: string) {
+  constructor (db: Database, ethClient: EthClient, ethProvider: BaseProvider, serverMode: string) {
+    assert(db);
     assert(ethClient);
-    assert(pubsub);
-    assert(artifacts);
+
+    this._db = db;
+    this._ethClient = ethClient;
+    this._ethProvider = ethProvider;
+    this._serverMode = serverMode;
+    this._baseIndexer = new BaseIndexer(this._db, this._ethClient);
 
     const { abi, storageLayout } = artifacts;
 
     assert(abi);
     assert(storageLayout);
-
-    this._ethClient = ethClient;
-    this._ethProvider = ethProvider;
-    this._pubsub = pubsub;
-    this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
-    this._serverMode = serverMode;
 
     this._abi = abi;
     this._storageLayout = storageLayout;
@@ -56,13 +47,18 @@ export class Indexer {
     this._contract = new ethers.utils.Interface(this._abi);
   }
 
-  getEventIterator (): AsyncIterator<any> {
-    return this._pubsub.asyncIterator(['event']);
-  }
-
   {{#each queries as | query |}}
   async {{query.name}} (blockHash: string, contractAddress: string
     {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}}): Promise<ValueResult> {
+    const entity = await this._db.get{{capitalize query.name tillIndex=1}}({ blockHash, contractAddress
+    {{~#each query.params}}, {{this.name~}} {{~/each}} });
+    if (entity) {
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
     const contract = new Contract(contractAddress, this._abi, this._ethProvider);
     let value = null;
 
@@ -84,18 +80,14 @@ export class Indexer {
     {{/if}}
 
     const result: ValueResult = { value };
+    const { proof } = result;
+    await this._db.save{{capitalize query.name tillIndex=1}}({ blockHash, contractAddress
+    {{~#each query.params}}, {{this.name~}} {{/each}}, value, proof: JSONbig.stringify(proof) });
+  
     return result;
   }
+  {{#unless @last}}
 
+  {{/unless}}
   {{/each}}
-  async _getStorageValue (blockHash: string, contractAddress: string, variable: string, ...mappingKeys: string[]): Promise<ValueResult> {
-    return getStorageValue(
-      this._storageLayout,
-      this._getStorageAt,
-      blockHash,
-      contractAddress,
-      variable,
-      ...mappingKeys
-    );
-  }
 }

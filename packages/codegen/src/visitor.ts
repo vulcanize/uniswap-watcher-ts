@@ -4,6 +4,7 @@
 
 import { Writable } from 'stream';
 
+import { Database } from './database';
 import { Entity } from './entity';
 import { Indexer } from './indexer';
 import { Resolvers } from './resolvers';
@@ -14,13 +15,15 @@ export class Visitor {
   _schema: Schema;
   _resolvers: Resolvers;
   _indexer: Indexer;
-  _entity: Entity
+  _entity: Entity;
+  _database: Database;
 
   constructor () {
     this._schema = new Schema();
     this._resolvers = new Resolvers();
     this._indexer = new Indexer();
     this._entity = new Entity();
+    this._database = new Database();
   }
 
   /**
@@ -41,6 +44,7 @@ export class Visitor {
       this._resolvers.addQuery(name, params, returnType);
       this._indexer.addQuery(name, params, returnType);
       this._entity.addQuery(name, params, returnType);
+      this._database.addQuery(name, params, returnType);
     }
   }
 
@@ -73,6 +77,7 @@ export class Visitor {
     this._resolvers.addQuery(name, params, returnType);
     this._indexer.addQuery(name, params, returnType);
     this._entity.addQuery(name, params, returnType);
+    this._database.addQuery(name, params, returnType);
   }
 
   /**
@@ -100,11 +105,15 @@ export class Visitor {
     this._resolvers.exportResolvers(outStream);
   }
 
-  exportIndexer (outStream: Writable): void {
-    this._indexer.exportIndexer(outStream);
+  exportIndexer (outStream: Writable, inputFileName: string): void {
+    this._indexer.exportIndexer(outStream, inputFileName);
   }
 
   exportEntities (entityDir: string): void {
     this._entity.exportEntities(entityDir);
+  }
+
+  exportDatabase (outStream: Writable): void {
+    this._database.exportDatabase(outStream);
   }
 }

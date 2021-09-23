@@ -9,9 +9,11 @@ import { Writable } from 'stream';
 
 const TEMPLATE_FILE = './templates/configTemplate.handlebars';
 
-export function exportConfig (outStream: Writable): void {
+export function exportConfig (folderName: string, outStream: Writable): void {
   const templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
   const template = Handlebars.compile(templateString);
-  const config = template({});
+  const config = template({
+    folderName
+  });
   outStream.write(config);
 }

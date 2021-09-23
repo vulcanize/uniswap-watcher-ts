@@ -6,7 +6,9 @@ import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 
-import { Indexer, ValueResult } from './indexer';
+import { ValueResult } from '@vulcanize/util';
+
+import { Indexer } from './indexer';
 
 const log = debug('vulcanize:resolver');
 
@@ -21,12 +23,6 @@ export const createResolvers = async (indexer: Indexer): Promise<any> => {
         assert(obj.__typename);
 
         return obj.__typename;
-      }
-    },
-
-    Subscription: {
-      onEvent: {
-        subscribe: () => indexer.getEventIterator()
       }
     },
 

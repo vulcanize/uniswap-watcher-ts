@@ -23,7 +23,8 @@ export class Entity {
   }
 
   addQuery (name: string, params: Array<Param>, returnType: string): void {
-    if (this._entities.filter(entity => entity.name === name).length !== 0) {
+    // Check if the query is already added.
+    if (this._entities.some(entity => entity.className.toLowerCase() === name.toLowerCase())) {
       return;
     }
 
