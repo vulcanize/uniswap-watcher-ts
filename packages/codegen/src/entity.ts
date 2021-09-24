@@ -439,9 +439,6 @@ export class Entity {
         columns: ['blockNumber']
       },
       {
-        columns: ['blockNumber']
-      },
-      {
         columns: ['parentHash']
       }
     );
