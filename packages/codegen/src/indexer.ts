@@ -61,6 +61,11 @@ export class Indexer {
   }
 
   addEvent (name: string, params: Array<Param>): void {
+    // Check if the event is already added.
+    if (this._events.some(event => event.name === name)) {
+      return;
+    }
+
     this._events.push({
       name,
       params

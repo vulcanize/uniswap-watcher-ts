@@ -58,7 +58,6 @@ export class Indexer {
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
     this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
-    this._serverMode = serverMode;
     this._baseIndexer = new BaseIndexer(this._db, this._ethClient);
 
     const { abi, storageLayout } = artifacts;
@@ -122,9 +121,8 @@ export class Indexer {
 
     log('{{query.name}}: db miss, fetching from upstream server');
 
-    {{~#if (compare query.mode @root.constants.MODE_ETH_CALL)}}
+    {{#if (compare query.mode @root.constants.MODE_ETH_CALL)}}
     const contract = new ethers.Contract(contractAddress, this._abi, this._ethProvider);
-    let value = null;
 
     const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
     const blockNumber = BigNumber.from(number).toNumber();
@@ -160,7 +158,6 @@ export class Indexer {
   }
 
   {{/each}}
-
   async _getStorageValue (storageLayout: StorageLayout, blockHash: string, contractAddress: string, variable: string, ...mappingKeys: any[]): Promise<ValueResult> {
     return getStorageValue(
       storageLayout,
@@ -171,7 +168,7 @@ export class Indexer {
       ...mappingKeys
     );
   }
-  
+
   parseEventNameAndArgs (kind: string, logObj: any): any {
     let eventName = UNKNOWN_EVENT_NAME;
     let eventInfo = {};

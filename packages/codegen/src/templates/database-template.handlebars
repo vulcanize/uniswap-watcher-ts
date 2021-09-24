@@ -73,18 +73,6 @@ export class Database {
   }
 
   {{/each}}
-  _getPropertyColumnMapForEntity (entityName: string): Map<string, string> {
-    return this._conn.getMetadata(entityName).ownColumns.reduce((acc, curr) => {
-      return acc.set(curr.propertyName, curr.databaseName);
-    }, new Map<string, string>());
-  }
-
-  _setPropColMaps () {
-    {{#each queries as | query |}}
-    this._propColMaps['{{capitalize query.name tillIndex=1}}'] = this._getPropertyColumnMapForEntity('{{capitalize query.name tillIndex=1}}');
-    {{/each}}
-  }
-
   async getContract (address: string): Promise<Contract | undefined> {
     const repo = this._conn.getRepository(Contract);
 
@@ -192,5 +180,17 @@ export class Database {
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
     return this._baseDatabase.getAncestorAtDepth(blockHash, depth);
+  }
+
+  _getPropertyColumnMapForEntity (entityName: string): Map<string, string> {
+    return this._conn.getMetadata(entityName).ownColumns.reduce((acc, curr) => {
+      return acc.set(curr.propertyName, curr.databaseName);
+    }, new Map<string, string>());
+  }
+
+  _setPropColMaps () {
+    {{#each queries as | query |}}
+    this._propColMaps['{{capitalize query.name tillIndex=1}}'] = this._getPropertyColumnMapForEntity('{{capitalize query.name tillIndex=1}}');
+    {{/each}}
   }
 }

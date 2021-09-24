@@ -13,7 +13,7 @@
 * Run the following command to generate a watcher from a contract file:
 
   ```bash
-  yarn codegen --input-file <input-file-path> --contract-name <contract-name> --output-folder [output-folder] --mode [eth_call | storage| all] --flatten [true | false]
+  yarn codegen --input-file <input-file-path> --contract-name <contract-name> --output-folder [output-folder] --mode [eth_call | storage | all] --flatten [true | false]
   ```
 
     * `input-file`(alias: `i`): Input contract file path or an URL (required).
