@@ -43,7 +43,7 @@ const main = async (): Promise<void> => {
       alias: 'm',
       describe: 'Code generation mode.',
       type: 'string',
-      default: MODE_STORAGE,
+      default: MODE_ALL,
       choices: [MODE_ETH_CALL, MODE_STORAGE, MODE_ALL]
     })
     .option('flatten', {
@@ -79,12 +79,14 @@ function parseAndVisit (data: string, visitor: Visitor, mode: string) {
   // Filter out library nodes.
   ast.children = ast.children.filter(child => !(child.type === 'ContractDefinition' && child.kind === 'library'));
 
-  if (mode === MODE_ETH_CALL) {
+  if ([MODE_ALL, MODE_ETH_CALL].some(value => value === mode)) {
     visit(ast, {
       FunctionDefinition: visitor.functionDefinitionVisitor.bind(visitor),
       EventDefinition: visitor.eventDefinitionVisitor.bind(visitor)
     });
-  } else {
+  }
+
+  if ([MODE_ALL, MODE_STORAGE].some(value => value === mode)) {
     visit(ast, {
       StateVariableDeclaration: visitor.stateVariableDeclarationVisitor.bind(visitor),
       EventDefinition: visitor.eventDefinitionVisitor.bind(visitor)
