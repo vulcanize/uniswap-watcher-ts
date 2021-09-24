@@ -91,6 +91,7 @@ export class Visitor {
     });
 
     this._schema.addEventType(name, params);
+    this._indexer.addEvent(name, params);
   }
 
   /**

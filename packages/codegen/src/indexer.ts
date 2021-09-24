@@ -11,21 +11,19 @@ import _ from 'lodash';
 
 import { getTsForSol } from './utils/type-mappings';
 import { Param } from './utils/types';
-import { compareHelper, capitalizeHelper } from './utils/handlebar-helpers';
 import { MODE_ETH_CALL, MODE_STORAGE } from './utils/constants';
 
 const TEMPLATE_FILE = './templates/indexer-template.handlebars';
 
 export class Indexer {
   _queries: Array<any>;
+  _events: Array<any>;
   _templateString: string;
 
   constructor () {
     this._queries = [];
+    this._events = [];
     this._templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
-
-    Handlebars.registerHelper('compare', compareHelper);
-    Handlebars.registerHelper('capitalize', capitalizeHelper);
   }
 
   /**
@@ -62,6 +60,13 @@ export class Indexer {
     this._queries.push(queryObject);
   }
 
+  addEvent (name: string, params: Array<Param>): void {
+    this._events.push({
+      name,
+      params
+    });
+  }
+
   /**
    * Writes the indexer file generated from a template to a stream.
    * @param outStream A writable output stream to write the indexer file to.
@@ -76,7 +81,8 @@ export class Indexer {
       constants: {
         MODE_ETH_CALL,
         MODE_STORAGE
-      }
+      },
+      events: this._events
     };
 
     const indexer = template(obj);

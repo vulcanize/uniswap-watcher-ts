@@ -10,7 +10,6 @@ import { Writable } from 'stream';
 
 import { getTsForSol, getPgForTs } from './utils/type-mappings';
 import { Param } from './utils/types';
-import { compareHelper } from './utils/handlebar-helpers';
 
 const TEMPLATE_FILE = './templates/entity-template.handlebars';
 
@@ -21,8 +20,6 @@ export class Entity {
   constructor () {
     this._entities = [];
     this._templateString = fs.readFileSync(path.resolve(__dirname, TEMPLATE_FILE)).toString();
-
-    Handlebars.registerHelper('compare', compareHelper);
   }
 
   /**

@@ -20,6 +20,7 @@ import { exportPackage } from './package';
 import { exportTSConfig } from './tsconfig';
 import { exportReadme } from './readme';
 import { exportEvents } from './events';
+import { registerHandlebarHelpers } from './utils/handlebar-helpers';
 
 const main = async (): Promise<void> => {
   const argv = await yargs(hideBin(process.argv))
@@ -113,6 +114,8 @@ function generateWatcher (data: string, visitor: Visitor, argv: any) {
   }
 
   const inputFileName = path.basename(argv['input-file'], '.sol');
+
+  registerHandlebarHelpers();
 
   let outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'src/schema.gql'))
