@@ -27,9 +27,8 @@ export class Indexer {
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
-  _serverMode: string
 
-  constructor (db: Database, ethClient: EthClient, ethProvider: BaseProvider, serverMode: string) {
+  constructor (db: Database, ethClient: EthClient, ethProvider: BaseProvider) {
     assert(db);
     assert(ethClient);
 
@@ -37,7 +36,6 @@ export class Indexer {
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
     this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
-    this._serverMode = serverMode;
 
     const { abi, storageLayout } = artifacts;
 
@@ -98,9 +96,8 @@ export class Indexer {
     );
     {{/if}}
 
-    const { proof, value } = result;
     await this._db.save{{capitalize query.name tillIndex=1}}({ blockHash, contractAddress
-    {{~#each query.params}}, {{this.name~}} {{/each}}, value, proof: JSONbig.stringify(proof) });
+    {{~#each query.params}}, {{this.name~}} {{/each}}, value: result.value, proof: JSONbig.stringify(result.proof) });
 
     return result;
   }
