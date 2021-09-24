@@ -61,7 +61,7 @@ export class Database {
 
   {{~#each queries as | query |}}
   async save{{capitalize query.name tillIndex=1}} ({ blockHash, contractAddress
-  {{~#each query.params}}, {{this.name~}} {{/each}}, value, proof}: DeepPartial<{{capitalize query.name tillIndex=1}}>): Promise<{{capitalize query.name tillIndex=1}}> {
+  {{~#each query.params}}, {{this.name~}} {{/each}}, value, proof }: DeepPartial<{{capitalize query.name tillIndex=1}}>): Promise<{{capitalize query.name tillIndex=1}}> {
     const repo = this._conn.getRepository({{capitalize query.name tillIndex=1}});
     const entity = repo.create({ blockHash, contractAddress
     {{~#each query.params}}, {{this.name~}} {{/each}}, value, proof });
