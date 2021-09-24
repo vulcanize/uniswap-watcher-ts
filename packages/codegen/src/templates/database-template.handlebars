@@ -48,17 +48,13 @@ export class Database {
   {{~#each query.params}}, {{this.name~}} {{/each}} }: { blockHash: string, contractAddress: string
   {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}} }): Promise<{{capitalize query.name tillIndex=1}} | undefined> {
     return this._conn.getRepository({{capitalize query.name tillIndex=1}})
-      .createQueryBuilder('{{query.name}}')
-      .where(`${this._propColMaps['{{capitalize query.name tillIndex=1}}'].get('blockHash')} = :blockHash AND ${this._propColMaps['{{capitalize query.name tillIndex=1}}'].get('contractAddress')} = :contractAddress
-      {{~#each query.params}} AND ${this._propColMaps['{{capitalize query.name tillIndex=1}}'].get('{{this.name}}')} = :{{this.name~}} {{/each}}`, {
+      .findOne({
         blockHash,
-        contractAddress
-        {{~#each query.params}},
-        {{this.name}}
-        {{~/each}}
-
+        contractAddress{{#if query.params.length}},{{/if}}
+        {{#each query.params}}
+        {{this.name}}{{#unless @last}},{{/unless}}
+        {{/each}}
       })
-      .getOne();
   }
 
   {{/each}}

@@ -6,12 +6,14 @@
 import { {{~#each import.toImport}} {{this}} {{~#unless @last}}, {{~/unless}} {{~/each}} } from '{{import.from}}';
 {{/each}}
 
+import { bigintTransformer } from '@vulcanize/util';
+
 @Entity()
 {{#each indexOn as | index |}}
 {{#if index.columns}}
 @Index([
 {{~#each index.columns}}'{{this}}'
-{{~#unless @last}}, {{/unless}}  
+{{~#unless @last}}, {{/unless}}
 {{~/each}}]
 {{~#if index.unique}}, { unique: true }{{/if}})
 {{/if}}

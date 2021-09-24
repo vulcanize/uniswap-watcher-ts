@@ -96,11 +96,22 @@ export class Entity {
         assert(pgType);
 
         const columnOptions = [];
+
         if (param.type === 'address') {
           columnOptions.push(
             {
               option: 'length',
               value: 42
+            }
+          );
+        }
+
+        // Use bigintTransformer for bigint types.
+        if (tsType === 'bigint') {
+          columnOptions.push(
+            {
+              option: 'transformer',
+              value: 'bigintTransformer'
             }
           );
         }
