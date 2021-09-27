@@ -11,7 +11,7 @@ import { ethers } from 'ethers';
 import { BaseProvider } from '@ethersproject/providers';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { getStorageValue, GetStorageAt, StorageLayout } from '@vulcanize/solidity-mapper';
+import { StorageLayout } from '@vulcanize/solidity-mapper';
 import { EventInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME } from '@vulcanize/util';
 
 import { Database } from './database';
@@ -152,9 +152,9 @@ export class Indexer {
   }
 
   {{/each}}
-
   async triggerIndexingOnEvent (event: Event): Promise<void> {
     // TODO: Implement custom hooks.
+    assert(event);
   }
 
   async processEvent (event: Event): Promise<void> {

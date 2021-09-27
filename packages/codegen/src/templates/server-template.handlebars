@@ -7,7 +7,7 @@ import path from 'path';
 import assert from 'assert';
 import 'reflect-metadata';
 import express, { Application } from 'express';
-import { ApolloServer } from 'apollo-server-express';
+import { ApolloServer, PubSub } from 'apollo-server-express';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
@@ -64,6 +64,9 @@ export const main = async (): Promise<any> => {
 
   const ethProvider = getDefaultProvider(rpcProviderEndpoint);
 
+  // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
+  // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
+  const pubsub = new PubSub();
   const indexer = new Indexer(db, ethClient, ethProvider);
 
   assert(jobQueueConfig, 'Missing job queue config');
