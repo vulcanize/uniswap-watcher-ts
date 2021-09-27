@@ -44,7 +44,7 @@ export class Entity {
 
     entityObject.imports.push(
       {
-        toImport: ['Entity', 'PrimaryGeneratedColumn', 'Column', 'Index'],
+        toImport: new Set(['Entity', 'PrimaryGeneratedColumn', 'Column', 'Index']),
         from: 'typeorm'
       }
     );
@@ -106,16 +106,6 @@ export class Entity {
           );
         }
 
-        // Use bigintTransformer for bigint types.
-        if (tsType === 'bigint') {
-          columnOptions.push(
-            {
-              option: 'transformer',
-              value: 'bigintTransformer'
-            }
-          );
-        }
-
         return {
           name,
           pgType,
@@ -136,7 +126,8 @@ export class Entity {
       name: 'value',
       pgType: pgReturnType,
       tsType: tsReturnType,
-      columnType: 'Column'
+      columnType: 'Column',
+      columnOptions: []
     });
 
     entityObject.columns.push({
@@ -150,6 +141,31 @@ export class Entity {
           value: true
         }
       ]
+    });
+
+    entityObject.columns.forEach((column: any) => {
+      if (column.tsType === 'bigint') {
+        column.columnOptions.push(
+          {
+            option: 'transformer',
+            value: 'bigintTransformer'
+          }
+        );
+        const importObject = entityObject.imports.find((element: any) => {
+          return element.from === '@vulcanize/util';
+        });
+
+        if (importObject) {
+          importObject.toImport.add('bigintTransformer');
+        } else {
+          entityObject.imports.push(
+            {
+              toImport: new Set(['bigintTransformer']),
+              from: '@vulcanize/util'
+            }
+          );
+        }
+      }
     });
 
     this._entities.push(entityObject);
