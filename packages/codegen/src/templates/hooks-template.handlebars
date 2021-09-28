@@ -3,10 +3,19 @@
 //
 
 import assert from 'assert';
+import { Indexer } from './indexer';
 
-export async function eventHookFunction (eventName: string, eventFields: any, contractAddress: string, blockHash: string): Promise<void> {
-  console.log('hello');
+/**
+ * Event hook function.
+ * @param indexer Indexer object to trigger functions for indexing.
+ * @param eventName Name of the event.
+ * @param eventFields An object having the event fields.
+ * @param contractAddress Address of the concerned contract.
+ * @param blockHash Block hash of the concerned block.
+ */
+export async function handleEvent (indexer: Indexer, eventName: string, eventFields: any, contractAddress: string, blockHash: string): Promise<void> {
   // Provide a custom hook function.
+  assert(indexer);
   assert(eventName);
   assert(eventFields);
   assert(contractAddress);

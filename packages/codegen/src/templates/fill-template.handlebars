@@ -27,20 +27,17 @@ export const main = async (): Promise<any> => {
     configFile: {
       alias: 'f',
       type: 'string',
-      require: true,
       demandOption: true,
       describe: 'configuration file path (toml)',
       default: DEFAULT_CONFIG_PATH
     },
     startBlock: {
       type: 'number',
-      require: true,
       demandOption: true,
       describe: 'Block number to start processing at'
     },
     endBlock: {
       type: 'number',
-      require: true,
       demandOption: true,
       describe: 'Block number to stop processing at'
     }
@@ -50,7 +47,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode } } = config;
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
   assert(dbConfig, 'Missing database config');
 
@@ -73,7 +70,7 @@ export const main = async (): Promise<any> => {
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
   // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
   const pubsub = new PubSub();
-  const indexer = new Indexer(db, ethClient, ethProvider, mode);
+  const indexer = new Indexer(db, ethClient, ethProvider);
 
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
   assert(dbConnectionString, 'Missing job queue db connection string');
