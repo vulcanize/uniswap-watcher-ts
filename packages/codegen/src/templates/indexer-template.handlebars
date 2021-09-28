@@ -20,6 +20,7 @@ import { Event } from './entity/Event';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import artifacts from './artifacts/{{inputFileName}}.json';
+import { eventHookFunction } from './hooks';
 
 const log = debug('vulcanize:indexer');
 
@@ -153,8 +154,11 @@ export class Indexer {
 
   {{/each}}
   async triggerIndexingOnEvent (event: Event): Promise<void> {
-    // TODO: Implement custom hooks.
-    assert(event);
+    // Custom hooks.
+    const { eventName, eventInfo, contract: token, block: { blockHash } } = event;
+    const eventFields = JSON.parse(eventInfo);
+
+    await eventHookFunction(eventName, eventFields, token, blockHash);
   }
 
   async processEvent (event: Event): Promise<void> {

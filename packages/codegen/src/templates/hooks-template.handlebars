@@ -1,0 +1,14 @@
+//
+// Copyright 2021 Vulcanize, Inc.
+//
+
+import assert from 'assert';
+
+export async function eventHookFunction (eventName: string, eventFields: any, contractAddress: string, blockHash: string): Promise<void> {
+  console.log('hello');
+  // Provide a custom hook function.
+  assert(eventName);
+  assert(eventFields);
+  assert(contractAddress);
+  assert(blockHash);
+}
