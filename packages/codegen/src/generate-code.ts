@@ -209,15 +209,15 @@ function generateWatcher (data: string, visitor: Visitor, argv: any) {
   exportWatchContract(outStream);
 
   let hooksOutStream;
-  let egOutStream;
+  let exampleOutStream;
   if (outputDir) {
     hooksOutStream = fs.createWriteStream(path.join(outputDir, 'src/hooks.ts'));
-    egOutStream = fs.createWriteStream(path.join(outputDir, 'src/hooks.example.ts'));
+    exampleOutStream = fs.createWriteStream(path.join(outputDir, 'src/hooks.example.ts'));
   } else {
     hooksOutStream = process.stdout;
-    egOutStream = process.stdout;
+    exampleOutStream = process.stdout;
   }
-  exportHooks(hooksOutStream, egOutStream);
+  exportHooks(hooksOutStream, exampleOutStream);
 
   outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'src/fill.ts'))

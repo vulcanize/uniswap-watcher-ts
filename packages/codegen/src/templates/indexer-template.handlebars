@@ -164,7 +164,7 @@ export class Indexer {
     const resultEvent = this.getResultEvent(event);
 
     // Call custom hook function for indexing on event.
-    await handleEvent(resultEvent, this);
+    await handleEvent(this, resultEvent);
   }
 
   async processEvent (event: Event): Promise<void> {
