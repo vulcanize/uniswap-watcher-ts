@@ -1,0 +1,38 @@
+//
+// Copyright 2021 Vulcanize, Inc.
+//
+
+import assert from 'assert';
+import { Indexer, ResultEvent } from './indexer';
+
+/**
+ * Event hook function.
+ * @param resultEvent ResultEvent object containing necessary information.
+ * @param indexer Indexer object to trigger functions for indexing.
+ */
+export async function handleEvent (resultEvent: ResultEvent, indexer: Indexer): Promise<void> {
+  assert(indexer);
+  assert(resultEvent);
+
+  // Perform indexing corresponding to the event.
+  switch (resultEvent.event.__typename) {
+    case 'TransferEvent': {
+      // On a transfer, balances for both parties change.
+      // Therefore, trigger indexing for both sender and receiver.
+
+      // const { from, to } = resultEvent.event;
+      // await indexer.balanceOf(resultEvent.block.hash, resultEvent.contract, from);
+      // await indexer.balanceOf(resultEvent.block.hash, resultEvent.contract, to);
+
+      break;
+    }
+    case 'ApprovalEvent': {
+      // Update allowance for (owner, spender) combination.
+
+      // const { owner, spender } = resultEvent.event;
+      // await indexer.allowance(resultEvent.block.hash, resultEvent.contract, owner, spender);
+
+      break;
+    }
+  }
+}
