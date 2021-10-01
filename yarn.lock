@@ -7524,9 +7524,9 @@ got@^7.1.0:
     url-parse-lax "^1.0.0"
     url-to-options "^1.0.1"
 
-"gql-generator@https://github.com/vulcanize/gql-generator.git#pm-codegen-client":
+"gql-generator@https://github.com/vulcanize/gql-generator.git":
   version "1.0.13"
-  resolved "https://github.com/vulcanize/gql-generator.git#266c5c1702ec4e7850ceb3f6675998dbd6b7754c"
+  resolved "https://github.com/vulcanize/gql-generator.git#0b818b1d41bd383c860d1c88082b7b1f5831c272"
   dependencies:
     commander "^2.15.1"
     del "^3.0.0"

@@ -3,6 +3,7 @@
 //
 
 import { gql } from '@apollo/client/core';
+
 import { GraphQLClient, GraphQLConfig } from '@vulcanize/ipld-eth-client';
 
 import { queries, mutations, subscriptions } from './gql';
@@ -40,13 +41,22 @@ export class Client {
     return events;
   }
 
-  async getEventsInRange (fromblockNumber: number, toBlockNumber: number): Promise<any> {
+  async getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<any> {
     const { eventsInRange } = await this._client.query(
       gql(queries.eventsInRange),
-      { fromblockNumber, toBlockNumber }
+      { fromBlockNumber, toBlockNumber }
     );
 
     return eventsInRange;
+  }
+
+  async watchContract (contractAddress: string, startingBlock?: number): Promise<any> {
+    const { watchContract } = await this._client.mutate(
+      gql(mutations.watchContract),
+      { contractAddress, startingBlock }
+    );
+
+    return watchContract;
   }
 
   async watchEvents (onNext: (value: any) => void): Promise<ZenObservable.Subscription> {
