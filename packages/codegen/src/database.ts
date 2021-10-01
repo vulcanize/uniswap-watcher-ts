@@ -36,10 +36,17 @@ export class Database {
     }
 
     const queryObject = {
-      name: name,
+      name,
+      entityName: '',
       params: _.cloneDeep(params),
-      returnType: returnType
+      returnType
     };
+
+    // eth_call mode: Capitalize first letter of entity name (balanceOf -> BalanceOf).
+    // storage mode: Capiltalize second letter of entity name (_balances -> _Balances).
+    queryObject.entityName = (name.charAt(0) === '_')
+      ? `_${name.charAt(1).toUpperCase()}${name.slice(2)}`
+      : `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
 
     queryObject.params = queryObject.params.map((param) => {
       const tsParamType = getTsForSol(param.type);
