@@ -31,4 +31,30 @@ export class Client {
   }
 
   {{/each}}
+  async getEvents (blockHash: string, contractAddress: string, name: string): Promise<any> {
+    const { events } = await this._client.query(
+      gql(queries.events),
+      { blockHash, contractAddress, name }
+    );
+
+    return events;
+  }
+
+  async getEventsInRange (fromblockNumber: number, toBlockNumber: number): Promise<any> {
+    const { eventsInRange } = await this._client.query(
+      gql(queries.eventsInRange),
+      { fromblockNumber, toBlockNumber }
+    );
+
+    return eventsInRange;
+  }
+
+  async watchEvents (onNext: (value: any) => void): Promise<ZenObservable.Subscription> {
+    return this._client.subscribe(
+      gql(subscriptions.onEvent),
+      ({ data }) => {
+        onNext(data.onEvent);
+      }
+    );
+  }
 }
