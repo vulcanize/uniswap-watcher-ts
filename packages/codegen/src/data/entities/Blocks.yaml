@@ -1,9 +1,8 @@
 className: Blocks
 indexOn:
   - columns:
-      - blockHash
+      - block
       - contractAddress
-    unique: true
 columns:
   - name: block
     tsType: BlockProgress

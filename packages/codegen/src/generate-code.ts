@@ -27,6 +27,7 @@ import { exportLint } from './lint';
 import { registerHandlebarHelpers } from './utils/handlebar-helpers';
 import { exportHooks } from './hooks';
 import { exportFill } from './fill';
+import { exportBlocksHook } from './blocks-hook';
 
 const main = async (): Promise<void> => {
   const argv = await yargs(hideBin(process.argv))
@@ -239,6 +240,11 @@ function generateWatcher (data: string, visitor: Visitor, argv: any) {
     ? fs.createWriteStream(path.join(outputDir, 'src/client.ts'))
     : process.stdout;
   visitor.exportClient(outStream, schemaContent, path.join(outputDir, 'src/gql'));
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'src/blocks-hook.ts'))
+    : process.stdout;
+  exportBlocksHook(outStream);
 }
 
 main().catch(err => {

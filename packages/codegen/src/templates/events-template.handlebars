@@ -12,11 +12,13 @@ import {
   EventWatcher as BaseEventWatcher,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  UNKNOWN_EVENT_NAME
+  UNKNOWN_EVENT_NAME,
+  JOB_KIND_INDEX
 } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { Event } from './entity/Event';
+import { blockProcessingCompleteHandler } from './blocks-hook';
 
 const EVENT = 'event';
 
@@ -71,6 +73,14 @@ export class EventWatcher {
   async initBlockProcessingOnCompleteHandler (): Promise<void> {
     this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
       await this._baseEventWatcher.blockProcessingCompleteHandler(job);
+
+      // Call custom hook function to update Blocks table.
+      const { data: { request: { data } } } = job;
+      const { kind } = data;
+
+      if (kind === JOB_KIND_INDEX) {
+        await blockProcessingCompleteHandler(this._indexer, data);
+      }
     });
   }
 

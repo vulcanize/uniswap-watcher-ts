@@ -1,0 +1,91 @@
+import { encode, code as codecCode } from '@ipld/dag-json';
+import { sha256 } from 'multiformats/hashes/sha2';
+import { CID } from 'multiformats/cid';
+
+import { BlockProgressInterface } from '@vulcanize/util';
+
+import { Indexer } from './indexer';
+
+export async function blockProcessingCompleteHandler (indexer: Indexer, jobData: any): Promise<void> {
+  // Get events for current block and make an entry of updated values in an IPLD Block.
+
+  const { blockHash } = jobData;
+  const events = await indexer.getBlockEvents(blockHash);
+
+  if (events) {
+    events.forEach(async (event) => {
+      const contractAddress = event.contract;
+
+      const ipldBlockData: any = {};
+
+      const eventData = indexer.getResultEvent(event);
+
+      switch (event.eventName) {
+        case 'Transfer': {
+          const { from, to } = eventData.event;
+
+          const fromBalance = await indexer.balanceOf(blockHash, contractAddress, from);
+          const toBalance = await indexer.balanceOf(blockHash, contractAddress, to);
+
+          // {
+          //   "_balances": {
+          //      "0xCA6D29232D1435D8198E3E5302495417dD073d61": {
+          //         "value": 100
+          //      },
+          //      "0xDC7d7A8920C8Eecc098da5B7522a5F31509b5Bfc": {
+          //         "value": 999999999999999999900
+          //      }
+          //   }
+          // }
+          ipldBlockData._balances = {};
+          ipldBlockData._balances[from] = fromBalance;
+          ipldBlockData._balances[to] = toBalance;
+          break;
+        }
+
+        case 'Approval': {
+          const { owner, spender } = eventData.event;
+          const allowance = await indexer.allowance(blockHash, contractAddress, owner, spender);
+
+          // {
+          //   "_allowances": {
+          //      "0xDC7d7A8920C8Eecc098da5B7522a5F31509b5Bfc": {
+          //         "0xCA6D29232D1435D8198E3E5302495417dD073d61": {
+          //            "value": 10
+          //         }
+          //      }
+          //   }
+          // }
+          ipldBlockData._allowances = {};
+          ipldBlockData._allowances[owner] = {};
+          ipldBlockData._allowances[owner][spender] = allowance;
+          break;
+        }
+      }
+
+      const blockProgress = event.block;
+      if (blockProgress) {
+        const ipldBlock = await prepareIPLDBlock(blockProgress, contractAddress, ipldBlockData);
+        await indexer.saveIPLDBlock(ipldBlock);
+      }
+    });
+  }
+}
+
+async function prepareIPLDBlock (blockProgress: BlockProgressInterface, contractAddress: string, data: any):Promise<any> {
+  // Encoding the data using dag-json codec.
+  const bytes = encode(data);
+
+  // Calculating sha256 (multi)hash of the encoded data.
+  const hash = await sha256.digest(bytes);
+
+  // Calculating the CID: v1, code: dag-json, hash.
+  const cid = CID.create(1, codecCode, hash);
+
+  return {
+    block: blockProgress,
+    contractAddress,
+    cid: cid.toString(),
+    data: bytes
+  };
+}

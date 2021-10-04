@@ -12,6 +12,7 @@ import { Contract } from './entity/Contract';
 import { Event } from './entity/Event';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
+import { Blocks } from './entity/Blocks';
 
 {{#each queries as | query |}}
 import { {{query.entityName}} } from './entity/{{query.entityName}}';
@@ -78,6 +79,12 @@ export class Database {
   }
 
   {{/each}}
+  async saveIPLDBlock (ipldBlock: DeepPartial<Blocks>): Promise<Blocks> {
+    const repo = this._conn.getRepository(Blocks);
+    const entity = repo.create(ipldBlock);
+    return repo.save(entity);
+  }
+
   async getContract (address: string): Promise<Contract | undefined> {
     const repo = this._conn.getRepository(Contract);
 
