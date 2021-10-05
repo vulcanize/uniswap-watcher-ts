@@ -1,4 +1,4 @@
-className: Blocks
+className: IPLDBlock
 indexOn:
   - columns:
       - block

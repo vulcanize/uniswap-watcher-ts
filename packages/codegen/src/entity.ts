@@ -187,7 +187,7 @@ export class Entity {
     this._addSyncStatusEntity();
     this._addContractEntity();
     this._addBlockProgressEntity();
-    this._addBlocksEntity();
+    this._addIPLDBlockEntity();
 
     const template = Handlebars.compile(this._templateString);
     this._entities.forEach(entityObj => {
@@ -219,8 +219,8 @@ export class Entity {
     this._entities.push(entity);
   }
 
-  _addBlocksEntity (): void {
-    const entity = yaml.load(fs.readFileSync(path.resolve(__dirname, TABLES_DIR, 'Blocks.yaml'), 'utf8'));
+  _addIPLDBlockEntity (): void {
+    const entity = yaml.load(fs.readFileSync(path.resolve(__dirname, TABLES_DIR, 'IPLDBlock.yaml'), 'utf8'));
     this._entities.push(entity);
   }
 }

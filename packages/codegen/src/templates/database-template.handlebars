@@ -12,7 +12,7 @@ import { Contract } from './entity/Contract';
 import { Event } from './entity/Event';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
-import { Blocks } from './entity/Blocks';
+import { IPLDBlock } from './entity/IPLDBlock';
 
 {{#each queries as | query |}}
 import { {{query.entityName}} } from './entity/{{query.entityName}}';
@@ -79,9 +79,24 @@ export class Database {
   }
 
   {{/each}}
-  async saveIPLDBlock (ipldBlock: DeepPartial<Blocks>): Promise<Blocks> {
-    const repo = this._conn.getRepository(Blocks);
-    const entity = repo.create(ipldBlock);
+  async getIPLDBlock (block: BlockProgress, contractAddress: string): Promise<IPLDBlock | undefined> {
+    const repo = this._conn.getRepository(IPLDBlock);
+    return repo.findOne({ block, contractAddress });
+  }
+
+  async saveOrUpdateIPLDBlock (ipldBlock: DeepPartial<IPLDBlock>): Promise<IPLDBlock> {
+    const repo = this._conn.getRepository(IPLDBlock);
+    const oldIPLDBlock = await repo.findOne({ block: ipldBlock.block, contractAddress: ipldBlock.contractAddress });
+
+    let entity: IPLDBlock;
+    if (oldIPLDBlock) {
+      entity = oldIPLDBlock;
+      entity.cid = ipldBlock.cid || '';
+      entity.data = ipldBlock.data || '';
+    } else {
+      entity = repo.create(ipldBlock);
+    }
+
     return repo.save(entity);
   }
 

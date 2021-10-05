@@ -19,6 +19,7 @@ import { Contract } from './entity/Contract';
 import { Event } from './entity/Event';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
+import { IPLDBlock } from './entity/IPLDBlock';
 import artifacts from './artifacts/{{inputFileName}}.json';
 import { handleEvent } from './hooks';
 
@@ -169,8 +170,12 @@ export class Indexer {
   }
 
   {{/each}}
-  async saveIPLDBlock (ipldBlock: any):Promise<void> {
-    await this._db.saveIPLDBlock(ipldBlock);
+  async getIPLDBlock (block: BlockProgress, contractAddress: string): Promise<IPLDBlock | undefined> {
+    return this._db.getIPLDBlock(block, contractAddress);
+  }
+
+  async saveOrUpdateIPLDBlock (ipldBlock: DeepPartial<IPLDBlock>):Promise<void> {
+    await this._db.saveOrUpdateIPLDBlock(ipldBlock);
   }
 
   async triggerIndexingOnEvent (event: Event): Promise<void> {
