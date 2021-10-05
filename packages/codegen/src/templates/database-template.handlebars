@@ -84,20 +84,9 @@ export class Database {
     return repo.findOne({ block, contractAddress });
   }
 
-  async saveOrUpdateIPLDBlock (ipldBlock: DeepPartial<IPLDBlock>): Promise<IPLDBlock> {
+  async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
     const repo = this._conn.getRepository(IPLDBlock);
-    const oldIPLDBlock = await repo.findOne({ block: ipldBlock.block, contractAddress: ipldBlock.contractAddress });
-
-    let entity: IPLDBlock;
-    if (oldIPLDBlock) {
-      entity = oldIPLDBlock;
-      entity.cid = ipldBlock.cid || '';
-      entity.data = ipldBlock.data || '';
-    } else {
-      entity = repo.create(ipldBlock);
-    }
-
-    return repo.save(entity);
+    return repo.save(ipldBlock);
   }
 
   async getContract (address: string): Promise<Contract | undefined> {

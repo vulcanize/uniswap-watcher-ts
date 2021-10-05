@@ -174,8 +174,8 @@ export class Indexer {
     return this._db.getIPLDBlock(block, contractAddress);
   }
 
-  async saveOrUpdateIPLDBlock (ipldBlock: DeepPartial<IPLDBlock>):Promise<void> {
-    await this._db.saveOrUpdateIPLDBlock(ipldBlock);
+  async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock):Promise<IPLDBlock> {
+    return this._db.saveOrUpdateIPLDBlock(ipldBlock);
   }
 
   async triggerIndexingOnEvent (event: Event): Promise<void> {
@@ -228,7 +228,7 @@ export class Indexer {
     return true;
   }
 
-  async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<Event>> {
+  async getEventsByFilter (blockHash: string, contract?: string, name?: string): Promise<Array<Event>> {
     return this._baseIndexer.getEventsByFilter(blockHash, contract, name);
   }
 

@@ -18,7 +18,7 @@ import {
 
 import { Indexer } from './indexer';
 import { Event } from './entity/Event';
-import { blockProcessingCompleteHandler } from './ipld-hook';
+import { handleBlock } from './hooks';
 
 const EVENT = 'event';
 
@@ -79,7 +79,7 @@ export class EventWatcher {
       const { kind } = data;
 
       if (kind === JOB_KIND_INDEX) {
-        await blockProcessingCompleteHandler(this._indexer, data);
+        await handleBlock(this._indexer, data);
       }
     });
   }

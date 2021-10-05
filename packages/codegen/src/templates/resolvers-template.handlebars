@@ -52,8 +52,8 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
       },
 
       {{/each}}
-      events: async (_: any, { blockHash, contractAddress, name }: { blockHash: string, contractAddress: string, name: string }) => {
-        log('events', blockHash, contractAddress, name || '');
+      events: async (_: any, { blockHash, contractAddress, name }: { blockHash: string, contractAddress: string, name?: string }) => {
+        log('events', blockHash, contractAddress, name);
 
         const block = await indexer.getBlockProgress(blockHash);
         if (!block || !block.isComplete) {
