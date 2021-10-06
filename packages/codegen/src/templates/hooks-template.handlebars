@@ -26,9 +26,25 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
     const block = event.block;
     const contractAddress = event.contract;
 
+    const ipldBlockData: any = {};
+
     const oldIpldBlock = await indexer.getIPLDBlock(block, contractAddress);
 
-    const ipldBlockData: any = {};
+    if (!oldIpldBlock) {
+      ipldBlockData.meta = {
+        id: contractAddress,
+        kind: 'diff',
+        parent: {
+          '/': null
+        }
+      };
+
+      ipldBlockData.ethBlock = {
+        cid: await indexer.getBlockCID(block.blockHash),
+        num: block.blockNumber
+      };
+    }
+
     const eventData = indexer.getResultEvent(event);
 
     switch (event.eventName) {
@@ -48,8 +64,8 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
         //      }
         //   }
         // }
-        _.set(ipldBlockData, `_balances[${from}]`, fromBalance);
-        _.set(ipldBlockData, `_balances[${to}]`, toBalance);
+        _.set(ipldBlockData, `state._balances[${from}]`, fromBalance);
+        _.set(ipldBlockData, `state._balances[${to}]`, toBalance);
 
         break;
       }
@@ -67,7 +83,7 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
         //      }
         //   }
         // }
-        _.set(ipldBlockData, `_allowances[${owner}][${spender}]`, allowance);
+        _.set(ipldBlockData, `state._allowances[${owner}][${spender}]`, allowance);
 
         break;
       }

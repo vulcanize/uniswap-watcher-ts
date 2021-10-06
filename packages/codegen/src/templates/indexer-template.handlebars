@@ -178,6 +178,24 @@ export class Indexer {
     return this._db.saveOrUpdateIPLDBlock(ipldBlock);
   }
 
+  async getBlockCID (blockHash: string): Promise<string> {
+    assert(blockHash);
+
+    const {
+      allEthHeaderCids: {
+        nodes: [
+          {
+            cid
+          }
+        ]
+      }
+    } = await this._postgraphileClient.getBlockWithTransactions({ blockHash });
+
+    assert(cid);
+
+    return cid;
+  }
+
   async triggerIndexingOnEvent (event: Event): Promise<void> {
     const resultEvent = this.getResultEvent(event);
 
