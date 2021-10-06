@@ -106,9 +106,14 @@ export const main = async (): Promise<any> => {
     gqlSubscriptionEndpoint
   });
 
+  const postgraphileClient = new EthClient({
+    gqlEndpoint: gqlPostgraphileEndpoint,
+    cache
+  });
+
   const erc20Client = new ERC20Client(tokenWatcher);
 
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, mode);
+  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, mode);
 
   assert(jobQueueConfig, 'Missing job queue config');
 

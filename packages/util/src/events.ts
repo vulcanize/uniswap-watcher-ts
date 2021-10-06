@@ -37,13 +37,13 @@ export class EventWatcher {
   }
 
   async blocksHandler (value: any): Promise<void> {
-    const { blockHash, blockNumber, parentHash, timestamp } = _.get(value, 'data.listen.relatedNode');
+    const { cid, blockHash, blockNumber, parentHash, timestamp } = _.get(value, 'data.listen.relatedNode');
 
     await this._indexer.updateSyncStatusChainHead(blockHash, blockNumber);
 
     log('watchBlock', blockHash, blockNumber);
 
-    await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { kind: JOB_KIND_INDEX, blockHash, blockNumber, parentHash, timestamp });
+    await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { kind: JOB_KIND_INDEX, cid, blockHash, blockNumber, parentHash, timestamp });
   }
 
   async blockProcessingCompleteHandler (job: any): Promise<void> {
@@ -80,11 +80,12 @@ export class EventWatcher {
   }
 
   async publishBlockProgressToSubscribers (blockProgress: BlockProgressInterface): Promise<void> {
-    const { blockHash, blockNumber, numEvents, numProcessedEvents, isComplete } = blockProgress;
+    const { cid, blockHash, blockNumber, numEvents, numProcessedEvents, isComplete } = blockProgress;
 
     // Publishing the event here will result in pushing the payload to GQL subscribers for `onAddressEvent(address)`.
     await this._pubsub.publish(BlockProgressEvent, {
       onBlockProgressEvent: {
+        cid,
         blockHash,
         blockNumber,
         numEvents,

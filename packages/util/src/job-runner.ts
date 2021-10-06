@@ -121,7 +121,7 @@ export class JobRunner {
   }
 
   async _indexBlock (job: any, syncStatus: SyncStatusInterface): Promise<void> {
-    const { data: { blockHash, blockNumber, parentHash, priority, timestamp } } = job;
+    const { data: { cid, blockHash, blockNumber, parentHash, priority, timestamp } } = job;
     log(`Processing block number ${blockNumber} hash ${blockHash} `);
 
     // Check if chain pruning is caught up.
@@ -139,13 +139,14 @@ export class JobRunner {
       const parent = await this._indexer.getBlockProgress(parentHash);
 
       if (!parent) {
-        const { number: parentBlockNumber, parent: grandparent, timestamp: parentTimestamp } = await this._indexer.getBlock(parentHash);
+        const { cid: parentCid, number: parentBlockNumber, parent: grandparent, timestamp: parentTimestamp } = await this._indexer.getBlock(parentHash);
 
         // Create a higher priority job to index parent block and then abort.
         // We don't have to worry about aborting as this job will get retried later.
         const newPriority = (priority || 0) + 1;
         await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, {
           kind: JOB_KIND_INDEX,
+          cid: parentCid,
           blockHash: parentHash,
           blockNumber: parentBlockNumber,
           parentHash: grandparent?.hash,
@@ -176,7 +177,7 @@ export class JobRunner {
 
       // Delay required to process block.
       await wait(jobDelayInMilliSecs);
-      const events = await this._indexer.getOrFetchBlockEvents({ blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
+      const events = await this._indexer.getOrFetchBlockEvents({ cid, blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
 
       for (let ei = 0; ei < events.length; ei++) {
         await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { id: events[ei].id, publish: true });

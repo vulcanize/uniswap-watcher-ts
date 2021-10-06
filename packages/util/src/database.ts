@@ -196,6 +196,7 @@ export class Database {
 
   async saveEvents (blockRepo: Repository<BlockProgressInterface>, eventRepo: Repository<EventInterface>, block: DeepPartial<BlockProgressInterface>, events: DeepPartial<EventInterface>[]): Promise<void> {
     const {
+      cid,
       blockHash,
       blockNumber,
       blockTimestamp,
@@ -216,6 +217,7 @@ export class Database {
 
     if (!blockProgress) {
       const entity = blockRepo.create({
+        cid,
         blockHash,
         parentHash,
         blockNumber,

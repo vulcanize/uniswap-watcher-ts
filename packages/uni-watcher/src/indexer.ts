@@ -49,7 +49,7 @@ export class Indexer implements IndexerInterface {
     this._db = db;
     this._ethClient = ethClient;
     this._postgraphileClient = postgraphileClient;
-    this._baseIndexer = new BaseIndexer(this._db, this._ethClient);
+    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient);
 
     this._factoryContract = new ethers.utils.Interface(factoryABI);
     this._poolContract = new ethers.utils.Interface(poolABI);
@@ -295,7 +295,7 @@ export class Indexer implements IndexerInterface {
     return contract;
   }
 
-  async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<Event>> {
+  async getEventsByFilter (blockHash: string, contract: string, name?: string): Promise<Array<Event>> {
     return this._baseIndexer.getEventsByFilter(blockHash, contract, name);
   }
 

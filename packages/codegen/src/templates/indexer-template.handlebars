@@ -31,6 +31,7 @@ const {{capitalize event.name}}_EVENT = '{{event.name}}';
 
 export type ResultEvent = {
   block: {
+    cid: string;
     hash: string;
     number: number;
     timestamp: number;
@@ -70,7 +71,7 @@ export class Indexer {
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
     this._postgraphileClient = postgraphileClient;
-    this._baseIndexer = new BaseIndexer(this._db, this._ethClient);
+    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient);
 
     const { abi, storageLayout } = artifacts;
 
@@ -90,6 +91,7 @@ export class Indexer {
 
     return {
       block: {
+        cid: string;
         hash: block.blockHash,
         number: block.blockNumber,
         timestamp: block.blockTimestamp,
@@ -314,7 +316,7 @@ export class Indexer {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
-  async _fetchAndSaveEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<void> {
+  async _fetchAndSaveEvents ({ cid: blockCid, blockHash }: DeepPartial<BlockProgress>): Promise<void> {
     assert(blockHash);
     let { block, logs } = await this._ethClient.getLogs({ blockHash });
 
@@ -397,6 +399,7 @@ export class Indexer {
 
     try {
       block = {
+        cid: blockCid,
         blockHash,
         blockNumber: block.number,
         blockTimestamp: block.timestamp,

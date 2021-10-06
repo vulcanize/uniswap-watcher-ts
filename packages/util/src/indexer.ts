@@ -27,11 +27,13 @@ export interface ValueResult {
 export class Indexer {
   _db: DatabaseInterface;
   _ethClient: EthClient;
+  _postgraphileClient: EthClient;
   _getStorageAt: GetStorageAt
 
-  constructor (db: DatabaseInterface, ethClient: EthClient) {
+  constructor (db: DatabaseInterface, ethClient: EthClient, postgraphileClient: EthClient) {
     this._db = db;
     this._ethClient = ethClient;
+    this._postgraphileClient = postgraphileClient;
     this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
   }
 
@@ -104,8 +106,27 @@ export class Indexer {
   }
 
   async getBlock (blockHash: string): Promise<any> {
-    const { block } = await this._ethClient.getLogs({ blockHash });
-    return block;
+    const {
+      allEthHeaderCids: {
+        nodes: [
+          {
+            cid,
+            blockNumber,
+            timestamp,
+            parentHash
+          }
+        ]
+      }
+    } = await this._postgraphileClient.getBlockWithTransactions({ blockHash });
+
+    return {
+      cid,
+      number: blockNumber,
+      parent: {
+        hash: parentHash
+      },
+      timestamp
+    };
   }
 
   async getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined> {

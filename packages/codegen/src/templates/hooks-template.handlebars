@@ -40,7 +40,7 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
       };
 
       ipldBlockData.ethBlock = {
-        cid: await indexer.getBlockCID(block.blockHash),
+        cid: block.cid,
         num: block.blockNumber
       };
     }
@@ -98,7 +98,7 @@ async function prepareIPLDBlock (block: BlockProgressInterface, contractAddress:
   // If an IPLDBlock for { block, contractAddress } already exists, update the data field.
   if (oldIpldBlock) {
     const oldData = codec.decode(Buffer.from(oldIpldBlock.data));
-    data = Object.assign(oldData, data);
+    data = _.merge(oldData, data);
   }
 
   // Encoding the data using dag-json codec.

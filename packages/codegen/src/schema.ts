@@ -173,6 +173,7 @@ export class Schema {
     this._composer.createObjectTC({
       name: blockName,
       fields: {
+        cid: 'String!',
         hash: 'String!',
         number: 'Int!',
         timestamp: 'Int!',
