@@ -53,8 +53,8 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
       case 'Transfer': {
         const { from, to } = eventData.event;
 
-        const fromBalance = await indexer.balanceOf(blockHash, contractAddress, from);
-        const toBalance = await indexer.balanceOf(blockHash, contractAddress, to);
+        const fromBalance = await indexer._balances(blockHash, contractAddress, from);
+        const toBalance = await indexer._balances(blockHash, contractAddress, to);
 
         // {
         //   "_balances": {
@@ -74,7 +74,7 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
 
       case 'Approval': {
         const { owner, spender } = eventData.event;
-        const allowance = await indexer.allowance(blockHash, contractAddress, owner, spender);
+        const allowance = await indexer._allowances(blockHash, contractAddress, owner, spender);
 
         // {
         //   "_allowances": {
