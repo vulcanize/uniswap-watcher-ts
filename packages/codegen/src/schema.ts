@@ -98,7 +98,7 @@ export class Schema {
     this._addWatchContractMutation();
 
     this._addIPLDType();
-    this._addIPLDBlockQuery();
+    this._addIPLDQuery();
 
     return this._composer.buildSchema();
   }
@@ -250,12 +250,22 @@ export class Schema {
     });
   }
 
-  _addIPLDBlockQuery (): void {
+  _addIPLDQuery (): void {
     this._composer.Query.addFields({
-      ipldBlock: {
+      getStateByCID: {
         type: this._composer.getOTC('ResultIPLDBlock'),
         args: {
           cid: 'String!'
+        }
+      }
+    });
+
+    this._composer.Query.addFields({
+      getState: {
+        type: this._composer.getOTC('ResultIPLDBlock'),
+        args: {
+          blockHash: 'String!',
+          contractAddress: 'String!'
         }
       }
     });

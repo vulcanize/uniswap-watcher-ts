@@ -66,8 +66,8 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
         //      }
         //   }
         // }
-        _.set(ipldBlockData, `state._balances[${from}]`, fromBalance.value);
-        _.set(ipldBlockData, `state._balances[${to}]`, toBalance.value);
+        _.set(ipldBlockData, `state._balances[${from}]`, fromBalance.value.toString());
+        _.set(ipldBlockData, `state._balances[${to}]`, toBalance.value.toString());
 
         break;
       }
@@ -85,7 +85,7 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
         //      }
         //   }
         // }
-        _.set(ipldBlockData, `state._allowances[${owner}][${spender}]`, allowance.value);
+        _.set(ipldBlockData, `state._allowances[${owner}][${spender}]`, allowance.value.toString());
 
         break;
       }

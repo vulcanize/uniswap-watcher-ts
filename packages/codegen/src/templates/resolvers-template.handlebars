@@ -76,12 +76,20 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return events.map(event => indexer.getResultEvent(event));
       },
 
-      ipldBlock: async (_: any, { cid }: { cid: string }) => {
-        log('ipldBlock', cid);
+      getStateByCID: async (_: any, { cid }: { cid: string }) => {
+        log('getStateByCID', cid);
 
         const ipldBlock = await indexer.getIPLDBlockByCid(cid);
 
-        return ipldBlock ? indexer.getResultIPLDBlock(ipldBlock) : undefined;
+        return ipldBlock && ipldBlock.block.isComplete ? indexer.getResultIPLDBlock(ipldBlock) : undefined;
+      },
+
+      getState: async (_: any, { blockHash, contractAddress }: { blockHash: string, contractAddress: string }) => {
+        log('getState', blockHash, contractAddress);
+
+        const ipldBlock = await indexer.getPrevIPLDBlock(blockHash, contractAddress);
+
+        return ipldBlock && ipldBlock.block.isComplete ? indexer.getResultIPLDBlock(ipldBlock) : undefined;
       }
     }
   };

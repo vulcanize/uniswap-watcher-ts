@@ -138,14 +138,14 @@ export class Database {
 
     let result: IPLDBlock | undefined;
     if (id) {
-      result = await repo.findOne({ id });
+      result = await repo.findOne({ id }, { relations: ['block'] });
     } else {
       // If IPLDBlock not found in frothy region get latest IPLDBlock in the pruned region.
       // Filter out IPLDBlocks from pruned blocks.
       const canonicalBlockNumber = blockNumber + 1;
 
       result = await repo.createQueryBuilder('ipld_block')
-        .innerJoinAndSelect('block_progress', 'block', 'block.id = ipld_block.block_id')
+        .leftJoinAndSelect('ipld_block.block', 'block')
         .where('block.is_pruned = false')
         .andWhere('ipld_block.contract_address = :contractAddress', { contractAddress })
         .andWhere('block.block_number <= :canonicalBlockNumber', { canonicalBlockNumber })
