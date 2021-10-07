@@ -9,6 +9,10 @@ import { DeepPartial } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
 import { BaseProvider } from '@ethersproject/providers';
+import * as codec from '@ipld/dag-json';
+import { sha256 } from 'multiformats/hashes/sha2';
+import { CID } from 'multiformats/cid';
+import _ from 'lodash';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { StorageLayout } from '@vulcanize/solidity-mapper';
@@ -202,6 +206,33 @@ export class Indexer {
   }
 
   {{/each}}
+  async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any, currentIPLDBlock?: IPLDBlock):Promise<any> {
+    // If an IPLDBlock for { block, contractAddress } already exists, update the data field.
+    if (currentIPLDBlock) {
+      const oldData = codec.decode(Buffer.from(currentIPLDBlock.data));
+      data = _.merge(oldData, data);
+    }
+
+    // Encoding the data using dag-json codec.
+    const bytes = codec.encode(data);
+
+    // Calculating sha256 (multi)hash of the encoded data.
+    const hash = await sha256.digest(bytes);
+
+    // Calculating the CID: v1, code: dag-json, hash.
+    const cid = CID.create(1, codec.code, hash);
+
+    let ipldBlock = currentIPLDBlock || new IPLDBlock();
+    ipldBlock = Object.assign(ipldBlock, {
+      block,
+      contractAddress,
+      cid: cid.toString(),
+      data: bytes
+    });
+
+    return ipldBlock;
+  }
+
   async getIPLDBlock (block: BlockProgress, contractAddress: string): Promise<IPLDBlock | undefined> {
     const ipldBlocks = await this._db.getIPLDBlocks({ block, contractAddress });
 
