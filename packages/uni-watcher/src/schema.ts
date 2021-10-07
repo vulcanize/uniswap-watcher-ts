@@ -158,6 +158,7 @@ union Event = TransferEvent | PoolCreatedEvent | IncreaseLiquidityEvent | Decrea
 # Ethereum types
 
 type Block {
+  cid: String!
   hash: String!
   number: Int!
   timestamp: Int!

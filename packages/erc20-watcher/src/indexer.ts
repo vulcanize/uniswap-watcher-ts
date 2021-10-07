@@ -369,7 +369,7 @@ export class Indexer {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
-  async _fetchAndSaveEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<void> {
+  async _fetchAndSaveEvents ({ cid: blockCid, blockHash }: DeepPartial<BlockProgress>): Promise<void> {
     assert(blockHash);
     let { block, logs } = await this._ethClient.getLogs({ blockHash });
 
@@ -434,6 +434,7 @@ export class Indexer {
 
     try {
       block = {
+        cid: blockCid,
         blockHash,
         blockNumber: block.number,
         blockTimestamp: block.timestamp,
