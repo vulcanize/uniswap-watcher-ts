@@ -39,7 +39,9 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
           '/': (await indexer.getPrevIPLDBlock(blockHash, contractAddress))?.cid || null
         },
         ethBlock: {
-          cid: block.cid,
+          cid: {
+            '/': block.cid
+          },
           num: block.blockNumber
         }
       };
