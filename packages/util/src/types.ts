@@ -6,7 +6,7 @@ import { DeepPartial, FindConditions, QueryRunner } from 'typeorm';
 
 export interface BlockProgressInterface {
   id: number;
-  cid?: string;
+  cid: string;
   blockHash: string;
   parentHash: string;
   blockNumber: number;

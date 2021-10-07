@@ -28,6 +28,7 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
 
     const ipldBlockData: any = {};
 
+    // Get an existing IPLDBlock for current block and contractAddress.
     const oldIpldBlock = await indexer.getIPLDBlock(block, contractAddress);
 
     if (!oldIpldBlock) {
@@ -35,13 +36,12 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
         id: contractAddress,
         kind: 'diff',
         parent: {
-          '/': null
+          '/': (await indexer.getPrevIPLDBlock(blockHash, contractAddress))?.cid || null
+        },
+        ethBlock: {
+          cid: block.cid,
+          num: block.blockNumber
         }
-      };
-
-      ipldBlockData.ethBlock = {
-        cid: block.cid,
-        num: block.blockNumber
       };
     }
 
@@ -64,8 +64,8 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
         //      }
         //   }
         // }
-        _.set(ipldBlockData, `state._balances[${from}]`, fromBalance);
-        _.set(ipldBlockData, `state._balances[${to}]`, toBalance);
+        _.set(ipldBlockData, `state._balances[${from}]`, fromBalance.value);
+        _.set(ipldBlockData, `state._balances[${to}]`, toBalance.value);
 
         break;
       }
@@ -83,7 +83,7 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
         //      }
         //   }
         // }
-        _.set(ipldBlockData, `state._allowances[${owner}][${spender}]`, allowance);
+        _.set(ipldBlockData, `state._allowances[${owner}][${spender}]`, allowance.value);
 
         break;
       }

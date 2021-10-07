@@ -91,7 +91,7 @@ export class Indexer {
 
     return {
       block: {
-        cid: string;
+        cid: block.cid,
         hash: block.blockHash,
         number: block.blockNumber,
         timestamp: block.blockTimestamp,
@@ -176,26 +176,24 @@ export class Indexer {
     return this._db.getIPLDBlock(block, contractAddress);
   }
 
-  async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock):Promise<IPLDBlock> {
+  async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
     return this._db.saveOrUpdateIPLDBlock(ipldBlock);
   }
 
-  async getBlockCID (blockHash: string): Promise<string> {
-    assert(blockHash);
+  async getPrevIPLDBlock (blockHash: string, contractAddress: string): Promise<IPLDBlock | undefined> {
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
 
-    const {
-      allEthHeaderCids: {
-        nodes: [
-          {
-            cid
-          }
-        ]
-      }
-    } = await this._postgraphileClient.getBlockWithTransactions({ blockHash });
-
-    assert(cid);
-
-    return cid;
+    try {
+      res = await this._db.getPrevIPLDBlock(dbTx, blockHash, contractAddress);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+    return res;
   }
 
   async triggerIndexingOnEvent (event: Event): Promise<void> {

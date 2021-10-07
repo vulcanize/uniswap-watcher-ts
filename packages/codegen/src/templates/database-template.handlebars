@@ -6,7 +6,7 @@ import assert from 'assert';
 import { Connection, ConnectionOptions, DeepPartial, FindConditions, QueryRunner } from 'typeorm';
 import path from 'path';
 
-import { Database as BaseDatabase } from '@vulcanize/util';
+import { Database as BaseDatabase, MAX_REORG_DEPTH } from '@vulcanize/util';
 
 import { Contract } from './entity/Contract';
 import { Event } from './entity/Event';
@@ -87,6 +87,74 @@ export class Database {
   async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
     const repo = this._conn.getRepository(IPLDBlock);
     return repo.save(ipldBlock);
+  }
+
+  async getPrevIPLDBlock (queryRunner: QueryRunner, blockHash: string, contractAddress: string): Promise<IPLDBlock | undefined> {
+    const repo = this._conn.getRepository(IPLDBlock);
+    const heirerchicalQuery = `
+    WITH RECURSIVE cte_query AS
+    (
+      SELECT
+        b.block_hash,
+        b.block_number,
+        b.parent_hash,
+        1 as depth,
+        i.id
+      FROM
+        block_progress b
+        LEFT JOIN
+          ipld_block i ON i.block_id = b.id
+      WHERE
+        b.block_hash = $1
+      UNION ALL
+        SELECT
+          b.block_hash,
+          b.block_number,
+          b.parent_hash,
+          c.depth + 1,
+          i.id
+        FROM
+          block_progress b
+          LEFT JOIN
+            ipld_block i
+            ON i.block_id = b.id
+            AND i.contract_address = $2
+          INNER JOIN
+            cte_query c ON c.parent_hash = b.block_hash
+          WHERE
+            c.id IS NULL AND c.depth < $3
+    )
+    SELECT
+      block_number, id
+    FROM
+      cte_query
+    ORDER BY block_number ASC
+    LIMIT 1;
+  `;
+
+    // Fetching block and id for previous IPLDBlock in frothy region.
+    const [{ block_number: blockNumber, id }] = await queryRunner.query(heirerchicalQuery, [blockHash, contractAddress, MAX_REORG_DEPTH]);
+
+    let result: IPLDBlock | undefined;
+    if (id) {
+      result = await repo.findOne({ id });
+    } else {
+      // If IPLDBlock not found in frothy region get latest IPLDBlock in the pruned region.
+      // Filter out IPLDBlocks from pruned blocks.
+      const canonicalBlockNumber = blockNumber + 1;
+      const ipldBlockInPrunedRegion:any = await repo.createQueryBuilder('ipld_block')
+        .innerJoinAndSelect('block_progress', 'block', 'block.id = ipld_block.block_id')
+        .where('block.is_pruned = false')
+        .andWhere('ipld_block.contract_address = :contractAddress', { contractAddress })
+        .andWhere('block.block_number <= :canonicalBlockNumber', { canonicalBlockNumber })
+        .orderBy('block.block_number', 'DESC')
+        .limit(1)
+        .getOne();
+
+      result = ipldBlockInPrunedRegion;
+    }
+
+    return result;
   }
 
   async getContract (address: string): Promise<Contract | undefined> {
