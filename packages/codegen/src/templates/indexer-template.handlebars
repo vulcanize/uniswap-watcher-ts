@@ -206,11 +206,70 @@ export class Indexer {
   }
 
   {{/each}}
-  async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any, currentIPLDBlock?: IPLDBlock):Promise<any> {
+  async getIPLDBlock (block: BlockProgress, contractAddress: string): Promise<IPLDBlock | undefined> {
+    const ipldBlocks = await this._db.getIPLDBlocks({ block, contractAddress });
+
+    // There can be only one IPLDBlock for a { block, contractAddress } combination.
+    assert(ipldBlocks.length <= 1);
+
+    return ipldBlocks[0];
+  }
+
+  async getIPLDBlockByCid (cid: string): Promise<IPLDBlock | undefined> {
+    const ipldBlocks = await this._db.getIPLDBlocks({ cid });
+
+    // There can be only one IPLDBlock with a particular cid.
+    assert(ipldBlocks.length <= 1);
+
+    return ipldBlocks[0];
+  }
+
+  async getPrevIPLDBlock (blockHash: string, contractAddress: string): Promise<IPLDBlock | undefined> {
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
+
+    try {
+      res = await this._db.getPrevIPLDBlock(dbTx, blockHash, contractAddress);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+    return res;
+  }
+
+  async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
+    return this._db.saveOrUpdateIPLDBlock(ipldBlock);
+  }
+
+  async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any):Promise<any> {
+    // Get an existing IPLDBlock for current block and contractAddress.
+    const currentIPLDBlock = await this.getIPLDBlock(block, contractAddress);
+
     // If an IPLDBlock for { block, contractAddress } already exists, update the data field.
     if (currentIPLDBlock) {
       const oldData = codec.decode(Buffer.from(currentIPLDBlock.data));
       data = _.merge(oldData, data);
+    } else {
+      // Fetch the parent IPLDBlock.
+      const parentIPLDBlock = await this.getPrevIPLDBlock(block.blockHash, contractAddress);
+
+      // Setting the meta-data for an IPLDBlock (done only once per block).
+      data.meta = {
+        id: contractAddress,
+        kind: 'diff',
+        parent: {
+          '/': parentIPLDBlock ? parentIPLDBlock.cid : null
+        },
+        ethBlock: {
+          cid: {
+            '/': block.cid
+          },
+          num: block.blockNumber
+        }
+      };
     }
 
     // Encoding the data using dag-json codec.
@@ -231,44 +290,6 @@ export class Indexer {
     });
 
     return ipldBlock;
-  }
-
-  async getIPLDBlock (block: BlockProgress, contractAddress: string): Promise<IPLDBlock | undefined> {
-    const ipldBlocks = await this._db.getIPLDBlocks({ block, contractAddress });
-
-    // There can be only one IPLDBlock for a { block, contractAddress } combination.
-    assert(ipldBlocks.length <= 1);
-
-    return ipldBlocks[0];
-  }
-
-  async getIPLDBlockByCid (cid: string): Promise<IPLDBlock | undefined> {
-    const ipldBlocks = await this._db.getIPLDBlocks({ cid });
-
-    // There can be only one IPLDBlock with a particular cid.
-    assert(ipldBlocks.length <= 1);
-
-    return ipldBlocks[0];
-  }
-
-  async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
-    return this._db.saveOrUpdateIPLDBlock(ipldBlock);
-  }
-
-  async getPrevIPLDBlock (blockHash: string, contractAddress: string): Promise<IPLDBlock | undefined> {
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      res = await this._db.getPrevIPLDBlock(dbTx, blockHash, contractAddress);
-      await dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-    return res;
   }
 
   async triggerIndexingOnEvent (event: Event): Promise<void> {

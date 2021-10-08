@@ -74,12 +74,13 @@ export class EventWatcher {
     this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
       await this._baseEventWatcher.blockProcessingCompleteHandler(job);
 
+      // TODO Call post-block hook here.
+
       // Call custom hook function to update Blocks table.
-      const { data: { request: { data } } } = job;
-      const { kind } = data;
+      const { data: { request: { data: { kind, blockHash } } } } = job;
 
       if (kind === JOB_KIND_INDEX) {
-        await handleBlock(this._indexer, data);
+        await handleBlock(this._indexer, blockHash);
       }
     });
   }
@@ -87,6 +88,8 @@ export class EventWatcher {
   async initEventProcessingOnCompleteHandler (): Promise<void> {
     await this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
       const dbEvent = await this._baseEventWatcher.eventProcessingCompleteHandler(job);
+
+      // TODO Can call IPLDBlock hook here if blockProgress.isComplete() is true (get blockProgress from eventProcessingCompleteHandler).
 
       const { data: { request, failed, state, createdOn } } = job;
 

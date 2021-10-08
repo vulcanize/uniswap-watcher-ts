@@ -7,10 +7,13 @@ import _ from 'lodash';
 
 import { Indexer, ResultEvent } from './indexer';
 
-export async function handleBlock (indexer: Indexer, jobData: any): Promise<void> {
+/**
+ * IPLDBlock hook function.
+ * @param indexer Indexer instance that contains methods to fetch the contract varaiable values.
+ * @param blockHash Block hash of the concerned block.
+ */
+export async function handleBlock (indexer: Indexer, blockHash: string): Promise<void> {
   // Get events for current block and make an entry of updated values in IPLDBlock.
-
-  const { blockHash } = jobData;
   const events = await indexer.getEventsByFilter(blockHash);
 
   // No IPLDBlock entry if there are no events.
@@ -20,32 +23,9 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
     const block = event.block;
     const contractAddress = event.contract;
 
-    const ipldBlockData: any = {};
-
-    // Get an existing IPLDBlock for current block and contractAddress.
-    const currentIPLDBlock = await indexer.getIPLDBlock(block, contractAddress);
-
-    if (!currentIPLDBlock) {
-      // Fetch the parent IPLDBlock.
-      const parentIPLDBlock = await indexer.getPrevIPLDBlock(blockHash, contractAddress);
-
-      // Setting the meta-data for an IPLDBlock (done only once per block).
-      ipldBlockData.meta = {
-        id: contractAddress,
-        kind: 'diff',
-        parent: {
-          '/': parentIPLDBlock ? parentIPLDBlock.cid : null
-        },
-        ethBlock: {
-          cid: {
-            '/': block.cid
-          },
-          num: block.blockNumber
-        }
-      };
-    }
-
     const eventData = indexer.getResultEvent(event);
+
+    const ipldBlockData: any = {};
 
     switch (event.eventName) {
       case 'Transfer': {
@@ -83,7 +63,7 @@ export async function handleBlock (indexer: Indexer, jobData: any): Promise<void
       }
     }
 
-    const ipldBlock = await indexer.prepareIPLDBlock(block, contractAddress, ipldBlockData, currentIPLDBlock);
+    const ipldBlock = await indexer.prepareIPLDBlock(block, contractAddress, ipldBlockData);
     await indexer.saveOrUpdateIPLDBlock(ipldBlock);
   }
 }
