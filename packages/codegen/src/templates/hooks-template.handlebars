@@ -6,13 +6,30 @@ import assert from 'assert';
 import _ from 'lodash';
 
 import { Indexer, ResultEvent } from './indexer';
+import { BlockProgress } from './entity/BlockProgress';
 
 /**
- * IPLDBlock hook function.
+ * Genesis hook function.
+ * @param indexer Indexer instance.
+ * @param block Concerned block.
+ * @param contractAddress Address of the concerned contract.
+ */
+export async function genesisHook (indexer: Indexer, block: BlockProgress, contractAddress: string): Promise<void> {
+  // Store the genesis state values in an IPLDBlock.
+  const ipldBlockData: any = {};
+  _.set(ipldBlockData, 'state._balances[0xDC7d7A8920C8Eecc098da5B7522a5F31509b5Bfc]', BigInt(1000000000000000000000).toString());
+  _.set(ipldBlockData, 'meta.kind', 'checkpoint');
+
+  const ipldBlock = await indexer.prepareIPLDBlock(block, contractAddress, ipldBlockData);
+  await indexer.saveOrUpdateIPLDBlock(ipldBlock);
+}
+
+/**
+ * Post-block hook function.
  * @param indexer Indexer instance that contains methods to fetch the contract varaiable values.
  * @param blockHash Block hash of the concerned block.
  */
-export async function handleBlock (indexer: Indexer, blockHash: string): Promise<void> {
+export async function postBlockHook (indexer: Indexer, blockHash: string): Promise<void> {
   // Get events for current block and make an entry of updated values in IPLDBlock.
   const events = await indexer.getEventsByFilter(blockHash);
 

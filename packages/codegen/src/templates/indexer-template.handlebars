@@ -25,7 +25,7 @@ import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { IPLDBlock } from './entity/IPLDBlock';
 import artifacts from './artifacts/{{inputFileName}}.json';
-import { handleEvent } from './hooks';
+import { genesisHook, handleEvent, postBlockHook } from './hooks';
 
 const log = debug('vulcanize:indexer');
 
@@ -206,6 +206,11 @@ export class Indexer {
   }
 
   {{/each}}
+  async processBlock (blockHash: string): Promise<void> {
+    // Call custom post-block hook.
+    await postBlockHook(this, blockHash);
+  }
+
   async getIPLDBlock (block: BlockProgress, contractAddress: string): Promise<IPLDBlock | undefined> {
     const ipldBlocks = await this._db.getIPLDBlocks({ block, contractAddress });
 
@@ -257,7 +262,7 @@ export class Indexer {
       const parentIPLDBlock = await this.getPrevIPLDBlock(block.blockHash, contractAddress);
 
       // Setting the meta-data for an IPLDBlock (done only once per block).
-      data.meta = {
+      const metaData = {
         id: contractAddress,
         kind: 'diff',
         parent: {
@@ -270,6 +275,8 @@ export class Indexer {
           num: block.blockNumber
         }
       };
+
+      data.meta = _.merge(metaData, data.meta);
     }
 
     // Encoding the data using dag-json codec.
@@ -335,9 +342,18 @@ export class Indexer {
     return { eventName, eventInfo };
   }
 
-  async watchContract (address: string, startingBlock: number): Promise<boolean> {
+  async watchContract (address: string, startingBlock: number, kind?: string): Promise<boolean> {
+    kind = kind || 'ERC20';
+
     // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
-    await this._db.saveContract(ethers.utils.getAddress(address), '{{contractName}}', startingBlock);
+    await this._db.saveContract(ethers.utils.getAddress(address), startingBlock, kind);
+
+    // Getting the current block.
+    const currentBlock = await this._db.getLatestBlockProgress();
+    assert(currentBlock);
+
+    // Call genesis hook here.
+    await genesisHook(this, currentBlock, address);
 
     return true;
   }

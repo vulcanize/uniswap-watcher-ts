@@ -197,7 +197,7 @@ export class Database {
     return this._baseDatabase.saveEvents(blockRepo, eventRepo, block, events);
   }
 
-  async saveContract (address: string, kind: string, startingBlock: number): Promise<void> {
+  async saveContract (address: string, startingBlock: number, kind: string): Promise<void> {
     await this._conn.transaction(async (tx) => {
       const repo = tx.getRepository(Contract);
 
@@ -250,6 +250,11 @@ export class Database {
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
     const repo = this._conn.getRepository(BlockProgress);
     return this._baseDatabase.getBlockProgress(repo, blockHash);
+  }
+
+  async getLatestBlockProgress (): Promise<BlockProgress | undefined> {
+    const repo = this._conn.getRepository(BlockProgress);
+    return repo.findOne({ order: { blockNumber: 'DESC' } });
   }
 
   async updateBlockProgress (queryRunner: QueryRunner, blockHash: string, lastProcessedEventIndex: number): Promise<void> {
