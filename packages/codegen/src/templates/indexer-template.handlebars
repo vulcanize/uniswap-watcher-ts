@@ -352,7 +352,7 @@ export class Indexer {
     const currentBlock = await this._db.getLatestBlockProgress();
     assert(currentBlock);
 
-    // Call genesis hook here.
+    // Call custom genesis hook.
     await genesisHook(this, currentBlock, address);
 
     return true;

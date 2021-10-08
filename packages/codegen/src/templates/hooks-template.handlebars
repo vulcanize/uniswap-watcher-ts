@@ -17,7 +17,18 @@ import { BlockProgress } from './entity/BlockProgress';
 export async function genesisHook (indexer: Indexer, block: BlockProgress, contractAddress: string): Promise<void> {
   // Store the genesis state values in an IPLDBlock.
   const ipldBlockData: any = {};
-  _.set(ipldBlockData, 'state._balances[0xDC7d7A8920C8Eecc098da5B7522a5F31509b5Bfc]', BigInt(1000000000000000000000).toString());
+
+  const accounts = [
+    '0xDC7d7A8920C8Eecc098da5B7522a5F31509b5Bfc'
+  ];
+
+  // Setting the initial balances of accounts.
+  for (const account of accounts) {
+    const balance = await indexer._balances(block.blockHash, contractAddress, account);
+    _.set(ipldBlockData, `state._balances[${account}]`, balance.value.toString());
+  }
+
+  // Setting the IPLDBlock kind as checkpoint.
   _.set(ipldBlockData, 'meta.kind', 'checkpoint');
 
   const ipldBlock = await indexer.prepareIPLDBlock(block, contractAddress, ipldBlockData);

@@ -74,6 +74,7 @@ export class EventWatcher {
     const blockProgress = await this._indexer.getBlockProgress(dbEvent.block.blockHash);
     if (blockProgress) {
       await this.publishBlockProgressToSubscribers(blockProgress);
+      dbEvent.block = blockProgress;
     }
 
     return dbEvent;
