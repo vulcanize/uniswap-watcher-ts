@@ -3,7 +3,7 @@
 //
 
 import assert from 'assert';
-import { Connection, ConnectionOptions, DeepPartial, FindConditions, QueryRunner } from 'typeorm';
+import { Connection, ConnectionOptions, DeepPartial, FindConditions, QueryRunner, In, Between } from 'typeorm';
 import path from 'path';
 
 import { Database as BaseDatabase, MAX_REORG_DEPTH } from '@vulcanize/util';
@@ -84,11 +84,6 @@ export class Database {
     return repo.find({ where, relations: ['block'] });
   }
 
-  async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
-    const repo = this._conn.getRepository(IPLDBlock);
-    return repo.save(ipldBlock);
-  }
-
   async getPrevIPLDBlock (queryRunner: QueryRunner, blockHash: string, contractAddress: string): Promise<IPLDBlock | undefined> {
     const repo = this._conn.getRepository(IPLDBlock);
 
@@ -155,6 +150,69 @@ export class Database {
     }
 
     return result;
+  }
+
+  async getPrevIPLDBlocks (queryRunner: QueryRunner, blockHash: string, blockNumber: number, contractAddress: string, checkpointBlockNumber: number): Promise<IPLDBlock[]> {
+    const repo = this._conn.getRepository(IPLDBlock);
+
+    const heirerchicalQuery = `
+      WITH RECURSIVE cte_query AS
+      (
+        SELECT
+          b.block_hash,
+          b.parent_hash,
+          1 as depth,
+          i.id
+        FROM
+          block_progress b
+          LEFT JOIN
+            ipld_block i ON i.block_id = b.id
+        WHERE
+          b.block_hash = $1
+        UNION ALL
+          SELECT
+            b.block_hash,
+            b.parent_hash,
+            c.depth + 1,
+            i.id
+          FROM
+            block_progress b
+            LEFT JOIN
+              ipld_block i
+              ON i.block_id = b.id
+              AND i.contract_address = $2
+            INNER JOIN
+              cte_query c ON c.parent_hash = b.block_hash
+            WHERE
+              c.depth < $3
+      )
+      SELECT
+        id
+      FROM
+        cte_query
+      WHERE id IS NOT NULL
+    `;
+
+    // Fetching ids for previous IPLDBlocks in the frothy region.
+    const queryResult = await queryRunner.query(heirerchicalQuery, [blockHash, contractAddress, MAX_REORG_DEPTH]);
+    const frothyIds = queryResult.map((obj: any) => obj.id);
+
+    // Fetching all diff blocks along with the previous checkpoint.
+    const ipldBlocks = await repo.find({
+      relations: ['block'],
+      where: [
+        { contractAddress, block: { isPruned: false, blockNumber: Between(checkpointBlockNumber, blockNumber - MAX_REORG_DEPTH) } },
+        { id: In(frothyIds) }
+      ],
+      order: { block: 'ASC' }
+    });
+
+    return ipldBlocks;
+  }
+
+  async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
+    const repo = this._conn.getRepository(IPLDBlock);
+    return repo.save(ipldBlock);
   }
 
   async getContract (address: string): Promise<Contract | undefined> {

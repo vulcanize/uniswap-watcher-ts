@@ -5,8 +5,14 @@
 import assert from 'assert';
 import _ from 'lodash';
 
+import { UNKNOWN_EVENT_NAME } from '@vulcanize/util';
+
 import { Indexer, ResultEvent } from './indexer';
 import { BlockProgress } from './entity/BlockProgress';
+
+const ACCOUNTS = [
+  '0xDC7d7A8920C8Eecc098da5B7522a5F31509b5Bfc'
+];
 
 /**
  * Genesis hook function.
@@ -18,20 +24,13 @@ export async function genesisHook (indexer: Indexer, block: BlockProgress, contr
   // Store the genesis state values in an IPLDBlock.
   const ipldBlockData: any = {};
 
-  const accounts = [
-    '0xDC7d7A8920C8Eecc098da5B7522a5F31509b5Bfc'
-  ];
-
   // Setting the initial balances of accounts.
-  for (const account of accounts) {
+  for (const account of ACCOUNTS) {
     const balance = await indexer._balances(block.blockHash, contractAddress, account);
     _.set(ipldBlockData, `state._balances[${account}]`, balance.value.toString());
   }
 
-  // Setting the IPLDBlock kind as checkpoint.
-  _.set(ipldBlockData, 'meta.kind', 'checkpoint');
-
-  const ipldBlock = await indexer.prepareIPLDBlock(block, contractAddress, ipldBlockData);
+  const ipldBlock = await indexer.prepareIPLDBlock(block, contractAddress, ipldBlockData, 'checkpoint');
   await indexer.saveOrUpdateIPLDBlock(ipldBlock);
 }
 
@@ -48,6 +47,8 @@ export async function postBlockHook (indexer: Indexer, blockHash: string): Promi
   if (!events) return;
 
   for (const event of events) {
+    if (event.eventName === UNKNOWN_EVENT_NAME) continue;
+
     const block = event.block;
     const contractAddress = event.contract;
 

@@ -8,7 +8,14 @@ import { wait } from '.';
 import { createPruningJob } from './common';
 
 import { JobQueueConfig } from './config';
-import { JOB_KIND_INDEX, JOB_KIND_PRUNE, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING } from './constants';
+import {
+  JOB_KIND_INDEX,
+  JOB_KIND_PRUNE,
+  MAX_REORG_DEPTH,
+  QUEUE_BLOCK_PROCESSING,
+  QUEUE_EVENT_PROCESSING,
+  QUEUE_BLOCK_CHECKPOINT
+} from './constants';
 import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
 
@@ -178,6 +185,11 @@ export class JobRunner {
       // Delay required to process block.
       await wait(jobDelayInMilliSecs);
       const events = await this._indexer.getOrFetchBlockEvents({ cid, blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
+
+      if (!events.length) {
+        await this._indexer.processBlock(blockHash);
+        await this._jobQueue.pushJob(QUEUE_BLOCK_CHECKPOINT, { blockHash, blockNumber });
+      }
 
       for (let ei = 0; ei < events.length; ei++) {
         await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { id: events[ei].id, publish: true });

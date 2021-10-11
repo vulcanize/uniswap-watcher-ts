@@ -61,6 +61,7 @@ export interface IndexerInterface {
   updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
   updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
   markBlocksAsPruned (blocks: BlockProgressInterface[]): Promise<void>;
+  processBlock(blockHash: string): Promise<void>;
 }
 
 export interface EventWatcherInterface {

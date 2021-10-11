@@ -12,8 +12,8 @@ import {
   EventWatcher as BaseEventWatcher,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  UNKNOWN_EVENT_NAME,
-  JOB_KIND_INDEX
+  QUEUE_BLOCK_CHECKPOINT,
+  UNKNOWN_EVENT_NAME
 } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
@@ -79,8 +79,13 @@ export class EventWatcher {
     await this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
       const dbEvent = await this._baseEventWatcher.eventProcessingCompleteHandler(job);
 
-      // Use an indexer method to call a post-block hook if the block is marked as complete.
-      if (dbEvent.block.isComplete && dbEvent.eventName !== UNKNOWN_EVENT_NAME) await this._indexer.processBlock(dbEvent.block.blockHash);
+      // If the block is marked as complete:
+      // a. Use an indexer method to call a post-block hook.
+      // b. Push a block checkpointing job.
+      if (dbEvent.block.isComplete) {
+        await this._indexer.processBlock(dbEvent.block.blockHash);
+        await this._jobQueue.pushJob(QUEUE_BLOCK_CHECKPOINT, { blockHash: dbEvent.block.blockHash, blockNumber: dbEvent.block.blockNumber });
+      }
 
       const { data: { request, failed, state, createdOn } } = job;
 

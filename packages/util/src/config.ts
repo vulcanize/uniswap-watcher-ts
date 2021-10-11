@@ -24,6 +24,8 @@ export interface Config {
     port: number;
     mode: string;
     kind: string;
+    checkpointing: boolean;
+    checkpointInterval: number;
   };
   database: ConnectionOptions;
   upstream: {

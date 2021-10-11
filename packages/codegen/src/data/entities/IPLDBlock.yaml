@@ -20,6 +20,10 @@ columns:
     pgType: varchar
     tsType: string
     columnType: Column
+  - name: kind
+    pgType: varchar
+    tsType: string
+    columnType: Column
   - name: data
     pgType: text
     tsType: string

@@ -291,7 +291,8 @@ export class Schema {
         type: 'Boolean!',
         args: {
           contractAddress: 'String!',
-          startingBlock: 'Int'
+          startingBlock: 'Int',
+          kind: 'String!'
         }
       }
     });

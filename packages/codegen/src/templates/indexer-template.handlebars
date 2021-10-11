@@ -75,12 +75,13 @@ export class Indexer {
   _ethProvider: BaseProvider
   _postgraphileClient: EthClient;
   _baseIndexer: BaseIndexer
+  _checkpointInterval: number
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
 
-  constructor (db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider) {
+  constructor (db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider, checkpointInterval?: number) {
     assert(db);
     assert(ethClient);
 
@@ -89,6 +90,7 @@ export class Indexer {
     this._ethProvider = ethProvider;
     this._postgraphileClient = postgraphileClient;
     this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient);
+    this._checkpointInterval = checkpointInterval || 0;
 
     const { abi, storageLayout } = artifacts;
 
@@ -211,6 +213,40 @@ export class Indexer {
     await postBlockHook(this, blockHash);
   }
 
+  async processCheckpoint (job: any): Promise<void> {
+    // Create a checkpoint IPLDBlock for contracts that were checkpointed checkPointInterval blocks before.
+
+    // Return if checkpointInterval is <= 0.
+    if (this._checkpointInterval <= 0) return;
+
+    const { data: { blockNumber: currentBlockNumber, blockHash: currentBlockHash } } = job;
+
+    // Get checkpoint IPLDBlocks with blockNumber: current-checkPointInterval.
+    // Assuming checkPointInterval < MAX_REORG_DEPTH.
+    const prevCheckpointBlocks = await this._db.getIPLDBlocks({ block: { blockNumber: currentBlockNumber - this._checkpointInterval }, kind: 'checkpoint' });
+
+    // For each contractAddress, merge the diff till now.
+    for (const checkpointBlock of prevCheckpointBlocks) {
+      const { contractAddress } = checkpointBlock;
+
+      // Fetching all diff blocks along with the previous checkpoint.
+      const diffBlocks = await this.getPrevIPLDBlocks(currentBlockHash, currentBlockNumber, contractAddress, currentBlockNumber - this._checkpointInterval);
+
+      let checkPoint: any = {};
+      for (const diffBlock of diffBlocks) {
+        const diff = codec.decode(Buffer.from(diffBlock.data));
+        checkPoint = _.merge(checkPoint, diff);
+      }
+
+      // Getting the current block.
+      const block = await this.getBlockProgress(currentBlockHash);
+      assert(block);
+
+      const ipldBlock = await this.prepareIPLDBlock(block, contractAddress, checkPoint, 'checkpoint');
+      await this.saveOrUpdateIPLDBlock(ipldBlock);
+    }
+  }
+
   async getIPLDBlock (block: BlockProgress, contractAddress: string): Promise<IPLDBlock | undefined> {
     const ipldBlocks = await this._db.getIPLDBlocks({ block, contractAddress });
 
@@ -245,11 +281,28 @@ export class Indexer {
     return res;
   }
 
+  async getPrevIPLDBlocks (blockHash: string, blockNumber: number, contractAddress: string, checkpointBlockNumber: number): Promise<IPLDBlock[]> {
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
+
+    try {
+      res = await this._db.getPrevIPLDBlocks(dbTx, blockHash, blockNumber, contractAddress, checkpointBlockNumber);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+
+    return res;
+  }
+
   async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
     return this._db.saveOrUpdateIPLDBlock(ipldBlock);
   }
 
-  async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any):Promise<any> {
+  async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any, kind?: string):Promise<any> {
     // Get an existing IPLDBlock for current block and contractAddress.
     const currentIPLDBlock = await this.getIPLDBlock(block, contractAddress);
 
@@ -262,9 +315,9 @@ export class Indexer {
       const parentIPLDBlock = await this.getPrevIPLDBlock(block.blockHash, contractAddress);
 
       // Setting the meta-data for an IPLDBlock (done only once per block).
-      const metaData = {
+      data.meta = {
         id: contractAddress,
-        kind: 'diff',
+        kind: kind || 'diff',
         parent: {
           '/': parentIPLDBlock ? parentIPLDBlock.cid : null
         },
@@ -275,8 +328,6 @@ export class Indexer {
           num: block.blockNumber
         }
       };
-
-      data.meta = _.merge(metaData, data.meta);
     }
 
     // Encoding the data using dag-json codec.
@@ -293,6 +344,7 @@ export class Indexer {
       block,
       contractAddress,
       cid: cid.toString(),
+      kind: data.meta.kind,
       data: bytes
     });
 
@@ -342,9 +394,7 @@ export class Indexer {
     return { eventName, eventInfo };
   }
 
-  async watchContract (address: string, startingBlock: number, kind?: string): Promise<boolean> {
-    kind = kind || 'ERC20';
-
+  async watchContract (address: string, startingBlock: number, kind: string): Promise<boolean> {
     // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
     await this._db.saveContract(ethers.utils.getAddress(address), startingBlock, kind);
 
