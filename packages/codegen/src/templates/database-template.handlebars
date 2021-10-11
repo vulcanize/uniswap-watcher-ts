@@ -85,8 +85,6 @@ export class Database {
   }
 
   async getPrevIPLDBlock (queryRunner: QueryRunner, blockHash: string, contractAddress: string): Promise<IPLDBlock | undefined> {
-    const repo = this._conn.getRepository(IPLDBlock);
-
     const heirerchicalQuery = `
       WITH RECURSIVE cte_query AS
       (
@@ -133,13 +131,13 @@ export class Database {
 
     let result: IPLDBlock | undefined;
     if (id) {
-      result = await repo.findOne({ id }, { relations: ['block'] });
+      result = await queryRunner.manager.findOne(IPLDBlock, { id }, { relations: ['block'] });
     } else {
       // If IPLDBlock not found in frothy region get latest IPLDBlock in the pruned region.
       // Filter out IPLDBlocks from pruned blocks.
       const canonicalBlockNumber = blockNumber + 1;
 
-      result = await repo.createQueryBuilder('ipld_block')
+      result = await queryRunner.manager.createQueryBuilder(IPLDBlock, 'ipld_block')
         .leftJoinAndSelect('ipld_block.block', 'block')
         .where('block.is_pruned = false')
         .andWhere('ipld_block.contract_address = :contractAddress', { contractAddress })
@@ -152,14 +150,13 @@ export class Database {
     return result;
   }
 
-  async getPrevIPLDBlocks (queryRunner: QueryRunner, blockHash: string, blockNumber: number, contractAddress: string, checkpointBlockNumber: number): Promise<IPLDBlock[]> {
-    const repo = this._conn.getRepository(IPLDBlock);
-
+  async getPrevIPLDBlocksAfterCheckpoint (queryRunner: QueryRunner, blockHash: string, checkpointBlockNumber: number, contractAddress: string): Promise<IPLDBlock[]> {
     const heirerchicalQuery = `
       WITH RECURSIVE cte_query AS
       (
         SELECT
           b.block_hash,
+          b.block_number,
           b.parent_hash,
           1 as depth,
           i.id
@@ -172,6 +169,7 @@ export class Database {
         UNION ALL
           SELECT
             b.block_hash,
+            b.block_number,
             b.parent_hash,
             c.depth + 1,
             i.id
@@ -187,21 +185,25 @@ export class Database {
               c.depth < $3
       )
       SELECT
-        id
+        block_number, id
       FROM
         cte_query
-      WHERE id IS NOT NULL
+      ORDER BY block_number ASC
     `;
 
     // Fetching ids for previous IPLDBlocks in the frothy region.
     const queryResult = await queryRunner.query(heirerchicalQuery, [blockHash, contractAddress, MAX_REORG_DEPTH]);
-    const frothyIds = queryResult.map((obj: any) => obj.id);
 
-    // Fetching all diff blocks along with the previous checkpoint.
-    const ipldBlocks = await repo.find({
+    let frothyIds = queryResult.map((obj: any) => obj.id);
+    frothyIds = frothyIds.filter((id: any) => id !== null);
+
+    const frothyBlockNumber = queryResult[0].block_number;
+
+    // Fetching all diff blocks after checkpoint till current blockNumber.
+    const ipldBlocks = await queryRunner.manager.find(IPLDBlock, {
       relations: ['block'],
       where: [
-        { contractAddress, block: { isPruned: false, blockNumber: Between(checkpointBlockNumber, blockNumber - MAX_REORG_DEPTH) } },
+        { contractAddress, block: { isPruned: false, blockNumber: Between(checkpointBlockNumber + 1, frothyBlockNumber - 1) } },
         { id: In(frothyIds) }
       ],
       order: { block: 'ASC' }

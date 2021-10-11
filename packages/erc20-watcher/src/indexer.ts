@@ -12,7 +12,7 @@ import { BaseProvider } from '@ethersproject/providers';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { StorageLayout } from '@vulcanize/solidity-mapper';
-import { EventInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME } from '@vulcanize/util';
+import { EventInterface, IndexerInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Event } from './entity/Event';
@@ -41,7 +41,7 @@ interface EventResult {
   proof?: string;
 }
 
-export class Indexer {
+export class Indexer implements IndexerInterface {
   _db: Database
   _ethClient: EthClient
   _postgraphileClient: EthClient;
@@ -253,6 +253,11 @@ export class Indexer {
   async processEvent (event: Event): Promise<void> {
     // Trigger indexing of data based on the event.
     await this.triggerIndexingOnEvent(event);
+  }
+
+  async processBlock (blockHash: string): Promise<void> {
+    // Empty post-block method.
+    assert(blockHash);
   }
 
   parseEventNameAndArgs (kind: string, logObj: any): any {

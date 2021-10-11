@@ -227,12 +227,13 @@ export class Indexer {
 
     // For each contractAddress, merge the diff till now.
     for (const checkpointBlock of prevCheckpointBlocks) {
-      const { contractAddress } = checkpointBlock;
+      const { contractAddress, block: { blockNumber: checkpointBlockNumber } } = checkpointBlock;
 
-      // Fetching all diff blocks along with the previous checkpoint.
-      const diffBlocks = await this.getPrevIPLDBlocks(currentBlockHash, currentBlockNumber, contractAddress, currentBlockNumber - this._checkpointInterval);
+      // Fetching all diff blocks after checkpoint.
+      const diffBlocks = await this.getPrevIPLDBlocksAfterCheckpoint(currentBlockHash, checkpointBlockNumber, contractAddress);
 
-      let checkPoint: any = {};
+      let checkPoint = codec.decode(Buffer.from(checkpointBlock.data)) as any;
+
       for (const diffBlock of diffBlocks) {
         const diff = codec.decode(Buffer.from(diffBlock.data));
         checkPoint = _.merge(checkPoint, diff);
@@ -281,12 +282,12 @@ export class Indexer {
     return res;
   }
 
-  async getPrevIPLDBlocks (blockHash: string, blockNumber: number, contractAddress: string, checkpointBlockNumber: number): Promise<IPLDBlock[]> {
+  async getPrevIPLDBlocksAfterCheckpoint (blockHash: string, checkpointBlockNumber: number, contractAddress: string): Promise<IPLDBlock[]> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
     try {
-      res = await this._db.getPrevIPLDBlocks(dbTx, blockHash, blockNumber, contractAddress, checkpointBlockNumber);
+      res = await this._db.getPrevIPLDBlocksAfterCheckpoint(dbTx, blockHash, checkpointBlockNumber, contractAddress);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
