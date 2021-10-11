@@ -2,8 +2,12 @@
   host = "127.0.0.1"
   port = 3008
   kind = "{{watcherKind}}"
+
+  # Checkpointing derived state.
   checkpointing = true
-  checkpointInterval = 30
+
+  # Checkpoint interval in number of blocks.
+  checkpointInterval = 2000
 
 [database]
   type = "postgres"

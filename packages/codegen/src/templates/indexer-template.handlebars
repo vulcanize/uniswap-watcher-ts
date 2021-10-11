@@ -4,19 +4,19 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { JsonFragment } from '@ethersproject/abi';
 import { DeepPartial } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
-import { BaseProvider } from '@ethersproject/providers';
-import * as codec from '@ipld/dag-json';
 import { sha256 } from 'multiformats/hashes/sha2';
 import { CID } from 'multiformats/cid';
 import _ from 'lodash';
 
+import { JsonFragment } from '@ethersproject/abi';
+import { BaseProvider } from '@ethersproject/providers';
+import * as codec from '@ipld/dag-json';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { StorageLayout } from '@vulcanize/solidity-mapper';
-import { EventInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME } from '@vulcanize/util';
+import { EventInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME, ServerConfig } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Contract } from './entity/Contract';
@@ -66,6 +66,7 @@ export type ResultIPLDBlock = {
   };
   contractAddress: string;
   cid: string;
+  kind: string;
   data: string;
 };
 
@@ -75,13 +76,13 @@ export class Indexer {
   _ethProvider: BaseProvider
   _postgraphileClient: EthClient;
   _baseIndexer: BaseIndexer
-  _checkpointInterval: number
+  _serverConfig: ServerConfig
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
 
-  constructor (db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider, checkpointInterval?: number) {
+  constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider) {
     assert(db);
     assert(ethClient);
 
@@ -89,8 +90,8 @@ export class Indexer {
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
     this._postgraphileClient = postgraphileClient;
+    this._serverConfig = serverConfig;
     this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient);
-    this._checkpointInterval = checkpointInterval || 0;
 
     const { abi, storageLayout } = artifacts;
 
@@ -150,6 +151,7 @@ export class Indexer {
       },
       contractAddress: ipldBlock.contractAddress,
       cid: ipldBlock.cid,
+      kind: ipldBlock.kind,
       data: ipldBlock.data
     };
   }
@@ -217,13 +219,14 @@ export class Indexer {
     // Create a checkpoint IPLDBlock for contracts that were checkpointed checkPointInterval blocks before.
 
     // Return if checkpointInterval is <= 0.
-    if (this._checkpointInterval <= 0) return;
+    const checkpointInterval = this._serverConfig.checkpointInterval;
+    if (checkpointInterval <= 0) return;
 
     const { data: { blockNumber: currentBlockNumber, blockHash: currentBlockHash } } = job;
 
     // Get checkpoint IPLDBlocks with blockNumber: current-checkPointInterval.
     // Assuming checkPointInterval < MAX_REORG_DEPTH.
-    const prevCheckpointBlocks = await this._db.getIPLDBlocks({ block: { blockNumber: currentBlockNumber - this._checkpointInterval }, kind: 'checkpoint' });
+    const prevCheckpointBlocks = await this._db.getIPLDBlocks({ block: { blockNumber: currentBlockNumber - checkpointInterval }, kind: 'checkpoint' });
 
     // For each contractAddress, merge the diff till now.
     for (const checkpointBlock of prevCheckpointBlocks) {
@@ -395,9 +398,9 @@ export class Indexer {
     return { eventName, eventInfo };
   }
 
-  async watchContract (address: string, startingBlock: number, kind: string): Promise<boolean> {
+  async watchContract (address: string, kind: string, startingBlock: number): Promise<boolean> {
     // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
-    await this._db.saveContract(ethers.utils.getAddress(address), startingBlock, kind);
+    await this._db.saveContract(ethers.utils.getAddress(address), kind, startingBlock);
 
     // Getting the current block.
     const currentBlock = await this._db.getLatestBlockProgress();

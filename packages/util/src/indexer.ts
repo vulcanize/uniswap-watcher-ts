@@ -112,12 +112,12 @@ export class Indexer {
           {
             cid,
             blockNumber,
-            timestamp,
-            parentHash
+            parentHash,
+            timestamp
           }
         ]
       }
-    } = await this._postgraphileClient.getBlockWithTransactions({ blockHash });
+    } = await this._postgraphileClient.getBlock({ blockHash });
 
     return {
       cid,

@@ -245,6 +245,7 @@ export class Schema {
         block: () => this._composer.getOTC('Block').NonNull,
         contractAddress: 'String!',
         cid: 'String!',
+        kind: 'String!',
         data: 'String!'
       }
     });
@@ -291,8 +292,8 @@ export class Schema {
         type: 'Boolean!',
         args: {
           contractAddress: 'String!',
-          startingBlock: 'Int',
-          kind: 'String!'
+          kind: 'String!',
+          startingBlock: 'Int'
         }
       }
     });

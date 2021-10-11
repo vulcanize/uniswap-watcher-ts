@@ -7,8 +7,8 @@ import fetch from 'node-fetch';
 import path from 'path';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
-import { flatten } from '@poanet/solidity-flattener';
 
+import { flatten } from '@poanet/solidity-flattener';
 import { parse, visit } from '@solidity-parser/parser';
 import { KIND_ACTIVE, KIND_LAZY } from '@vulcanize/util';
 
