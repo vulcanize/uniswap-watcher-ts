@@ -19,6 +19,7 @@ import {
   QUEUE_EVENT_PROCESSING,
   JobRunner as BaseJobRunner,
   JobQueueConfig,
+  ServerConfig,
   DEFAULT_CONFIG_PATH
 } from '@vulcanize/util';
 
@@ -32,12 +33,14 @@ export class JobRunner {
   _jobQueue: JobQueue
   _baseJobRunner: BaseJobRunner
   _jobQueueConfig: JobQueueConfig
+  _serverConfig: ServerConfig
 
-  constructor (jobQueueConfig: JobQueueConfig, indexer: Indexer, jobQueue: JobQueue) {
+  constructor (jobQueueConfig: JobQueueConfig, serverConfig: ServerConfig, indexer: Indexer, jobQueue: JobQueue) {
     this._indexer = indexer;
     this._jobQueue = jobQueue;
     this._jobQueueConfig = jobQueueConfig;
-    this._baseJobRunner = new BaseJobRunner(this._jobQueueConfig, this._indexer, this._jobQueue);
+    this._serverConfig = serverConfig;
+    this._baseJobRunner = new BaseJobRunner(this._jobQueueConfig, this._serverConfig, this._indexer, this._jobQueue);
   }
 
   async start (): Promise<void> {
@@ -80,16 +83,15 @@ export const main = async (): Promise<any> => {
 
   const config = await getConfig(argv.f);
 
-  assert(config.server, 'Missing server config');
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: serverConfig } = config;
 
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode } } = config;
-
+  assert(upstream, 'Missing upstream config');
   assert(dbConfig, 'Missing database config');
+  assert(serverConfig, 'Missing server config');
 
   const db = new Database(dbConfig);
   await db.init();
 
-  assert(upstream, 'Missing upstream config');
   const { uniWatcher: { gqlEndpoint, gqlSubscriptionEndpoint }, tokenWatcher, cache: cacheConfig, ethServer: { gqlApiEndpoint, gqlPostgraphileEndpoint } } = upstream;
   assert(gqlEndpoint, 'Missing upstream uniWatcher.gqlEndpoint');
   assert(gqlSubscriptionEndpoint, 'Missing upstream uniWatcher.gqlSubscriptionEndpoint');
@@ -113,7 +115,7 @@ export const main = async (): Promise<any> => {
 
   const erc20Client = new ERC20Client(tokenWatcher);
 
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, mode);
+  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, serverConfig.mode);
 
   assert(jobQueueConfig, 'Missing job queue config');
 
@@ -123,7 +125,7 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const jobRunner = new JobRunner(jobQueueConfig, indexer, jobQueue);
+  const jobRunner = new JobRunner(jobQueueConfig, serverConfig, indexer, jobQueue);
   await jobRunner.start();
 };
 

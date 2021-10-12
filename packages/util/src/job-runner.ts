@@ -7,7 +7,7 @@ import debug from 'debug';
 import { wait } from '.';
 import { createPruningJob } from './common';
 
-import { JobQueueConfig } from './config';
+import { JobQueueConfig, ServerConfig } from './config';
 import {
   JOB_KIND_INDEX,
   JOB_KIND_PRUNE,
@@ -25,11 +25,13 @@ export class JobRunner {
   _indexer: IndexerInterface
   _jobQueue: JobQueue
   _jobQueueConfig: JobQueueConfig
+  _serverConfig: ServerConfig
 
-  constructor (jobQueueConfig: JobQueueConfig, indexer: IndexerInterface, jobQueue: JobQueue) {
+  constructor (jobQueueConfig: JobQueueConfig, serverConfig: ServerConfig, indexer: IndexerInterface, jobQueue: JobQueue) {
     this._indexer = indexer;
     this._jobQueue = jobQueue;
     this._jobQueueConfig = jobQueueConfig;
+    this._serverConfig = serverConfig;
   }
 
   async processBlock (job: any): Promise<void> {
@@ -186,13 +188,18 @@ export class JobRunner {
       await wait(jobDelayInMilliSecs);
       const events = await this._indexer.getOrFetchBlockEvents({ cid, blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
 
-      if (!events.length) {
-        await this._indexer.processBlock(blockHash);
-        await this._jobQueue.pushJob(QUEUE_BLOCK_CHECKPOINT, { blockHash, blockNumber });
-      }
-
       for (let ei = 0; ei < events.length; ei++) {
         await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { id: events[ei].id, publish: true });
+      }
+
+      // Call post-block hook and checkpointing if there are no events as the block is already marked as complete.
+      if (!events.length) {
+        await this._indexer.processBlock(blockHash);
+
+        // Push checkpointing job if checkpointing is on.
+        if (this._serverConfig.checkpointing) {
+          await this._jobQueue.pushJob(QUEUE_BLOCK_CHECKPOINT, { blockHash, blockNumber });
+        }
       }
     }
   }

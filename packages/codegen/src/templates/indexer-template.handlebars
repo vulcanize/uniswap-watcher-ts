@@ -224,12 +224,17 @@ export class Indexer {
 
     const { data: { blockNumber: currentBlockNumber, blockHash: currentBlockHash } } = job;
 
-    // Get checkpoint IPLDBlocks with blockNumber: current-checkPointInterval.
-    // Assuming checkPointInterval < MAX_REORG_DEPTH.
-    const prevCheckpointBlocks = await this._db.getIPLDBlocks({ block: { blockNumber: currentBlockNumber - checkpointInterval }, kind: 'checkpoint' });
+    // Get latest checkpoints for all the contracts.
+    // Assuming checkPointInterval > MAX_REORG_DEPTH.
+    const latestCheckpointBlocks = await this.getLatestCheckpoints();
 
     // For each contractAddress, merge the diff till now.
-    for (const checkpointBlock of prevCheckpointBlocks) {
+    for (const checkpointBlock of latestCheckpointBlocks) {
+      // Check if it is time for a new checkpoint.
+      if (checkpointBlock.block.blockNumber > currentBlockNumber - checkpointInterval) {
+        continue;
+      }
+
       const { contractAddress, block: { blockNumber: checkpointBlockNumber } } = checkpointBlock;
 
       // Fetching all diff blocks after checkpoint.
@@ -251,8 +256,32 @@ export class Indexer {
     }
   }
 
+  async getLatestCheckpoints (): Promise<IPLDBlock[]> {
+    // Get the latest checkpoints for all the contracts.
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
+
+    try {
+      res = await this._db.getLatestCheckpoints(dbTx);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+    return res;
+  }
+
   async getIPLDBlock (block: BlockProgress, contractAddress: string): Promise<IPLDBlock | undefined> {
-    const ipldBlocks = await this._db.getIPLDBlocks({ block, contractAddress });
+    // Setting up find options for the query.
+    const where = {
+      block,
+      contractAddress
+    };
+    const relations = ['block'];
+
+    const ipldBlocks = await this._db.getIPLDBlocks({ where, relations });
 
     // There can be only one IPLDBlock for a { block, contractAddress } combination.
     assert(ipldBlocks.length <= 1);
@@ -261,7 +290,13 @@ export class Indexer {
   }
 
   async getIPLDBlockByCid (cid: string): Promise<IPLDBlock | undefined> {
-    const ipldBlocks = await this._db.getIPLDBlocks({ cid });
+    // Setting up find options for the query.
+    const where = {
+      cid
+    };
+    const relations = ['block'];
+
+    const ipldBlocks = await this._db.getIPLDBlocks({ where, relations });
 
     // There can be only one IPLDBlock with a particular cid.
     assert(ipldBlocks.length <= 1);

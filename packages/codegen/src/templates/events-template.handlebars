@@ -84,7 +84,11 @@ export class EventWatcher {
       // b. Push a block checkpointing job.
       if (dbEvent.block.isComplete) {
         await this._indexer.processBlock(dbEvent.block.blockHash);
-        await this._jobQueue.pushJob(QUEUE_BLOCK_CHECKPOINT, { blockHash: dbEvent.block.blockHash, blockNumber: dbEvent.block.blockNumber });
+
+        // Push checkpointing job if checkpointing is on.
+        if (this._indexer._serverConfig.checkpointing) {
+          await this._jobQueue.pushJob(QUEUE_BLOCK_CHECKPOINT, { blockHash: dbEvent.block.blockHash, blockNumber: dbEvent.block.blockNumber });
+        }
       }
 
       const { data: { request, failed, state, createdOn } } = job;

@@ -40,13 +40,13 @@ export class JobRunner {
     this._jobQueue = jobQueue;
     this._jobQueueConfig = jobQueueConfig;
     this._serverConfig = serverConfig;
-    this._baseJobRunner = new BaseJobRunner(this._jobQueueConfig, this._indexer, this._jobQueue);
+    this._baseJobRunner = new BaseJobRunner(this._jobQueueConfig, this._serverConfig, this._indexer, this._jobQueue);
   }
 
   async start (): Promise<void> {
     await this.subscribeBlockProcessingQueue();
     await this.subscribeEventProcessingQueue();
-    if (this._serverConfig.checkpointing) await this.subscribeBlockCheckpointQueue();
+    await this.subscribeBlockCheckpointQueue();
   }
 
   async subscribeBlockProcessingQueue (): Promise<void> {
