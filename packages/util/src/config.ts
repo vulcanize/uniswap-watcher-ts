@@ -18,13 +18,17 @@ export interface JobQueueConfig {
   jobDelayInMilliSecs?: number;
 }
 
+export interface ServerConfig {
+  host: string;
+  port: number;
+  mode: string;
+  kind: string;
+  checkpointing: boolean;
+  checkpointInterval: number;
+}
+
 export interface Config {
-  server: {
-    host: string;
-    port: number;
-    mode: string;
-    kind: string;
-  };
+  server: ServerConfig;
   database: ConnectionOptions;
   upstream: {
     cache: CacheConfig,

@@ -6,6 +6,7 @@ import { DeepPartial, FindConditions, QueryRunner } from 'typeorm';
 
 export interface BlockProgressInterface {
   id: number;
+  cid: string;
   blockHash: string;
   parentHash: string;
   blockNumber: number;
@@ -60,6 +61,7 @@ export interface IndexerInterface {
   updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
   updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
   markBlocksAsPruned (blocks: BlockProgressInterface[]): Promise<void>;
+  processBlock(blockHash: string): Promise<void>;
 }
 
 export interface EventWatcherInterface {
