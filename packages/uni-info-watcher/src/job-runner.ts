@@ -17,6 +17,7 @@ import {
   JobQueue,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
+  QUEUE_HOOKS,
   JobRunner as BaseJobRunner,
   JobQueueConfig,
   ServerConfig,
@@ -64,6 +65,14 @@ export class JobRunner {
       if (!event.block.isComplete && event.index !== event.block.lastProcessedEventIndex) {
         await this._indexer.processEvent(event);
       }
+
+      await this._jobQueue.markComplete(job);
+    });
+  }
+
+  async subscribeHooksQueue (): Promise<void> {
+    await this._jobQueue.subscribe(QUEUE_HOOKS, async (job) => {
+      await this._indexer.processBlock(job);
 
       await this._jobQueue.markComplete(job);
     });

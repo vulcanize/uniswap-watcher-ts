@@ -44,10 +44,14 @@ export async function postBlockHook (indexer: Indexer, blockHash: string): Promi
   const events = await indexer.getEventsByFilter(blockHash);
 
   // No IPLDBlock entry if there are no events.
-  if (!events) return;
+  if (!events) {
+    return;
+  }
 
   for (const event of events) {
-    if (event.eventName === UNKNOWN_EVENT_NAME) continue;
+    if (event.eventName === UNKNOWN_EVENT_NAME) {
+      continue;
+    }
 
     const block = event.block;
     const contractAddress = event.contract;

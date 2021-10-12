@@ -13,6 +13,7 @@ import {
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
   QUEUE_BLOCK_CHECKPOINT,
+  QUEUE_HOOKS,
   UNKNOWN_EVENT_NAME
 } from '@vulcanize/util';
 
@@ -80,10 +81,10 @@ export class EventWatcher {
       const dbEvent = await this._baseEventWatcher.eventProcessingCompleteHandler(job);
 
       // If the block is marked as complete:
-      // a. Use an indexer method to call a post-block hook.
+      // a. Push a post-block hook job.
       // b. Push a block checkpointing job.
       if (dbEvent.block.isComplete) {
-        await this._indexer.processBlock(dbEvent.block.blockHash);
+        await this._jobQueue.pushJob(QUEUE_HOOKS, { blockHash: dbEvent.block.blockHash });
 
         // Push checkpointing job if checkpointing is on.
         if (this._indexer._serverConfig.checkpointing) {

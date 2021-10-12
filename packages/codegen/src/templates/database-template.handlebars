@@ -3,7 +3,7 @@
 //
 
 import assert from 'assert';
-import { Connection, ConnectionOptions, DeepPartial, FindConditions, FindManyOptions, QueryRunner, In, Between } from 'typeorm';
+import { Connection, ConnectionOptions, DeepPartial, FindConditions, QueryRunner, In, Between } from 'typeorm';
 import path from 'path';
 
 import { Database as BaseDatabase, MAX_REORG_DEPTH } from '@vulcanize/util';
@@ -79,19 +79,20 @@ export class Database {
   }
 
   {{/each}}
-  async getIPLDBlocks (findOptions: FindManyOptions<IPLDBlock>): Promise<IPLDBlock[]> {
+  async getIPLDBlocks (where: FindConditions<IPLDBlock>): Promise<IPLDBlock[]> {
     const repo = this._conn.getRepository(IPLDBlock);
-    return repo.find(findOptions);
+    return repo.find({ where, relations: ['block'] });
   }
 
   async getLatestCheckpoints (queryRunner: QueryRunner): Promise<IPLDBlock[]> {
     // Get the latest checkpoints for all the contracts.
     const result = await queryRunner.manager.createQueryBuilder(IPLDBlock, 'ipld_block')
       .distinctOn(['contract_address'])
+      .orderBy('contract_address')
       .innerJoinAndSelect(Contract, 'contract', 'contract_address = contract.address')
       .leftJoinAndSelect('ipld_block.block', 'block')
-      .where('ipld_block.kind = :kind', { kind: 'checkpoint' })
-      .orderBy('contract_address')
+      .where('block.is_pruned = false')
+      .andWhere('ipld_block.kind = :kind', { kind: 'checkpoint' })
       .addOrderBy('ipld_block.block_id', 'DESC')
       .getMany();
 

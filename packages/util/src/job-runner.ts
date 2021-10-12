@@ -14,7 +14,8 @@ import {
   MAX_REORG_DEPTH,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  QUEUE_BLOCK_CHECKPOINT
+  QUEUE_BLOCK_CHECKPOINT,
+  QUEUE_HOOKS
 } from './constants';
 import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
@@ -192,11 +193,11 @@ export class JobRunner {
         await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { id: events[ei].id, publish: true });
       }
 
-      // Call post-block hook and checkpointing if there are no events as the block is already marked as complete.
+      // Push post-block hook and checkpointing jobs if there are no events as the block is already marked as complete.
       if (!events.length) {
-        await this._indexer.processBlock(blockHash);
+        await this._jobQueue.pushJob(QUEUE_HOOKS, { blockHash });
 
-        // Push checkpointing job if checkpointing is on.
+        // Push checkpointing job only if checkpointing is on.
         if (this._serverConfig.checkpointing) {
           await this._jobQueue.pushJob(QUEUE_BLOCK_CHECKPOINT, { blockHash, blockNumber });
         }

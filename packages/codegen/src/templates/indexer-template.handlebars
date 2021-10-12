@@ -210,7 +210,9 @@ export class Indexer {
   }
 
   {{/each}}
-  async processBlock (blockHash: string): Promise<void> {
+  async processBlock (job: any): Promise<void> {
+    const { data: { blockHash } } = job;
+
     // Call custom post-block hook.
     await postBlockHook(this, blockHash);
   }
@@ -274,14 +276,7 @@ export class Indexer {
   }
 
   async getIPLDBlock (block: BlockProgress, contractAddress: string): Promise<IPLDBlock | undefined> {
-    // Setting up find options for the query.
-    const where = {
-      block,
-      contractAddress
-    };
-    const relations = ['block'];
-
-    const ipldBlocks = await this._db.getIPLDBlocks({ where, relations });
+    const ipldBlocks = await this._db.getIPLDBlocks({ block, contractAddress });
 
     // There can be only one IPLDBlock for a { block, contractAddress } combination.
     assert(ipldBlocks.length <= 1);
@@ -290,13 +285,7 @@ export class Indexer {
   }
 
   async getIPLDBlockByCid (cid: string): Promise<IPLDBlock | undefined> {
-    // Setting up find options for the query.
-    const where = {
-      cid
-    };
-    const relations = ['block'];
-
-    const ipldBlocks = await this._db.getIPLDBlocks({ where, relations });
+    const ipldBlocks = await this._db.getIPLDBlocks({ cid });
 
     // There can be only one IPLDBlock with a particular cid.
     assert(ipldBlocks.length <= 1);
