@@ -63,9 +63,15 @@ export const main = async (): Promise<any> => {
   assert(gqlPostgraphileEndpoint, 'Missing upstream ethServer.gqlPostgraphileEndpoint');
 
   const cache = await getCache(cacheConfig);
+
   const ethClient = new EthClient({
     gqlEndpoint: gqlPostgraphileEndpoint,
     gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
+    cache
+  });
+
+  const postgraphileClient = new EthClient({
+    gqlEndpoint: gqlPostgraphileEndpoint,
     cache
   });
 
@@ -75,7 +81,7 @@ export const main = async (): Promise<any> => {
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
   // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
   const pubsub = new PubSub();
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, mode);
+  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, mode);
 
   assert(jobQueueConfig, 'Missing job queue config');
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;

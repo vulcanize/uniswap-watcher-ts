@@ -77,7 +77,7 @@ const processBlockByNumber = async (
 ) => {
   log(`Fill block ${blockNumber}`);
 
-  const result = await ethClient.getBlocksByNumber(blockNumber);
+  const result = await ethClient.getBlocks({ blockNumber });
   const { allEthHeaderCids: { nodes: blockNodes } } = result;
 
   for (let bi = 0; bi < blockNodes.length; bi++) {
