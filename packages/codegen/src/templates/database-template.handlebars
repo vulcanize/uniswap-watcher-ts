@@ -46,11 +46,10 @@ export class Database {
   }
 
   {{#each queries as | query |}}
-  // eslint-disable-next-line camelcase
-  {{#if (reservedNameCheck (capitalize query.name tillIndex=1)) }}
+  {{#if (reservedNameCheck query.entityName) }}
   // eslint-disable-next-line @typescript-eslint/ban-types
   {{/if}}
-  async get{{capitalize query.name tillIndex=1}} ({ blockHash, contractAddress
+  async {{query.getQueryName}} ({ blockHash, contractAddress
   {{~#each query.params}}, {{this.name~}} {{/each}} }: { blockHash: string, contractAddress: string
   {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}} }): Promise<{{query.entityName}} | undefined> {
     return this._conn.getRepository({{query.entityName}})
@@ -66,11 +65,10 @@ export class Database {
   {{/each}}
 
   {{~#each queries as | query |}}
-  // eslint-disable-next-line camelcase
-  {{#if (reservedNameCheck (capitalize query.name tillIndex=1)) }}
+  {{#if (reservedNameCheck query.entityName) }}
   // eslint-disable-next-line @typescript-eslint/ban-types
   {{/if}}
-  async save{{capitalize query.name tillIndex=1}} ({ blockHash, contractAddress
+  async {{query.saveQueryName}} ({ blockHash, contractAddress
   {{~#each query.params}}, {{this.name~}} {{/each}}, value, proof }: DeepPartial<{{query.entityName}}>): Promise<{{query.entityName}}> {
     const repo = this._conn.getRepository({{query.entityName}});
     const entity = repo.create({ blockHash, contractAddress

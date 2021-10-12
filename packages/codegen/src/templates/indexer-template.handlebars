@@ -159,7 +159,7 @@ export class Indexer {
   {{#each queries as | query |}}
   async {{query.name}} (blockHash: string, contractAddress: string
     {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}}): Promise<ValueResult> {
-    const entity = await this._db.get{{capitalize query.name tillIndex=1}}({ blockHash, contractAddress
+    const entity = await this._db.{{query.getQueryName}}({ blockHash, contractAddress
     {{~#each query.params}}, {{this.name~}} {{~/each}} });
     if (entity) {
       log('{{query.name}}: db hit.');
@@ -203,7 +203,7 @@ export class Indexer {
     );
     {{/if}}
 
-    await this._db.save{{capitalize query.name tillIndex=1}}({ blockHash, contractAddress
+    await this._db.{{query.saveQueryName}}({ blockHash, contractAddress
     {{~#each query.params}}, {{this.name~}} {{/each}}, value: result.value, proof: JSONbig.stringify(result.proof) });
 
     return result;
