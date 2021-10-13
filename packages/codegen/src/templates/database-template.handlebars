@@ -96,7 +96,7 @@ export class Database {
     return result;
   }
 
-  async getPrevIPLDBlock (queryRunner: QueryRunner, blockHash: string, contractAddress: string): Promise<IPLDBlock | undefined> {
+  async getPrevIPLDBlock (queryRunner: QueryRunner, blockHash: string, contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
     const heirerchicalQuery = `
       WITH RECURSIVE cte_query AS
       (
@@ -105,7 +105,8 @@ export class Database {
           b.block_number,
           b.parent_hash,
           1 as depth,
-          i.id
+          i.id,
+          i.kind
         FROM
           block_progress b
           LEFT JOIN
@@ -118,7 +119,8 @@ export class Database {
             b.block_number,
             b.parent_hash,
             c.depth + 1,
-            i.id
+            i.id,
+            i.kind
           FROM
             block_progress b
             LEFT JOIN
@@ -128,35 +130,42 @@ export class Database {
             INNER JOIN
               cte_query c ON c.parent_hash = b.block_hash
             WHERE
-              c.id IS NULL AND c.depth < $3
+              c.depth < $3
       )
       SELECT
-        block_number, id
+        block_number, id, kind
       FROM
         cte_query
-      ORDER BY block_number ASC
-      LIMIT 1;
+      ORDER BY block_number DESC, id DESC
     `;
 
     // Fetching block and id for previous IPLDBlock in frothy region.
-    const [{ block_number: blockNumber, id }] = await queryRunner.query(heirerchicalQuery, [blockHash, contractAddress, MAX_REORG_DEPTH]);
+    const queryResult = await queryRunner.query(heirerchicalQuery, [blockHash, contractAddress, MAX_REORG_DEPTH]);
+    const latestRequiredResult = kind
+      ? queryResult.find((obj: any) => obj.kind === kind)
+      : queryResult.find((obj: any) => obj.id);
 
     let result: IPLDBlock | undefined;
-    if (id) {
-      result = await queryRunner.manager.findOne(IPLDBlock, { id }, { relations: ['block'] });
+    if (latestRequiredResult) {
+      result = await queryRunner.manager.findOne(IPLDBlock, { id: latestRequiredResult.id }, { relations: ['block'] });
     } else {
       // If IPLDBlock not found in frothy region get latest IPLDBlock in the pruned region.
       // Filter out IPLDBlocks from pruned blocks.
-      const canonicalBlockNumber = blockNumber + 1;
+      const canonicalBlockNumber = queryResult.pop().block_number + 1;
 
-      result = await queryRunner.manager.createQueryBuilder(IPLDBlock, 'ipld_block')
+      let queryBuilder = queryRunner.manager.createQueryBuilder(IPLDBlock, 'ipld_block')
         .leftJoinAndSelect('ipld_block.block', 'block')
         .where('block.is_pruned = false')
         .andWhere('ipld_block.contract_address = :contractAddress', { contractAddress })
         .andWhere('block.block_number <= :canonicalBlockNumber', { canonicalBlockNumber })
-        .orderBy('block.block_number', 'DESC')
-        .limit(1)
-        .getOne();
+        .orderBy('block.block_number', 'DESC');
+
+      // Filter using kind if specified else order by id to give preference to checkpoint.
+      queryBuilder = kind
+        ? queryBuilder.andWhere('ipld_block.kind = :kind', { kind })
+        : queryBuilder.addOrderBy('ipld_block.id', 'DESC');
+
+      result = await queryBuilder.getOne();
     }
 
     return result;
