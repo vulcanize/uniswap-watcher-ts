@@ -281,13 +281,10 @@ export class Indexer {
     return res;
   }
 
-  async getIPLDBlock (block: BlockProgress, contractAddress: string): Promise<IPLDBlock | undefined> {
-    const ipldBlocks = await this._db.getIPLDBlocks({ block, contractAddress });
+  async getIPLDBlock (block: BlockProgress, contractAddress: string, kind?: string): Promise<IPLDBlock[]> {
+    const ipldBlocks = await this._db.getIPLDBlocks({ block, contractAddress, kind });
 
-    // There can be only one IPLDBlock for a { block, contractAddress } combination.
-    assert(ipldBlocks.length <= 1);
-
-    return ipldBlocks[0];
+    return ipldBlocks;
   }
 
   async getIPLDBlockByCid (cid: string): Promise<IPLDBlock | undefined> {
@@ -338,7 +335,10 @@ export class Indexer {
 
   async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any, kind?: string):Promise<any> {
     // Get an existing IPLDBlock for current block and contractAddress.
-    const currentIPLDBlock = await this.getIPLDBlock(block, contractAddress);
+    const currentIPLDBlocks = await this.getIPLDBlock(block, contractAddress, 'diff');
+    // There can be only one IPLDBlock for a (block, contractAddress, 'diff') combination.
+    assert(currentIPLDBlocks.length <= 1);
+    const currentIPLDBlock = currentIPLDBlocks[0];
 
     // Update currentIPLDBlock if it exists and is of same kind.
     let ipldBlock;
