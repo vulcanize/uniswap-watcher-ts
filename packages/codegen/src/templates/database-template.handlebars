@@ -3,7 +3,7 @@
 //
 
 import assert from 'assert';
-import { Connection, ConnectionOptions, DeepPartial, FindConditions, QueryRunner, In, Between, MoreThanOrEqual } from 'typeorm';
+import { Connection, ConnectionOptions, DeepPartial, FindConditions, QueryRunner, In, Between } from 'typeorm';
 import path from 'path';
 
 import { Database as BaseDatabase, MAX_REORG_DEPTH } from '@vulcanize/util';
@@ -11,6 +11,7 @@ import { Database as BaseDatabase, MAX_REORG_DEPTH } from '@vulcanize/util';
 import { Contract } from './entity/Contract';
 import { Event } from './entity/Event';
 import { SyncStatus } from './entity/SyncStatus';
+import { HooksStatus } from './entity/HooksStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { IPLDBlock } from './entity/IPLDBlock';
 
@@ -208,19 +209,13 @@ export class Database {
     let frothyIds = queryResult.map((obj: any) => obj.id);
     frothyIds = frothyIds.filter((id: any) => id !== null);
 
-    let blockNumberFilter;
-    if (queryResult.length > 0) {
-      const frothyBlockNumber = queryResult[0].block_number;
-      blockNumberFilter = Between(checkpointBlockNumber + 1, frothyBlockNumber - 1);
-    } else {
-      blockNumberFilter = MoreThanOrEqual(checkpointBlockNumber + 1);
-    }
+    const frothyBlockNumber = queryResult[0].block_number;
 
     // Fetching all diff blocks after checkpoint till current blockNumber.
     const ipldBlocks = await queryRunner.manager.find(IPLDBlock, {
       relations: ['block'],
       where: [
-        { contractAddress, block: { isPruned: false, blockNumber: blockNumberFilter } },
+        { contractAddress, block: { isPruned: false, blockNumber: Between(checkpointBlockNumber + 1, frothyBlockNumber - 1) } },
         { id: In(frothyIds) }
       ],
       order: { block: 'ASC' }
@@ -232,6 +227,29 @@ export class Database {
   async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
     const repo = this._conn.getRepository(IPLDBlock);
     return repo.save(ipldBlock);
+  }
+
+  async getHooksStatus (queryRunner: QueryRunner): Promise<HooksStatus | undefined> {
+    const repo = queryRunner.manager.getRepository(HooksStatus);
+
+    return repo.findOne();
+  }
+
+  async updateHooksStatusProcessedBlock (queryRunner: QueryRunner, blockNumber: number): Promise<HooksStatus> {
+    const repo = queryRunner.manager.getRepository(HooksStatus);
+    let entity = await repo.findOne();
+
+    if (!entity) {
+      entity = repo.create({
+        latestProcessedBlockNumber: blockNumber
+      });
+    }
+
+    if (blockNumber > entity.latestProcessedBlockNumber) {
+      entity.latestProcessedBlockNumber = blockNumber;
+    }
+
+    return repo.save(entity);
   }
 
   async getContracts (where: FindConditions<Contract>): Promise<Contract[]> {
