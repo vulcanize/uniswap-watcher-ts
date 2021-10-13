@@ -3,7 +3,7 @@
 //
 
 import assert from 'assert';
-import { Connection, ConnectionOptions, DeepPartial, FindConditions, QueryRunner, In, Between } from 'typeorm';
+import { Connection, ConnectionOptions, DeepPartial, FindConditions, QueryRunner, In, Between, MoreThanOrEqual } from 'typeorm';
 import path from 'path';
 
 import { Database as BaseDatabase, MAX_REORG_DEPTH } from '@vulcanize/util';
@@ -82,17 +82,15 @@ export class Database {
     return repo.find({ where, relations: ['block'] });
   }
 
-  async getLatestCheckpoints (queryRunner: QueryRunner): Promise<IPLDBlock[]> {
-    // Get the latest checkpoints for all the contracts.
+  async getLatestCheckpointFor (queryRunner: QueryRunner, contractAddress: string): Promise<IPLDBlock | undefined> {
+    // Get the latest checkpoints for a contract.
     const result = await queryRunner.manager.createQueryBuilder(IPLDBlock, 'ipld_block')
-      .distinctOn(['contract_address'])
-      .orderBy('contract_address')
-      .innerJoinAndSelect(Contract, 'contract', 'contract_address = contract.address')
       .leftJoinAndSelect('ipld_block.block', 'block')
       .where('block.is_pruned = false')
+      .andWhere('ipld_block.contractAddress = :contractAddress', { contractAddress })
       .andWhere('ipld_block.kind = :kind', { kind: 'checkpoint' })
-      .addOrderBy('ipld_block.block_id', 'DESC')
-      .getMany();
+      .orderBy('ipld_block.block_id', 'DESC')
+      .getOne();
 
     return result;
   }
@@ -210,13 +208,19 @@ export class Database {
     let frothyIds = queryResult.map((obj: any) => obj.id);
     frothyIds = frothyIds.filter((id: any) => id !== null);
 
-    const frothyBlockNumber = queryResult[0].block_number;
+    let blockNumberFilter;
+    if (queryResult.length > 0) {
+      const frothyBlockNumber = queryResult[0].block_number;
+      blockNumberFilter = Between(checkpointBlockNumber + 1, frothyBlockNumber - 1);
+    } else {
+      blockNumberFilter = MoreThanOrEqual(checkpointBlockNumber + 1);
+    }
 
     // Fetching all diff blocks after checkpoint till current blockNumber.
     const ipldBlocks = await queryRunner.manager.find(IPLDBlock, {
       relations: ['block'],
       where: [
-        { contractAddress, block: { isPruned: false, blockNumber: Between(checkpointBlockNumber + 1, frothyBlockNumber - 1) } },
+        { contractAddress, block: { isPruned: false, blockNumber: blockNumberFilter } },
         { id: In(frothyIds) }
       ],
       order: { block: 'ASC' }
@@ -228,6 +232,11 @@ export class Database {
   async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
     const repo = this._conn.getRepository(IPLDBlock);
     return repo.save(ipldBlock);
+  }
+
+  async getContracts (where: FindConditions<Contract>): Promise<Contract[]> {
+    const repo = this._conn.getRepository(Contract);
+    return repo.find({ where });
   }
 
   async getContract (address: string): Promise<Contract | undefined> {

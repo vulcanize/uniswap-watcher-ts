@@ -226,18 +226,22 @@ export class Indexer {
 
     const { data: { blockNumber: currentBlockNumber, blockHash: currentBlockHash } } = job;
 
-    // Get latest checkpoints for all the contracts.
-    // Assuming checkPointInterval > MAX_REORG_DEPTH.
-    const latestCheckpointBlocks = await this.getLatestCheckpoints();
+    // Get all the contracts.
+    const contracts = await this._db.getContracts({});
+    const contractAddresses = contracts.map(contract => contract.address);
 
     // For each contractAddress, merge the diff till now.
-    for (const checkpointBlock of latestCheckpointBlocks) {
+    for (const contractAddress of contractAddresses) {
+      // Fetching the latest checkpoint.
+      // Assuming checkPointInterval > MAX_REORG_DEPTH.
+      const checkpointBlock = await this.getLatestCheckpointFor(contractAddress);
+
       // Check if it is time for a new checkpoint.
-      if (checkpointBlock.block.blockNumber > currentBlockNumber - checkpointInterval) {
+      if (!checkpointBlock || (checkpointBlock.block.blockNumber > (currentBlockNumber - checkpointInterval))) {
         continue;
       }
 
-      const { contractAddress, block: { blockNumber: checkpointBlockNumber } } = checkpointBlock;
+      const { block: { blockNumber: checkpointBlockNumber } } = checkpointBlock;
 
       // Fetching all diff blocks after checkpoint.
       const diffBlocks = await this.getPrevIPLDBlocksAfterCheckpoint(currentBlockHash, checkpointBlockNumber, contractAddress);
@@ -258,13 +262,13 @@ export class Indexer {
     }
   }
 
-  async getLatestCheckpoints (): Promise<IPLDBlock[]> {
-    // Get the latest checkpoints for all the contracts.
+  async getLatestCheckpointFor (contractAddress: string): Promise<IPLDBlock | undefined> {
+    // Get the latest checkpoints for a contract.
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
     try {
-      res = await this._db.getLatestCheckpoints(dbTx);
+      res = await this._db.getLatestCheckpointFor(dbTx, contractAddress);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
@@ -334,11 +338,17 @@ export class Indexer {
     // Get an existing IPLDBlock for current block and contractAddress.
     const currentIPLDBlock = await this.getIPLDBlock(block, contractAddress);
 
-    // If an IPLDBlock for { block, contractAddress } already exists, update the data field.
-    if (currentIPLDBlock) {
+    // Update currentIPLDBlock if it exists and is of same kind.
+    let ipldBlock;
+    if (currentIPLDBlock && currentIPLDBlock.kind === kind) {
+      ipldBlock = currentIPLDBlock;
+
+      // Update the data field.
       const oldData = codec.decode(Buffer.from(currentIPLDBlock.data));
       data = _.merge(oldData, data);
     } else {
+      ipldBlock = new IPLDBlock();
+
       // Fetch the parent IPLDBlock.
       const parentIPLDBlock = await this.getPrevIPLDBlock(block.blockHash, contractAddress);
 
@@ -367,7 +377,7 @@ export class Indexer {
     // Calculating the CID: v1, code: dag-json, hash.
     const cid = CID.create(1, codec.code, hash);
 
-    let ipldBlock = currentIPLDBlock || new IPLDBlock();
+    // Update ipldBlock with new data.
     ipldBlock = Object.assign(ipldBlock, {
       block,
       contractAddress,
