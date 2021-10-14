@@ -111,6 +111,7 @@ export class Database {
           block_progress b
           LEFT JOIN
             ipld_block i ON i.block_id = b.id
+            AND i.contract_address = $2
         WHERE
           b.block_hash = $1
         UNION ALL
@@ -185,6 +186,7 @@ export class Database {
           block_progress b
           LEFT JOIN
             ipld_block i ON i.block_id = b.id
+            AND i.contract_address = $2
         WHERE
           b.block_hash = $1
         UNION ALL
