@@ -81,6 +81,8 @@
 
   * Edit the custom hook function `handleBlock` (triggered on a block) in `src/hooks.ts` to save `IPLDBlock`s using the `Indexer` object.
 
+  * Edit the custom hook function `genesisHook` (triggered on watch-contract) in `src/hooks.ts` to save a genesis checkpoint `IPLDBlock` using the `Indexer` object.
+
   * The existing example hooks in `src/hooks.ts` are for an `ERC20` contract.
 
 ### Run
@@ -114,7 +116,13 @@
   * To fill a block range:
 
     ```bash
-    yarn fill --startBlock <from-block> --endBlock <to-block>
+    yarn fill --start-block <from-block> --end-block <to-block>
+    ```
+
+  * To create a checkpoint for a contract:
+
+    ```bash
+    yarn checkpoint --address <contract-address> --block-hash [block-hash]
     ```
 
 ## Known Issues

@@ -226,8 +226,6 @@ export class Indexer {
     if (checkpointInterval <= 0) return;
 
     const { data: { blockHash: currentBlockHash } } = job;
-    const block = await this.getBlockProgress(currentBlockHash);
-    assert(block);
 
     // Get all the contracts.
     const contracts = await this._db.getContracts({});
@@ -235,13 +233,16 @@ export class Indexer {
 
     // For each contractAddress, merge the diff till now to create a checkpoint.
     for (const contractAddress of contractAddresses) {
-      await this.createCheckpointFor(contractAddress, block, checkpointInterval);
+      await this.createCheckpointFor(contractAddress, currentBlockHash, checkpointInterval);
     }
   }
 
-  async createCheckpointFor (contractAddress: string, currentBlock?: BlockProgress, checkpointInterval?: number): Promise<void> {
+  async createCheckpointFor (contractAddress: string, currentBlockHash?: string, checkpointInterval?: number): Promise<void> {
     // Getting the current block.
-    if (!currentBlock) {
+    let currentBlock;
+    if (currentBlockHash) {
+      currentBlock = await this.getBlockProgress(currentBlockHash);
+    } else {
       currentBlock = await this._db.getLatestBlockProgress();
     }
     assert(currentBlock);

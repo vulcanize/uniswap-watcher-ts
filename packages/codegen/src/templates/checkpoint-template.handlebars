@@ -30,7 +30,11 @@ const main = async (): Promise<void> => {
       type: 'string',
       require: true,
       demandOption: true,
-      describe: 'Contract address to create a checkpoint for.'
+      describe: 'Contract address to create the checkpoint for.'
+    },
+    blockHash: {
+      type: 'string',
+      describe: 'Blockhash at which to create the checkpoint.'
     }
   }).argv;
 
@@ -65,7 +69,7 @@ const main = async (): Promise<void> => {
   const ethProvider = getDefaultProvider(rpcProviderEndpoint);
 
   const indexer = new Indexer(serverConfig, db, ethClient, postgraphileClient, ethProvider);
-  await indexer.createCheckpointFor(argv.address);
+  await indexer.createCheckpointFor(argv.address, argv.blockHash);
 
   await db.close();
 };
