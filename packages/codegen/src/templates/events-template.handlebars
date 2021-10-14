@@ -109,7 +109,7 @@ export class EventWatcher {
 
       // Push checkpointing job only after post-block hook job is marked complete and checkpointing is on.
       if (this._indexer._serverConfig.checkpointing) {
-        this._jobQueue.pushJob(QUEUE_BLOCK_CHECKPOINT, { blockHash, blockNumber });
+        this._jobQueue.pushJob(QUEUE_BLOCK_CHECKPOINT, { blockHash });
       }
     });
   }

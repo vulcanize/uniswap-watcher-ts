@@ -225,43 +225,51 @@ export class Indexer {
     const checkpointInterval = this._serverConfig.checkpointInterval;
     if (checkpointInterval <= 0) return;
 
-    const { data: { blockNumber: currentBlockNumber, blockHash: currentBlockHash } } = job;
+    const { data: { blockHash: currentBlockHash } } = job;
+    const block = await this.getBlockProgress(currentBlockHash);
+    assert(block);
 
     // Get all the contracts.
     const contracts = await this._db.getContracts({});
     const contractAddresses = contracts.map(contract => contract.address);
 
-    // For each contractAddress, merge the diff till now.
+    // For each contractAddress, merge the diff till now to create a checkpoint.
     for (const contractAddress of contractAddresses) {
-      // Fetching the latest checkpoint.
-      // Assuming checkPointInterval > MAX_REORG_DEPTH.
-      const checkpointBlock = await this.getLatestCheckpointFor(contractAddress);
-      assert(checkpointBlock);
-
-      // Check if it is time for a new checkpoint.
-      if (checkpointBlock.block.blockNumber > (currentBlockNumber - checkpointInterval)) {
-        continue;
-      }
-
-      const { block: { blockNumber: checkpointBlockNumber } } = checkpointBlock;
-
-      // Fetching all diff blocks after checkpoint.
-      const diffBlocks = await this.getPrevIPLDBlocksAfterCheckpoint(currentBlockHash, checkpointBlockNumber, contractAddress);
-
-      let checkPoint = codec.decode(Buffer.from(checkpointBlock.data)) as any;
-
-      for (const diffBlock of diffBlocks) {
-        const diff = codec.decode(Buffer.from(diffBlock.data));
-        checkPoint = _.merge(checkPoint, diff);
-      }
-
-      // Getting the current block.
-      const block = await this.getBlockProgress(currentBlockHash);
-      assert(block);
-
-      const ipldBlock = await this.prepareIPLDBlock(block, contractAddress, checkPoint, 'checkpoint');
-      await this.saveOrUpdateIPLDBlock(ipldBlock);
+      await this.createCheckpointFor(contractAddress, block, checkpointInterval);
     }
+  }
+
+  async createCheckpointFor (contractAddress: string, currentBlock?: BlockProgress, checkpointInterval?: number): Promise<void> {
+    // Getting the current block.
+    if (!currentBlock) {
+      currentBlock = await this._db.getLatestBlockProgress();
+    }
+    assert(currentBlock);
+
+    // Fetching the latest checkpoint for a contract.
+    // Assuming checkPointInterval > MAX_REORG_DEPTH.
+    const checkpointBlock = await this.getLatestCheckpointFor(contractAddress);
+    assert(checkpointBlock);
+
+    // Check if it is time for a new checkpoint.
+    if (checkpointInterval && checkpointBlock.block.blockNumber > (currentBlock.blockNumber - checkpointInterval)) {
+      return;
+    }
+
+    const { block: { blockNumber: checkpointBlockNumber } } = checkpointBlock;
+
+    // Fetching all diff blocks after checkpoint.
+    const diffBlocks = await this.getPrevIPLDBlocksAfterCheckpoint(currentBlock.blockHash, checkpointBlockNumber, contractAddress);
+
+    let checkPoint = codec.decode(Buffer.from(checkpointBlock.data)) as any;
+
+    for (const diffBlock of diffBlocks) {
+      const diff = codec.decode(Buffer.from(diffBlock.data));
+      checkPoint = _.merge(checkPoint, diff);
+    }
+
+    const ipldBlock = await this.prepareIPLDBlock(currentBlock, contractAddress, checkPoint, 'checkpoint');
+    await this.saveOrUpdateIPLDBlock(ipldBlock);
   }
 
   async getLatestCheckpointFor (contractAddress: string): Promise<IPLDBlock | undefined> {

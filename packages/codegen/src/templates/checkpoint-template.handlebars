@@ -30,18 +30,7 @@ const main = async (): Promise<void> => {
       type: 'string',
       require: true,
       demandOption: true,
-      describe: 'Address of the deployed contract'
-    },
-    kind: {
-      type: 'string',
-      require: true,
-      demandOption: true,
-      describe: 'Kind of contract'
-    },
-    startingBlock: {
-      type: 'number',
-      default: 1,
-      describe: 'Starting block'
+      describe: 'Contract address to create a checkpoint for.'
     }
   }).argv;
 
@@ -76,7 +65,7 @@ const main = async (): Promise<void> => {
   const ethProvider = getDefaultProvider(rpcProviderEndpoint);
 
   const indexer = new Indexer(serverConfig, db, ethClient, postgraphileClient, ethProvider);
-  await indexer.watchContract(argv.address, argv.kind, argv.startingBlock);
+  await indexer.createCheckpointFor(argv.address);
 
   await db.close();
 };
