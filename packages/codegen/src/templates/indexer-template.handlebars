@@ -344,7 +344,7 @@ export class Indexer {
     return this._db.saveOrUpdateIPLDBlock(ipldBlock);
   }
 
-  async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any, kind?: string):Promise<any> {
+  async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any, kind: string):Promise<any> {
     // Get an existing IPLDBlock for current block and contractAddress.
     const currentIPLDBlocks = await this.getIPLDBlocks(block, contractAddress, 'diff');
     // There can be only one IPLDBlock for a (block, contractAddress, 'diff') combination.
