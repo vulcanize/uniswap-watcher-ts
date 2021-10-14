@@ -73,6 +73,8 @@
 
 * Create the databases configured in `environments/local.toml`.
 
+* Update the derived state checkpoint settings in `environments/local.toml`.
+
 ### Customize
 
 * Indexing on an event:

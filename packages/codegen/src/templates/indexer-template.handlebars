@@ -237,7 +237,7 @@ export class Indexer {
     }
   }
 
-  async createCheckpointFor (contractAddress: string, currentBlockHash?: string, checkpointInterval?: number): Promise<void> {
+  async createCheckpointFor (contractAddress: string, currentBlockHash?: string, checkpointInterval?: number): Promise<string | undefined> {
     // Getting the current block.
     let currentBlock;
     if (currentBlockHash) {
@@ -271,6 +271,8 @@ export class Indexer {
 
     const ipldBlock = await this.prepareIPLDBlock(currentBlock, contractAddress, checkPoint, 'checkpoint');
     await this.saveOrUpdateIPLDBlock(ipldBlock);
+
+    return currentBlock.blockHash;
   }
 
   async getLatestCheckpointFor (contractAddress: string): Promise<IPLDBlock | undefined> {

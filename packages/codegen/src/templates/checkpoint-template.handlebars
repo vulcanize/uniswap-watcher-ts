@@ -69,7 +69,9 @@ const main = async (): Promise<void> => {
   const ethProvider = getDefaultProvider(rpcProviderEndpoint);
 
   const indexer = new Indexer(serverConfig, db, ethClient, postgraphileClient, ethProvider);
-  await indexer.createCheckpointFor(argv.address, argv.blockHash);
+  const blockHash = await indexer.createCheckpointFor(argv.address, argv.blockHash);
+
+  console.log(`Created checkpoint for contract ${argv.address} at block-hash ${blockHash}`);
 
   await db.close();
 };
