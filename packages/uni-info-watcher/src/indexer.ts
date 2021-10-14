@@ -151,9 +151,9 @@ export class Indexer implements IndexerInterface {
     log('Event processing completed for', eventName);
   }
 
-  async processBlock (blockHash: string): Promise<void> {
+  async processBlock (job: any): Promise<void> {
     // Empty post-block method.
-    assert(blockHash);
+    assert(job);
   }
 
   async getBlockEntities (where: { [key: string]: any } = {}, queryOptions: QueryOptions): Promise<any> {
