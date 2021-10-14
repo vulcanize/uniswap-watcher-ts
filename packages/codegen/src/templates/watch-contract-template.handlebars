@@ -5,6 +5,7 @@
 import assert from 'assert';
 import yargs from 'yargs';
 import 'reflect-metadata';
+import debug from 'debug';
 import { getDefaultProvider } from 'ethers';
 
 import { Config, DEFAULT_CONFIG_PATH, getConfig } from '@vulcanize/util';
@@ -13,6 +14,8 @@ import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { Database } from '../database';
 import { Indexer } from '../indexer';
+
+const log = debug('vulcanize:watch-contract');
 
 const main = async (): Promise<void> => {
   const argv = await yargs.parserConfiguration({
@@ -83,7 +86,7 @@ const main = async (): Promise<void> => {
 
 main()
   .catch(err => {
-    console.error(err);
+    log(err);
   })
   .finally(() => {
     process.exit(0);

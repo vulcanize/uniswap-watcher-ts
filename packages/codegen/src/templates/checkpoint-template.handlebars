@@ -5,6 +5,7 @@
 import assert from 'assert';
 import yargs from 'yargs';
 import 'reflect-metadata';
+import debug from 'debug';
 import { getDefaultProvider } from 'ethers';
 
 import { Config, DEFAULT_CONFIG_PATH, getConfig } from '@vulcanize/util';
@@ -13,6 +14,8 @@ import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { Database } from '../database';
 import { Indexer } from '../indexer';
+
+const log = debug('vulcanize:checkpoint');
 
 const main = async (): Promise<void> => {
   const argv = await yargs.parserConfiguration({
@@ -69,16 +72,16 @@ const main = async (): Promise<void> => {
   const ethProvider = getDefaultProvider(rpcProviderEndpoint);
 
   const indexer = new Indexer(serverConfig, db, ethClient, postgraphileClient, ethProvider);
-  const blockHash = await indexer.createCheckpointFor(argv.address, argv.blockHash);
+  const blockHash = await indexer.createCheckpoint(argv.address, argv.blockHash);
 
-  console.log(`Created checkpoint for contract ${argv.address} at block-hash ${blockHash}`);
+  log(`Created a checkpoint for contract ${argv.address} at block-hash ${blockHash}`);
 
   await db.close();
 };
 
 main()
   .catch(err => {
-    console.error(err);
+    log(err);
   })
   .finally(() => {
     process.exit(0);

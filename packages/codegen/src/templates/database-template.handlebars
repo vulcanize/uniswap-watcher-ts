@@ -83,7 +83,7 @@ export class Database {
     return repo.find({ where, relations: ['block'] });
   }
 
-  async getLatestCheckpointFor (queryRunner: QueryRunner, contractAddress: string): Promise<IPLDBlock | undefined> {
+  async getLatestCheckpoint (queryRunner: QueryRunner, contractAddress: string): Promise<IPLDBlock | undefined> {
     // Get the latest checkpoints for a contract.
     const result = await queryRunner.manager.createQueryBuilder(IPLDBlock, 'ipld_block')
       .leftJoinAndSelect('ipld_block.block', 'block')

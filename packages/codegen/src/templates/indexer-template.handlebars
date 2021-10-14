@@ -233,11 +233,11 @@ export class Indexer {
 
     // For each contractAddress, merge the diff till now to create a checkpoint.
     for (const contractAddress of contractAddresses) {
-      await this.createCheckpointFor(contractAddress, currentBlockHash, checkpointInterval);
+      await this.createCheckpoint(contractAddress, currentBlockHash, checkpointInterval);
     }
   }
 
-  async createCheckpointFor (contractAddress: string, currentBlockHash?: string, checkpointInterval?: number): Promise<string | undefined> {
+  async createCheckpoint (contractAddress: string, currentBlockHash?: string, checkpointInterval?: number): Promise<string | undefined> {
     // Getting the current block.
     let currentBlock;
     if (currentBlockHash) {
@@ -249,7 +249,7 @@ export class Indexer {
 
     // Fetching the latest checkpoint for a contract.
     // Assuming checkPointInterval > MAX_REORG_DEPTH.
-    const checkpointBlock = await this.getLatestCheckpointFor(contractAddress);
+    const checkpointBlock = await this.getLatestCheckpoint(contractAddress);
     assert(checkpointBlock);
 
     // Check if it is time for a new checkpoint.
@@ -275,13 +275,13 @@ export class Indexer {
     return currentBlock.blockHash;
   }
 
-  async getLatestCheckpointFor (contractAddress: string): Promise<IPLDBlock | undefined> {
+  async getLatestCheckpoint (contractAddress: string): Promise<IPLDBlock | undefined> {
     // Get the latest checkpoints for a contract.
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
     try {
-      res = await this._db.getLatestCheckpointFor(dbTx, contractAddress);
+      res = await this._db.getLatestCheckpoint(dbTx, contractAddress);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
