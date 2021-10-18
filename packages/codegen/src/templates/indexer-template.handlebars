@@ -83,8 +83,6 @@ export class Indexer {
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
 
-  _defaultDiffMap: Map<string, any>
-
   constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider) {
     assert(db);
     assert(ethClient);
@@ -105,8 +103,6 @@ export class Indexer {
     this._storageLayout = storageLayout;
 
     this._contract = new ethers.utils.Interface(this._abi);
-
-    this._defaultDiffMap = new Map();
   }
 
   getResultEvent (event: Event): ResultEvent {
@@ -215,10 +211,10 @@ export class Indexer {
     {{#if (compare query.stateVariableType 'Mapping')}}
 
 
-    const currentState = this._defaultDiffMap.get(contractAddress) || {};
-    this._defaultDiffMap.set(`${contractAddress}`, _.set(currentState, `{{query.name}}
-    {{~#each query.params~}} [${ {{~this.name~}} }]{{/each~}}
-    `, result.value));
+    const stateUpdate = _.set({}, `state.{{query.name}}
+    {{~#each query.params}}[${ {{~this.name~}} }]{{/each~}}
+    `, result.value.toString());
+    await this.storeIPLDData(blockHash, contractAddress, stateUpdate, 'diff');  
     {{~/if}}
     {{/if}}
 
@@ -229,22 +225,6 @@ export class Indexer {
   {{/each}}
   async processBlock (job: any): Promise<void> {
     const { data: { blockHash } } = job;
-
-    const defaultDiffMapItr = this._defaultDiffMap.entries();
-
-    let value = defaultDiffMapItr.next().value;
-    while (value) {
-      console.log(value);
-      const block = await this.getBlockProgress(blockHash);
-      assert(block);
-
-      const ipldBlock = await this.prepareIPLDBlock(block, value[0], { state: value[1] }, 'diff');
-      await this.saveOrUpdateIPLDBlock(ipldBlock);
-
-      value = defaultDiffMapItr.next().value;
-    }
-
-    this._defaultDiffMap = new Map();
 
     // Call custom post-block hook.
     await postBlockHook(this, blockHash);
@@ -370,6 +350,14 @@ export class Indexer {
     }
 
     return res;
+  }
+
+  async storeIPLDData (blockHash: string, contractAddress: string, data: any, kind: string): Promise<void> {
+    const block = await this.getBlockProgress(blockHash);
+    assert(block);
+
+    const ipldBlock = await this.prepareIPLDBlock(block, contractAddress, data, kind);
+    await this.saveOrUpdateIPLDBlock(ipldBlock);
   }
 
   async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
