@@ -20,8 +20,8 @@
     "fill:dev": "DEBUG=vulcanize:* ts-node src/fill.ts",
     "watch:contract": "node --enable-source-maps dist/cli/watch-contract.js",
     "watch:contract:dev": "ts-node src/cli/watch-contract.ts",
-    "clean-jobs": "node --enable-source-maps dist/cli/clean-jobs.js",
-    "clean-jobs:dev": "DEBUG=vulcanize:* ts-node src/cli/clean-jobs.ts"
+    "reset": "node --enable-source-maps dist/cli/reset.js",
+    "reset:dev": "DEBUG=vulcanize:* ts-node src/cli/reset.ts"
   },
   "repository": {
     "type": "git",

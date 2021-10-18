@@ -2,12 +2,10 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import yargs from 'yargs';
 import assert from 'assert';
 import Decimal from 'decimal.js';
 import { ValueTransformer } from 'typeorm';
 
-import { DEFAULT_CONFIG_PATH } from './constants';
 import { getConfig } from './config';
 import { JobQueue } from './job-queue';
 
@@ -57,21 +55,8 @@ export const bigintTransformer: ValueTransformer = {
   }
 };
 
-export const cleanJobs = async (): Promise<void> => {
-  const argv = await yargs.parserConfiguration({
-    'parse-numbers': false
-  }).options({
-    configFile: {
-      alias: 'f',
-      type: 'string',
-      require: true,
-      demandOption: true,
-      describe: 'configuration file path (toml)',
-      default: DEFAULT_CONFIG_PATH
-    }
-  }).argv;
-
-  const config = await getConfig(argv.configFile);
+export const cleanJobs = async (configFile: string): Promise<void> => {
+  const config = await getConfig(configFile);
 
   assert(config.server, 'Missing server config');
 
@@ -83,4 +68,10 @@ export const cleanJobs = async (): Promise<void> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
   await jobQueue.deleteAllJobs();
+};
+
+export const resetState = async (configFile: string, blockNumber: number): Promise<void> => {
+  const config = await getConfig(configFile);
+  assert(config.server, 'Missing server config');
+  assert(blockNumber, 'Missing block number');
 };
