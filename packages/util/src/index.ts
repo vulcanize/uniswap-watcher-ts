@@ -2,8 +2,14 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
+import yargs from 'yargs';
+import assert from 'assert';
 import Decimal from 'decimal.js';
 import { ValueTransformer } from 'typeorm';
+
+import { DEFAULT_CONFIG_PATH } from './constants';
+import { getConfig } from './config';
+import { JobQueue } from './job-queue';
 
 /**
  * Method to wait for specified time.
@@ -49,4 +55,32 @@ export const bigintTransformer: ValueTransformer = {
 
     return value;
   }
+};
+
+export const cleanJobs = async (): Promise<void> => {
+  const argv = await yargs.parserConfiguration({
+    'parse-numbers': false
+  }).options({
+    configFile: {
+      alias: 'f',
+      type: 'string',
+      require: true,
+      demandOption: true,
+      describe: 'configuration file path (toml)',
+      default: DEFAULT_CONFIG_PATH
+    }
+  }).argv;
+
+  const config = await getConfig(argv.configFile);
+
+  assert(config.server, 'Missing server config');
+
+  const { jobQueue: jobQueueConfig } = config;
+
+  const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
+  assert(dbConnectionString, 'Missing job queue db connection string');
+
+  const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
+  await jobQueue.start();
+  await jobQueue.deleteAllJobs();
 };
