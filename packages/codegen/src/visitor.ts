@@ -64,6 +64,7 @@ export class Visitor {
 
     const params: Param[] = [];
 
+    const stateVariableType = node.variables[0].typeName.type;
     let typeName = node.variables[0].typeName;
     let numParams = 0;
 
@@ -79,7 +80,7 @@ export class Visitor {
 
     this._schema.addQuery(name, params, returnType);
     this._resolvers.addQuery(name, params, returnType);
-    this._indexer.addQuery(MODE_STORAGE, name, params, returnType);
+    this._indexer.addQuery(MODE_STORAGE, name, params, returnType, stateVariableType);
     this._entity.addQuery(name, params, returnType);
     this._database.addQuery(name, params, returnType);
     this._client.addQuery(name, params, returnType);

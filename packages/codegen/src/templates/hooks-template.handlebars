@@ -123,10 +123,10 @@ export async function handleEvent (indexer: Indexer, eventData: ResultEvent): Pr
       const { from, to } = eventData.event;
 
       // Update balance entry for sender in the database.
-      await indexer.balanceOf(eventData.block.hash, eventData.contract, from);
+      await indexer._balances(eventData.block.hash, eventData.contract, from);
 
       // Update balance entry for receiver in the database.
-      await indexer.balanceOf(eventData.block.hash, eventData.contract, to);
+      await indexer._balances(eventData.block.hash, eventData.contract, to);
 
       break;
     }
@@ -138,7 +138,7 @@ export async function handleEvent (indexer: Indexer, eventData: ResultEvent): Pr
       const { owner, spender } = eventData.event;
 
       // Update allowance entry for (owner, spender) combination in the database.
-      await indexer.allowance(eventData.block.hash, eventData.contract, owner, spender);
+      await indexer._allowances(eventData.block.hash, eventData.contract, owner, spender);
 
       break;
     }

@@ -75,13 +75,15 @@ export class Indexer {
   _db: Database
   _ethClient: EthClient
   _ethProvider: BaseProvider
-  _postgraphileClient: EthClient;
+  _postgraphileClient: EthClient
   _baseIndexer: BaseIndexer
   _serverConfig: ServerConfig
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
+
+  _defaultDiffMap: Map<string, any>
 
   constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider) {
     assert(db);
@@ -103,6 +105,8 @@ export class Indexer {
     this._storageLayout = storageLayout;
 
     this._contract = new ethers.utils.Interface(this._abi);
+
+    this._defaultDiffMap = new Map();
   }
 
   getResultEvent (event: Event): ResultEvent {
@@ -207,12 +211,40 @@ export class Indexer {
     await this._db.{{query.saveQueryName}}({ blockHash, contractAddress
     {{~#each query.params}}, {{this.name~}} {{/each}}, value: result.value, proof: JSONbig.stringify(result.proof) });
 
+    {{~#if query.stateVariableType}}
+    {{#if (compare query.stateVariableType 'Mapping')}}
+
+
+    const currentState = this._defaultDiffMap.get(contractAddress) || {};
+    this._defaultDiffMap.set(`${contractAddress}`, _.set(currentState, `{{query.name}}
+    {{~#each query.params~}} [${ {{~this.name~}} }]{{/each~}}
+    `, result.value));
+    {{~/if}}
+    {{/if}}
+
+
     return result;
   }
 
   {{/each}}
   async processBlock (job: any): Promise<void> {
     const { data: { blockHash } } = job;
+
+    const defaultDiffMapItr = this._defaultDiffMap.entries();
+
+    let value = defaultDiffMapItr.next().value;
+    while (value) {
+      console.log(value);
+      const block = await this.getBlockProgress(blockHash);
+      assert(block);
+
+      const ipldBlock = await this.prepareIPLDBlock(block, value[0], { state: value[1] }, 'diff');
+      await this.saveOrUpdateIPLDBlock(ipldBlock);
+
+      value = defaultDiffMapItr.next().value;
+    }
+
+    this._defaultDiffMap = new Map();
 
     // Call custom post-block hook.
     await postBlockHook(this, blockHash);
