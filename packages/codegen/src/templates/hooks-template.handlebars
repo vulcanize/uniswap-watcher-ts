@@ -3,9 +3,8 @@
 //
 
 import assert from 'assert';
-import _ from 'lodash';
 
-import { UNKNOWN_EVENT_NAME } from '@vulcanize/util';
+import { UNKNOWN_EVENT_NAME, updateStateForMappingType } from '@vulcanize/util';
 
 import { Indexer, ResultEvent } from './indexer';
 import { BlockProgress } from './entity/BlockProgress';
@@ -22,12 +21,12 @@ const ACCOUNTS = [
  */
 export async function initialCheckpointHook (indexer: Indexer, block: BlockProgress, contractAddress: string): Promise<void> {
   // Store the initial state values in an IPLDBlock.
-  const ipldBlockData: any = {};
+  let ipldBlockData: any = {};
 
   // Setting the initial balances of accounts.
   for (const account of ACCOUNTS) {
     const balance = await indexer._balances(block.blockHash, contractAddress, account);
-    _.set(ipldBlockData, `state._balances[${account}]`, balance.value.toString());
+    ipldBlockData = updateStateForMappingType(ipldBlockData, '_balances', [account], balance.value.toString());
   }
 
   const ipldBlock = await indexer.prepareIPLDBlock(block, contractAddress, ipldBlockData, 'checkpoint');
@@ -58,7 +57,7 @@ export async function postBlockHook (indexer: Indexer, blockHash: string): Promi
 
     const eventData = indexer.getResultEvent(event);
 
-    const ipldBlockData: any = {};
+    let ipldBlockData: any = {};
 
     switch (event.eventName) {
       case 'Transfer': {
@@ -73,8 +72,8 @@ export async function postBlockHook (indexer: Indexer, blockHash: string): Promi
         //      "0xDC7d7A8920C8Eecc098da5B7522a5F31509b5Bfc": "999999999999999999900"
         //   }
         // }
-        _.set(ipldBlockData, `state._balances[${from}]`, fromBalance.value.toString());
-        _.set(ipldBlockData, `state._balances[${to}]`, toBalance.value.toString());
+        ipldBlockData = updateStateForMappingType(ipldBlockData, '_balances', [from], fromBalance.value.toString());
+        ipldBlockData = updateStateForMappingType(ipldBlockData, '_balances', [to], toBalance.value.toString());
 
         break;
       }
@@ -90,7 +89,7 @@ export async function postBlockHook (indexer: Indexer, blockHash: string): Promi
         //      }
         //   }
         // }
-        _.set(ipldBlockData, `state._allowances[${owner}][${spender}]`, allowance.value.toString());
+        ipldBlockData = updateStateForMappingType(ipldBlockData, '_allowances', [owner, spender], allowance.value.toString());
 
         break;
       }

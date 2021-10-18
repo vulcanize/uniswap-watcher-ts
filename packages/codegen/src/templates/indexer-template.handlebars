@@ -16,7 +16,7 @@ import { BaseProvider } from '@ethersproject/providers';
 import * as codec from '@ipld/dag-json';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { StorageLayout } from '@vulcanize/solidity-mapper';
-import { EventInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME, ServerConfig } from '@vulcanize/util';
+import { EventInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME, ServerConfig, updateStateForElementaryType, updateStateForMappingType } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Contract } from './entity/Contract';
@@ -212,9 +212,17 @@ export class Indexer {
     {{#if query.stateVariableType}}
     {{#if (compare query.stateVariableType 'Mapping')}}
     if (defaultState) {
-      const stateUpdate = _.set({}, `state.{{query.name}}
-      {{~#each query.params}}[${ {{~this.name~}} }]{{/each~}}
-      `, result.value.toString());
+      const stateUpdate = updateStateForMappingType({}, '{{query.name}}', [
+      {{~#each query.params}}
+      {{~this.name~}} {{#unless @last}}, {{/unless~}}
+      {{/each~}}
+      ], result.value.toString());
+      await this.storeIPLDData(blockHash, contractAddress, stateUpdate, defaultState);
+    }
+
+    {{else if (compare query.stateVariableType 'ElementaryTypeName')}}
+    if (defaultState) {
+      const stateUpdate = updateStateForElementaryType({}, '{{query.name}}', result.value.toString());
       await this.storeIPLDData(blockHash, contractAddress, stateUpdate, defaultState);
     }
 
