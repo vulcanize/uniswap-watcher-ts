@@ -159,7 +159,9 @@ export class Indexer {
 
   {{#each queries as | query |}}
   async {{query.name}} (blockHash: string, contractAddress: string
-    {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}}): Promise<ValueResult> {
+    {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}}, defaultState?: string): Promise<ValueResult> {
+    assert(_.includes(['diff', 'checkpoint', undefined], defaultState));
+
     const entity = await this._db.{{query.getQueryName}}({ blockHash, contractAddress
     {{~#each query.params}}, {{this.name~}} {{~/each}} });
     if (entity) {
@@ -207,18 +209,20 @@ export class Indexer {
     await this._db.{{query.saveQueryName}}({ blockHash, contractAddress
     {{~#each query.params}}, {{this.name~}} {{/each}}, value: result.value, proof: JSONbig.stringify(result.proof) });
 
-    {{~#if query.stateVariableType}}
+    {{#if query.stateVariableType}}
     {{#if (compare query.stateVariableType 'Mapping')}}
+    if (defaultState) {
+      const stateUpdate = _.set({}, `state.{{query.name}}
+      {{~#each query.params}}[${ {{~this.name~}} }]{{/each~}}
+      `, result.value.toString());
+      await this.storeIPLDData(blockHash, contractAddress, stateUpdate, defaultState);
+    }
 
+    {{else}}
+    assert(defaultState === undefined, 'Type not supported for default derived state.');
 
-    const stateUpdate = _.set({}, `state.{{query.name}}
-    {{~#each query.params}}[${ {{~this.name~}} }]{{/each~}}
-    `, result.value.toString());
-    await this.storeIPLDData(blockHash, contractAddress, stateUpdate, 'diff');  
-    {{~/if}}
     {{/if}}
-
-
+    {{/if}}
     return result;
   }
 
