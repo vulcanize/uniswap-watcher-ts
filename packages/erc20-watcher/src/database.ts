@@ -124,16 +124,16 @@ export class Database {
     });
   }
 
-  async updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
+  async updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, skipCheck: boolean): Promise<SyncStatus> {
     const repo = queryRunner.manager.getRepository(SyncStatus);
 
-    return this._baseDatabase.updateSyncStatusIndexedBlock(repo, blockHash, blockNumber);
+    return this._baseDatabase.updateSyncStatusIndexedBlock(repo, blockHash, blockNumber, skipCheck);
   }
 
-  async updateSyncStatusCanonicalBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
+  async updateSyncStatusCanonicalBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, skipCheck: boolean): Promise<SyncStatus> {
     const repo = queryRunner.manager.getRepository(SyncStatus);
 
-    return this._baseDatabase.updateSyncStatusCanonicalBlock(repo, blockHash, blockNumber);
+    return this._baseDatabase.updateSyncStatusCanonicalBlock(repo, blockHash, blockNumber, skipCheck);
   }
 
   async updateSyncStatusChainHead (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {

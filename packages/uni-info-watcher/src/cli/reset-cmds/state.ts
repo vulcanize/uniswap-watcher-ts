@@ -69,11 +69,11 @@ export const handler = async (argv: any): Promise<void> => {
     await Promise.all(removeEntitiesPromise);
 
     if (syncStatus.latestIndexedBlockNumber > blockProgress.blockNumber) {
-      await indexer.updateSyncStatusIndexedBlock(blockProgress.blockHash, blockProgress.blockNumber);
+      await indexer.updateSyncStatusIndexedBlock(blockProgress.blockHash, blockProgress.blockNumber, true);
     }
 
     if (syncStatus.latestCanonicalBlockNumber > blockProgress.blockNumber) {
-      await indexer.updateSyncStatusCanonicalBlock(blockProgress.blockHash, blockProgress.blockNumber);
+      await indexer.updateSyncStatusCanonicalBlock(blockProgress.blockHash, blockProgress.blockNumber, true);
     }
 
     dbTx.commitTransaction();

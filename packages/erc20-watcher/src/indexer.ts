@@ -315,16 +315,16 @@ export class Indexer {
     return this._baseIndexer.getEventsInRange(fromBlockNumber, toBlockNumber);
   }
 
-  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
-    return this._baseIndexer.updateSyncStatusIndexedBlock(blockHash, blockNumber);
+  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number, skipCheck: boolean): Promise<SyncStatus> {
+    return this._baseIndexer.updateSyncStatusIndexedBlock(blockHash, blockNumber, skipCheck);
   }
 
   async updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatus> {
     return this._baseIndexer.updateSyncStatusChainHead(blockHash, blockNumber);
   }
 
-  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number): Promise<SyncStatus> {
-    return this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber);
+  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, skipCheck: boolean): Promise<SyncStatus> {
+    return this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, skipCheck);
   }
 
   async getSyncStatus (): Promise<SyncStatus | undefined> {
