@@ -5,7 +5,10 @@
 import assert from 'assert';
 import Decimal from 'decimal.js';
 import { ValueTransformer } from 'typeorm';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
 
+import { DEFAULT_CONFIG_PATH } from './constants';
 import { Config } from './config';
 import { JobQueue } from './job-queue';
 
@@ -64,4 +67,20 @@ export const cleanJobs = async (config: Config): Promise<void> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
   await jobQueue.deleteAllJobs();
+};
+
+export const getResetYargs = (): yargs.Argv => {
+  return yargs(hideBin(process.argv))
+    .parserConfiguration({
+      'parse-numbers': false
+    }).options({
+      configFile: {
+        alias: 'f',
+        type: 'string',
+        require: true,
+        demandOption: true,
+        describe: 'configuration file path (toml)',
+        default: DEFAULT_CONFIG_PATH
+      }
+    });
 };

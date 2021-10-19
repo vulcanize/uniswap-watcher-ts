@@ -5,8 +5,13 @@
 import { cleanJobs, getConfig, getResetConfig } from '@vulcanize/util';
 import debug from 'debug';
 import { MoreThan } from 'typeorm';
+import assert from 'assert';
+
+import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
+import { Client as UniClient } from '@vulcanize/uni-watcher';
 
 import { Database } from '../../database';
+import { Indexer } from '../../indexer';
 import { BlockProgress } from '../../entity/BlockProgress';
 import { Factory } from '../../entity/Factory';
 import { Bundle } from '../../entity/Bundle';
@@ -33,11 +38,26 @@ export const builder = {
 export const handler = async (argv: any): Promise<void> => {
   const config = await getConfig(argv.configFile);
   await cleanJobs(config);
-  const dbConfig = getResetConfig(config);
+  const { dbConfig, serverConfig, upstreamConfig, ethClient } = await getResetConfig(config);
 
   // Initialize database.
   const db = new Database(dbConfig);
   await db.init();
+
+  const {
+    uniWatcher,
+    tokenWatcher
+  } = upstreamConfig;
+
+  const uniClient = new UniClient(uniWatcher);
+  const erc20Client = new ERC20Client(tokenWatcher);
+
+  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, serverConfig.mode);
+
+  const syncStatus = await indexer.getSyncStatus();
+  assert(syncStatus, 'Missing Sync status');
+  const [blockProgress] = await indexer.getBlocksAtHeight(argv.blockNumber, false);
+  assert(blockProgress, 'Block missing at specified block number');
 
   const dbTx = await db.createTransactionRunner();
 
@@ -47,6 +67,14 @@ export const handler = async (argv: any): Promise<void> => {
     });
 
     await Promise.all(removeEntitiesPromise);
+
+    if (syncStatus.latestIndexedBlockNumber > blockProgress.blockNumber) {
+      await indexer.updateSyncStatusIndexedBlock(blockProgress.blockHash, blockProgress.blockNumber);
+    }
+
+    if (syncStatus.latestCanonicalBlockNumber > blockProgress.blockNumber) {
+      await indexer.updateSyncStatusCanonicalBlock(blockProgress.blockHash, blockProgress.blockNumber);
+    }
 
     dbTx.commitTransaction();
   } catch (error) {
