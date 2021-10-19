@@ -308,16 +308,16 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getBlockEvents(blockHash);
   }
 
-  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number, skipCheck: boolean): Promise<SyncStatus> {
-    return this._baseIndexer.updateSyncStatusIndexedBlock(blockHash, blockNumber, skipCheck);
+  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number, force: boolean): Promise<SyncStatus> {
+    return this._baseIndexer.updateSyncStatusIndexedBlock(blockHash, blockNumber, force);
   }
 
   async updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatus> {
     return this._baseIndexer.updateSyncStatusChainHead(blockHash, blockNumber);
   }
 
-  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, skipCheck: boolean): Promise<SyncStatus> {
-    return this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, skipCheck);
+  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force: boolean): Promise<SyncStatus> {
+    return this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, force);
   }
 
   async getSyncStatus (): Promise<SyncStatus | undefined> {

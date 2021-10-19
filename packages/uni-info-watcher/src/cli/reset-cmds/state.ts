@@ -23,7 +23,7 @@ import { PositionSnapshot } from '../../entity/PositionSnapshot';
 import { Position } from '../../entity/Position';
 import { Token } from '../../entity/Token';
 
-const log = debug('vulcanize:reset-job-queue');
+const log = debug('vulcanize:reset-state');
 
 export const command = 'state';
 
@@ -56,8 +56,11 @@ export const handler = async (argv: any): Promise<void> => {
 
   const syncStatus = await indexer.getSyncStatus();
   assert(syncStatus, 'Missing Sync status');
-  const [blockProgress] = await indexer.getBlocksAtHeight(argv.blockNumber, false);
-  assert(blockProgress, 'Block missing at specified block number');
+
+  const blockProgresses = await indexer.getBlocksAtHeight(argv.blockNumber, false);
+  assert(blockProgresses.length, `No Blocks at specified block number ${argv.blockNumber}`);
+  assert(!blockProgresses.some(block => !block.isComplete), `Incomplete block at block number ${argv.blockNumber} with unprocessed events`);
+  const [blockProgress] = blockProgresses;
 
   const dbTx = await db.createTransactionRunner();
 

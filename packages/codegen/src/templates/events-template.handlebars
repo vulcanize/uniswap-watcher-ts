@@ -70,19 +70,23 @@ export class EventWatcher {
 
   async initBlockProcessingOnCompleteHandler (): Promise<void> {
     this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
-      const { data: { failed } } = job;
+      const { id, data: { failed } } = job;
 
-      if (!failed) {
-        await this._baseEventWatcher.blockProcessingCompleteHandler(job);
+      if (failed) {
+        log(`Job ${id} for queue ${QUEUE_BLOCK_PROCESSING} failed`);
+        return;
       }
+
+      await this._baseEventWatcher.blockProcessingCompleteHandler(job);
     });
   }
 
   async initEventProcessingOnCompleteHandler (): Promise<void> {
     await this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
-      const { data: { request, failed, state, createdOn } } = job;
+      const { id, data: { request, failed, state, createdOn } } = job;
 
       if (failed) {
+        log(`Job ${id} for queue ${QUEUE_EVENT_PROCESSING} failed`);
         return;
       }
 

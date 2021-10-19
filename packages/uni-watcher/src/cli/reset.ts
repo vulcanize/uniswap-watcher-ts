@@ -7,7 +7,7 @@ import debug from 'debug';
 
 import { getResetYargs } from '@vulcanize/util';
 
-const log = debug('vulcanize:clean-jobs');
+const log = debug('vulcanize:reset');
 
 const main = async () => {
   return getResetYargs()

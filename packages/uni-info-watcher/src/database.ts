@@ -569,16 +569,16 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.saveEvents(blockRepo, eventRepo, block, events);
   }
 
-  async updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, skipCheck: boolean): Promise<SyncStatus> {
+  async updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, force: boolean): Promise<SyncStatus> {
     const repo = queryRunner.manager.getRepository(SyncStatus);
 
-    return this._baseDatabase.updateSyncStatusIndexedBlock(repo, blockHash, blockNumber, skipCheck);
+    return this._baseDatabase.updateSyncStatusIndexedBlock(repo, blockHash, blockNumber, force);
   }
 
-  async updateSyncStatusCanonicalBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, skipCheck: boolean): Promise<SyncStatus> {
+  async updateSyncStatusCanonicalBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, force: boolean): Promise<SyncStatus> {
     const repo = queryRunner.manager.getRepository(SyncStatus);
 
-    return this._baseDatabase.updateSyncStatusCanonicalBlock(repo, blockHash, blockNumber, skipCheck);
+    return this._baseDatabase.updateSyncStatusCanonicalBlock(repo, blockHash, blockNumber, force);
   }
 
   async updateSyncStatusChainHead (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatus> {
