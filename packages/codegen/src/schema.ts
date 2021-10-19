@@ -294,6 +294,7 @@ export class Schema {
         args: {
           contractAddress: 'String!',
           kind: 'String!',
+          checkpoint: 'Boolean!',
           startingBlock: 'Int'
         }
       }

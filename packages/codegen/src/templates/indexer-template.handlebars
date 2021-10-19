@@ -26,7 +26,7 @@ import { HookStatus } from './entity/HookStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { IPLDBlock } from './entity/IPLDBlock';
 import artifacts from './artifacts/{{inputFileName}}.json';
-import { initialCheckpointHook, handleEvent, postBlockHook } from './hooks';
+import { createInitialCheckpoint, handleEvent, createStateDiff } from './hooks';
 
 const log = debug('vulcanize:indexer');
 
@@ -238,8 +238,8 @@ export class Indexer {
   async processBlock (job: any): Promise<void> {
     const { data: { blockHash } } = job;
 
-    // Call custom post-block hook.
-    await postBlockHook(this, blockHash);
+    // Call custom stateDiff hook.
+    await createStateDiff(this, blockHash);
   }
 
   async processCheckpoint (job: any): Promise<void> {
@@ -253,11 +253,12 @@ export class Indexer {
 
     // Get all the contracts.
     const contracts = await this._db.getContracts({});
-    const contractAddresses = contracts.map(contract => contract.address);
 
-    // For each contractAddress, merge the diff till now to create a checkpoint.
-    for (const contractAddress of contractAddresses) {
-      await this.createCheckpoint(contractAddress, currentBlockHash, checkpointInterval);
+    // For each contract, merge the diff till now to create a checkpoint.
+    for (const contract of contracts) {
+      if (contract.checkpoint) {
+        await this.createCheckpoint(contract.address, currentBlockHash, checkpointInterval);
+      }
     }
   }
 
@@ -477,16 +478,18 @@ export class Indexer {
     return { eventName, eventInfo };
   }
 
-  async watchContract (address: string, kind: string, startingBlock: number): Promise<boolean> {
+  async watchContract (address: string, kind: string, checkpoint: boolean, startingBlock: number): Promise<boolean> {
     // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
-    await this._db.saveContract(ethers.utils.getAddress(address), kind, startingBlock);
+    await this._db.saveContract(ethers.utils.getAddress(address), kind, checkpoint, startingBlock);
 
-    // Getting the current block.
-    const currentBlock = await this._db.getLatestBlockProgress();
-    assert(currentBlock);
+    if (checkpoint) {
+      // Getting the current block.
+      const currentBlock = await this._db.getLatestBlockProgress();
+      assert(currentBlock);
 
-    // Call custom initial checkpoint hook.
-    await initialCheckpointHook(this, currentBlock, address);
+      // Call custom initial checkpoint hook.
+      await createInitialCheckpoint(this, currentBlock, address);
+    }
 
     return true;
   }

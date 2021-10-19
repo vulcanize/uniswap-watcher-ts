@@ -14,12 +14,12 @@ const ACCOUNTS = [
 ];
 
 /**
- * Initial checkpoint hook function.
+ * Hook function to create an initial checkpoint.
  * @param indexer Indexer instance.
  * @param block Concerned block.
  * @param contractAddress Address of the concerned contract.
  */
-export async function initialCheckpointHook (indexer: Indexer, block: BlockProgress, contractAddress: string): Promise<void> {
+export async function createInitialCheckpoint (indexer: Indexer, block: BlockProgress, contractAddress: string): Promise<void> {
   // Store the initial state values in an IPLDBlock.
   let ipldBlockData: any = {};
 
@@ -34,11 +34,11 @@ export async function initialCheckpointHook (indexer: Indexer, block: BlockProgr
 }
 
 /**
- * Post-block hook function.
+ * Hook function to create and store state diffs.
  * @param indexer Indexer instance that contains methods to fetch the contract varaiable values.
  * @param blockHash Block hash of the concerned block.
  */
-export async function postBlockHook (indexer: Indexer, blockHash: string): Promise<void> {
+export async function createStateDiff (indexer: Indexer, blockHash: string): Promise<void> {
   // Get events for current block and make an entry of updated values in IPLDBlock.
   const events = await indexer.getEventsByFilter(blockHash);
 

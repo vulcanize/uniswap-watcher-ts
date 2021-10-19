@@ -96,7 +96,7 @@ export class Indexer implements IndexerInterface {
     switch (re.event.__typename) {
       case 'PoolCreatedEvent': {
         const poolContract = ethers.utils.getAddress(re.event.pool);
-        await this._db.saveContract(dbTx, poolContract, KIND_POOL, dbEvent.block.blockNumber);
+        await this._db.saveContract(dbTx, poolContract, KIND_POOL, false, dbEvent.block.blockNumber);
       }
     }
   }
