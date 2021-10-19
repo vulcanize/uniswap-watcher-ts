@@ -2,10 +2,11 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { cleanJobs, getConfig, getResetConfig } from '@vulcanize/util';
 import debug from 'debug';
 import { MoreThan } from 'typeorm';
 import assert from 'assert';
+
+import { getConfig, getResetConfig, resetJobs } from '@vulcanize/util';
 
 import { Database } from '../../database';
 import { Indexer } from '../../indexer';
@@ -25,7 +26,7 @@ export const builder = {
 
 export const handler = async (argv: any): Promise<void> => {
   const config = await getConfig(argv.configFile);
-  await cleanJobs(config);
+  await resetJobs(config);
   const { dbConfig, ethClient, postgraphileClient } = await getResetConfig(config);
 
   // Initialize database.
@@ -35,10 +36,10 @@ export const handler = async (argv: any): Promise<void> => {
   const indexer = new Indexer(db, ethClient, postgraphileClient);
 
   const syncStatus = await indexer.getSyncStatus();
-  assert(syncStatus, 'Missing Sync status');
+  assert(syncStatus, 'Missing syncStatus');
 
   const blockProgresses = await indexer.getBlocksAtHeight(argv.blockNumber, false);
-  assert(blockProgresses.length, `No Blocks at specified block number ${argv.blockNumber}`);
+  assert(blockProgresses.length, `No blocks at specified block number ${argv.blockNumber}`);
   assert(!blockProgresses.some(block => !block.isComplete), `Incomplete block at block number ${argv.blockNumber} with unprocessed events`);
   const [blockProgress] = blockProgresses;
 

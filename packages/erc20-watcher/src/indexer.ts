@@ -315,7 +315,7 @@ export class Indexer {
     return this._baseIndexer.getEventsInRange(fromBlockNumber, toBlockNumber);
   }
 
-  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number, force: boolean): Promise<SyncStatus> {
+  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number, force = false): Promise<SyncStatus> {
     return this._baseIndexer.updateSyncStatusIndexedBlock(blockHash, blockNumber, force);
   }
 
@@ -323,7 +323,7 @@ export class Indexer {
     return this._baseIndexer.updateSyncStatusChainHead(blockHash, blockNumber);
   }
 
-  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force: boolean): Promise<SyncStatus> {
+  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force = false): Promise<SyncStatus> {
     return this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, force);
   }
 

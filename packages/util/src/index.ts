@@ -58,7 +58,7 @@ export const bigintTransformer: ValueTransformer = {
   }
 };
 
-export const cleanJobs = async (config: Config): Promise<void> => {
+export const resetJobs = async (config: Config): Promise<void> => {
   const { jobQueue: jobQueueConfig } = config;
 
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;

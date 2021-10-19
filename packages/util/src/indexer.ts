@@ -52,7 +52,7 @@ export class Indexer {
     return res;
   }
 
-  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number, force: boolean): Promise<SyncStatusInterface> {
+  async updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number, force = false): Promise<SyncStatusInterface> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
@@ -86,7 +86,7 @@ export class Indexer {
     return res;
   }
 
-  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force: boolean): Promise<SyncStatusInterface> {
+  async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force = false): Promise<SyncStatusInterface> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 

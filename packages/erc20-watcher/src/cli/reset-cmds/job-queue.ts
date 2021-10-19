@@ -2,8 +2,9 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { cleanJobs, getConfig } from '@vulcanize/util';
 import debug from 'debug';
+
+import { getConfig, resetJobs } from '@vulcanize/util';
 
 const log = debug('vulcanize:reset-job-queue');
 
@@ -15,7 +16,7 @@ export const builder = {};
 
 export const handler = async (argv: any): Promise<void> => {
   const config = await getConfig(argv.configFile);
-  await cleanJobs(config);
+  await resetJobs(config);
 
-  log('Cleaned jobs successfully');
+  log('Job queue reset successfully');
 };

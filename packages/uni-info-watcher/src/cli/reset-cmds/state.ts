@@ -2,11 +2,11 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { cleanJobs, getConfig, getResetConfig } from '@vulcanize/util';
 import debug from 'debug';
 import { MoreThan } from 'typeorm';
 import assert from 'assert';
 
+import { getConfig, getResetConfig, resetJobs } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 
@@ -37,7 +37,7 @@ export const builder = {
 
 export const handler = async (argv: any): Promise<void> => {
   const config = await getConfig(argv.configFile);
-  await cleanJobs(config);
+  await resetJobs(config);
   const { dbConfig, serverConfig, upstreamConfig, ethClient } = await getResetConfig(config);
 
   // Initialize database.
@@ -55,18 +55,18 @@ export const handler = async (argv: any): Promise<void> => {
   const indexer = new Indexer(db, uniClient, erc20Client, ethClient, serverConfig.mode);
 
   const syncStatus = await indexer.getSyncStatus();
-  assert(syncStatus, 'Missing Sync status');
+  assert(syncStatus, 'Missing syncStatus');
 
   const blockProgresses = await indexer.getBlocksAtHeight(argv.blockNumber, false);
-  assert(blockProgresses.length, `No Blocks at specified block number ${argv.blockNumber}`);
+  assert(blockProgresses.length, `No blocks at specified block number ${argv.blockNumber}`);
   assert(!blockProgresses.some(block => !block.isComplete), `Incomplete block at block number ${argv.blockNumber} with unprocessed events`);
   const [blockProgress] = blockProgresses;
 
   const dbTx = await db.createTransactionRunner();
 
   try {
-    const removeEntitiesPromise = [BlockProgress, Factory, Bundle, Pool, Mint, Burn, Swap, PositionSnapshot, Position, Token].map(async entity => {
-      return db.removeEntities<any>(dbTx, entity, { blockNumber: MoreThan(argv.blockNumber) });
+    const removeEntitiesPromise = [BlockProgress, Factory, Bundle, Pool, Mint, Burn, Swap, PositionSnapshot, Position, Token].map(async entityClass => {
+      return db.removeEntities<any>(dbTx, entityClass, { blockNumber: MoreThan(argv.blockNumber) });
     });
 
     await Promise.all(removeEntitiesPromise);
