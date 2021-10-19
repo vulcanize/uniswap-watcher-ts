@@ -11,8 +11,8 @@ const log = debug('vulcanize:clean-jobs');
 
 const main = async () => {
   return getResetYargs()
-    .commandDir('reset-cmds', { extensions: ['ts'] })
-    .demandCommand()
+    .commandDir('reset-cmds', { extensions: ['ts', 'js'], exclude: /([a-zA-Z0-9\s_\\.\-:])+(.d.ts)$/ })
+    .demandCommand(1)
     .help()
     .argv;
 };
