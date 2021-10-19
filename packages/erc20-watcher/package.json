@@ -27,8 +27,8 @@
     "token:transfer-from:docker": "hardhat --network docker token-transfer-from",
     "block:latest": "hardhat --network localhost block-latest",
     "block:latest:docker": "hardhat --network docker block-latest",
-    "clean-jobs": "node --enable-source-maps dist/cli/clean-jobs.js",
-    "clean-jobs:dev": "DEBUG=vulcanize:* ts-node src/cli/clean-jobs.ts"
+    "reset": "node --enable-source-maps dist/cli/reset.js",
+    "reset:dev": "DEBUG=vulcanize:* ts-node src/cli/reset.ts"
   },
   "repository": {
     "type": "git",

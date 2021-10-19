@@ -8,6 +8,15 @@ import { MoreThan } from 'typeorm';
 
 import { Database } from '../../database';
 import { BlockProgress } from '../../entity/BlockProgress';
+import { Factory } from '../../entity/Factory';
+import { Bundle } from '../../entity/Bundle';
+import { Pool } from '../../entity/Pool';
+import { Mint } from '../../entity/Mint';
+import { Burn } from '../../entity/Burn';
+import { Swap } from '../../entity/Swap';
+import { PositionSnapshot } from '../../entity/PositionSnapshot';
+import { Position } from '../../entity/Position';
+import { Token } from '../../entity/Token';
 
 const log = debug('vulcanize:reset-job-queue');
 
@@ -33,7 +42,11 @@ export const handler = async (argv: any): Promise<void> => {
   const dbTx = await db.createTransactionRunner();
 
   try {
-    await db.removeEntities(dbTx, BlockProgress, { blockNumber: MoreThan(argv.blockNumber) });
+    const removeEntitiesPromise = [BlockProgress, Factory, Bundle, Pool, Mint, Burn, Swap, PositionSnapshot, Position, Token].map(async entity => {
+      return db.removeEntities<any>(dbTx, entity, { blockNumber: MoreThan(argv.blockNumber) });
+    });
+
+    await Promise.all(removeEntitiesPromise);
 
     dbTx.commitTransaction();
   } catch (error) {

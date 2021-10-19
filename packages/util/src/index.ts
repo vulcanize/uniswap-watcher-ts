@@ -6,7 +6,7 @@ import assert from 'assert';
 import Decimal from 'decimal.js';
 import { ValueTransformer } from 'typeorm';
 
-import { getConfig } from './config';
+import { Config } from './config';
 import { JobQueue } from './job-queue';
 
 /**
@@ -55,11 +55,7 @@ export const bigintTransformer: ValueTransformer = {
   }
 };
 
-export const cleanJobs = async (configFile: string): Promise<void> => {
-  const config = await getConfig(configFile);
-
-  assert(config.server, 'Missing server config');
-
+export const cleanJobs = async (config: Config): Promise<void> => {
   const { jobQueue: jobQueueConfig } = config;
 
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
@@ -68,10 +64,4 @@ export const cleanJobs = async (configFile: string): Promise<void> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
   await jobQueue.deleteAllJobs();
-};
-
-export const resetState = async (configFile: string, blockNumber: number): Promise<void> => {
-  const config = await getConfig(configFile);
-  assert(config.server, 'Missing server config');
-  assert(blockNumber, 'Missing block number');
 };

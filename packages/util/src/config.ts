@@ -2,6 +2,7 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
+import assert from 'assert';
 import fs from 'fs-extra';
 import path from 'path';
 import toml from 'toml';
@@ -57,4 +58,12 @@ export const getConfig = async (configFile: string): Promise<Config> => {
   log('config', JSON.stringify(config, null, 2));
 
   return config;
+};
+
+export const getResetConfig = (config: Config): ConnectionOptions => {
+  const { database: dbConfig } = config;
+
+  assert(dbConfig, 'Missing database config');
+
+  return dbConfig;
 };
