@@ -159,9 +159,14 @@ export class Indexer {
 
   {{#each queries as | query |}}
   async {{query.name}} (blockHash: string, contractAddress: string
-    {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}}, defaultState?: string): Promise<ValueResult> {
-    assert(_.includes(['diff', 'checkpoint', undefined], defaultState));
+    {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}}
+    {{~#if query.stateVariableType~}}
+    , defaultStateKind?: string): Promise<ValueResult> {
+    assert(_.includes(['diff', 'checkpoint', undefined], defaultStateKind));
 
+    {{else~}}
+    ): Promise<ValueResult> {
+    {{/if}}
     const entity = await this._db.{{query.getQueryName}}({ blockHash, contractAddress
     {{~#each query.params}}, {{this.name~}} {{~/each}} });
     if (entity) {
@@ -211,23 +216,23 @@ export class Indexer {
 
     {{#if query.stateVariableType}}
     {{#if (compare query.stateVariableType 'Mapping')}}
-    if (defaultState) {
+    if (defaultStateKind) {
       const stateUpdate = updateStateForMappingType({}, '{{query.name}}', [
       {{~#each query.params}}
       {{~this.name~}} {{#unless @last}}, {{/unless~}}
       {{/each~}}
       ], result.value.toString());
-      await this.storeIPLDData(blockHash, contractAddress, stateUpdate, defaultState);
+      await this.storeIPLDData(blockHash, contractAddress, stateUpdate, defaultStateKind);
     }
 
     {{else if (compare query.stateVariableType 'ElementaryTypeName')}}
-    if (defaultState) {
+    if (defaultStateKind) {
       const stateUpdate = updateStateForElementaryType({}, '{{query.name}}', result.value.toString());
-      await this.storeIPLDData(blockHash, contractAddress, stateUpdate, defaultState);
+      await this.storeIPLDData(blockHash, contractAddress, stateUpdate, defaultStateKind);
     }
 
     {{else}}
-    assert(defaultState === undefined, 'Type not supported for default derived state.');
+    assert(defaultStateKind === undefined, 'Type not supported for default derived state.');
 
     {{/if}}
     {{/if}}
@@ -480,7 +485,8 @@ export class Indexer {
 
   async watchContract (address: string, kind: string, checkpoint: boolean, startingBlock: number): Promise<boolean> {
     // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
-    await this._db.saveContract(ethers.utils.getAddress(address), kind, checkpoint, startingBlock);
+    const contractAddress = (kind === 'protocol') ? address : ethers.utils.getAddress(address);
+    await this._db.saveContract(contractAddress, kind, checkpoint, startingBlock);
 
     if (checkpoint) {
       // Getting the current block.

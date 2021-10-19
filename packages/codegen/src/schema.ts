@@ -292,7 +292,7 @@ export class Schema {
       watchContract: {
         type: 'Boolean!',
         args: {
-          contractAddress: 'String!',
+          address: 'String!',
           kind: 'String!',
           checkpoint: 'Boolean!',
           startingBlock: 'Int'

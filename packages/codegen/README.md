@@ -81,11 +81,15 @@
 
   * Edit the custom hook function `handleEvent` (triggered on an event) in `src/hooks.ts` to perform corresponding indexing using the `Indexer` object.
 
-  * Edit the custom hook function `postBlockHook` (triggered on a block) in `src/hooks.ts` to save `IPLDBlock`s using the `Indexer` object.
+  * While using the indexer storage methods for indexing, pass the optional arg. `defaultStateKind` as `diff` or `checkpoint` if default derived state is desired to be generated using the state variables being indexed.
 
-  * Edit the custom hook function `initialCheckpointHook` (triggered on watch-contract) in `src/hooks.ts` to save an initial checkpoint `IPLDBlock` using the `Indexer` object.
+* Derived state:
 
-  * The existing example hooks in `src/hooks.ts` are for an `ERC20` contract.
+  * Edit the custom hook function `createInitialCheckpoint` (triggered on watch-contract, checkpoint: `true`) in `src/hooks.ts` to save an initial checkpoint `IPLDBlock` using the `Indexer` object.
+
+  * Edit the custom hook function `createStateDiff` (triggered on a block) in `src/hooks.ts` to save the derived state in an `IPLDBlock` using the `Indexer` object. The default derived state (if exists) is updated.
+
+* The existing example hooks in `src/hooks.ts` are for an `ERC20` contract.
 
 ### Run
 
@@ -112,7 +116,7 @@
   * To watch a contract:
 
     ```bash
-    yarn watch:contract --address <contract-address> --kind <contract-kind> --starting-block [block-number]
+    yarn watch:contract --address <contract-address> --kind <contract-kind> --checkpoint <true | false> --starting-block [block-number]
     ```
 
   * To fill a block range:

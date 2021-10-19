@@ -47,11 +47,15 @@
 
   * Edit the custom hook function `handleEvent` (triggered on an event) in [hooks.ts](./src/hooks.ts) to perform corresponding indexing using the `Indexer` object.
 
-  * Edit the custom hook function `postBlockHook` (triggered on a block) in [hooks.ts](./src/hooks.ts) to save `IPLDBlock`s using the `Indexer` object.
+  * While using the indexer storage methods for indexing, pass the optional arg. `defaultStateKind` as `diff` or `checkpoint` if default derived state is desired to be generated using the state variables being indexed.
 
-  * Edit the custom hook function `initialCheckpointHook` (triggered on watch-contract) in [hooks.ts](./src/hooks.ts) to save an initial checkpoint `IPLDBlock` using the `Indexer` object.
+* Derived state:
 
-  * The existing example hooks in [hooks.ts](./src/hooks.ts) are for an `ERC20` contract.
+  * Edit the custom hook function `createInitialCheckpoint` (triggered on watch-contract, checkpoint: `true`) in [hooks.ts](./src/hooks.ts) to save an initial checkpoint `IPLDBlock` using the `Indexer` object.
+
+  * Edit the custom hook function `createStateDiff` (triggered on a block) in [hooks.ts](./src/hooks.ts) to save the derived state in an `IPLDBlock` using the `Indexer` object. The default derived state (if exists) is updated.
+
+* The existing example hooks in [hooks.ts](./src/hooks.ts) are for an `ERC20` contract.
 
 ## Run
 
@@ -74,7 +78,7 @@ GQL console: http://localhost:3008/graphql
   * To watch a contract:
 
     ```bash
-    yarn watch:contract --address <contract-address> --kind {{contractName}} --starting-block [block-number]
+    yarn watch:contract --address <contract-address> --kind <contract-kind> --checkpoint <true | false> --starting-block [block-number]
     ```
 
   * To fill a block range:
@@ -88,3 +92,21 @@ GQL console: http://localhost:3008/graphql
     ```bash
     yarn checkpoint --address <contract-address> --block-hash [block-hash]
     ```
+  
+  * While watching the contract using the `watchContract` mutation or the CLI:
+  
+    * Pass `checkpoint` flag as `true` to turn checkpointing on for that contract.
+
+    * If the contract to be watched has an identifier, pass the identifier as `address` instead of the contract address.
+    
+      * In such case, either the kind needs to be passed as `protocol` or necessary changes can be made in `watchContract()` in [indexer.ts](./src/indexer.ts)
+
+      * Example:
+
+        * Contract identifier: `MyProtocol`.
+        * Kind: `demo-protocol`.
+        * Changes in `watchContract()`:
+
+          ```ts
+          const contractAddress = (kind === 'demo-protocol') ? address : ethers.utils.getAddress(address);
+          ```
