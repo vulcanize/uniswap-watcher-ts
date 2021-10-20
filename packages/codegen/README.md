@@ -29,7 +29,7 @@
     * `output-folder`(alias: `o`): Output folder path. (logs output using `stdout` if not provided).
     * `mode`(alias: `m`): Code generation mode (default: `all`).
     * `flatten`(alias: `f`): Flatten the input contract file (default: `true`).
-    * `kind` (alias: `k`): Kind of watcher (default; `active`).
+    * `kind` (alias: `k`): Kind of watcher (default: `active`).
 
   **Note**: When passed an *URL* as `input-file`, it is assumed that it points to an already flattened contract file.
 
@@ -81,13 +81,13 @@
 
   * Edit the custom hook function `handleEvent` (triggered on an event) in `src/hooks.ts` to perform corresponding indexing using the `Indexer` object.
 
-  * While using the indexer storage methods for indexing, pass the optional arg. `defaultStateKind` as `diff` or `checkpoint` if default derived state is desired to be generated using the state variables being indexed.
+  * While using the indexer storage methods for indexing, pass the optional arg. `defaultStateKind` as `diff` or `checkpoint` if default state is desired to be generated using the state variables being indexed.
 
-* Derived state:
+* Generating state:
 
   * Edit the custom hook function `createInitialCheckpoint` (triggered on watch-contract, checkpoint: `true`) in `src/hooks.ts` to save an initial checkpoint `IPLDBlock` using the `Indexer` object.
 
-  * Edit the custom hook function `createStateDiff` (triggered on a block) in `src/hooks.ts` to save the derived state in an `IPLDBlock` using the `Indexer` object. The default derived state (if exists) is updated.
+  * Edit the custom hook function `createStateDiff` (triggered on a block) in `src/hooks.ts` to save the state in an `IPLDBlock` using the `Indexer` object. The default state (if exists) is updated.
 
 * The existing example hooks in `src/hooks.ts` are for an `ERC20` contract.
 

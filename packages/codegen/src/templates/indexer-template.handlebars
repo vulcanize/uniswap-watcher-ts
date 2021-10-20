@@ -383,6 +383,8 @@ export class Indexer {
   }
 
   async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any, kind: string):Promise<any> {
+    assert(_.includes(['diff', 'checkpoint'], kind));
+
     // Get an existing IPLDBlock for current block and contractAddress.
     const currentIPLDBlocks = await this.getIPLDBlocks(block, contractAddress, 'diff');
     // There can be only one IPLDBlock for a (block, contractAddress, 'diff') combination.
@@ -406,7 +408,7 @@ export class Indexer {
       // Setting the meta-data for an IPLDBlock (done only once per block).
       data.meta = {
         id: contractAddress,
-        kind: kind || 'diff',
+        kind,
         parent: {
           '/': parentIPLDBlock ? parentIPLDBlock.cid : null
         },
@@ -484,9 +486,11 @@ export class Indexer {
   }
 
   async watchContract (address: string, kind: string, checkpoint: boolean, startingBlock: number): Promise<boolean> {
-    // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
-    const contractAddress = (kind === 'protocol') ? address : ethers.utils.getAddress(address);
-    await this._db.saveContract(contractAddress, kind, checkpoint, startingBlock);
+    // Use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress) if input to address is a contract address.
+    // If a contract identifier is passed as address instead, no need to convert to checksum address.
+    // Customize: use the kind input to filter out non-contract-address input to address.
+    const formattedAddress = (kind === 'protocol') ? address : ethers.utils.getAddress(address);
+    await this._db.saveContract(formattedAddress, kind, checkpoint, startingBlock);
 
     if (checkpoint) {
       // Getting the current block.
