@@ -337,6 +337,15 @@ export class Indexer {
     return ipldBlocks[0];
   }
 
+  async getPrevState (blockHash: string, contractAddress: string, kind?: string): Promise<any> {
+    const ipldBlock = await this.getPrevIPLDBlock(blockHash, contractAddress, kind);
+
+    if (ipldBlock) {
+      const data = codec.decode(Buffer.from(ipldBlock.data)) as any;
+      return data.state;
+    }
+  }
+
   async getPrevIPLDBlock (blockHash: string, contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
@@ -489,7 +498,7 @@ export class Indexer {
     // Use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress) if input to address is a contract address.
     // If a contract identifier is passed as address instead, no need to convert to checksum address.
     // Customize: use the kind input to filter out non-contract-address input to address.
-    const formattedAddress = (kind === 'protocol') ? address : ethers.utils.getAddress(address);
+    const formattedAddress = (kind === '__protocol__') ? address : ethers.utils.getAddress(address);
     await this._db.saveContract(formattedAddress, kind, checkpoint, startingBlock);
 
     if (checkpoint) {
