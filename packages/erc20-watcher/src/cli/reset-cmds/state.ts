@@ -9,8 +9,10 @@ import assert from 'assert';
 import { getConfig, getResetConfig, resetJobs } from '@vulcanize/util';
 
 import { Database } from '../../database';
-import { BlockProgress } from '../../entity/BlockProgress';
 import { Indexer } from '../../indexer';
+import { BlockProgress } from '../../entity/BlockProgress';
+import { Allowance } from '../../entity/Allowance';
+import { Balance } from '../../entity/Balance';
 
 const log = debug('vulcanize:reset-state');
 
@@ -46,7 +48,11 @@ export const handler = async (argv: any): Promise<void> => {
   const dbTx = await db.createTransactionRunner();
 
   try {
-    await db.removeEntities(dbTx, BlockProgress, { blockNumber: MoreThan(blockProgress.blockNumber) });
+    const removeEntitiesPromise = [BlockProgress, Allowance, Balance].map(async entityClass => {
+      return db.removeEntities<any>(dbTx, entityClass, { blockNumber: MoreThan(argv.blockNumber) });
+    });
+
+    await Promise.all(removeEntitiesPromise);
 
     if (syncStatus.latestIndexedBlockNumber > blockProgress.blockNumber) {
       await indexer.updateSyncStatusIndexedBlock(blockProgress.blockHash, blockProgress.blockNumber, true);

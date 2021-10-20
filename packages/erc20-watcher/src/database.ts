@@ -64,15 +64,15 @@ export class Database {
       .getOne();
   }
 
-  async saveBalance ({ blockHash, token, owner, value, proof }: DeepPartial<Balance>): Promise<Balance> {
+  async saveBalance ({ blockHash, blockNumber, token, owner, value, proof }: DeepPartial<Balance>): Promise<Balance> {
     const repo = this._conn.getRepository(Balance);
-    const entity = repo.create({ blockHash, token, owner, value, proof });
+    const entity = repo.create({ blockHash, blockNumber, token, owner, value, proof });
     return repo.save(entity);
   }
 
-  async saveAllowance ({ blockHash, token, owner, spender, value, proof }: DeepPartial<Allowance>): Promise<Allowance> {
+  async saveAllowance ({ blockHash, blockNumber, token, owner, spender, value, proof }: DeepPartial<Allowance>): Promise<Allowance> {
     const repo = this._conn.getRepository(Allowance);
-    const entity = repo.create({ blockHash, token, owner, spender, value, proof });
+    const entity = repo.create({ blockHash, blockNumber, token, owner, spender, value, proof });
     return repo.save(entity);
   }
 
