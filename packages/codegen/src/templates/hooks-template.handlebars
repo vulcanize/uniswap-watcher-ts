@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 
-import { UNKNOWN_EVENT_NAME, updateStateForMappingType } from '@vulcanize/util';
+import { UNKNOWN_EVENT_NAME, updateStateForMappingType, updateStateForElementaryType } from '@vulcanize/util';
 
 import { Indexer, ResultEvent } from './indexer';
 import { BlockProgress } from './entity/BlockProgress';
@@ -20,6 +20,10 @@ const ACCOUNTS = [
  * @param contractAddress Address of the concerned contract.
  */
 export async function createInitialCheckpoint (indexer: Indexer, block: BlockProgress, contractAddress: string): Promise<void> {
+  assert(indexer);
+  assert(block);
+  assert(contractAddress);
+
   // Store the initial state values in an IPLDBlock.
   let ipldBlockData: any = {};
 
@@ -39,6 +43,9 @@ export async function createInitialCheckpoint (indexer: Indexer, block: BlockPro
  * @param blockHash Block hash of the concerned block.
  */
 export async function createStateDiff (indexer: Indexer, blockHash: string): Promise<void> {
+  assert(indexer);
+  assert(blockHash);
+
   // Get events for current block and make an entry of updated values in IPLDBlock.
   const events = await indexer.getEventsByFilter(blockHash);
 
@@ -122,10 +129,10 @@ export async function handleEvent (indexer: Indexer, eventData: ResultEvent): Pr
       const { from, to } = eventData.event;
 
       // Update balance entry for sender in the database.
-      await indexer._balances(eventData.block.hash, eventData.contract, from, 'diff');
+      await indexer._balances(eventData.block.hash, eventData.contract, from);
 
       // Update balance entry for receiver in the database.
-      await indexer._balances(eventData.block.hash, eventData.contract, to, 'diff');
+      await indexer._balances(eventData.block.hash, eventData.contract, to);
 
       break;
     }
@@ -137,7 +144,7 @@ export async function handleEvent (indexer: Indexer, eventData: ResultEvent): Pr
       const { owner, spender } = eventData.event;
 
       // Update allowance entry for (owner, spender) combination in the database.
-      await indexer._allowances(eventData.block.hash, eventData.contract, owner, spender, 'diff');
+      await indexer._allowances(eventData.block.hash, eventData.contract, owner, spender);
 
       break;
     }

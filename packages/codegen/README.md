@@ -35,10 +35,10 @@
 
   Examples:
 
-  Generate code in both `eth_call` and `storage` mode, `active` kind.
+  Generate code in `storage` mode, `lazy` kind.
 
   ```bash
-  yarn codegen --input-file ./test/examples/contracts/ERC20.sol --contract-name ERC20 --output-folder ../my-erc20-watcher --mode all --kind active
+  yarn codegen --input-file ./test/examples/contracts/ERC721.sol --contract-name ERC721 --output-folder ../my-erc721-watcher --mode storage --kind lazy
   ```
 
   Generate code in `eth_call` mode using a contract provided by an URL.
@@ -47,10 +47,10 @@
   yarn codegen --input-file https://git.io/Jupci --contract-name ERC721 --output-folder ../my-erc721-watcher --mode eth_call
   ```
 
-  Generate code in `storage` mode, `lazy` kind.
+  Generate code for `ERC721` in both `eth_call` and `storage` mode, `active` kind.
 
   ```bash
-  yarn codegen --input-file ./test/examples/contracts/ERC721.sol --contract-name ERC721 --output-folder ../my-erc721-watcher --mode storage --kind lazy
+  yarn codegen --input-file ../../node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol --contract-name ERC721 --output-folder ../demo-erc721-watcher --mode all --kind active
   ```
 
   Generate code for `ERC20` contract in both `eth_call` and `storage` mode, `active` kind:
@@ -73,7 +73,7 @@
 
 * Create the databases configured in `environments/local.toml`.
 
-* Update the derived state checkpoint settings in `environments/local.toml`.
+* Update the state checkpoint settings in `environments/local.toml`.
 
 ### Customize
 

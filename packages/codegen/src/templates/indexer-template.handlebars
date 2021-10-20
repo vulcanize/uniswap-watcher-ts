@@ -219,7 +219,7 @@ export class Indexer {
     if (defaultStateKind) {
       const stateUpdate = updateStateForMappingType({}, '{{query.name}}', [
       {{~#each query.params}}
-      {{~this.name~}} {{#unless @last}}, {{/unless~}}
+      {{~this.name}}.toString() {{~#unless @last}}, {{/unless~}}
       {{/each~}}
       ], result.value.toString());
       await this.storeIPLDData(blockHash, contractAddress, stateUpdate, defaultStateKind);
