@@ -81,7 +81,7 @@
 
   * Edit the custom hook function `handleEvent` (triggered on an event) in `src/hooks.ts` to perform corresponding indexing using the `Indexer` object.
 
-  * While using the indexer storage methods for indexing, pass the optional arg. `defaultStateKind` as `diff` or `checkpoint` if default state is desired to be generated using the state variables being indexed.
+  * While using the indexer storage methods for indexing, pass the optional arg. `state` as `diff` or `checkpoint` if default state is desired to be generated using the state variables being indexed else pass `none`.
 
 * Generating state:
 

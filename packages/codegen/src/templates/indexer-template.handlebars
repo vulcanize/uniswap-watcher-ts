@@ -161,8 +161,8 @@ export class Indexer {
   async {{query.name}} (blockHash: string, contractAddress: string
     {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}}
     {{~#if query.stateVariableType~}}
-    , defaultStateKind?: string): Promise<ValueResult> {
-    assert(_.includes(['diff', 'checkpoint', undefined], defaultStateKind));
+    , state = 'none'): Promise<ValueResult> {
+    assert(_.includes(['diff', 'checkpoint', 'none'], state));
 
     {{else~}}
     ): Promise<ValueResult> {
@@ -216,23 +216,23 @@ export class Indexer {
 
     {{#if query.stateVariableType}}
     {{#if (compare query.stateVariableType 'Mapping')}}
-    if (defaultStateKind) {
+    if (state !== 'none') {
       const stateUpdate = updateStateForMappingType({}, '{{query.name}}', [
       {{~#each query.params}}
       {{~this.name}}.toString() {{~#unless @last}}, {{/unless~}}
       {{/each~}}
       ], result.value.toString());
-      await this.storeIPLDData(blockHash, contractAddress, stateUpdate, defaultStateKind);
+      await this.storeIPLDData(blockHash, contractAddress, stateUpdate, state);
     }
 
     {{else if (compare query.stateVariableType 'ElementaryTypeName')}}
-    if (defaultStateKind) {
+    if (state !== 'none') {
       const stateUpdate = updateStateForElementaryType({}, '{{query.name}}', result.value.toString());
-      await this.storeIPLDData(blockHash, contractAddress, stateUpdate, defaultStateKind);
+      await this.storeIPLDData(blockHash, contractAddress, stateUpdate, state);
     }
 
     {{else}}
-    assert(defaultStateKind === undefined, 'Type not supported for default derived state.');
+    assert(state === 'none', 'Type not supported for default state.');
 
     {{/if}}
     {{/if}}

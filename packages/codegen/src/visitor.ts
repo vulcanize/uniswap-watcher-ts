@@ -60,12 +60,13 @@ export class Visitor {
   stateVariableDeclarationVisitor (node: any): void {
     // TODO Handle multiples variables in a single line.
     // TODO Handle array types.
-    const name: string = node.variables[0].name;
+    const variable = node.variables[0];
+    const name: string = variable.name;
+    const stateVariableType: string = variable.typeName.type;
 
     const params: Param[] = [];
 
-    const stateVariableType = node.variables[0].typeName.type;
-    let typeName = node.variables[0].typeName;
+    let typeName = variable.typeName;
     let numParams = 0;
 
     // If the variable type is mapping, extract key as a param:

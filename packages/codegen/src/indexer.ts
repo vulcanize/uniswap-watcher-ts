@@ -71,7 +71,9 @@ export class Indexer {
     assert(tsReturnType);
     queryObject.returnType = tsReturnType;
 
-    queryObject.stateVariableType = stateVariableType;
+    if (stateVariableType) {
+      queryObject.stateVariableType = stateVariableType;
+    }
 
     this._queries.push(queryObject);
   }
