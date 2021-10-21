@@ -32,7 +32,7 @@ type ResultGetPool {
   proof: Proof
 }
 
-type ResultEthGetPool {
+type ResultCallGetPool {
   value: String!
 
   proof: Proof
@@ -264,13 +264,13 @@ type Query {
     fee: String!
   ): ResultGetPool
 
-  ethGetPool(
+  callGetPool(
     blockHash: String!
     contractAddress: String!
     key0: String!
     key1: String!
     key2: Int!
-  ): ResultEthGetPool
+  ): ResultCallGetPool
 
   # Pool
 

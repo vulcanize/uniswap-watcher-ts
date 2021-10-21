@@ -292,15 +292,26 @@ export class Indexer implements IndexerInterface {
     };
   }
 
-  async ethGetPool (blockHash: string, contractAddress: string, key0: string, key1: string, key2: number): Promise<ValueResult> {
+  async callGetPool (blockHash: string, contractAddress: string, key0: string, key1: string, key2: number): Promise<ValueResult> {
     const contract = new ethers.Contract(contractAddress, factoryABI, this._ethProvider);
 
     const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
     const blockNumber = ethers.BigNumber.from(number).toNumber();
 
-    const value = await contract.getPool(key0, key1, key2, { blockTag: blockNumber });
+    try {
+      const value = await contract.getPool(key0, key1, key2, { blockTag: blockNumber });
 
-    return { value };
+      return { value };
+    } catch (error: any) {
+      if (error.code === ethers.utils.Logger.errors.CALL_EXCEPTION) {
+        log('eth_call error');
+        log(error);
+
+        throw new Error(error.code);
+      }
+
+      throw error;
+    }
   }
 
   async positions (blockHash: string, contractAddress: string, tokenId: string): Promise<ValueResult> {
@@ -309,9 +320,20 @@ export class Indexer implements IndexerInterface {
     const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
     const blockNumber = ethers.BigNumber.from(number).toNumber();
 
-    const value = await contract.positions(tokenId, { blockTag: blockNumber });
+    try {
+      const value = await contract.positions(tokenId, { blockTag: blockNumber });
 
-    return { value };
+      return { value };
+    } catch (error: any) {
+      if (error.code === ethers.utils.Logger.errors.CALL_EXCEPTION) {
+        log('eth_call error');
+        log(error);
+
+        throw new Error(error.code);
+      }
+
+      throw error;
+    }
   }
 
   async getContract (type: string): Promise<any> {

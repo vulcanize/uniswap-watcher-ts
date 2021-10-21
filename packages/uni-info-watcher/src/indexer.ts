@@ -1231,13 +1231,26 @@ export class Indexer implements IndexerInterface {
     let position = await this._db.getPosition({ id: tokenId.toString(), blockHash });
 
     if (!position) {
-      try {
-        const { value: positionResult } = await this._uniClient.positions(blockHash, contractAddress, tokenId);
+      let positionResult;
 
+      try {
+        ({ value: positionResult } = await this._uniClient.positions(blockHash, contractAddress, tokenId));
+      } catch (error: any) {
+        // The contract call reverts in situations where the position is minted and deleted in the same block.
+        // From my investigation this happens in calls from BancorSwap.
+        // (e.g. 0xf7867fa19aa65298fadb8d4f72d0daed5e836f3ba01f0b9b9631cdc6c36bed40)
+
+        if (error.message !== utils.Logger.errors.CALL_EXCEPTION) {
+          log('nfpm positions eth_call failed');
+          throw error;
+        }
+      }
+
+      if (positionResult) {
         // TODO: In subgraph factory is fetched by hardcoded factory address.
         // Currently fetching first factory in database as only one exists.
         const [factory] = await this._db.getModelEntitiesNoTx(Factory, { hash: blockHash }, {}, { limit: 1 });
-        const { value: poolAddress } = await this._uniClient.ethGetPool(blockHash, factory.id, positionResult.token0, positionResult.token1, positionResult.fee);
+        const { value: poolAddress } = await this._uniClient.callGetPool(blockHash, factory.id, positionResult.token0, positionResult.token1, positionResult.fee);
 
         position = new Position();
         position.id = tokenId.toString();
@@ -1264,13 +1277,6 @@ export class Indexer implements IndexerInterface {
 
         position.feeGrowthInside0LastX128 = BigInt(positionResult.feeGrowthInside0LastX128.toString());
         position.feeGrowthInside1LastX128 = BigInt(positionResult.feeGrowthInside1LastX128.toString());
-      } catch (error) {
-        // The contract call reverts in situations where the position is minted and deleted in the same block.
-        // From my investigation this happens in calls from BancorSwap.
-        // (e.g. 0xf7867fa19aa65298fadb8d4f72d0daed5e836f3ba01f0b9b9631cdc6c36bed40)
-
-        log('nfpm positions eth_call failed');
-        log(error);
       }
     }
 

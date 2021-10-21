@@ -185,9 +185,9 @@ query getPool($blockHash: String!, $token0: String!, $token1: String!, $fee: Str
 }
 `;
 
-export const queryEthGetPool = gql`
-query ethGetPool($blockHash: String!, $contractAddress: String!, $key0: String!, $key1: String!, $key2: Int!) {
-  ethGetPool(blockHash: $blockHash, contractAddress: $contractAddress, key0: $key0, key1: $key1, key2: $key2) {
+export const queryCallGetPool = gql`
+query callGetPool($blockHash: String!, $contractAddress: String!, $key0: String!, $key1: String!, $key2: Int!) {
+  callGetPool(blockHash: $blockHash, contractAddress: $contractAddress, key0: $key0, key1: $key1, key2: $key2) {
     value
     proof {
       data

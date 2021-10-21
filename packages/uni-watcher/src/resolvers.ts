@@ -99,9 +99,9 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getPool(blockHash, token0, token1, fee);
       },
 
-      ethGetPool: (_: any, { blockHash, contractAddress, key0, key1, key2 }: { blockHash: string, contractAddress: string, key0: string, key1: string, key2: number }): Promise<ValueResult> => {
-        log('ethGetPool', blockHash, contractAddress, key0, key1, key2);
-        return indexer.ethGetPool(blockHash, contractAddress, key0, key1, key2);
+      callGetPool: (_: any, { blockHash, contractAddress, key0, key1, key2 }: { blockHash: string, contractAddress: string, key0: string, key1: string, key2: number }): Promise<ValueResult> => {
+        log('callGetPool', blockHash, contractAddress, key0, key1, key2);
+        return indexer.callGetPool(blockHash, contractAddress, key0, key1, key2);
       },
 
       getContract: (_: any, { type }: { type: string }) => {
