@@ -117,7 +117,7 @@ export class Indexer {
           }
         ]
       }
-    } = await this._postgraphileClient.getBlock({ blockHash });
+    } = await this._postgraphileClient.getBlocks({ blockHash });
 
     return {
       cid,

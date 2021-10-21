@@ -7,21 +7,14 @@ import { MoreThan } from 'typeorm';
 import assert from 'assert';
 
 import { getConfig, getResetConfig, resetJobs } from '@vulcanize/util';
-import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
-import { Client as UniClient } from '@vulcanize/uni-watcher';
 
 import { Database } from '../../database';
 import { Indexer } from '../../indexer';
 import { BlockProgress } from '../../entity/BlockProgress';
-import { Factory } from '../../entity/Factory';
-import { Bundle } from '../../entity/Bundle';
-import { Pool } from '../../entity/Pool';
-import { Mint } from '../../entity/Mint';
-import { Burn } from '../../entity/Burn';
-import { Swap } from '../../entity/Swap';
-import { PositionSnapshot } from '../../entity/PositionSnapshot';
-import { Position } from '../../entity/Position';
-import { Token } from '../../entity/Token';
+
+{{#each queries as | query |}}
+import { {{query.entityName}} } from '../../entity/{{query.entityName}}';
+{{/each}}
 
 const log = debug('vulcanize:reset-state');
 
@@ -38,21 +31,13 @@ export const builder = {
 export const handler = async (argv: any): Promise<void> => {
   const config = await getConfig(argv.configFile);
   await resetJobs(config);
-  const { dbConfig, serverConfig, upstreamConfig, ethClient, postgraphileClient } = await getResetConfig(config);
+  const { dbConfig, serverConfig, ethClient, postgraphileClient, ethProvider } = await getResetConfig(config);
 
   // Initialize database.
   const db = new Database(dbConfig);
   await db.init();
 
-  const {
-    uniWatcher,
-    tokenWatcher
-  } = upstreamConfig;
-
-  const uniClient = new UniClient(uniWatcher);
-  const erc20Client = new ERC20Client(tokenWatcher);
-
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, serverConfig.mode);
+  const indexer = new Indexer(serverConfig, db, ethClient, postgraphileClient, ethProvider);
 
   const syncStatus = await indexer.getSyncStatus();
   assert(syncStatus, 'Missing syncStatus');
@@ -65,7 +50,13 @@ export const handler = async (argv: any): Promise<void> => {
   const dbTx = await db.createTransactionRunner();
 
   try {
-    const removeEntitiesPromise = [BlockProgress, Factory, Bundle, Pool, Mint, Burn, Swap, PositionSnapshot, Position, Token].map(async entityClass => {
+    const entities = [BlockProgress
+    {{~#each queries as | query |~}}
+    , {{query.entityName}}
+    {{~/each~}}
+    ];
+
+    const removeEntitiesPromise = entities.map(async entityClass => {
       return db.removeEntities<any>(dbTx, entityClass, { blockNumber: MoreThan(argv.blockNumber) });
     });
 
