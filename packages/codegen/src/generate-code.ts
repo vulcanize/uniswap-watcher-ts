@@ -28,6 +28,7 @@ import { registerHandlebarHelpers } from './utils/handlebar-helpers';
 import { exportHooks } from './hooks';
 import { exportFill } from './fill';
 import { exportCheckpoint } from './checkpoint';
+import { exportWatcher } from './export-watcher';
 
 const main = async (): Promise<void> => {
   const argv = await yargs(hideBin(process.argv))
@@ -256,6 +257,11 @@ function generateWatcher (data: string, visitor: Visitor, argv: any) {
     resetStateOutStream = process.stdout;
   }
   visitor.exportReset(resetOutStream, resetJQOutStream, resetStateOutStream);
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'src/cli/export-watcher.ts'))
+    : process.stdout;
+  exportWatcher(outStream);
 }
 
 main().catch(err => {
