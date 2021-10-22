@@ -363,9 +363,9 @@ export class Database {
     return this._baseDatabase.getBlockProgress(repo, blockHash);
   }
 
-  async getLatestBlockProgress (): Promise<BlockProgress | undefined> {
+  async getLastCompleteBlock (): Promise<BlockProgress | undefined> {
     const repo = this._conn.getRepository(BlockProgress);
-    return repo.findOne({ order: { blockNumber: 'DESC' } });
+    return repo.findOne({ where: { isComplete: true }, order: { blockNumber: 'DESC' } });
   }
 
   async updateBlockProgress (queryRunner: QueryRunner, blockHash: string, lastProcessedEventIndex: number): Promise<void> {

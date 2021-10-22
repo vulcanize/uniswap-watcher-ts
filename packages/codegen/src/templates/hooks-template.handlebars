@@ -32,7 +32,7 @@ export async function createInitialCheckpoint (indexer: Indexer, contractAddress
     ipldBlockData = updateStateForMappingType(ipldBlockData, '_balances', [account], balance.value.toString());
   }
 
-  await indexer.createCheckpoint(contractAddress, ipldBlockData, blockHash);
+  await indexer.createCheckpoint(contractAddress, blockHash, ipldBlockData);
 }
 
 /**
@@ -99,7 +99,7 @@ export async function createStateDiff (indexer: Indexer, blockHash: string): Pro
       }
     }
 
-    await indexer.createDiff(contractAddress, ipldBlockData, blockHash);
+    await indexer.createDiff(contractAddress, blockHash, ipldBlockData);
   }
 }
 
