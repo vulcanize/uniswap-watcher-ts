@@ -88,14 +88,14 @@ export class EventWatcher {
       // If it's a pruning job:
       // Create a hook job for the latest canonical block.
       if (kind === JOB_KIND_PRUNE) {
-        const syncStatus = await this._indexer.getSyncStatus();
-        assert(syncStatus);
+        const latestCanonicalBlock = await this._indexer.getLatestCanonicalBlock();
+        assert(latestCanonicalBlock);
 
         this._jobQueue.pushJob(
           QUEUE_HOOKS,
           {
-            blockHash: syncStatus.latestCanonicalBlockHash,
-            blockNumber: syncStatus.latestCanonicalBlockNumber
+            blockHash: latestCanonicalBlock.blockHash,
+            blockNumber: latestCanonicalBlock.blockNumber
           }
         );
       }

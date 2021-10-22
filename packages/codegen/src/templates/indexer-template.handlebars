@@ -588,6 +588,13 @@ export class Indexer {
     return res;
   }
 
+  async getLatestCanonicalBlock (): Promise<BlockProgress | undefined> {
+    const syncStatus = await this.getSyncStatus();
+    assert(syncStatus);
+
+    return this.getBlockProgress(syncStatus.latestCanonicalBlockHash);
+  }
+
   async getEventsByFilter (blockHash: string, contract?: string, name?: string): Promise<Array<Event>> {
     return this._baseIndexer.getEventsByFilter(blockHash, contract, name);
   }

@@ -29,6 +29,7 @@ import { exportHooks } from './hooks';
 import { exportFill } from './fill';
 import { exportCheckpoint } from './checkpoint';
 import { exportWatcher } from './export-watcher';
+import { importWatcher } from './import-watcher';
 
 const main = async (): Promise<void> => {
   const argv = await yargs(hideBin(process.argv))
@@ -262,6 +263,11 @@ function generateWatcher (data: string, visitor: Visitor, argv: any) {
     ? fs.createWriteStream(path.join(outputDir, 'src/cli/export-watcher.ts'))
     : process.stdout;
   exportWatcher(outStream);
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'src/cli/import-watcher.ts'))
+    : process.stdout;
+  importWatcher(outStream);
 }
 
 main().catch(err => {

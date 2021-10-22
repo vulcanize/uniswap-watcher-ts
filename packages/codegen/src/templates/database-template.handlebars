@@ -229,11 +229,6 @@ export class Database {
     return repo.find({ where });
   }
 
-  async getLastCompleteBlock (): Promise<BlockProgress | undefined> {
-    const repo = this._conn.getRepository(BlockProgress);
-    return repo.findOne({ where: { isComplete: true }, order: { blockNumber: 'DESC' } });
-  }
-
   async getContract (address: string): Promise<Contract | undefined> {
     const repo = this._conn.getRepository(Contract);
 

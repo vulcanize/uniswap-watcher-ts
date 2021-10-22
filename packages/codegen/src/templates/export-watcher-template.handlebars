@@ -71,30 +71,44 @@ const main = async (): Promise<void> => {
   const indexer = new Indexer(serverConfig, db, ethClient, postgraphileClient, ethProvider);
 
   const exportData: any = {
+    snapshotBlock: {},
     contracts: [],
-    checkpoints: []
+    ipldCheckpoints: []
   };
 
   const contracts = await db.getContracts({});
 
-  const block = await db.getLatestBlockProgress();
+  // Get latest canonical block.
+  const block = await indexer.getLatestCanonicalBlock();
   assert(block);
 
+  // Export snapshot block.
+  exportData.snapshotBlock = {
+    blockNumber: block.blockNumber,
+    blockHash: block.blockHash
+  };
+
+  // Export contracts and checkpoints.
   for (const contract of contracts) {
     exportData.contracts.push({
       address: contract.address,
       kind: contract.kind,
-      checkpoint: contract.checkpoint
+      checkpoint: contract.checkpoint,
+      startingBlock: block.blockNumber
     });
 
+    // Create and export checkpoint if checkpointing is on for the contract.
     if (contract.checkpoint) {
-      const state = await indexer.getPrevState(block.blockHash, contract.address, 'checkpoint');
-      exportData.checkpoints.push({
-        contractAddress: contract.address,
-        kind: 'checkpoint',
-        data: {
-          state
-        }
+      await indexer.createCheckpoint(contract.address, block.blockHash);
+
+      const ipldBlock = await indexer.getLastIPLDBlock(contract.address, 'checkpoint');
+      assert(ipldBlock);
+
+      exportData.ipldCheckpoints.push({
+        contractAddress: ipldBlock.contractAddress,
+        cid: ipldBlock.cid,
+        kind: ipldBlock.kind,
+        data: ipldBlock.data
       });
     }
   }

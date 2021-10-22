@@ -20,7 +20,7 @@ export const fillBlocks = async (
   eventWatcher: EventWatcherInterface,
   { startBlock, endBlock }: { startBlock: number, endBlock: number}
 ): Promise<any> => {
-  assert(startBlock < endBlock, 'endBlock should be greater than startBlock');
+  assert(startBlock <= endBlock, 'endBlock should be greater than or equal to startBlock');
 
   await eventWatcher.initBlockProcessingOnCompleteHandler();
   await eventWatcher.initEventProcessingOnCompleteHandler();
