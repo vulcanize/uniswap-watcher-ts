@@ -175,7 +175,7 @@ export class Database {
             ipld_block i ON i.block_id = b.id
             AND i.contract_address = $2
         WHERE
-          b.block_hash = $1
+          b.block_hash = $1 AND b.block_number > $3
         UNION ALL
           SELECT
             b.block_hash,
@@ -192,7 +192,7 @@ export class Database {
             INNER JOIN
               cte_query c ON c.parent_hash = b.block_hash
             WHERE
-              c.depth < $3
+              c.depth < $4 AND b.block_number > $3
       )
       SELECT
         block_number, id
@@ -202,7 +202,7 @@ export class Database {
     `;
 
     // Fetching ids for previous IPLDBlocks in the frothy region.
-    const queryResult = await queryRunner.query(heirerchicalQuery, [blockHash, contractAddress, MAX_REORG_DEPTH]);
+    const queryResult = await queryRunner.query(heirerchicalQuery, [blockHash, contractAddress, checkpointBlockNumber, MAX_REORG_DEPTH]);
 
     let frothyIds = queryResult.map((obj: any) => obj.id);
     frothyIds = frothyIds.filter((id: any) => id !== null);
