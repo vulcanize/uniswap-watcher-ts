@@ -83,19 +83,6 @@ export class Database {
     return repo.find({ where, relations: ['block'] });
   }
 
-  async getLatestCheckpoint (queryRunner: QueryRunner, contractAddress: string): Promise<IPLDBlock | undefined> {
-    // Get the latest checkpoints for a contract.
-    const result = await queryRunner.manager.createQueryBuilder(IPLDBlock, 'ipld_block')
-      .leftJoinAndSelect('ipld_block.block', 'block')
-      .where('block.is_pruned = false')
-      .andWhere('ipld_block.contractAddress = :contractAddress', { contractAddress })
-      .andWhere('ipld_block.kind = :kind', { kind: 'checkpoint' })
-      .orderBy('ipld_block.block_id', 'DESC')
-      .getOne();
-
-    return result;
-  }
-
   async getPrevIPLDBlock (queryRunner: QueryRunner, blockHash: string, contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
     const heirerchicalQuery = `
       WITH RECURSIVE cte_query AS

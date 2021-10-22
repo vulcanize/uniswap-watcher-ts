@@ -268,7 +268,8 @@ export class Indexer {
     const block = await this.getBlockProgress(blockHash);
     assert(block);
 
-    const checkpoint = await this.getLatestCheckpoint(contractAddress);
+    // Fetch the latest checkpoint for the contract.
+    const checkpoint = await this.getPrevIPLDBlock(blockHash, contractAddress, 'checkpoint');
 
     // There should be an initial checkpoint at least.
     assert(checkpoint, 'Initial checkpoint doesn\'t exist');
@@ -304,9 +305,8 @@ export class Indexer {
 
     // If data is not passed, create from previous checkpoint and diffs after that.
 
-    // Fetching the latest checkpoint for a contract.
-    // TODO Use hierarchical query (using blockHash).
-    const checkpointBlock = await this.getLatestCheckpoint(contractAddress);
+    // Fetch the latest checkpoint for the contract.
+    const checkpointBlock = await this.getPrevIPLDBlock(currentBlock.blockHash, contractAddress, 'checkpoint');
     assert(checkpointBlock);
 
     // Check (only if checkpointInterval is passed) if it is time for a new checkpoint.
@@ -330,23 +330,6 @@ export class Indexer {
     await this.saveOrUpdateIPLDBlock(ipldBlock);
 
     return currentBlock.blockHash;
-  }
-
-  async getLatestCheckpoint (contractAddress: string): Promise<IPLDBlock | undefined> {
-    // Get the latest checkpoints for a contract.
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      res = await this._db.getLatestCheckpoint(dbTx, contractAddress);
-      await dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-    return res;
   }
 
   async getIPLDBlocks (block: BlockProgress, contractAddress: string, kind?: string): Promise<IPLDBlock[]> {
