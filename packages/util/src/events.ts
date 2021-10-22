@@ -13,6 +13,7 @@ import { JobQueue } from './job-queue';
 import { BlockProgressInterface, EventInterface, IndexerInterface } from './types';
 import { QUEUE_BLOCK_PROCESSING, MAX_REORG_DEPTH, JOB_KIND_PRUNE, JOB_KIND_INDEX } from './constants';
 import { createPruningJob } from './common';
+import { wait } from './index';
 
 const log = debug('vulcanize:events');
 
@@ -20,13 +21,15 @@ export const BlockProgressEvent = 'block-progress-event';
 
 export class EventWatcher {
   _ethClient: EthClient
+  _postgraphileClient: EthClient
   _indexer: IndexerInterface
   _subscription?: ZenObservable.Subscription
   _pubsub: PubSub
   _jobQueue: JobQueue
 
-  constructor (ethClient: EthClient, indexer: IndexerInterface, pubsub: PubSub, jobQueue: JobQueue) {
+  constructor (ethClient: EthClient, postgraphileClient: EthClient, indexer: IndexerInterface, pubsub: PubSub, jobQueue: JobQueue) {
     this._ethClient = ethClient;
+    this._postgraphileClient = postgraphileClient;
     this._indexer = indexer;
     this._pubsub = pubsub;
     this._jobQueue = jobQueue;
@@ -34,6 +37,28 @@ export class EventWatcher {
 
   getBlockProgressEventIterator (): AsyncIterator<any> {
     return this._pubsub.asyncIterator([BlockProgressEvent]);
+  }
+
+  async stop (): Promise<void> {
+    if (this._subscription) {
+      log('Stopped watching upstream blocks');
+      this._subscription.unsubscribe();
+    }
+  }
+
+  async startBlockProcessing (): Promise<void> {
+    const syncStatus = await this._indexer.getSyncStatus();
+
+    if (!syncStatus) {
+      // Get latest block in chain.
+      const { block: currentBlock } = await this._ethClient.getBlockByHash();
+      await this._fetchBlocksByNumberAndProcess(currentBlock.number + 1);
+      return;
+    }
+
+    const block = await this._indexer.getBlockProgress(syncStatus.latestIndexedBlockHash);
+    assert(block);
+    await this._handleBlockComplete(block);
   }
 
   async blocksHandler (value: any): Promise<void> {
@@ -78,6 +103,8 @@ export class EventWatcher {
 
       if (blockProgress.isComplete) {
         await this._indexer.removeUnknownEvents(blockProgress);
+
+        await this._handleBlockComplete(blockProgress);
       }
     }
 
@@ -115,6 +142,10 @@ export class EventWatcher {
     const blockProgress = await this._indexer.getBlockProgress(blockHash);
     if (blockProgress) {
       await this.publishBlockProgressToSubscribers(blockProgress);
+
+      if (blockProgress.isComplete) {
+        await this._handleBlockComplete(blockProgress);
+      }
     }
   }
 
@@ -131,10 +162,38 @@ export class EventWatcher {
     await this._indexer.updateSyncStatusCanonicalBlock(block.blockHash, block.blockNumber);
   }
 
-  async stop (): Promise<void> {
-    if (this._subscription) {
-      log('Stopped watching upstream blocks');
-      this._subscription.unsubscribe();
+  /**
+   * Method called after blockProgress isComplete is true.
+   * @param block
+   */
+  async _handleBlockComplete (block: BlockProgressInterface): Promise<void> {
+    this._fetchBlocksByNumberAndProcess(block.blockNumber + 1);
+  }
+
+  /**
+   * Method to fetch blocks by number and push to job queue.
+   * @param blockNumber
+   */
+  async _fetchBlocksByNumberAndProcess (blockNumber: number): Promise<void> {
+    while (true) {
+      const { allEthHeaderCids: { nodes: blocks } } = await this._postgraphileClient.getBlocksByNumber(blockNumber);
+
+      if (blocks.length) {
+        blocks.forEach(async (block: any) => {
+          const { blockNumber, blockHash, parentHash, timestamp } = block;
+
+          await this._indexer.updateSyncStatusChainHead(blockHash, blockNumber);
+
+          await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { kind: JOB_KIND_INDEX, blockHash, blockNumber, parentHash, timestamp });
+        });
+
+        // Break loop to check for nodes if child blocks are fetched.
+        return;
+      }
+
+      log(`No blocks fetched for block number ${blockNumber}. Fetching after some time.`);
+      // TODO: Get wait time from config.
+      await wait(2000);
     }
   }
 }
