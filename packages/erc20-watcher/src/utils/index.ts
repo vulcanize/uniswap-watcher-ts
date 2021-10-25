@@ -42,18 +42,18 @@ export const fetchTokenSymbol = async (ethProvider: BaseProvider, tokenAddress: 
   return symbolValue;
 };
 
-export const fetchTokenName = async (ethProvider: BaseProvider, tokenAddress: string): Promise<string> => {
+export const fetchTokenName = async (ethProvider: BaseProvider, blockHash: string, tokenAddress: string): Promise<string> => {
   const contract = new Contract(tokenAddress, abi, ethProvider);
   const contractNameBytes = new Contract(tokenAddress, ERC20NameBytesABI, ethProvider);
   let nameValue = 'unknown';
 
   // Try types string and bytes32 for name.
   try {
-    const result = await contract.name();
+    const result = await contract.name({ blockTag: blockHash });
     nameValue = result;
   } catch (error) {
     try {
-      const result = await contractNameBytes.name();
+      const result = await contractNameBytes.name({ blockTag: blockHash });
 
       // For broken pairs that have no name function exposed.
       if (!isNullEthValue(result)) {
