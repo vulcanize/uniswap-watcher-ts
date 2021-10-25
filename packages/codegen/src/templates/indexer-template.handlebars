@@ -245,7 +245,7 @@ export class Indexer {
   }
 
   async processCheckpoint (job: any): Promise<void> {
-    // Create a checkpoint IPLDBlock for contracts that were checkpointed checkPointInterval blocks before.
+    // Create a checkpoint IPLDBlock for all the contracts that have checkpointing on.
 
     // Return if checkpointInterval is <= 0.
     const checkpointInterval = this._serverConfig.checkpointInterval;
@@ -282,20 +282,23 @@ export class Indexer {
   }
 
   async createCheckpoint (contractAddress: string, blockHash?: string, data?: any, checkpointInterval?: number): Promise<string | undefined> {
+    const syncStatus = await this.getSyncStatus();
+    assert(syncStatus);
+
     // Getting the current block.
     let currentBlock;
 
     if (blockHash) {
       currentBlock = await this.getBlockProgress(blockHash);
     } else {
-      currentBlock = await this._db.getLastCompleteBlock();
+      // In case of empty blockHash from checkpoint CLI, get the latest canonical block for the checkpoint.
+      currentBlock = await this.getBlockProgress(syncStatus.latestCanonicalBlockHash);
     }
 
     assert(currentBlock);
 
-    // Make sure the block is marked complete.
-    assert(currentBlock.isComplete);
-
+    // Data is passed in case of initial checkpoint.
+    // Assuming there will be no events for the contract in this block.
     if (data) {
       const ipldBlock = await this.prepareIPLDBlock(currentBlock, contractAddress, data, 'checkpoint');
       await this.saveOrUpdateIPLDBlock(ipldBlock);
@@ -305,9 +308,20 @@ export class Indexer {
 
     // If data is not passed, create from previous checkpoint and diffs after that.
 
+    // Make sure the block is marked complete.
+    assert(currentBlock.isComplete, 'Block for a checkpoint should be marked as complete');
+
+    // Make sure the block is in the pruned region.
+    assert(currentBlock.blockNumber <= syncStatus.latestCanonicalBlockNumber, 'Block for a checkpoint should be in the pruned region');
+
     // Fetch the latest checkpoint for the contract.
     const checkpointBlock = await this.getPrevIPLDBlock(currentBlock.blockHash, contractAddress, 'checkpoint');
-    assert(checkpointBlock);
+
+    if (!checkpointBlock) {
+      // When a contract is watched, auto-checkpointing may try to checkpoint the contract for a block in the pruned region.
+      // In such case, return.
+      return;
+    }
 
     // Check (only if checkpointInterval is passed) if it is time for a new checkpoint.
     if (checkpointInterval && checkpointBlock.block.blockNumber > (currentBlock.blockNumber - checkpointInterval)) {

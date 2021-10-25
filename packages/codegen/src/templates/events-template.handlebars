@@ -14,7 +14,8 @@ import {
   QUEUE_EVENT_PROCESSING,
   QUEUE_BLOCK_CHECKPOINT,
   QUEUE_HOOKS,
-  UNKNOWN_EVENT_NAME
+  UNKNOWN_EVENT_NAME,
+  JOB_KIND_PRUNE
 } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
@@ -81,6 +82,22 @@ export class EventWatcher {
       }
 
       await this._baseEventWatcher.blockProcessingCompleteHandler(job);
+
+      const { data: { request: { data: { kind } } } } = job;
+
+      // Push checkpointing job if a pruning job is complete and checkpointing is on.
+      if (kind === JOB_KIND_PRUNE && this._indexer._serverConfig.checkpointing) {
+        const syncStatus = await this._indexer.getSyncStatus();
+        assert(syncStatus);
+
+        this._jobQueue.pushJob(
+          QUEUE_BLOCK_CHECKPOINT,
+          {
+            blockHash: syncStatus.latestCanonicalBlockHash,
+            blockNumber: syncStatus.latestCanonicalBlockNumber
+          }
+        );
+      }
     });
   }
 
@@ -115,14 +132,9 @@ export class EventWatcher {
 
   async initHooksOnCompleteHandler (): Promise<void> {
     this._jobQueue.onComplete(QUEUE_HOOKS, async (job) => {
-      const { data: { request: { data: { blockHash, blockNumber } } } } = job;
+      const { data: { request: { data: { blockNumber } } } } = job;
 
       await this._indexer.updateHookStatusProcessedBlock(blockNumber);
-
-      // Push checkpointing job only after post-block hook job is marked complete and checkpointing is on.
-      if (this._indexer._serverConfig.checkpointing) {
-        this._jobQueue.pushJob(QUEUE_BLOCK_CHECKPOINT, { blockHash });
-      }
     });
   }
 

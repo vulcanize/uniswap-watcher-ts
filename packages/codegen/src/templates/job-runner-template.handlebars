@@ -95,6 +95,18 @@ export class JobRunner {
 
   async subscribeBlockCheckpointQueue (): Promise<void> {
     await this._jobQueue.subscribe(QUEUE_BLOCK_CHECKPOINT, async (job) => {
+      // Check if the hook processing for the concerned blockNumber is complete.
+      const { data: { blockNumber } } = job;
+
+      const hookStatus = await this._indexer.getHookStatus();
+
+      if (hookStatus && hookStatus.latestProcessedBlockNumber < blockNumber) {
+        const message = `Hooks for blockNumber ${blockNumber} not processed yet, aborting`;
+        log(message);
+
+        throw new Error(message);
+      }
+
       await this._indexer.processCheckpoint(job);
 
       await this._jobQueue.markComplete(job);

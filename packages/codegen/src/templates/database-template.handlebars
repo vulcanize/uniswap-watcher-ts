@@ -255,6 +255,11 @@ export class Database {
     return repo.find({ where });
   }
 
+  async getLastCompleteBlock (): Promise<BlockProgress | undefined> {
+    const repo = this._conn.getRepository(BlockProgress);
+    return repo.findOne({ where: { isComplete: true }, order: { blockNumber: 'DESC' } });
+  }
+
   async getContract (address: string): Promise<Contract | undefined> {
     const repo = this._conn.getRepository(Contract);
 
@@ -348,11 +353,6 @@ export class Database {
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
     const repo = this._conn.getRepository(BlockProgress);
     return this._baseDatabase.getBlockProgress(repo, blockHash);
-  }
-
-  async getLastCompleteBlock (): Promise<BlockProgress | undefined> {
-    const repo = this._conn.getRepository(BlockProgress);
-    return repo.findOne({ where: { isComplete: true }, order: { blockNumber: 'DESC' } });
   }
 
   async updateBlockProgress (queryRunner: QueryRunner, blockHash: string, lastProcessedEventIndex: number): Promise<void> {
