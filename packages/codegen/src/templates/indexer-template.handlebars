@@ -249,15 +249,7 @@ export class Indexer {
     const checkpointInterval = this._serverConfig.checkpointInterval;
     if (checkpointInterval <= 0) return;
 
-    const { data: { blockHash: currentBlockHash, contractAddress } } = job;
-
-    // Create initial checkpoint and return if contract address passed in the job.
-    if (contractAddress) {
-      // Call initial checkpoint hook.
-      await createInitialCheckpoint(this, contractAddress, currentBlockHash);
-
-      return;
-    }
+    const { data: { blockHash: currentBlockHash } } = job;
 
     // Get all the contracts.
     const contracts = await this._db.getContracts({});
@@ -325,8 +317,9 @@ export class Indexer {
     const checkpointBlock = await this.getPrevIPLDBlock(currentBlock.blockHash, contractAddress, 'checkpoint');
 
     if (!checkpointBlock) {
-      // When a contract is watched, auto-checkpointing may try to checkpoint the contract for a block in the pruned region.
-      // In such case, return.
+      // If a checkpoint doesn't exist for a contract, call initial checkpoint hook.
+      await createInitialCheckpoint(this, contractAddress, currentBlock.blockHash);
+
       return;
     }
 

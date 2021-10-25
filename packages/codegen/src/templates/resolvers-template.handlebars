@@ -37,13 +37,7 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
       watchContract: (_: any, { address, kind, checkpoint, startingBlock = 1 }: { address: string, kind: string, checkpoint: boolean, startingBlock: number }): Promise<boolean> => {
         log('watchContract', address, kind, checkpoint, startingBlock);
 
-        const result = indexer.watchContract(address, kind, checkpoint, startingBlock);
-
-        if (checkpoint) {
-          eventWatcher.createInitialCheckpoint(address);
-        }
-
-        return result;
+        return indexer.watchContract(address, kind, checkpoint, startingBlock);
       }
     },
 

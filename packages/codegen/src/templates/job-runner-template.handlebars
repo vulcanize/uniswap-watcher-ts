@@ -96,30 +96,16 @@ export class JobRunner {
 
   async subscribeBlockCheckpointQueue (): Promise<void> {
     await this._jobQueue.subscribe(QUEUE_BLOCK_CHECKPOINT, async (job) => {
-      const { data: { blockNumber, contractAddress } } = job;
+      const { data: { blockNumber } } = job;
 
-      if (contractAddress) {
-        // Initial checkpoint job is contract address passed.
-        // Check if the canonical height is MAX_REORG_DEPTH or more from latest indexed block.
-        const syncStatus = await this._indexer.getSyncStatus();
-        assert(syncStatus);
+      // Check if the hook processing for the concerned blockNumber is complete.
+      const hookStatus = await this._indexer.getHookStatus();
 
-        if (syncStatus.latestIndexedBlockNumber < (syncStatus.latestCanonicalBlockNumber + MAX_REORG_DEPTH)) {
-          const message = `Latest indexed block not yet ahead of canonical block by MAX_REORG_DEPTH ${MAX_REORG_DEPTH}, aborting`;
-          log(message);
+      if (hookStatus && hookStatus.latestProcessedBlockNumber < blockNumber) {
+        const message = `Hooks for blockNumber ${blockNumber} not processed yet, aborting`;
+        log(message);
 
-          throw new Error(message);
-        }
-      } else {
-        // Check if the hook processing for the concerned blockNumber is complete.
-        const hookStatus = await this._indexer.getHookStatus();
-
-        if (hookStatus && hookStatus.latestProcessedBlockNumber < blockNumber) {
-          const message = `Hooks for blockNumber ${blockNumber} not processed yet, aborting`;
-          log(message);
-
-          throw new Error(message);
-        }
+        throw new Error(message);
       }
 
       await this._indexer.processCheckpoint(job);
