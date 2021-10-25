@@ -150,4 +150,18 @@ export class EventWatcher {
       });
     }
   }
+
+  async createInitialCheckpoint (contractAddress: string): Promise<void> {
+    const syncStatus = await this._indexer.getSyncStatus();
+    assert(syncStatus);
+
+    this._jobQueue.pushJob(
+      QUEUE_BLOCK_CHECKPOINT,
+      {
+        blockHash: syncStatus.latestCanonicalBlockHash,
+        blockNumber: syncStatus.latestCanonicalBlockNumber,
+        contractAddress
+      }
+    );
+  }
 }

@@ -245,19 +245,26 @@ export class Indexer {
   }
 
   async processCheckpoint (job: any): Promise<void> {
-    // Create a checkpoint IPLDBlock for all the contracts that have checkpointing on.
-
     // Return if checkpointInterval is <= 0.
     const checkpointInterval = this._serverConfig.checkpointInterval;
     if (checkpointInterval <= 0) return;
 
-    const { data: { blockHash: currentBlockHash } } = job;
+    const { data: { blockHash: currentBlockHash, contractAddress } } = job;
+
+    // Create initial checkpoint and return if contract address passed in the job.
+    if (contractAddress) {
+      // Call initial checkpoint hook.
+      await createInitialCheckpoint(this, contractAddress, currentBlockHash);
+
+      return;
+    }
 
     // Get all the contracts.
     const contracts = await this._db.getContracts({});
 
     // For each contract, merge the diff till now to create a checkpoint.
     for (const contract of contracts) {
+      // Check if contract has checkpointing on.
       if (contract.checkpoint) {
         await this.createCheckpoint(contract.address, currentBlockHash, undefined, checkpointInterval);
       }
@@ -517,15 +524,6 @@ export class Indexer {
     // Customize: use the kind input to filter out non-contract-address input to address.
     const formattedAddress = (kind === '__protocol__') ? address : ethers.utils.getAddress(address);
     await this._db.saveContract(formattedAddress, kind, checkpoint, startingBlock);
-
-    if (checkpoint) {
-      // Getting the current block.
-      const currentBlock = await this._db.getLastCompleteBlock();
-      assert(currentBlock);
-
-      // Call custom initial checkpoint hook.
-      await createInitialCheckpoint(this, address, currentBlock.blockHash);
-    }
 
     return true;
   }
