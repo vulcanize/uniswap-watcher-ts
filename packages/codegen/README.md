@@ -131,6 +131,20 @@
     ```bash
     yarn checkpoint --address <contract-address> --block-hash [block-hash]
     ```
+  
+  * To reset the watcher to a previous block number:
+
+    * Reset state:
+
+      ```bash
+      yarn reset state --block-number <previous-block-number>
+      ```
+
+    * Reset job-queue:
+
+      ```bash
+      yarn reset job-queue --block-number <previous-block-number>
+      ```
 
 ## Known Issues
 

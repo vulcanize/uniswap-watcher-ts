@@ -116,4 +116,20 @@ GQL console: http://localhost:3008/graphql
     ```
 
     * `address`: Address or identifier of the contract for which to create a checkpoint.
-    * `block-hash`: Hash of the block at which to create the checkpoint (default: current block hash).
+    * `block-hash`: Hash of a block (in the pruned region) at which to create the checkpoint (default: latest canonical block hash).
+
+  * To reset the watcher to a previous block number:
+
+    * Reset state:
+
+      ```bash
+      yarn reset state --block-number <previous-block-number>
+      ```
+
+    * Reset job-queue:
+
+      ```bash
+      yarn reset job-queue --block-number <previous-block-number>
+      ```
+    
+    * `block-number`: Block number to reset the watcher to.
