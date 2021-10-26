@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { wait } from '.';
+import { wait } from './misc';
 import { createPruningJob } from './common';
 
 import { JobQueueConfig } from './config';

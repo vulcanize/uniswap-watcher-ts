@@ -5,7 +5,7 @@ import { EthClient } from '@vulcanize/ipld-eth-client';
 import { JOB_KIND_PRUNE, QUEUE_BLOCK_PROCESSING, JOB_KIND_INDEX } from './constants';
 import { JobQueue } from './job-queue';
 import { IndexerInterface } from './types';
-import { wait } from './index';
+import { wait } from './misc';
 
 const log = debug('vulcanize:common');
 
@@ -70,7 +70,7 @@ export const processBlockByNumber = async (
       return;
     }
 
-    log(`No blocks fetched for block number ${blockNumber}. Fetching after some time.`);
+    log(`No blocks fetched for block number ${blockNumber}, retrying after ${blockDelayInMilliSecs} ms delay.`);
 
     await wait(blockDelayInMilliSecs);
   }

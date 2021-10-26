@@ -13,7 +13,7 @@ import { BaseProvider } from '@ethersproject/providers';
 import { Config as CacheConfig, getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
-import { getCustomProvider } from './index';
+import { getCustomProvider } from './misc';
 
 const log = debug('vulcanize:config');
 
