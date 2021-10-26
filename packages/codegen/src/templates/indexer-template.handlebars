@@ -78,13 +78,12 @@ export class Indexer {
   _postgraphileClient: EthClient
   _baseIndexer: BaseIndexer
   _serverConfig: ServerConfig
-  _jobQueue: JobQueue | undefined
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
 
-  constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider, jobQueue?: JobQueue) {
+  constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider) {
     assert(db);
     assert(ethClient);
 
@@ -94,7 +93,6 @@ export class Indexer {
     this._postgraphileClient = postgraphileClient;
     this._serverConfig = serverConfig;
     this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient);
-    this._jobQueue = jobQueue;
 
     const { abi, storageLayout } = artifacts;
 
@@ -239,8 +237,10 @@ export class Indexer {
   }
 
   {{/each}}
-  async processBlock (job: any): Promise<void> {
+  async processCanonicalBlock (job: any): Promise<void> {
     const { data: { blockHash } } = job;
+
+    // TODO: Check if there are any staged diffs. Finalize if any.
 
     // Call custom stateDiff hook.
     await createStateDiff(this, blockHash);
@@ -251,26 +251,23 @@ export class Indexer {
     const checkpointInterval = this._serverConfig.checkpointInterval;
     if (checkpointInterval <= 0) return;
 
-    const { data: { blockHash, contractAddress, blockNumber } } = job;
+    const { data: { blockHash, blockNumber } } = job;
 
-    // Create initial checkpoint and return if contract address passed in the job.
-    if (contractAddress) {
-      // Call initial checkpoint hook.
+    // Get all the contracts.
+    const contracts = await this._db.getContracts({});
 
-      // Only one canonical (not pruned) block should exist at blockNumber.
-      const blocks = await this.getBlocksAtHeight(blockNumber, false);
-      assert(blocks.length === 1);
-      const [block] = blocks;
+    // For each contract, merge the diff till now to create a checkpoint.
+    for (const contract of contracts) {
+      // Check if contract has checkpointing on.
+      if (contract.checkpoint) {
+        // If a checkpoint doesn't already exist and blockNumber is equal to startingBlock, create an initial checkpoint.
+        const checkpointBlock = await this.getPrevIPLDBlock(blockHash, contract.address, 'checkpoint');
 
-      await createInitialCheckpoint(this, contractAddress, block.blockHash);
-    } else {
-      // Get all the contracts.
-      const contracts = await this._db.getContracts({});
-
-      // For each contract, merge the diff till now to create a checkpoint.
-      for (const contract of contracts) {
-        // Check if contract has checkpointing on.
-        if (contract.checkpoint) {
+        if (!checkpointBlock) {
+          if (blockNumber === contract.startingBlock) {
+            await createInitialCheckpoint(this, contract.address, blockHash);
+          }
+        } else {
           await this.createCheckpoint(contract.address, blockHash, undefined, checkpointInterval);
         }
       }
@@ -329,12 +326,7 @@ export class Indexer {
 
     // Fetch the latest checkpoint for the contract.
     const checkpointBlock = await this.getPrevIPLDBlock(currentBlock.blockHash, contractAddress, 'checkpoint');
-
-    if (!checkpointBlock) {
-      // When a contract is watched, auto-checkpointing may try to checkpoint the contract for a block in the pruned region.
-      // In such case, return.
-      return;
-    }
+    assert(checkpointBlock);
 
     // Check (only if checkpointInterval is passed) if it is time for a new checkpoint.
     if (checkpointInterval && checkpointBlock.block.blockNumber > (currentBlock.blockNumber - checkpointInterval)) {
@@ -524,27 +516,20 @@ export class Indexer {
     return { eventName, eventInfo };
   }
 
-  async watchContract (address: string, kind: string, checkpoint: boolean, startingBlock: number): Promise<boolean> {
+  async watchContract (address: string, kind: string, checkpoint: boolean, startingBlock?: number): Promise<boolean> {
     // Use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress) if input to address is a contract address.
     // If a contract identifier is passed as address instead, no need to convert to checksum address.
     // Customize: use the kind input to filter out non-contract-address input to address.
     const formattedAddress = (kind === '__protocol__') ? address : ethers.utils.getAddress(address);
-    await this._db.saveContract(formattedAddress, kind, checkpoint, startingBlock);
 
-    // Create an initial checkpoint job if checkpoint true for the contract.
-    if (checkpoint) {
+    if (!startingBlock) {
       const syncStatus = await this.getSyncStatus();
       assert(syncStatus);
-      assert(this._jobQueue);
 
-      this._jobQueue.pushJob(
-        QUEUE_BLOCK_CHECKPOINT,
-        {
-          blockNumber: syncStatus.latestIndexedBlockNumber,
-          contractAddress: address
-        }
-      );
+      startingBlock = syncStatus.latestIndexedBlockNumber;
     }
+
+    await this._db.saveContract(formattedAddress, kind, checkpoint, startingBlock);
 
     return true;
   }

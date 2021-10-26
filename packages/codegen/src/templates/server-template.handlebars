@@ -69,6 +69,8 @@ export const main = async (): Promise<any> => {
 
   const ethProvider = getDefaultProvider(rpcProviderEndpoint);
 
+  const indexer = new Indexer(serverConfig, db, ethClient, postgraphileClient, ethProvider);
+
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
   // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
   const pubsub = new PubSub();
@@ -78,8 +80,6 @@ export const main = async (): Promise<any> => {
   assert(dbConnectionString, 'Missing job queue db connection string');
 
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
-
-  const indexer = new Indexer(serverConfig, db, ethClient, postgraphileClient, ethProvider, jobQueue);
 
   const eventWatcher = new EventWatcher(ethClient, indexer, pubsub, jobQueue);
 
