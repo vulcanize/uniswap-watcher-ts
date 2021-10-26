@@ -101,7 +101,7 @@ const main = async (): Promise<void> => {
     if (contract.checkpoint) {
       await indexer.createCheckpoint(contract.address, block.blockHash);
 
-      const ipldBlock = await indexer.getLastIPLDBlock(contract.address, 'checkpoint');
+      const ipldBlock = await indexer.getLatestIPLDBlock(contract.address, 'checkpoint');
       assert(ipldBlock);
 
       exportData.ipldCheckpoints.push({
@@ -115,8 +115,8 @@ const main = async (): Promise<void> => {
 
   const exportString = JSON.stringify(exportData, undefined, 2);
 
-  if (argv.outputFile) {
-    const filePath = path.resolve(argv.outputFile);
+  if (argv.exportFile) {
+    const filePath = path.resolve(argv.exportFile);
     const fileDir = path.dirname(filePath);
 
     if (!fs.existsSync(fileDir)) fs.mkdirSync(fileDir, { recursive: true });
