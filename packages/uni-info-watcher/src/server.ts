@@ -93,7 +93,7 @@ export const main = async (): Promise<any> => {
   await jobQueue.start();
 
   const pubSub = new PubSub();
-  const eventWatcher = new EventWatcher(ethClient, postgraphileClient, indexer, pubSub, jobQueue);
+  const eventWatcher = new EventWatcher(upstream, ethClient, postgraphileClient, indexer, pubSub, jobQueue);
   await eventWatcher.start();
 
   const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, eventWatcher);

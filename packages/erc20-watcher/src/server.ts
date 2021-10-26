@@ -80,7 +80,7 @@ export const main = async (): Promise<any> => {
   assert(dbConnectionString, 'Missing job queue db connection string');
 
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
-  const eventWatcher = new EventWatcher(ethClient, postgraphileClient, indexer, pubsub, jobQueue);
+  const eventWatcher = new EventWatcher(upstream, ethClient, postgraphileClient, indexer, pubsub, jobQueue);
 
   if (watcherKind === KIND_ACTIVE) {
     await jobQueue.start();

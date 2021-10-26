@@ -5,7 +5,6 @@
 import assert from 'assert';
 import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
-import _ from 'lodash';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
@@ -14,6 +13,7 @@ import { BlockProgressInterface, EventInterface, IndexerInterface } from './type
 import { QUEUE_BLOCK_PROCESSING, MAX_REORG_DEPTH, JOB_KIND_PRUNE, JOB_KIND_INDEX } from './constants';
 import { createPruningJob } from './common';
 import { wait } from './index';
+import { UpstreamConfig } from './config';
 
 const log = debug('vulcanize:events');
 
@@ -26,13 +26,15 @@ export class EventWatcher {
   _subscription?: ZenObservable.Subscription
   _pubsub: PubSub
   _jobQueue: JobQueue
+  _upstreamConfig: UpstreamConfig
 
-  constructor (ethClient: EthClient, postgraphileClient: EthClient, indexer: IndexerInterface, pubsub: PubSub, jobQueue: JobQueue) {
+  constructor (upstreamConfig: UpstreamConfig, ethClient: EthClient, postgraphileClient: EthClient, indexer: IndexerInterface, pubsub: PubSub, jobQueue: JobQueue) {
     this._ethClient = ethClient;
     this._postgraphileClient = postgraphileClient;
     this._indexer = indexer;
     this._pubsub = pubsub;
     this._jobQueue = jobQueue;
+    this._upstreamConfig = upstreamConfig;
   }
 
   getBlockProgressEventIterator (): AsyncIterator<any> {
@@ -52,23 +54,13 @@ export class EventWatcher {
     if (!syncStatus) {
       // Get latest block in chain.
       const { block: currentBlock } = await this._ethClient.getBlockByHash();
-      await this._fetchBlocksByNumberAndProcess(currentBlock.number + 1);
+      await this._fetchAndProcessBlocksByNumber(currentBlock.number + 1);
       return;
     }
 
     const block = await this._indexer.getBlockProgress(syncStatus.latestIndexedBlockHash);
     assert(block);
     await this._handleBlockComplete(block);
-  }
-
-  async blocksHandler (value: any): Promise<void> {
-    const { blockHash, blockNumber, parentHash, timestamp } = _.get(value, 'data.listen.relatedNode');
-
-    await this._indexer.updateSyncStatusChainHead(blockHash, blockNumber);
-
-    log('watchBlock', blockHash, blockNumber);
-
-    await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { kind: JOB_KIND_INDEX, blockHash, blockNumber, parentHash, timestamp });
   }
 
   async blockProcessingCompleteHandler (job: any): Promise<void> {
@@ -167,14 +159,14 @@ export class EventWatcher {
    * @param block
    */
   async _handleBlockComplete (block: BlockProgressInterface): Promise<void> {
-    this._fetchBlocksByNumberAndProcess(block.blockNumber + 1);
+    this._fetchAndProcessBlocksByNumber(block.blockNumber + 1);
   }
 
   /**
    * Method to fetch blocks by number and push to job queue.
    * @param blockNumber
    */
-  async _fetchBlocksByNumberAndProcess (blockNumber: number): Promise<void> {
+  async _fetchAndProcessBlocksByNumber (blockNumber: number): Promise<void> {
     while (true) {
       const { allEthHeaderCids: { nodes: blocks } } = await this._postgraphileClient.getBlocksByNumber(blockNumber);
 
@@ -197,8 +189,9 @@ export class EventWatcher {
       }
 
       log(`No blocks fetched for block number ${blockNumber}. Fetching after some time.`);
-      // TODO: Get wait time from config.
-      await wait(2000);
+
+      const { ethServer: { blockDelayInMilliSecs } } = this._upstreamConfig;
+      await wait(blockDelayInMilliSecs);
     }
   }
 }

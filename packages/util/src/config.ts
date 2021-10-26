@@ -30,12 +30,13 @@ interface ServerConfig {
   kind: string;
 }
 
-interface UpstreamConfig {
+export interface UpstreamConfig {
   cache: CacheConfig,
   ethServer: {
     gqlApiEndpoint: string;
     gqlPostgraphileEndpoint: string;
-    rpcProviderEndpoint: string
+    rpcProviderEndpoint: string;
+    blockDelayInMilliSecs: number;
   }
   traceProviderEndpoint: string;
   uniWatcher: {
