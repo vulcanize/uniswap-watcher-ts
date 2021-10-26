@@ -181,6 +181,11 @@ export class EventWatcher {
       if (blocks.length) {
         blocks.forEach(async (block: any) => {
           const { blockNumber, blockHash, parentHash, timestamp } = block;
+          const blockProgress = await this._indexer.getBlockProgress(blockHash);
+
+          if (blockProgress) {
+            return;
+          }
 
           await this._indexer.updateSyncStatusChainHead(blockHash, blockNumber);
 

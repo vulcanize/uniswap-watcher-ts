@@ -52,20 +52,13 @@ export class EventWatcher {
   async start (): Promise<void> {
     assert(!this._subscription, 'subscription already started');
 
-    await this.watchBlocksAtChainHead();
     await this.initBlockProcessingOnCompleteHandler();
     await this.initEventProcessingOnCompleteHandler();
+    await this._baseEventWatcher.startBlockProcessing();
   }
 
   async stop (): Promise<void> {
     this._baseEventWatcher.stop();
-  }
-
-  async watchBlocksAtChainHead (): Promise<void> {
-    log('Started watching upstream blocks...');
-    this._subscription = await this._ethClient.watchBlocks(async (value) => {
-      await this._baseEventWatcher.blocksHandler(value);
-    });
   }
 
   async initBlockProcessingOnCompleteHandler (): Promise<void> {

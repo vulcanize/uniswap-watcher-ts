@@ -69,6 +69,11 @@ export const main = async (): Promise<any> => {
     cache
   });
 
+  const postgraphileClient = new EthClient({
+    gqlEndpoint: gqlPostgraphileEndpoint,
+    cache
+  });
+
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);
   const ethProvider = getCustomProvider(rpcProviderEndpoint);
@@ -85,7 +90,7 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const eventWatcher = new EventWatcher(ethClient, indexer, pubsub, jobQueue);
+  const eventWatcher = new EventWatcher(ethClient, postgraphileClient, indexer, pubsub, jobQueue);
 
   await fillBlocks(jobQueue, indexer, ethClient, eventWatcher, argv);
 };

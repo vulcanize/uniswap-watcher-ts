@@ -49,7 +49,6 @@ export class EventWatcher implements EventWatcherInterface {
   async start (): Promise<void> {
     assert(!this._subscription, 'subscription already started');
 
-    // TODO: push job for block processing of latestIndexedBlock from syncstatus table. Update syncstatus with latest chain block if not present.
     await this.initBlockProcessingOnCompleteHandler();
     await this.initEventProcessingOnCompleteHandler();
     await this._baseEventWatcher.startBlockProcessing();
