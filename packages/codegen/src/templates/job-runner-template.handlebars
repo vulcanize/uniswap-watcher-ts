@@ -81,7 +81,7 @@ export class JobRunner {
 
       const hookStatus = await this._indexer.getHookStatus();
 
-      if (hookStatus && hookStatus.latestProcessedBlockNumber !== blockNumber - 1) {
+      if (hookStatus && hookStatus.latestProcessedBlockNumber < (blockNumber - 1)) {
         const message = `Hooks for blockNumber ${blockNumber - 1} not processed yet, aborting`;
         log(message);
 
@@ -96,16 +96,31 @@ export class JobRunner {
 
   async subscribeBlockCheckpointQueue (): Promise<void> {
     await this._jobQueue.subscribe(QUEUE_BLOCK_CHECKPOINT, async (job) => {
-      const { data: { blockNumber } } = job;
+      const { data: { blockNumber, contractAddress } } = job;
 
-      // Check if the hook processing for the concerned blockNumber is complete.
-      const hookStatus = await this._indexer.getHookStatus();
+      // Initial checkpoint job if contract address passed in the job.
+      if (contractAddress) {
+        // Check if the watch block is MAX_REORG_DEPTH or more from latest indexed block.
+        const syncStatus = await this._indexer.getSyncStatus();
+        assert(syncStatus);
 
-      if (hookStatus && hookStatus.latestProcessedBlockNumber < blockNumber) {
-        const message = `Hooks for blockNumber ${blockNumber} not processed yet, aborting`;
-        log(message);
+        if ((syncStatus.latestIndexedBlockNumber - blockNumber) < MAX_REORG_DEPTH) {
+          const message = `Latest indexed block not yet ahead of canonical block by MAX_REORG_DEPTH ${MAX_REORG_DEPTH}, aborting`;
+          log(message);
 
-        throw new Error(message);
+          throw new Error(message);
+        }
+      } else {
+        // Check if the hook processing for the concerned blockNumber is complete.
+        const hookStatus = await this._indexer.getHookStatus();
+        assert(hookStatus);
+
+        if (hookStatus.latestProcessedBlockNumber < blockNumber) {
+          const message = `Hooks for blockNumber ${blockNumber} not processed yet, aborting`;
+          log(message);
+
+          throw new Error(message);
+        }
       }
 
       await this._indexer.processCheckpoint(job);

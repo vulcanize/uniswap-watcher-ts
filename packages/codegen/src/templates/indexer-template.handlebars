@@ -78,12 +78,13 @@ export class Indexer {
   _postgraphileClient: EthClient
   _baseIndexer: BaseIndexer
   _serverConfig: ServerConfig
+  _jobQueue: JobQueue | undefined
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
 
-  constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider) {
+  constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider, jobQueue?: JobQueue) {
     assert(db);
     assert(ethClient);
 
@@ -93,6 +94,7 @@ export class Indexer {
     this._postgraphileClient = postgraphileClient;
     this._serverConfig = serverConfig;
     this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient);
+    this._jobQueue = jobQueue;
 
     const { abi, storageLayout } = artifacts;
 
@@ -249,16 +251,28 @@ export class Indexer {
     const checkpointInterval = this._serverConfig.checkpointInterval;
     if (checkpointInterval <= 0) return;
 
-    const { data: { blockHash: currentBlockHash } } = job;
+    const { data: { blockHash, contractAddress, blockNumber } } = job;
 
-    // Get all the contracts.
-    const contracts = await this._db.getContracts({});
+    // Create initial checkpoint and return if contract address passed in the job.
+    if (contractAddress) {
+      // Call initial checkpoint hook.
 
-    // For each contract, merge the diff till now to create a checkpoint.
-    for (const contract of contracts) {
-      // Check if contract has checkpointing on.
-      if (contract.checkpoint) {
-        await this.createCheckpoint(contract.address, currentBlockHash, undefined, checkpointInterval);
+      // Only one canonical (not pruned) block should exist at blockNumber.
+      const blocks = await this.getBlocksAtHeight(blockNumber, false);
+      assert(blocks.length === 1);
+      const [block] = blocks;
+
+      await createInitialCheckpoint(this, contractAddress, block.blockHash);
+    } else {
+      // Get all the contracts.
+      const contracts = await this._db.getContracts({});
+
+      // For each contract, merge the diff till now to create a checkpoint.
+      for (const contract of contracts) {
+        // Check if contract has checkpointing on.
+        if (contract.checkpoint) {
+          await this.createCheckpoint(contract.address, blockHash, undefined, checkpointInterval);
+        }
       }
     }
   }
@@ -317,9 +331,8 @@ export class Indexer {
     const checkpointBlock = await this.getPrevIPLDBlock(currentBlock.blockHash, contractAddress, 'checkpoint');
 
     if (!checkpointBlock) {
-      // If a checkpoint doesn't exist for a contract, call initial checkpoint hook.
-      await createInitialCheckpoint(this, contractAddress, currentBlock.blockHash);
-
+      // When a contract is watched, auto-checkpointing may try to checkpoint the contract for a block in the pruned region.
+      // In such case, return.
       return;
     }
 
@@ -496,7 +509,7 @@ export class Indexer {
           {{#each event.params}}
           {{#if (compare this.type 'bigint')}}
           {{this.name}}: BigInt(ethers.BigNumber.from({{this.name}}).toString())
-          {{else}}
+          {{~else}}
           {{this.name}}
           {{~/if}}
           {{~#unless @last}},{{/unless}}
@@ -517,6 +530,21 @@ export class Indexer {
     // Customize: use the kind input to filter out non-contract-address input to address.
     const formattedAddress = (kind === '__protocol__') ? address : ethers.utils.getAddress(address);
     await this._db.saveContract(formattedAddress, kind, checkpoint, startingBlock);
+
+    // Create an initial checkpoint job if checkpoint true for the contract.
+    if (checkpoint) {
+      const syncStatus = await this.getSyncStatus();
+      assert(syncStatus);
+      assert(this._jobQueue);
+
+      this._jobQueue.pushJob(
+        QUEUE_BLOCK_CHECKPOINT,
+        {
+          blockNumber: syncStatus.latestIndexedBlockNumber,
+          contractAddress: address
+        }
+      );
+    }
 
     return true;
   }
