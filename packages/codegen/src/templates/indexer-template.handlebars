@@ -278,7 +278,7 @@ export class Indexer {
     assert(block);
 
     // Fetch the latest checkpoint for the contract.
-    const checkpoint = await this.getLastIPLDBlock(contractAddress, 'checkpoint');
+    const checkpoint = await this.getLatestIPLDBlock(contractAddress, 'checkpoint');
 
     // There should be an initial checkpoint at least.
     assert(checkpoint, 'Initial checkpoint doesn\'t exist');
@@ -305,10 +305,11 @@ export class Indexer {
       // Check if contract has checkpointing on.
       if (contract.checkpoint) {
         // If a checkpoint doesn't already exist and blockNumber is equal to startingBlock, create an initial checkpoint.
-        const checkpointBlock = await this.getLastIPLDBlock(contract.address, 'checkpoint');
+        const checkpointBlock = await this.getLatestIPLDBlock(contract.address, 'checkpoint');
 
         if (!checkpointBlock) {
           if (blockNumber === contract.startingBlock) {
+            // Call initial checkpoint hook.
             await createInitialCheckpoint(this, contract.address, blockHash);
           }
         } else {
@@ -352,7 +353,7 @@ export class Indexer {
     assert(currentBlock.blockNumber <= syncStatus.latestCanonicalBlockNumber, 'Block for a checkpoint should be in the pruned region');
 
     // Fetch the latest checkpoint for the contract.
-    const checkpointBlock = await this.getLastIPLDBlock(contractAddress, 'checkpoint');
+    const checkpointBlock = await this.getLatestIPLDBlock(contractAddress, 'checkpoint');
     assert(checkpointBlock);
 
     // Check (only if checkpointInterval is passed) if it is time for a new checkpoint.
@@ -363,7 +364,7 @@ export class Indexer {
     const { block: { blockNumber: checkpointBlockNumber } } = checkpointBlock;
 
     // Fetching all diff blocks after checkpoint.
-    const diffBlocks = await this.getPrevIPLDBlocksAfterCheckpoint(contractAddress, checkpointBlockNumber);
+    const diffBlocks = await this.getDiffIPLDBlocksByCheckpoint(contractAddress, checkpointBlockNumber);
 
     data = codec.decode(Buffer.from(checkpointBlock.data)) as any;
 
@@ -387,8 +388,8 @@ export class Indexer {
     return ipldBlocks[0];
   }
 
-  async getLastIPLDBlock (contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
-    return this._db.getLastIPLDBlock(contractAddress, kind);
+  async getLatestIPLDBlock (contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
+    return this._db.getLatestIPLDBlock(contractAddress, kind);
   }
 
   async getPrevIPLDBlock (blockHash: string, contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
@@ -407,8 +408,8 @@ export class Indexer {
     return res;
   }
 
-  async getPrevIPLDBlocksAfterCheckpoint (contractAddress: string, checkpointBlockNumber: number): Promise<IPLDBlock[]> {
-    return this._db.getPrevIPLDBlocksAfterCheckpoint(contractAddress, checkpointBlockNumber);
+  async getDiffIPLDBlocksByCheckpoint (contractAddress: string, checkpointBlockNumber: number): Promise<IPLDBlock[]> {
+    return this._db.getDiffIPLDBlocksByCheckpoint(contractAddress, checkpointBlockNumber);
   }
 
   async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any, kind: string):Promise<any> {
@@ -436,7 +437,7 @@ export class Indexer {
       ipldBlock = new IPLDBlock();
 
       // Fetch the parent IPLDBlock.
-      const parentIPLDBlock = await this.getLastIPLDBlock(contractAddress);
+      const parentIPLDBlock = await this.getLatestIPLDBlock(contractAddress);
 
       // Setting the meta-data for an IPLDBlock (done only once per block).
       data.meta = {

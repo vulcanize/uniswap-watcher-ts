@@ -146,6 +146,18 @@
       yarn reset job-queue --block-number <previous-block-number>
       ```
 
+  * To export the watcher:
+
+    ```bash
+    yarn export-watcher --export-file [export-file-path]
+    ```
+
+  * To import the watcher:
+
+    ```bash
+    yarn import-watcher --import-file <import-file-path>
+    ```
+
 ## Known Issues
 
 * Currently, `node-fetch v2.6.2` is being used to fetch from URLs as `v3.0.0` is an [ESM-only module](https://www.npmjs.com/package/node-fetch#loading-and-configuring-the-module) and `ts-node` transpiles to import  it using `require`.

@@ -74,7 +74,7 @@ export class EventWatcher {
 
   async initBlockProcessingOnCompleteHandler (): Promise<void> {
     this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
-      const { id, data: { failed } } = job;
+      const { id, data: { failed, request: { data: { kind } } } } = job;
 
       if (failed) {
         log(`Job ${id} for queue ${QUEUE_BLOCK_PROCESSING} failed`);
@@ -83,22 +83,7 @@ export class EventWatcher {
 
       await this._baseEventWatcher.blockProcessingCompleteHandler(job);
 
-      const { data: { request: { data: { kind } } } } = job;
-
-      // If it's a pruning job:
-      // Create a hook job for the latest canonical block.
-      if (kind === JOB_KIND_PRUNE) {
-        const latestCanonicalBlock = await this._indexer.getLatestCanonicalBlock();
-        assert(latestCanonicalBlock);
-
-        this._jobQueue.pushJob(
-          QUEUE_HOOKS,
-          {
-            blockHash: latestCanonicalBlock.blockHash,
-            blockNumber: latestCanonicalBlock.blockNumber
-          }
-        );
-      }
+      await this.createHooksJob(kind);
     });
   }
 
@@ -133,13 +118,7 @@ export class EventWatcher {
       await this._indexer.updateHookStatusProcessedBlock(blockNumber);
 
       // Create a checkpoint job after completion of a hook job.
-      this._jobQueue.pushJob(
-        QUEUE_BLOCK_CHECKPOINT,
-        {
-          blockHash,
-          blockNumber
-        }
-      );
+      await this.createCheckpointJob(blockHash, blockNumber);
     });
   }
 
@@ -154,5 +133,31 @@ export class EventWatcher {
         onEvent: resultEvent
       });
     }
+  }
+
+  async createHooksJob (kind: string): Promise<void> {
+    // If it's a pruning job: Create a hook job for the latest canonical block.
+    if (kind === JOB_KIND_PRUNE) {
+      const latestCanonicalBlock = await this._indexer.getLatestCanonicalBlock();
+      assert(latestCanonicalBlock);
+
+      await this._jobQueue.pushJob(
+        QUEUE_HOOKS,
+        {
+          blockHash: latestCanonicalBlock.blockHash,
+          blockNumber: latestCanonicalBlock.blockNumber
+        }
+      );
+    }
+  }
+
+  async createCheckpointJob (blockHash: string, blockNumber: number): Promise<void> {
+    await this._jobQueue.pushJob(
+      QUEUE_BLOCK_CHECKPOINT,
+      {
+        blockHash,
+        blockNumber
+      }
+    );
   }
 }

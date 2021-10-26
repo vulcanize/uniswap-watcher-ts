@@ -31,10 +31,10 @@ const main = async (): Promise<void> => {
       describe: 'Configuration file path (toml)',
       default: DEFAULT_CONFIG_PATH
     },
-    outputFile: {
+    exportFile: {
       alias: 'o',
       type: 'string',
-      describe: 'Output file path (json)'
+      describe: 'Export file path (JSON)'
     }
   }).argv;
 
