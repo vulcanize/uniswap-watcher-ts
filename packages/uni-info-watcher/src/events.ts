@@ -142,7 +142,7 @@ export class EventWatcher implements EventWatcherInterface {
 
     await this.initBlockProcessingOnCompleteHandler();
     await this.initEventProcessingOnCompleteHandler();
-    await this._baseEventWatcher.startBlockProcessing();
+    this._baseEventWatcher.startBlockProcessing();
   }
 
   async stop (): Promise<void> {

@@ -10,9 +10,8 @@ import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { JobQueue } from './job-queue';
 import { BlockProgressInterface, EventInterface, IndexerInterface } from './types';
-import { QUEUE_BLOCK_PROCESSING, MAX_REORG_DEPTH, JOB_KIND_PRUNE, JOB_KIND_INDEX } from './constants';
-import { createPruningJob } from './common';
-import { wait } from './index';
+import { MAX_REORG_DEPTH, JOB_KIND_PRUNE, JOB_KIND_INDEX } from './constants';
+import { createPruningJob, processBlockByNumber } from './common';
 import { UpstreamConfig } from './config';
 
 const log = debug('vulcanize:events');
@@ -29,12 +28,12 @@ export class EventWatcher {
   _upstreamConfig: UpstreamConfig
 
   constructor (upstreamConfig: UpstreamConfig, ethClient: EthClient, postgraphileClient: EthClient, indexer: IndexerInterface, pubsub: PubSub, jobQueue: JobQueue) {
+    this._upstreamConfig = upstreamConfig;
     this._ethClient = ethClient;
     this._postgraphileClient = postgraphileClient;
     this._indexer = indexer;
     this._pubsub = pubsub;
     this._jobQueue = jobQueue;
-    this._upstreamConfig = upstreamConfig;
   }
 
   getBlockProgressEventIterator (): AsyncIterator<any> {
@@ -50,17 +49,36 @@ export class EventWatcher {
 
   async startBlockProcessing (): Promise<void> {
     const syncStatus = await this._indexer.getSyncStatus();
+    let blockNumber;
 
     if (!syncStatus) {
       // Get latest block in chain.
       const { block: currentBlock } = await this._ethClient.getBlockByHash();
-      await this._fetchAndProcessBlocksByNumber(currentBlock.number + 1);
-      return;
+      blockNumber = currentBlock.number + 1;
+    } else {
+      blockNumber = syncStatus.latestIndexedBlockNumber + 1;
     }
 
-    const block = await this._indexer.getBlockProgress(syncStatus.latestIndexedBlockHash);
-    assert(block);
-    await this._handleBlockComplete(block);
+    const { ethServer: { blockDelayInMilliSecs } } = this._upstreamConfig;
+
+    processBlockByNumber(this._jobQueue, this._indexer, this._postgraphileClient, blockDelayInMilliSecs, blockNumber + 1);
+
+    // Creating an AsyncIterable from AsyncIterator to iterate over the values.
+    // https://www.codementor.io/@tiagolopesferreira/asynchronous-iterators-in-javascript-jl1yg8la1#for-wait-of
+    const blockProgressEventIterable = {
+      // getBlockProgressEventIterator returns an AsyncIterator which can be used to listen to BlockProgress events.
+      [Symbol.asyncIterator]: this.getBlockProgressEventIterator.bind(this)
+    };
+
+    // Iterate over async iterable.
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for-await...of
+    for await (const data of blockProgressEventIterable) {
+      const { onBlockProgressEvent: { blockNumber, isComplete } } = data;
+
+      if (isComplete) {
+        processBlockByNumber(this._jobQueue, this._indexer, this._postgraphileClient, blockDelayInMilliSecs, blockNumber + 1);
+      }
+    }
   }
 
   async blockProcessingCompleteHandler (job: any): Promise<void> {
@@ -95,8 +113,6 @@ export class EventWatcher {
 
       if (blockProgress.isComplete) {
         await this._indexer.removeUnknownEvents(blockProgress);
-
-        await this._handleBlockComplete(blockProgress);
       }
     }
 
@@ -134,10 +150,6 @@ export class EventWatcher {
     const blockProgress = await this._indexer.getBlockProgress(blockHash);
     if (blockProgress) {
       await this.publishBlockProgressToSubscribers(blockProgress);
-
-      if (blockProgress.isComplete) {
-        await this._handleBlockComplete(blockProgress);
-      }
     }
   }
 
@@ -152,46 +164,5 @@ export class EventWatcher {
     const [block] = blocks;
 
     await this._indexer.updateSyncStatusCanonicalBlock(block.blockHash, block.blockNumber);
-  }
-
-  /**
-   * Method called after blockProgress isComplete is true.
-   * @param block
-   */
-  async _handleBlockComplete (block: BlockProgressInterface): Promise<void> {
-    this._fetchAndProcessBlocksByNumber(block.blockNumber + 1);
-  }
-
-  /**
-   * Method to fetch blocks by number and push to job queue.
-   * @param blockNumber
-   */
-  async _fetchAndProcessBlocksByNumber (blockNumber: number): Promise<void> {
-    while (true) {
-      const { allEthHeaderCids: { nodes: blocks } } = await this._postgraphileClient.getBlocksByNumber(blockNumber);
-
-      if (blocks.length) {
-        blocks.forEach(async (block: any) => {
-          const { blockNumber, blockHash, parentHash, timestamp } = block;
-          const blockProgress = await this._indexer.getBlockProgress(blockHash);
-
-          if (blockProgress) {
-            return;
-          }
-
-          await this._indexer.updateSyncStatusChainHead(blockHash, blockNumber);
-
-          await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { kind: JOB_KIND_INDEX, blockHash, blockNumber, parentHash, timestamp });
-        });
-
-        // Break loop to check for nodes if child blocks are fetched.
-        return;
-      }
-
-      log(`No blocks fetched for block number ${blockNumber}. Fetching after some time.`);
-
-      const { ethServer: { blockDelayInMilliSecs } } = this._upstreamConfig;
-      await wait(blockDelayInMilliSecs);
-    }
   }
 }
