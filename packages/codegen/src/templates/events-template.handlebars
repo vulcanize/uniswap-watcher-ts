@@ -14,6 +14,7 @@ import {
   QUEUE_EVENT_PROCESSING,
   QUEUE_BLOCK_CHECKPOINT,
   QUEUE_HOOKS,
+  QUEUE_IPFS,
   UNKNOWN_EVENT_NAME,
   JOB_KIND_PRUNE
 } from '@vulcanize/util';
@@ -59,6 +60,7 @@ export class EventWatcher {
     await this.initBlockProcessingOnCompleteHandler();
     await this.initEventProcessingOnCompleteHandler();
     await this.initHooksOnCompleteHandler();
+    await this.initBlockCheckpointOnCompleteHandler();
   }
 
   async stop (): Promise<void> {
@@ -122,6 +124,14 @@ export class EventWatcher {
     });
   }
 
+  async initBlockCheckpointOnCompleteHandler (): Promise<void> {
+    this._jobQueue.onComplete(QUEUE_BLOCK_CHECKPOINT, async (job) => {
+      const { data: { request: { data: { blockHash } } } } = job;
+
+      await this.createIPFSJob(blockHash);
+    });
+  }
+
   async publishEventToSubscribers (dbEvent: Event, timeElapsedInSeconds: number): Promise<void> {
     if (dbEvent && dbEvent.eventName !== UNKNOWN_EVENT_NAME) {
       const resultEvent = this._indexer.getResultEvent(dbEvent);
@@ -159,5 +169,17 @@ export class EventWatcher {
         blockNumber
       }
     );
+  }
+
+  async createIPFSJob (blockHash: string): Promise<void> {
+    console.log('creating ipfs blocks for blockhash', blockHash);
+
+    const ipldBlocks = await this._indexer.getIPLDBlocksByHash(blockHash);
+
+    for (const ipldBlock of ipldBlocks) {
+      const data = this._indexer.getIPLDData(ipldBlock);
+
+      await this._jobQueue.pushJob(QUEUE_IPFS, { data });
+    }
   }
 }

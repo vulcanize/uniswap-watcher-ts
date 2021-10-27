@@ -30,6 +30,7 @@ import { exportFill } from './fill';
 import { exportCheckpoint } from './checkpoint';
 import { exportWatcher } from './export-watcher';
 import { importWatcher } from './import-watcher';
+import { exportIPFS } from './ipfs';
 
 const main = async (): Promise<void> => {
   const argv = await yargs(hideBin(process.argv))
@@ -268,6 +269,11 @@ function generateWatcher (data: string, visitor: Visitor, argv: any) {
     ? fs.createWriteStream(path.join(outputDir, 'src/cli/import-watcher.ts'))
     : process.stdout;
   importWatcher(outStream);
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'src/ipfs.ts'))
+    : process.stdout;
+  exportIPFS(outStream);
 }
 
 main().catch(err => {

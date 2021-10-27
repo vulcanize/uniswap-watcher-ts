@@ -13,7 +13,7 @@ import _ from 'lodash';
 
 import { JsonFragment } from '@ethersproject/abi';
 import { BaseProvider } from '@ethersproject/providers';
-import * as codec from '@ipld/dag-json';
+import * as codec from '@ipld/dag-cbor';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { StorageLayout } from '@vulcanize/solidity-mapper';
 import { EventInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME, ServerConfig, updateStateForElementaryType, updateStateForMappingType } from '@vulcanize/util';
@@ -27,6 +27,7 @@ import { BlockProgress } from './entity/BlockProgress';
 import { IPLDBlock } from './entity/IPLDBlock';
 import artifacts from './artifacts/{{inputFileName}}.json';
 import { createInitialCheckpoint, handleEvent, createStateDiff } from './hooks';
+import { IPFSClient } from './ipfs';
 
 const log = debug('vulcanize:indexer');
 
@@ -83,6 +84,8 @@ export class Indexer {
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
 
+  _ipfsClient: IPFSClient
+
   constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider) {
     assert(db);
     assert(ethClient);
@@ -103,6 +106,8 @@ export class Indexer {
     this._storageLayout = storageLayout;
 
     this._contract = new ethers.utils.Interface(this._abi);
+
+    this._ipfsClient = new IPFSClient(this._serverConfig.ipfsApiAddr);
   }
 
   getResultEvent (event: Event): ResultEvent {
@@ -153,7 +158,7 @@ export class Indexer {
       contractAddress: ipldBlock.contractAddress,
       cid: ipldBlock.cid,
       kind: ipldBlock.kind,
-      data: ipldBlock.data
+      data: ipldBlock.data.toString()
     };
   }
 
@@ -379,6 +384,17 @@ export class Indexer {
     return currentBlock.blockHash;
   }
 
+  getIPLDData (ipldBlock: IPLDBlock): any {
+    return codec.decode(Buffer.from(ipldBlock.data));
+  }
+
+  async getIPLDBlocksByHash (blockHash: string): Promise<IPLDBlock[]> {
+    const block = await this.getBlockProgress(blockHash);
+    assert(block);
+
+    return this._db.getIPLDBlocks({ block });
+  }
+
   async getIPLDBlockByCid (cid: string): Promise<IPLDBlock | undefined> {
     const ipldBlocks = await this._db.getIPLDBlocks({ cid });
 
@@ -470,7 +486,7 @@ export class Indexer {
       contractAddress,
       cid: cid.toString(),
       kind: data.meta.kind,
-      data: bytes
+      data: Buffer.from(bytes)
     });
 
     return ipldBlock;
@@ -492,6 +508,10 @@ export class Indexer {
     } finally {
       await dbTx.release();
     }
+  }
+
+  async pushToIPFS (data: any): Promise<void> {
+    await this._ipfsClient.push(data);
   }
 
   async triggerIndexingOnEvent (event: Event): Promise<void> {
