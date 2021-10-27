@@ -37,7 +37,7 @@ columns:
     columnType: Column
   - name: data
     pgType: bytea
-    tsType: string
+    tsType: Buffer
     columnType: Column
 imports:
   - toImport:
