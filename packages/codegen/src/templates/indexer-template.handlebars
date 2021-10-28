@@ -26,7 +26,7 @@ import { HookStatus } from './entity/HookStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { IPLDBlock } from './entity/IPLDBlock';
 import artifacts from './artifacts/{{inputFileName}}.json';
-import { createInitialCheckpoint, handleEvent, createStateDiff } from './hooks';
+import { createInitialCheckpoint, handleEvent, createStateDiff, createStateCheckpoint } from './hooks';
 import { IPFSClient } from './ipfs';
 
 const log = debug('vulcanize:indexer');
@@ -286,6 +286,7 @@ export class Indexer {
     const checkpoint = await this.getLatestIPLDBlock(contractAddress, 'checkpoint');
 
     // There should be an initial checkpoint at least.
+    // Assumption: there will be no events for the contract in the watch block.
     assert(checkpoint, 'Initial checkpoint doesn\'t exist');
 
     // Check if the latest checkpoint is in the same block.
@@ -340,8 +341,8 @@ export class Indexer {
 
     assert(currentBlock);
 
-    // Data is passed in case of initial checkpoint.
-    // Assuming there will be no events for the contract in this block.
+    // Data is passed in case of initial checkpoint and checkpoint hook.
+    // Assumption: there will be no events for the contract in the watch block.
     if (data) {
       const ipldBlock = await this.prepareIPLDBlock(currentBlock, contractAddress, data, 'checkpoint');
       await this.saveOrUpdateIPLDBlock(ipldBlock);
@@ -366,16 +367,28 @@ export class Indexer {
       return;
     }
 
+    // Call state checkpoint hook and check if default checkpoint is disabled.
+    const disableDefaultCheckpoint = await createStateCheckpoint(this, contractAddress, currentBlock.blockHash);
+
+    if (disableDefaultCheckpoint) {
+      // Return if default checkpoint is disabled.
+      // Return block hash for checkpoint CLI.
+      return currentBlock.blockHash;
+    }
+
     const { block: { blockNumber: checkpointBlockNumber } } = checkpointBlock;
 
     // Fetching all diff blocks after checkpoint.
     const diffBlocks = await this.getDiffIPLDBlocksByCheckpoint(contractAddress, checkpointBlockNumber);
 
-    data = codec.decode(Buffer.from(checkpointBlock.data)) as any;
+    const checkpointBlockData = codec.decode(Buffer.from(checkpointBlock.data)) as any;
+    data = {
+      state: checkpointBlockData.state
+    };
 
     for (const diffBlock of diffBlocks) {
-      const diff = codec.decode(Buffer.from(diffBlock.data));
-      data = _.merge(data, diff);
+      const diff = codec.decode(Buffer.from(diffBlock.data)) as any;
+      data.state = _.merge(data.state, diff.state);
     }
 
     const ipldBlock = await this.prepareIPLDBlock(currentBlock, contractAddress, data, 'checkpoint');
@@ -431,11 +444,8 @@ export class Indexer {
   async prepareIPLDBlock (block: BlockProgress, contractAddress: string, data: any, kind: string):Promise<any> {
     assert(_.includes(['diff', 'checkpoint', 'diff_staged'], kind));
 
-    // Get an existing 'diff' | 'diff_staged' IPLDBlock for current block, contractAddress.
-    let currentIPLDBlocks: IPLDBlock[] = [];
-    if (kind !== 'checkpoint') {
-      currentIPLDBlocks = await this._db.getIPLDBlocks({ block, contractAddress, kind });
-    }
+    // Get an existing 'diff' | 'diff_staged' | 'checkpoint' IPLDBlock for current block, contractAddress.
+    const currentIPLDBlocks = await this._db.getIPLDBlocks({ block, contractAddress, kind });
 
     // There can be only one IPLDBlock for a (block, contractAddress, kind) combination.
     assert(currentIPLDBlocks.length <= 1);
@@ -471,13 +481,13 @@ export class Indexer {
       };
     }
 
-    // Encoding the data using dag-json codec.
+    // Encoding the data using dag-cbor codec.
     const bytes = codec.encode(data);
 
     // Calculating sha256 (multi)hash of the encoded data.
     const hash = await sha256.digest(bytes);
 
-    // Calculating the CID: v1, code: dag-json, hash.
+    // Calculating the CID: v1, code: dag-cbor, hash.
     const cid = CID.create(1, codec.code, hash);
 
     // Update ipldBlock with new data.
@@ -512,6 +522,13 @@ export class Indexer {
 
   async pushToIPFS (data: any): Promise<void> {
     await this._ipfsClient.push(data);
+  }
+
+  getIPFSStatus (): boolean {
+    const ipfsAddr = this._serverConfig.ipfsApiAddr;
+
+    // Return false if ipfsAddr is undefined or an empty string.
+    return (ipfsAddr !== undefined && ipfsAddr !== '');
   }
 
   async triggerIndexingOnEvent (event: Event): Promise<void> {

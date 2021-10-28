@@ -8,6 +8,12 @@
   yarn
   ```
 
+* Run the IPFS daemon:
+
+  ```bash
+  jsipfs daemon
+  ```
+
 * Create a postgres12 database for the watcher:
 
   ```bash
@@ -39,7 +45,7 @@
 
 * Update the `upstream` config in the [config file](./environments/local.toml) and provide the `ipld-eth-server` GQL API and the `indexer-db` postgraphile endpoints.
 
-* Update the [config](./environments/local.toml) with state checkpoint settings.
+* Update the `server` config in the [config file](./environments/local.toml) with state checkpoint settings and provide the IPFS API address.
 
 ## Customize
 
@@ -53,7 +59,9 @@
 
   * Edit the custom hook function `createInitialCheckpoint` (triggered on watch-contract, checkpoint: `true`) in [hooks.ts](./src/hooks.ts) to save an initial checkpoint `IPLDBlock` using the `Indexer` object.
 
-  * Edit the custom hook function `createStateDiff` (triggered on a block) in [hooks.ts](./src/hooks.ts) to save the state in an `IPLDBlock` using the `Indexer` object. The default state (if exists) is updated.
+  * Edit the custom hook function `createStateDiff` (triggered on a block) in [hooks.ts](./src/hooks.ts) to save the state in a `diff` `IPLDBlock` using the `Indexer` object. The default state (if exists) is updated.
+
+  * Edit the custom hook function `createStateCheckpoint` (triggered just before default and CLI checkpoint) in [hooks.ts](./src/hooks.ts) to save the state in a `checkpoint` `IPLDBlock` using the `Indexer` object.
 
 * The existing example hooks in [hooks.ts](./src/hooks.ts) are for an `ERC20` contract.
 

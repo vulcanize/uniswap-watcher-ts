@@ -128,7 +128,9 @@ export class EventWatcher {
     this._jobQueue.onComplete(QUEUE_BLOCK_CHECKPOINT, async (job) => {
       const { data: { request: { data: { blockHash } } } } = job;
 
-      await this.createIPFSJob(blockHash);
+      if (this._indexer.getIPFSStatus()) {
+        await this.createIPFSJob(blockHash);
+      }
     });
   }
 
@@ -172,8 +174,6 @@ export class EventWatcher {
   }
 
   async createIPFSJob (blockHash: string): Promise<void> {
-    console.log('creating ipfs blocks for blockhash', blockHash);
-
     const ipldBlocks = await this._indexer.getIPLDBlocksByHash(blockHash);
 
     for (const ipldBlock of ipldBlocks) {

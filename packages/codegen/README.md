@@ -72,9 +72,17 @@
   yarn
   ```
 
+* Run the IPFS daemon:
+
+  ```bash
+  jsipfs daemon
+  ```
+
 * Create the databases configured in `environments/local.toml`.
 
 * Update the state checkpoint settings in `environments/local.toml`.
+
+* Update the IPFS API address in `environments/local.toml`.
 
 ### Customize
 
@@ -88,7 +96,9 @@
 
   * Edit the custom hook function `createInitialCheckpoint` (triggered on watch-contract, checkpoint: `true`) in `src/hooks.ts` to save an initial checkpoint `IPLDBlock` using the `Indexer` object.
 
-  * Edit the custom hook function `createStateDiff` (triggered on a block) in `src/hooks.ts` to save the state in an `IPLDBlock` using the `Indexer` object. The default state (if exists) is updated.
+  * Edit the custom hook function `createStateDiff` (triggered on a block) in `src/hooks.ts` to save the state in a `diff` `IPLDBlock` using the `Indexer` object. The default state (if exists) is updated.
+
+  * Edit the custom hook function `createStateCheckpoint` (triggered just before default and CLI checkpoint) in `src/hooks.ts` to save the state in a `checkpoint` `IPLDBlock` using the `Indexer` object.
 
 * The existing example hooks in `src/hooks.ts` are for an `ERC20` contract.
 
