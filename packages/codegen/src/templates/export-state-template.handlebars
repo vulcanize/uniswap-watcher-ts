@@ -35,7 +35,7 @@ const main = async (): Promise<void> => {
     exportFile: {
       alias: 'o',
       type: 'string',
-      describe: 'Export file path (JSON)'
+      describe: 'Export file path'
     }
   }).argv;
 
@@ -116,17 +116,17 @@ const main = async (): Promise<void> => {
     }
   }
 
-  const exportString = JSON.stringify(exportData, undefined, 2);
-
   if (argv.exportFile) {
+    const encodedExportData = codec.encode(exportData);
+
     const filePath = path.resolve(argv.exportFile);
     const fileDir = path.dirname(filePath);
 
     if (!fs.existsSync(fileDir)) fs.mkdirSync(fileDir, { recursive: true });
 
-    fs.writeFileSync(filePath, exportString);
+    fs.writeFileSync(filePath, encodedExportData);
   } else {
-    log(exportString);
+    log(exportData);
   }
 };
 

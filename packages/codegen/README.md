@@ -75,7 +75,7 @@
 * Run the IPFS daemon:
 
   ```bash
-  jsipfs daemon
+  ipfs daemon
   ```
 
 * Create the databases configured in `environments/local.toml`.
