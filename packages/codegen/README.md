@@ -156,16 +156,16 @@
       yarn reset job-queue --block-number <previous-block-number>
       ```
 
-  * To export the watcher:
+  * To export the watcher state:
 
     ```bash
-    yarn export-watcher --export-file [export-file-path]
+    yarn export-state --export-file [export-file-path]
     ```
 
-  * To import the watcher:
+  * To import the watcher state:
 
     ```bash
-    yarn import-watcher --import-file <import-file-path>
+    yarn import-state --import-file <import-file-path>
     ```
   
   * To inspect a CID:

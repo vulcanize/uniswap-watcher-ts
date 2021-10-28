@@ -18,7 +18,7 @@ import * as codec from '@ipld/dag-cbor';
 import { Database } from '../database';
 import { Indexer } from '../indexer';
 
-const log = debug('vulcanize:export-watcher');
+const log = debug('vulcanize:export-state');
 
 const main = async (): Promise<void> => {
   const argv = await yargs.parserConfiguration({
@@ -130,10 +130,8 @@ const main = async (): Promise<void> => {
   }
 };
 
-main()
-  .catch(err => {
-    log(err);
-  })
-  .finally(() => {
-    process.exit(0);
-  });
+main().catch(err => {
+  log(err);
+}).finally(() => {
+  process.exit(0);
+});

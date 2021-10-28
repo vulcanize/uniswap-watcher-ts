@@ -147,6 +147,8 @@ export class Indexer {
   getResultIPLDBlock (ipldBlock: IPLDBlock): ResultIPLDBlock {
     const block = ipldBlock.block;
 
+    const data = codec.decode(Buffer.from(ipldBlock.data)) as any;
+
     return {
       block: {
         cid: block.cid,
@@ -158,7 +160,7 @@ export class Indexer {
       contractAddress: ipldBlock.contractAddress,
       cid: ipldBlock.cid,
       kind: ipldBlock.kind,
-      data: ipldBlock.data.toString()
+      data: JSON.stringify(data)
     };
   }
 

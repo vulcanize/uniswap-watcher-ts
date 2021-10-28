@@ -129,7 +129,7 @@ export class EventWatcher {
       const { data: { request: { data: { blockHash } } } } = job;
 
       if (this._indexer.getIPFSStatus()) {
-        await this.createIPFSJob(blockHash);
+        await this.createIPFSPutJob(blockHash);
       }
     });
   }
@@ -173,7 +173,7 @@ export class EventWatcher {
     );
   }
 
-  async createIPFSJob (blockHash: string): Promise<void> {
+  async createIPFSPutJob (blockHash: string): Promise<void> {
     const ipldBlocks = await this._indexer.getIPLDBlocksByHash(blockHash);
 
     for (const ipldBlock of ipldBlocks) {

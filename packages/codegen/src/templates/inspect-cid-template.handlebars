@@ -78,10 +78,8 @@ const main = async (): Promise<void> => {
   log(util.inspect(ipldData, undefined, null));
 };
 
-main()
-  .catch(err => {
-    log(err);
-  })
-  .finally(() => {
-    process.exit(0);
-  });
+main().catch(err => {
+  log(err);
+}).finally(() => {
+  process.exit(0);
+});

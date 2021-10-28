@@ -22,7 +22,7 @@ import { Indexer } from '../indexer';
 import { EventWatcher } from '../events';
 import { IPLDBlock } from '../entity/IPLDBlock';
 
-const log = debug('vulcanize:import-watcher');
+const log = debug('vulcanize:import-state');
 
 export const main = async (): Promise<any> => {
   const argv = await yargs(hideBin(process.argv)).parserConfiguration({
@@ -129,5 +129,5 @@ export const main = async (): Promise<any> => {
 main().catch(err => {
   log(err);
 }).finally(() => {
-  process.exit();
+  process.exit(0);
 });

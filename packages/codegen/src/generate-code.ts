@@ -28,8 +28,8 @@ import { registerHandlebarHelpers } from './utils/handlebar-helpers';
 import { exportHooks } from './hooks';
 import { exportFill } from './fill';
 import { exportCheckpoint } from './checkpoint';
-import { exportWatcher } from './export-watcher';
-import { importWatcher } from './import-watcher';
+import { exportState } from './export-state';
+import { importState } from './import-state';
 import { exportIPFS } from './ipfs';
 import { exportInspectCID } from './inspect-cid';
 
@@ -262,14 +262,14 @@ function generateWatcher (data: string, visitor: Visitor, argv: any) {
   visitor.exportReset(resetOutStream, resetJQOutStream, resetStateOutStream);
 
   outStream = outputDir
-    ? fs.createWriteStream(path.join(outputDir, 'src/cli/export-watcher.ts'))
+    ? fs.createWriteStream(path.join(outputDir, 'src/cli/export-state.ts'))
     : process.stdout;
-  exportWatcher(outStream);
+  exportState(outStream);
 
   outStream = outputDir
-    ? fs.createWriteStream(path.join(outputDir, 'src/cli/import-watcher.ts'))
+    ? fs.createWriteStream(path.join(outputDir, 'src/cli/import-state.ts'))
     : process.stdout;
-  importWatcher(outStream);
+  importState(outStream);
 
   outStream = outputDir
     ? fs.createWriteStream(path.join(outputDir, 'src/ipfs.ts'))
