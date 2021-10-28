@@ -13,6 +13,7 @@ import path from 'path';
 import { Config, DEFAULT_CONFIG_PATH, getConfig } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
+import * as codec from '@ipld/dag-cbor';
 
 import { Database } from '../database';
 import { Indexer } from '../indexer';
@@ -104,11 +105,13 @@ const main = async (): Promise<void> => {
       const ipldBlock = await indexer.getLatestIPLDBlock(contract.address, 'checkpoint', block.blockNumber);
       assert(ipldBlock);
 
+      const data = codec.decode(Buffer.from(ipldBlock.data)) as any;
+
       exportData.ipldCheckpoints.push({
         contractAddress: ipldBlock.contractAddress,
         cid: ipldBlock.cid,
         kind: ipldBlock.kind,
-        data: ipldBlock.data
+        data
       });
     }
   }

@@ -15,6 +15,7 @@ import path from 'path';
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { getConfig, fillBlocks, JobQueue, DEFAULT_CONFIG_PATH } from '@vulcanize/util';
+import * as codec from '@ipld/dag-cbor';
 
 import { Database } from '../database';
 import { Indexer } from '../indexer';
@@ -118,6 +119,8 @@ export const main = async (): Promise<any> => {
 
     ipldBlock = Object.assign(ipldBlock, checkpoint);
     ipldBlock.block = block;
+
+    ipldBlock.data = Buffer.from(codec.encode(ipldBlock.data));
 
     await db.saveOrUpdateIPLDBlock(ipldBlock);
   }
