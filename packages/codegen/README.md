@@ -167,6 +167,12 @@
     ```bash
     yarn import-watcher --import-file <import-file-path>
     ```
+  
+  * To inspect a CID:
+
+    ```bash
+    yarn inspect-cid --cid <cid>
+    ```
 
 ## Known Issues
 

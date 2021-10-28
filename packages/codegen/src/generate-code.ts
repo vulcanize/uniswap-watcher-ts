@@ -31,6 +31,7 @@ import { exportCheckpoint } from './checkpoint';
 import { exportWatcher } from './export-watcher';
 import { importWatcher } from './import-watcher';
 import { exportIPFS } from './ipfs';
+import { exportInspectCID } from './inspect-cid';
 
 const main = async (): Promise<void> => {
   const argv = await yargs(hideBin(process.argv))
@@ -274,6 +275,11 @@ function generateWatcher (data: string, visitor: Visitor, argv: any) {
     ? fs.createWriteStream(path.join(outputDir, 'src/ipfs.ts'))
     : process.stdout;
   exportIPFS(outStream);
+
+  outStream = outputDir
+    ? fs.createWriteStream(path.join(outputDir, 'src/cli/inspect-cid.ts'))
+    : process.stdout;
+  exportInspectCID(outStream);
 }
 
 main().catch(err => {
