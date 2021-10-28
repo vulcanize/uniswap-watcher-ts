@@ -377,7 +377,7 @@ export class Indexer {
     assert(currentBlock.blockNumber <= syncStatus.latestCanonicalBlockNumber, 'Block for a checkpoint should be in the pruned region');
 
     // Fetch the latest checkpoint for the contract.
-    const checkpointBlock = await this.getLatestIPLDBlock(contractAddress, 'checkpoint');
+    const checkpointBlock = await this.getLatestIPLDBlock(contractAddress, 'checkpoint', currentBlock.blockNumber);
     assert(checkpointBlock);
 
     // Check (only if checkpointInterval is passed) if it is time for a new checkpoint.
@@ -435,8 +435,8 @@ export class Indexer {
     return ipldBlocks[0];
   }
 
-  async getLatestIPLDBlock (contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
-    return this._db.getLatestIPLDBlock(contractAddress, kind);
+  async getLatestIPLDBlock (contractAddress: string, kind?: string, blockNumber?: number): Promise<IPLDBlock | undefined> {
+    return this._db.getLatestIPLDBlock(contractAddress, kind, blockNumber);
   }
 
   async getPrevIPLDBlock (blockHash: string, contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
@@ -481,7 +481,7 @@ export class Indexer {
       ipldBlock = new IPLDBlock();
 
       // Fetch the parent IPLDBlock.
-      const parentIPLDBlock = await this.getLatestIPLDBlock(contractAddress);
+      const parentIPLDBlock = await this.getLatestIPLDBlock(contractAddress, undefined, block.blockNumber);
 
       // Setting the meta-data for an IPLDBlock (done only once per block).
       data.meta = {

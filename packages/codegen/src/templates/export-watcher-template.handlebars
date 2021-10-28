@@ -101,7 +101,7 @@ const main = async (): Promise<void> => {
     if (contract.checkpoint) {
       await indexer.createCheckpoint(contract.address, block.blockHash);
 
-      const ipldBlock = await indexer.getLatestIPLDBlock(contract.address, 'checkpoint');
+      const ipldBlock = await indexer.getLatestIPLDBlock(contract.address, 'checkpoint', block.blockNumber);
       assert(ipldBlock);
 
       exportData.ipldCheckpoints.push({
