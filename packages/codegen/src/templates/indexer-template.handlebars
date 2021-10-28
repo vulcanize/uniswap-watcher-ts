@@ -325,6 +325,24 @@ export class Indexer {
     }
   }
 
+  async processCLICheckpoint (contractAddress: string, blockHash?: string): Promise<string | undefined> {
+    const checkpointBlockHash = await this.createCheckpoint(contractAddress, blockHash);
+    assert(checkpointBlockHash);
+
+    const block = await this.getBlockProgress(checkpointBlockHash);
+    const checkpointIPLDBlocks = await this._db.getIPLDBlocks({ block, contractAddress, kind: 'checkpoint' });
+
+    // There can be at most one IPLDBlock for a (block, contractAddress, kind) combination.
+    assert(checkpointIPLDBlocks.length <= 1);
+    const checkpointIPLDBlock = checkpointIPLDBlocks[0];
+
+    const checkpointData = this.getIPLDData(checkpointIPLDBlock);
+
+    await this.pushToIPFS(checkpointData);
+
+    return checkpointBlockHash;
+  }
+
   async createCheckpoint (contractAddress: string, blockHash?: string, data?: any, checkpointInterval?: number): Promise<string | undefined> {
     const syncStatus = await this.getSyncStatus();
     assert(syncStatus);
@@ -447,7 +465,7 @@ export class Indexer {
     // Get an existing 'diff' | 'diff_staged' | 'checkpoint' IPLDBlock for current block, contractAddress.
     const currentIPLDBlocks = await this._db.getIPLDBlocks({ block, contractAddress, kind });
 
-    // There can be only one IPLDBlock for a (block, contractAddress, kind) combination.
+    // There can be at most one IPLDBlock for a (block, contractAddress, kind) combination.
     assert(currentIPLDBlocks.length <= 1);
     const currentIPLDBlock = currentIPLDBlocks[0];
 
