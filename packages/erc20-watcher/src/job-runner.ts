@@ -17,7 +17,6 @@ import {
   JobRunner as BaseJobRunner,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  QUEUE_HOOKS,
   JobQueueConfig,
   ServerConfig,
   DEFAULT_CONFIG_PATH
@@ -46,7 +45,6 @@ export class JobRunner {
   async start (): Promise<void> {
     await this.subscribeBlockProcessingQueue();
     await this.subscribeEventProcessingQueue();
-    await this.subscribeHooksQueue();
   }
 
   async subscribeBlockProcessingQueue (): Promise<void> {
@@ -65,14 +63,6 @@ export class JobRunner {
       if (watchedContract) {
         await this._indexer.processEvent(event);
       }
-
-      await this._jobQueue.markComplete(job);
-    });
-  }
-
-  async subscribeHooksQueue (): Promise<void> {
-    await this._jobQueue.subscribe(QUEUE_HOOKS, async (job) => {
-      await this._indexer.processBlock(job);
 
       await this._jobQueue.markComplete(job);
     });
