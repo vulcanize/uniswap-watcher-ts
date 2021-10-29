@@ -6,7 +6,7 @@ import assert from 'assert';
 import { Connection, ConnectionOptions, DeepPartial, FindConditions, QueryRunner, FindManyOptions, MoreThan } from 'typeorm';
 import path from 'path';
 
-import { Database as BaseDatabase, MAX_REORG_DEPTH } from '@vulcanize/util';
+import { Database as BaseDatabase, MAX_REORG_DEPTH, DatabaseInterface } from '@vulcanize/util';
 
 import { Contract } from './entity/Contract';
 import { Event } from './entity/Event';
@@ -19,7 +19,7 @@ import { IPLDBlock } from './entity/IPLDBlock';
 import { {{query.entityName}} } from './entity/{{query.entityName}}';
 {{/each}}
 
-export class Database {
+export class Database implements DatabaseInterface {
   _config: ConnectionOptions;
   _conn!: Connection;
   _baseDatabase: BaseDatabase;
@@ -212,7 +212,7 @@ export class Database {
     return repo.findOne();
   }
 
-  async updateHookStatusProcessedBlock (queryRunner: QueryRunner, blockNumber: number): Promise<HookStatus> {
+  async updateHookStatusProcessedBlock (queryRunner: QueryRunner, blockNumber: number, force?: boolean): Promise<HookStatus> {
     const repo = queryRunner.manager.getRepository(HookStatus);
     let entity = await repo.findOne();
 
@@ -222,7 +222,7 @@ export class Database {
       });
     }
 
-    if (blockNumber > entity.latestProcessedBlockNumber) {
+    if (force || blockNumber > entity.latestProcessedBlockNumber) {
       entity.latestProcessedBlockNumber = blockNumber;
     }
 

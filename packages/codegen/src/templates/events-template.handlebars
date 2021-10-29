@@ -10,6 +10,7 @@ import { EthClient } from '@vulcanize/ipld-eth-client';
 import {
   JobQueue,
   EventWatcher as BaseEventWatcher,
+  EventWatcherInterface,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
   QUEUE_BLOCK_CHECKPOINT,
@@ -26,7 +27,7 @@ const EVENT = 'event';
 
 const log = debug('vulcanize:events');
 
-export class EventWatcher {
+export class EventWatcher implements EventWatcherInterface {
   _ethClient: EthClient
   _indexer: Indexer
   _subscription: ZenObservable.Subscription | undefined

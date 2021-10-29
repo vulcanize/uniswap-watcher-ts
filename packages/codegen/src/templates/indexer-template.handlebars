@@ -16,7 +16,7 @@ import { BaseProvider } from '@ethersproject/providers';
 import * as codec from '@ipld/dag-cbor';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { StorageLayout } from '@vulcanize/solidity-mapper';
-import { EventInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME, ServerConfig, updateStateForElementaryType, updateStateForMappingType } from '@vulcanize/util';
+import { EventInterface, Indexer as BaseIndexer, IndexerInterface, ValueResult, UNKNOWN_EVENT_NAME, ServerConfig, updateStateForElementaryType, updateStateForMappingType } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Contract } from './entity/Contract';
@@ -72,7 +72,7 @@ export type ResultIPLDBlock = {
   data: string;
 };
 
-export class Indexer {
+export class Indexer implements IndexerInterface {
   _db: Database
   _ethClient: EthClient
   _ethProvider: BaseProvider
@@ -629,12 +629,12 @@ export class Indexer {
     return res;
   }
 
-  async updateHookStatusProcessedBlock (blockNumber: number): Promise<HookStatus> {
+  async updateHookStatusProcessedBlock (blockNumber: number, force?: boolean): Promise<HookStatus> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
     try {
-      res = await this._db.updateHookStatusProcessedBlock(dbTx, blockNumber);
+      res = await this._db.updateHookStatusProcessedBlock(dbTx, blockNumber, force);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
