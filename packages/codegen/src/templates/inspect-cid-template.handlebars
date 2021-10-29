@@ -75,7 +75,7 @@ const main = async (): Promise<void> => {
 
   const ipldData = await indexer.getIPLDData(ipldBlock);
 
-  log(util.inspect(ipldData, undefined, null));
+  log(util.inspect(ipldData, false, null));
 };
 
 main().catch(err => {

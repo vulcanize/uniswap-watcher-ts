@@ -129,7 +129,7 @@ export class EventWatcher implements EventWatcherInterface {
     this._jobQueue.onComplete(QUEUE_BLOCK_CHECKPOINT, async (job) => {
       const { data: { request: { data: { blockHash } } } } = job;
 
-      if (this._indexer.getIPFSStatus()) {
+      if (this._indexer.isIPFSConfigured()) {
         await this.createIPFSPutJob(blockHash);
       }
     });

@@ -288,7 +288,7 @@ export class Indexer implements IndexerInterface {
     const checkpoint = await this.getLatestIPLDBlock(contractAddress, 'checkpoint');
 
     // There should be an initial checkpoint at least.
-    // Assumption: there will be no events for the contract in the watch block.
+    // Assumption: There should be no events for the contract at the starting block.
     assert(checkpoint, 'Initial checkpoint doesn\'t exist');
 
     // Check if the latest checkpoint is in the same block.
@@ -321,7 +321,7 @@ export class Indexer implements IndexerInterface {
             await createInitialCheckpoint(this, contract.address, blockHash);
           }
         } else {
-          await this.createCheckpoint(contract.address, blockHash, undefined, checkpointInterval);
+          await this.createCheckpoint(contract.address, blockHash, null, checkpointInterval);
         }
       }
     }
@@ -362,7 +362,7 @@ export class Indexer implements IndexerInterface {
     assert(currentBlock);
 
     // Data is passed in case of initial checkpoint and checkpoint hook.
-    // Assumption: there will be no events for the contract in the watch block.
+    // Assumption: There should be no events for the contract at the starting block.
     if (data) {
       const ipldBlock = await this.prepareIPLDBlock(currentBlock, contractAddress, data, 'checkpoint');
       await this.saveOrUpdateIPLDBlock(ipldBlock);
@@ -437,7 +437,7 @@ export class Indexer implements IndexerInterface {
     return ipldBlocks[0];
   }
 
-  async getLatestIPLDBlock (contractAddress: string, kind?: string, blockNumber?: number): Promise<IPLDBlock | undefined> {
+  async getLatestIPLDBlock (contractAddress: string, kind: string | null, blockNumber?: number): Promise<IPLDBlock | undefined> {
     return this._db.getLatestIPLDBlock(contractAddress, kind, blockNumber);
   }
 
@@ -483,7 +483,7 @@ export class Indexer implements IndexerInterface {
       ipldBlock = new IPLDBlock();
 
       // Fetch the parent IPLDBlock.
-      const parentIPLDBlock = await this.getLatestIPLDBlock(contractAddress, undefined, block.blockNumber);
+      const parentIPLDBlock = await this.getLatestIPLDBlock(contractAddress, null, block.blockNumber);
 
       // Setting the meta-data for an IPLDBlock (done only once per block).
       data.meta = {
@@ -544,11 +544,11 @@ export class Indexer implements IndexerInterface {
     await this._ipfsClient.push(data);
   }
 
-  getIPFSStatus (): boolean {
+  isIPFSConfigured (): boolean {
     const ipfsAddr = this._serverConfig.ipfsApiAddr;
 
-    // Return false if ipfsAddr is undefined or an empty string.
-    return (ipfsAddr !== undefined && ipfsAddr !== '');
+    // Return false if ipfsAddr is undefined | null | empty string.
+    return (ipfsAddr !== undefined && ipfsAddr !== null && ipfsAddr !== '');
   }
 
   async triggerIndexingOnEvent (event: Event): Promise<void> {
