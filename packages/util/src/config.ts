@@ -2,17 +2,13 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import assert from 'assert';
 import fs from 'fs-extra';
 import path from 'path';
 import toml from 'toml';
 import debug from 'debug';
 import { ConnectionOptions } from 'typeorm';
-import { getDefaultProvider } from 'ethers';
 
-import { BaseProvider } from '@ethersproject/providers';
-import { Config as CacheConfig, getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
+import { Config as CacheConfig } from '@vulcanize/cache';
 
 const log = debug('vulcanize:config');
 
@@ -32,7 +28,7 @@ export interface ServerConfig {
   ipfsApiAddr: string;
 }
 
-interface UpstreamConfig {
+export interface UpstreamConfig {
   cache: CacheConfig,
   ethServer: {
     gqlApiEndpoint: string;
@@ -68,48 +64,4 @@ export const getConfig = async (configFile: string): Promise<Config> => {
   log('config', JSON.stringify(config, null, 2));
 
   return config;
-};
-
-export const getResetConfig = async (config: Config): Promise<{
-  dbConfig: ConnectionOptions,
-  serverConfig: ServerConfig,
-  upstreamConfig: UpstreamConfig,
-  ethClient: EthClient,
-  postgraphileClient: EthClient,
-  ethProvider: BaseProvider
-}> => {
-  const { database: dbConfig, upstream: upstreamConfig, server: serverConfig } = config;
-
-  assert(serverConfig, 'Missing server config');
-  assert(dbConfig, 'Missing database config');
-
-  assert(upstreamConfig, 'Missing upstream config');
-  const { ethServer: { gqlApiEndpoint, gqlPostgraphileEndpoint, rpcProviderEndpoint }, cache: cacheConfig } = upstreamConfig;
-  assert(gqlApiEndpoint, 'Missing upstream ethServer.gqlApiEndpoint');
-  assert(gqlPostgraphileEndpoint, 'Missing upstream ethServer.gqlPostgraphileEndpoint');
-  assert(rpcProviderEndpoint, 'Missing upstream ethServer.rpcProviderEndpoint');
-
-  const cache = await getCache(cacheConfig);
-
-  const ethClient = new EthClient({
-    gqlEndpoint: gqlApiEndpoint,
-    gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
-
-  const postgraphileClient = new EthClient({
-    gqlEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
-
-  const ethProvider = getDefaultProvider(rpcProviderEndpoint);
-
-  return {
-    dbConfig,
-    serverConfig,
-    upstreamConfig,
-    ethClient,
-    postgraphileClient,
-    ethProvider
-  };
 };

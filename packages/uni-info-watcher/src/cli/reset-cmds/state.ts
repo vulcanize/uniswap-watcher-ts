@@ -6,7 +6,7 @@ import debug from 'debug';
 import { MoreThan } from 'typeorm';
 import assert from 'assert';
 
-import { getConfig, getResetConfig, resetJobs } from '@vulcanize/util';
+import { getConfig, initClients, resetJobs } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 
@@ -38,7 +38,7 @@ export const builder = {
 export const handler = async (argv: any): Promise<void> => {
   const config = await getConfig(argv.configFile);
   await resetJobs(config);
-  const { dbConfig, serverConfig, upstreamConfig, ethClient, postgraphileClient } = await getResetConfig(config);
+  const { dbConfig, serverConfig, upstreamConfig, ethClient, postgraphileClient } = await initClients(config);
 
   // Initialize database.
   const db = new Database(dbConfig);
