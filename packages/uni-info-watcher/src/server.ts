@@ -14,9 +14,7 @@ import { createServer } from 'http';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { EthClient } from '@vulcanize/ipld-eth-client';
-import { DEFAULT_CONFIG_PATH, getConfig, JobQueue } from '@vulcanize/util';
-import { getCache } from '@vulcanize/cache';
+import { DEFAULT_CONFIG_PATH, getConfig, Config, JobQueue, initClients } from '@vulcanize/util';
 
 import typeDefs from './schema';
 
@@ -39,45 +37,15 @@ export const main = async (): Promise<any> => {
     })
     .argv;
 
-  const config = await getConfig(argv.f);
+  const config: Config = await getConfig(argv.f);
+  const { dbConfig, serverConfig, upstreamConfig, jobQueueConfig, ethClient, postgraphileClient } = await initClients(config);
 
-  assert(config.server, 'Missing server config');
-
-  const { host, port, mode } = config.server;
-
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
-
-  assert(dbConfig, 'Missing database config');
+  const { host, port, mode } = serverConfig;
 
   const db = new Database(dbConfig);
   await db.init();
 
-  assert(upstream, 'Missing upstream config');
-  const {
-    ethServer: {
-      gqlApiEndpoint,
-      gqlPostgraphileEndpoint
-    },
-    uniWatcher,
-    tokenWatcher,
-    cache: cacheConfig
-  } = upstream;
-
-  assert(gqlApiEndpoint, 'Missing upstream ethServer.gqlApiEndpoint');
-  assert(gqlPostgraphileEndpoint, 'Missing upstream ethServer.gqlPostgraphileEndpoint');
-
-  const cache = await getCache(cacheConfig);
-
-  const ethClient = new EthClient({
-    gqlEndpoint: gqlApiEndpoint,
-    gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
-
-  const postgraphileClient = new EthClient({
-    gqlEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
+  const { uniWatcher, tokenWatcher } = upstreamConfig;
 
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);

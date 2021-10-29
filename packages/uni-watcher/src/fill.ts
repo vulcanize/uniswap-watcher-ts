@@ -9,9 +9,7 @@ import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
 
-import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
-import { getConfig, fillBlocks, JobQueue, DEFAULT_CONFIG_PATH } from '@vulcanize/util';
+import { getConfig, Config, fillBlocks, JobQueue, DEFAULT_CONFIG_PATH, initClients } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Indexer } from './indexer';
@@ -45,32 +43,11 @@ export const main = async (): Promise<any> => {
     }
   }).argv;
 
-  const config = await getConfig(argv.configFile);
-
-  assert(config.server, 'Missing server config');
-
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
-
-  assert(dbConfig, 'Missing database config');
+  const config: Config = await getConfig(argv.configFile);
+  const { dbConfig, jobQueueConfig, ethClient, postgraphileClient } = await initClients(config);
 
   const db = new Database(dbConfig);
   await db.init();
-
-  assert(upstream, 'Missing upstream config');
-  const { ethServer: { gqlPostgraphileEndpoint }, cache: cacheConfig } = upstream;
-  assert(gqlPostgraphileEndpoint, 'Missing upstream ethServer.gqlPostgraphileEndpoint');
-
-  const cache = await getCache(cacheConfig);
-  const ethClient = new EthClient({
-    gqlEndpoint: gqlPostgraphileEndpoint,
-    gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
-
-  const postgraphileClient = new EthClient({
-    gqlEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
 
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
   // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
@@ -87,7 +64,7 @@ export const main = async (): Promise<any> => {
 
   assert(jobQueueConfig, 'Missing job queue config');
 
-  await fillBlocks(jobQueue, indexer, ethClient, eventWatcher, argv);
+  await fillBlocks(jobQueue, indexer, postgraphileClient, eventWatcher, argv);
 };
 
 main().catch(err => {

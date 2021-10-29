@@ -7,19 +7,18 @@ import 'reflect-metadata';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
-import { getDefaultProvider } from 'ethers';
 
-import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
 import {
   getConfig,
+  Config,
   JobQueue,
   JobRunner as BaseJobRunner,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
   JobQueueConfig,
   ServerConfig,
-  DEFAULT_CONFIG_PATH
+  DEFAULT_CONFIG_PATH,
+  initClients
 } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
@@ -80,35 +79,12 @@ export const main = async (): Promise<any> => {
     })
     .argv;
 
-  const config = await getConfig(argv.f);
-
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: serverConfig } = config;
-
-  assert(upstream, 'Missing upstream config');
-  assert(dbConfig, 'Missing database config');
-  assert(serverConfig, 'Missing server config');
+  const config: Config = await getConfig(argv.f);
+  const { dbConfig, serverConfig, jobQueueConfig, ethClient, postgraphileClient, ethProvider } = await initClients(config);
 
   const db = new Database(dbConfig);
   await db.init();
 
-  const { ethServer: { gqlApiEndpoint, gqlPostgraphileEndpoint, rpcProviderEndpoint }, cache: cacheConfig } = upstream;
-  assert(gqlApiEndpoint, 'Missing upstream ethServer.gqlApiEndpoint');
-  assert(gqlPostgraphileEndpoint, 'Missing upstream ethServer.gqlPostgraphileEndpoint');
-
-  const cache = await getCache(cacheConfig);
-
-  const ethClient = new EthClient({
-    gqlEndpoint: gqlApiEndpoint,
-    gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
-
-  const postgraphileClient = new EthClient({
-    gqlEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
-
-  const ethProvider = getDefaultProvider(rpcProviderEndpoint);
   const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider, serverConfig.mode);
 
   assert(jobQueueConfig, 'Missing job queue config');

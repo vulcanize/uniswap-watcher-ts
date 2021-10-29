@@ -10,17 +10,18 @@ import debug from 'debug';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
+
 import {
   getConfig,
+  Config,
   JobQueue,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
   JobRunner as BaseJobRunner,
   JobQueueConfig,
   ServerConfig,
-  DEFAULT_CONFIG_PATH
+  DEFAULT_CONFIG_PATH,
+  initClients
 } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
@@ -81,36 +82,17 @@ export const main = async (): Promise<any> => {
     })
     .argv;
 
-  const config = await getConfig(argv.f);
-
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: serverConfig } = config;
-
-  assert(upstream, 'Missing upstream config');
-  assert(dbConfig, 'Missing database config');
-  assert(serverConfig, 'Missing server config');
+  const config: Config = await getConfig(argv.f);
+  const { dbConfig, serverConfig, upstreamConfig, jobQueueConfig, ethClient, postgraphileClient } = await initClients(config);
 
   const db = new Database(dbConfig);
   await db.init();
 
-  const { uniWatcher: { gqlEndpoint, gqlSubscriptionEndpoint }, tokenWatcher, cache: cacheConfig, ethServer: { gqlApiEndpoint, gqlPostgraphileEndpoint } } = upstream;
-  assert(gqlEndpoint, 'Missing upstream uniWatcher.gqlEndpoint');
-  assert(gqlSubscriptionEndpoint, 'Missing upstream uniWatcher.gqlSubscriptionEndpoint');
-
-  const cache = await getCache(cacheConfig);
-  const ethClient = new EthClient({
-    gqlEndpoint: gqlApiEndpoint,
-    gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
+  const { uniWatcher: { gqlEndpoint, gqlSubscriptionEndpoint }, tokenWatcher } = upstreamConfig;
 
   const uniClient = new UniClient({
     gqlEndpoint,
     gqlSubscriptionEndpoint
-  });
-
-  const postgraphileClient = new EthClient({
-    gqlEndpoint: gqlPostgraphileEndpoint,
-    cache
   });
 
   const erc20Client = new ERC20Client(tokenWatcher);
