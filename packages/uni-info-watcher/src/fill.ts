@@ -51,7 +51,7 @@ export const main = async (): Promise<any> => {
   const db = new Database(config.database);
   await db.init();
 
-  const { uniWatcher, tokenWatcher, ethServer: { rpcProviderEndpoint } } = config.upstream;
+  const { uniWatcher, tokenWatcher, ethServer: { rpcProviderEndpoint, blockDelayInMilliSecs } } = config.upstream;
 
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);

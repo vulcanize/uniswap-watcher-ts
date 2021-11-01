@@ -151,11 +151,6 @@ export class Indexer implements IndexerInterface {
     log('Event processing completed for', eventName);
   }
 
-  async processBlock (job: any): Promise<void> {
-    // Empty post-block method.
-    assert(job);
-  }
-
   async getBlockEntities (where: { [key: string]: any } = {}, queryOptions: QueryOptions): Promise<any> {
     if (where.timestamp_gt) {
       where.blockTimestamp_gt = where.timestamp_gt;
