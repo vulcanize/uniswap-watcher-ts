@@ -44,15 +44,18 @@ export const main = async (): Promise<any> => {
   }).argv;
 
   const config: Config = await getConfig(argv.configFile);
-  const { dbConfig, jobQueueConfig, ethClient, postgraphileClient } = await initClients(config);
+  const { ethClient, postgraphileClient } = await initClients(config);
 
-  const db = new Database(dbConfig);
+  const db = new Database(config.database);
   await db.init();
 
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
   // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
   const pubsub = new PubSub();
   const indexer = new Indexer(db, ethClient, postgraphileClient);
+
+  const jobQueueConfig = config.jobQueue;
+  assert(jobQueueConfig, 'Missing job queue config');
 
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
   assert(dbConnectionString, 'Missing job queue db connection string');
@@ -61,8 +64,6 @@ export const main = async (): Promise<any> => {
   await jobQueue.start();
 
   const eventWatcher = new EventWatcher(ethClient, indexer, pubsub, jobQueue);
-
-  assert(jobQueueConfig, 'Missing job queue config');
 
   await fillBlocks(jobQueue, indexer, postgraphileClient, eventWatcher, argv);
 };

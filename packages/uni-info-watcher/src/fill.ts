@@ -46,12 +46,12 @@ export const main = async (): Promise<any> => {
   }).argv;
 
   const config: Config = await getConfig(argv.configFile);
-  const { dbConfig, serverConfig, upstreamConfig, jobQueueConfig, ethClient, postgraphileClient } = await initClients(config);
+  const { ethClient, postgraphileClient } = await initClients(config);
 
-  const db = new Database(dbConfig);
+  const db = new Database(config.database);
   await db.init();
 
-  const { uniWatcher, tokenWatcher } = upstreamConfig;
+  const { uniWatcher, tokenWatcher } = config.upstream;
 
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);
@@ -59,9 +59,11 @@ export const main = async (): Promise<any> => {
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
   // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
   const pubsub = new PubSub();
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, serverConfig.mode);
+  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, config.server.mode);
 
+  const jobQueueConfig = config.jobQueue;
   assert(jobQueueConfig, 'Missing job queue config');
+
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
   assert(dbConnectionString, 'Missing job queue db connection string');
 

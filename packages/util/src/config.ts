@@ -71,15 +71,11 @@ export const getConfig = async (configFile: string): Promise<Config> => {
 };
 
 export const initClients = async (config: Config): Promise<{
-  dbConfig: ConnectionOptions,
-  serverConfig: ServerConfig,
-  upstreamConfig: UpstreamConfig,
-  jobQueueConfig: JobQueueConfig
   ethClient: EthClient,
   postgraphileClient: EthClient,
   ethProvider: BaseProvider
 }> => {
-  const { database: dbConfig, upstream: upstreamConfig, server: serverConfig, jobQueue: jobQueueConfig } = config;
+  const { database: dbConfig, upstream: upstreamConfig, server: serverConfig } = config;
 
   assert(serverConfig, 'Missing server config');
   assert(dbConfig, 'Missing database config');
@@ -107,10 +103,6 @@ export const initClients = async (config: Config): Promise<{
   const ethProvider = getDefaultProvider(rpcProviderEndpoint);
 
   return {
-    dbConfig,
-    serverConfig,
-    upstreamConfig,
-    jobQueueConfig,
     ethClient,
     postgraphileClient,
     ethProvider

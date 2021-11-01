@@ -36,11 +36,11 @@ export const main = async (): Promise<any> => {
     .argv;
 
   const config: Config = await getConfig(argv.f);
-  const { dbConfig, serverConfig, jobQueueConfig, ethClient, postgraphileClient, ethProvider } = await initClients(config);
+  const { ethClient, postgraphileClient, ethProvider } = await initClients(config);
 
-  const { host, port, mode, kind: watcherKind } = serverConfig;
+  const { host, port, mode, kind: watcherKind } = config.server;
 
-  const db = new Database(dbConfig);
+  const db = new Database(config.database);
   await db.init();
 
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
@@ -48,6 +48,7 @@ export const main = async (): Promise<any> => {
   const pubsub = new PubSub();
   const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider, mode);
 
+  const jobQueueConfig = config.jobQueue;
   assert(jobQueueConfig, 'Missing job queue config');
 
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;

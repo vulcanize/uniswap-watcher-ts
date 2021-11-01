@@ -83,12 +83,12 @@ export const main = async (): Promise<any> => {
     .argv;
 
   const config: Config = await getConfig(argv.f);
-  const { dbConfig, serverConfig, upstreamConfig, jobQueueConfig, ethClient, postgraphileClient } = await initClients(config);
+  const { ethClient, postgraphileClient } = await initClients(config);
 
-  const db = new Database(dbConfig);
+  const db = new Database(config.database);
   await db.init();
 
-  const { uniWatcher: { gqlEndpoint, gqlSubscriptionEndpoint }, tokenWatcher } = upstreamConfig;
+  const { uniWatcher: { gqlEndpoint, gqlSubscriptionEndpoint }, tokenWatcher } = config.upstream;
 
   const uniClient = new UniClient({
     gqlEndpoint,
@@ -97,8 +97,9 @@ export const main = async (): Promise<any> => {
 
   const erc20Client = new ERC20Client(tokenWatcher);
 
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, serverConfig.mode);
+  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, config.server.mode);
 
+  const jobQueueConfig = config.jobQueue;
   assert(jobQueueConfig, 'Missing job queue config');
 
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
@@ -107,7 +108,7 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const jobRunner = new JobRunner(jobQueueConfig, serverConfig, indexer, jobQueue);
+  const jobRunner = new JobRunner(jobQueueConfig, config.server, indexer, jobQueue);
   await jobRunner.start();
 };
 

@@ -38,19 +38,20 @@ export const main = async (): Promise<any> => {
     .argv;
 
   const config: Config = await getConfig(argv.f);
-  const { dbConfig, serverConfig, upstreamConfig, jobQueueConfig, ethClient, postgraphileClient } = await initClients(config);
+  const { ethClient, postgraphileClient } = await initClients(config);
 
-  const { host, port, mode } = serverConfig;
+  const { host, port, mode } = config.server;
 
-  const db = new Database(dbConfig);
+  const db = new Database(config.database);
   await db.init();
 
-  const { uniWatcher, tokenWatcher } = upstreamConfig;
+  const { uniWatcher, tokenWatcher } = config.upstream;
 
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);
   const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, mode);
 
+  const jobQueueConfig = config.jobQueue;
   assert(jobQueueConfig, 'Missing job queue config');
 
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
