@@ -3,8 +3,7 @@
 //
 
 import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
-import Decimal from 'decimal.js';
-import { decimalTransformer } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
 
 import { Pool } from './Pool';
 
@@ -29,11 +28,11 @@ export class Tick {
   @Column('varchar', { length: 42 })
   poolAddress!: string
 
-  @Column('numeric', { transformer: decimalTransformer })
-  price0!: Decimal
+  @Column('numeric', { transformer: graphDecimalTransformer })
+  price0!: GraphDecimal
 
-  @Column('numeric', { transformer: decimalTransformer })
-  price1!: Decimal
+  @Column('numeric', { transformer: graphDecimalTransformer })
+  price1!: GraphDecimal
 
   @Column('bigint', { default: 0 })
   liquidityGross!: bigint

@@ -24,111 +24,145 @@ export class GraphDecimal {
   }
 
   toString (): string {
-    _checkOutOfRange(this);
+    this._checkOutOfRange(this);
 
     return this.value.toString();
   }
 
   // TODO: Use toFixed() instead of toString() in the mapping code.
   toFixed (): string {
-    _checkOutOfRange(this);
+    this._checkOutOfRange(this);
 
     return this.value.toFixed();
   }
 
   plus (n: Decimal.Value | GraphDecimal): GraphDecimal {
-    _checkOutOfRange(this);
-    const param = _checkOutOfRange(n);
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
 
     return new GraphDecimal(this.value.plus(param));
   }
 
   add (n: Decimal.Value | GraphDecimal): GraphDecimal {
-    _checkOutOfRange(this);
-    const param = _checkOutOfRange(n);
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
 
     return new GraphDecimal(this.value.add(param));
   }
 
   minus (n: Decimal.Value | GraphDecimal): GraphDecimal {
-    _checkOutOfRange(this);
-    const param = _checkOutOfRange(n);
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
 
     return new GraphDecimal(this.value.minus(param));
   }
 
   sub (n: Decimal.Value | GraphDecimal): GraphDecimal {
-    _checkOutOfRange(this);
-    const param = _checkOutOfRange(n);
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
 
     return new GraphDecimal(this.value.sub(param));
   }
 
   times (n: Decimal.Value | GraphDecimal): GraphDecimal {
-    _checkOutOfRange(this);
-    const param = _checkOutOfRange(n);
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
 
     return new GraphDecimal(this.value.times(param));
   }
 
   mul (n: Decimal.Value | GraphDecimal): GraphDecimal {
-    _checkOutOfRange(this);
-    const param = _checkOutOfRange(n);
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
 
     return new GraphDecimal(this.value.mul(param));
   }
 
   dividedBy (n: Decimal.Value | GraphDecimal): GraphDecimal {
-    _checkOutOfRange(this);
-    const param = _checkOutOfRange(n);
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
 
     return new GraphDecimal(this.value.dividedBy(param));
   }
 
   div (n: Decimal.Value | GraphDecimal): GraphDecimal {
-    _checkOutOfRange(this);
-    const param = _checkOutOfRange(n);
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
 
     return new GraphDecimal(this.value.div(param));
   }
 
+  isZero (): boolean {
+    this._checkOutOfRange(this);
+
+    return this.value.isZero();
+  }
+
+  lessThan (n: Decimal.Value | GraphDecimal): boolean {
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
+
+    return this.value.lessThan(param);
+  }
+
+  lt (n: Decimal.Value | GraphDecimal): boolean {
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
+
+    return this.value.lt(param);
+  }
+
+  greaterThan (n: Decimal.Value | GraphDecimal): boolean {
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
+
+    return this.value.lessThan(param);
+  }
+
+  gt (n: Decimal.Value | GraphDecimal): boolean {
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
+
+    return this.value.lessThan(param);
+  }
+
   comparedTo (n: Decimal.Value | GraphDecimal): number {
-    _checkOutOfRange(this);
-    const param = _checkOutOfRange(n);
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
 
     return this.value.comparedTo(param);
   }
 
   cmp (n: Decimal.Value | GraphDecimal): number {
-    _checkOutOfRange(this);
-    const param = _checkOutOfRange(n);
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
 
     return this.value.cmp(param);
   }
-}
 
-/**
- * Function to check and throw an error if a given value has exponent out of the specified range (MIN_EXP to MAX_EXP).
- * @param n A Decimal value to check the range for.
- * @returns A Decimal.Value instance.
- */
-function _checkOutOfRange (n: Decimal.Value | GraphDecimal): Decimal.Value {
-  let exp;
+  /**
+   * Function to check and throw an error if a given value has exponent out of the specified range (MIN_EXP to MAX_EXP).
+   * @param n A Decimal value to check the range for.
+   * @returns A Decimal.Value instance.
+   */
+  private _checkOutOfRange (n: Decimal.Value | GraphDecimal): Decimal.Value {
+    let exp;
 
-  // Return n.value if n is an instance of GraphDecimal.
-  if (n instanceof GraphDecimal) {
-    n = n.value;
-    exp = _getGraphExp(n.d, n.e);
-  } else {
-    const decimal = new Decimal(n);
-    exp = _getGraphExp(decimal.d, decimal.e);
+    // Return n.value if n is an instance of GraphDecimal.
+    if (n instanceof GraphDecimal) {
+      n = n.value;
+      exp = _getGraphExp(n.d, n.e);
+    } else {
+      const decimal = new Decimal(n);
+      exp = _getGraphExp(decimal.d, decimal.e);
+    }
+
+    if (exp < MIN_EXP || exp > MAX_EXP) {
+      throw new Error(`Big decimal exponent '${exp}' is outside the '${MIN_EXP}' to '${MAX_EXP}' range`);
+    }
+
+    return n;
   }
-
-  if (exp < MIN_EXP || exp > MAX_EXP) {
-    throw new Error(`Big decimal exponent '${exp}' is outside the '${MIN_EXP}' to '${MAX_EXP}' range`);
-  }
-
-  return n;
 }
 
 // Get exponent from Decimal d and e according to format in graph-node.

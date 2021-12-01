@@ -3,8 +3,7 @@
 //
 
 import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
-import Decimal from 'decimal.js';
-import { decimalTransformer } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
 
 import { Pool } from './Pool';
 import { Token } from './Token';
@@ -33,26 +32,26 @@ export class Position {
   @Column('bigint', { default: BigInt(0) })
   liquidity!: bigint
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  depositedToken0!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  depositedToken0!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  depositedToken1!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  depositedToken1!: GraphDecimal
 
   @Column('varchar', { length: 42, default: ADDRESS_ZERO })
   owner!: string
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  withdrawnToken0!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  withdrawnToken0!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  withdrawnToken1!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  withdrawnToken1!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  collectedFeesToken0!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  collectedFeesToken0!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  collectedFeesToken1!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  collectedFeesToken1!: GraphDecimal
 
   @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
   pool!: Pool

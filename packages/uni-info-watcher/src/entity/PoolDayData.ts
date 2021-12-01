@@ -2,9 +2,8 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import Decimal from 'decimal.js';
 import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
-import { decimalTransformer } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
 
 import { Pool } from './Pool';
 
@@ -26,17 +25,17 @@ export class PoolDayData {
   @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
   pool!: Pool;
 
-  @Column('numeric', { transformer: decimalTransformer })
-  high!: Decimal;
+  @Column('numeric', { transformer: graphDecimalTransformer })
+  high!: GraphDecimal;
 
-  @Column('numeric', { transformer: decimalTransformer })
-  low!: Decimal;
+  @Column('numeric', { transformer: graphDecimalTransformer })
+  low!: GraphDecimal;
 
-  @Column('numeric', { transformer: decimalTransformer })
-  open!: Decimal;
+  @Column('numeric', { transformer: graphDecimalTransformer })
+  open!: GraphDecimal;
 
-  @Column('numeric', { transformer: decimalTransformer })
-  close!: Decimal;
+  @Column('numeric', { transformer: graphDecimalTransformer })
+  close!: GraphDecimal;
 
   @Column('numeric', { default: BigInt(0) })
   sqrtPrice!: bigint
@@ -53,29 +52,29 @@ export class PoolDayData {
   @Column('numeric', { default: BigInt(0) })
   feeGrowthGlobal1X128!: bigint
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  token0Price!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  token0Price!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  token1Price!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  token1Price!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  tvlUSD!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  tvlUSD!: GraphDecimal
 
   @Column('numeric', { default: BigInt(0) })
   txCount!: bigint
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  volumeToken0!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  volumeToken0!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  volumeToken1!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  volumeToken1!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  volumeUSD!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  volumeUSD!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: decimalTransformer })
-  feesUSD!: Decimal
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  feesUSD!: GraphDecimal
 
   // TODO: Add remaining fields when they are used.
 }

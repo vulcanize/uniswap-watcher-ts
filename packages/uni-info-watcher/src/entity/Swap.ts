@@ -3,8 +3,7 @@
 //
 
 import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
-import Decimal from 'decimal.js';
-import { decimalTransformer } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
 
 import { Transaction } from './Transaction';
 import { Pool } from './Pool';
@@ -46,14 +45,14 @@ export class Swap {
   @Column('varchar', { length: 42 })
   recipient!: string
 
-  @Column('numeric', { transformer: decimalTransformer })
-  amount0!: Decimal
+  @Column('numeric', { transformer: graphDecimalTransformer })
+  amount0!: GraphDecimal
 
-  @Column('numeric', { transformer: decimalTransformer })
-  amount1!: Decimal
+  @Column('numeric', { transformer: graphDecimalTransformer })
+  amount1!: GraphDecimal
 
-  @Column('numeric', { transformer: decimalTransformer })
-  amountUSD!: Decimal
+  @Column('numeric', { transformer: graphDecimalTransformer })
+  amountUSD!: GraphDecimal
 
   @Column('bigint')
   tick!: bigint
