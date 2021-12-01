@@ -36,7 +36,7 @@ export class JobQueue {
 
       retentionDays: 30, // 30 days
 
-      newJobCheckIntervalSeconds: 1
+      newJobCheckInterval: 100
     });
 
     this._boss.on('error', error => log(error));
@@ -56,7 +56,7 @@ export class JobQueue {
         log(`Processing queue ${queue} job ${job.id}...`);
         await callback(job);
       } catch (error) {
-        log(`Error in queue ${queue}`);
+        log(`Error in queue ${queue} job ${job.id}`);
         log(error);
         throw error;
       }
