@@ -3,7 +3,7 @@
 //
 
 import { Entity, Column, PrimaryColumn } from 'typeorm';
-import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
 @Entity()
 export class Factory {
@@ -17,13 +17,13 @@ export class Factory {
   @Column('integer')
   blockNumber!: number;
 
-  @Column('bigint', { default: BigInt(0) })
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   poolCount!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   totalValueLockedETH!: GraphDecimal;
 
-  @Column('bigint', { default: BigInt(0) })
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   txCount!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })

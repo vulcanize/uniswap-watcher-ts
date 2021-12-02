@@ -29,7 +29,6 @@ export class GraphDecimal {
     return this.value.toString();
   }
 
-  // TODO: Use toFixed() instead of toString() in the mapping code.
   toFixed (): string {
     this._checkOutOfRange(this);
 

@@ -3,7 +3,7 @@
 //
 
 import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
-import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
 import { Pool } from './Pool';
 
@@ -19,8 +19,8 @@ export class Tick {
   @Column('integer')
   blockNumber!: number;
 
-  @Column('bigint')
-  tickIdx!: BigInt;
+  @Column('numeric', { transformer: bigintTransformer })
+  tickIdx!: bigint;
 
   @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
   pool!: Pool
@@ -34,9 +34,9 @@ export class Tick {
   @Column('numeric', { transformer: graphDecimalTransformer })
   price1!: GraphDecimal
 
-  @Column('bigint', { default: 0 })
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
   liquidityGross!: bigint
 
-  @Column('bigint', { default: 0 })
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
   liquidityNet!: bigint
 }

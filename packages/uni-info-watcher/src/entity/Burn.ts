@@ -3,7 +3,7 @@
 //
 
 import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
-import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
+import { bigintTransformer, graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
 
 import { Transaction } from './Transaction';
 import { Pool } from './Pool';
@@ -24,8 +24,8 @@ export class Burn {
   @ManyToOne(() => Transaction, transaction => transaction.burns, { onDelete: 'CASCADE' })
   transaction!: Transaction
 
-  @Column('bigint')
-  timestamp!: BigInt;
+  @Column('numeric', { transformer: bigintTransformer })
+  timestamp!: bigint;
 
   @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
   pool!: Pool
@@ -42,7 +42,7 @@ export class Burn {
   @Column('varchar', { length: 42 })
   origin!: string
 
-  @Column('bigint')
+  @Column('numeric', { transformer: bigintTransformer })
   amount!: bigint
 
   @Column('numeric', { transformer: graphDecimalTransformer })
@@ -54,9 +54,9 @@ export class Burn {
   @Column('numeric', { transformer: graphDecimalTransformer })
   amountUSD!: GraphDecimal
 
-  @Column('bigint')
+  @Column('numeric', { transformer: bigintTransformer })
   tickLower!: bigint
 
-  @Column('bigint')
+  @Column('numeric', { transformer: bigintTransformer })
   tickUpper!: bigint
 }

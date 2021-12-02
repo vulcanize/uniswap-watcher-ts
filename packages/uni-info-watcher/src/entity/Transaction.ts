@@ -3,7 +3,7 @@
 //
 
 import { Entity, PrimaryColumn, Column, OneToMany } from 'typeorm';
-import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
 import { Mint } from './Mint';
 import { Burn } from './Burn';
@@ -24,8 +24,8 @@ export class Transaction {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   ethPriceUSD!: GraphDecimal
 
-  @Column('bigint')
-  timestamp!: BigInt;
+  @Column('numeric', { transformer: bigintTransformer })
+  timestamp!: bigint;
 
   @OneToMany(() => Mint, mint => mint.transaction)
   mints!: Mint[];

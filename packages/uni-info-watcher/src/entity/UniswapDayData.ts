@@ -3,7 +3,7 @@
 //
 
 import { Entity, PrimaryColumn, Column } from 'typeorm';
-import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
 @Entity()
 export class UniswapDayData {
@@ -26,7 +26,7 @@ export class UniswapDayData {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   volumeUSD!: GraphDecimal
 
-  @Column('bigint')
+  @Column('numeric', { transformer: bigintTransformer })
   txCount!: bigint;
 
   @Column('numeric', { transformer: graphDecimalTransformer, default: 0 })

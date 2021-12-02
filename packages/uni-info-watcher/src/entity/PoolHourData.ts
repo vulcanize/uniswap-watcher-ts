@@ -3,7 +3,7 @@
 //
 
 import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
-import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
 import { Pool } from './Pool';
 
@@ -37,19 +37,19 @@ export class PoolHourData {
   @Column('numeric', { transformer: graphDecimalTransformer })
   close!: GraphDecimal;
 
-  @Column('numeric', { default: BigInt(0) })
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   sqrtPrice!: bigint
 
-  @Column('bigint', { nullable: true })
+  @Column('numeric', { nullable: true, transformer: bigintTransformer })
   tick!: bigint | null
 
-  @Column('numeric', { default: BigInt(0) })
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   liquidity!: bigint
 
-  @Column('numeric', { default: BigInt(0) })
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   feeGrowthGlobal0X128!: bigint
 
-  @Column('numeric', { default: BigInt(0) })
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   feeGrowthGlobal1X128!: bigint
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
@@ -61,7 +61,7 @@ export class PoolHourData {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   tvlUSD!: GraphDecimal
 
-  @Column('numeric', { default: BigInt(0) })
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   txCount!: bigint
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })

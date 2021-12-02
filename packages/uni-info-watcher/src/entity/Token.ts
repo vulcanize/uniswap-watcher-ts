@@ -3,7 +3,7 @@
 //
 
 import { Entity, PrimaryColumn, Column, ManyToMany, JoinTable } from 'typeorm';
-import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
 import { Pool } from './Pool';
 
@@ -25,16 +25,16 @@ export class Token {
   @Column('varchar')
   name!: string;
 
-  @Column('bigint')
+  @Column('numeric', { transformer: bigintTransformer })
   totalSupply!: bigint;
 
-  @Column('bigint')
+  @Column('numeric', { transformer: bigintTransformer })
   decimals!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   derivedETH!: GraphDecimal;
 
-  @Column('bigint', { default: BigInt(0) })
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   txCount!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
