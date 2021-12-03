@@ -411,6 +411,12 @@ export class Indexer implements IndexerInterface {
       token1 = await this._initToken(block, token1Address);
     }
 
+    // bail if we couldn't figure out the decimals
+    if (token0.decimals === null || token1.decimals === null) {
+      log('mybug the decimal on token was null');
+      return;
+    }
+
     // Save entities to DB.
     const dbTx = await this._db.createTransactionRunner();
 
@@ -1162,7 +1168,6 @@ export class Indexer implements IndexerInterface {
       return;
     }
 
-    // Temp fix from Subgraph mapping code.
     if (utils.getAddress(position.pool.id) === utils.getAddress('0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248')) {
       return;
     }
@@ -1176,13 +1181,6 @@ export class Indexer implements IndexerInterface {
         position.transaction = transaction;
         position = await this._db.savePosition(dbTx, position, block);
       }
-
-      const token0 = position.token0;
-      const token1 = position.token1;
-      const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
-      const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
-      position.collectedFeesToken0 = position.collectedFeesToken0.plus(amount0);
-      position.collectedFeesToken1 = position.collectedFeesToken1.plus(amount1);
 
       await this._db.savePosition(dbTx, position, block);
 
