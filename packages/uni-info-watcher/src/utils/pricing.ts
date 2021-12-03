@@ -121,6 +121,7 @@ export const findEthPerToken = async (db: Database, dbTx: QueryRunner, token: To
         if (pool.token0.id === token.id) {
           // whitelist token is token1
           const token1 = pool.token1;
+
           // get the derived ETH in pool
           const ethLocked = pool.totalValueLockedToken1.times(token1.derivedETH);
 
