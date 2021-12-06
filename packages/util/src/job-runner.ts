@@ -56,10 +56,6 @@ export class JobRunner {
 
     const event = dbEvent;
 
-    // TODO: Fetch as part of the above event loading query
-    const blockProgress = await this._indexer.getBlockProgress(event.block.blockHash);
-    assert(blockProgress);
-
     const events = await this._indexer.getBlockEvents(event.block.blockHash);
     // TODO: Use index field in event table?
     const eventIndex = events.findIndex((e: any) => e.id === event.id);
@@ -69,9 +65,9 @@ export class JobRunner {
     if (eventIndex > 0) { // Skip the first event in the block.
       const prevIndex = eventIndex - 1;
       const prevEvent = events[prevIndex];
-      if (prevEvent.index !== blockProgress.lastProcessedEventIndex) {
+      if (prevEvent.index !== event.block.lastProcessedEventIndex) {
         throw new Error(`Events received out of order for block number ${event.block.blockNumber} hash ${event.block.blockHash},` +
-        ` prev event index ${prevEvent.index}, got event index ${event.index} and lastProcessedEventIndex ${blockProgress.lastProcessedEventIndex}, aborting`);
+        ` prev event index ${prevEvent.index}, got event index ${event.index} and lastProcessedEventIndex ${event.block.lastProcessedEventIndex}, aborting`);
       }
     }
 
