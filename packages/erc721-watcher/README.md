@@ -47,22 +47,6 @@
 
 * Update the `server` config in the [config file](./environments/local.toml) with state checkpoint settings and provide the IPFS API address.
 
-## Customize
-
-* Indexing on an event:
-
-  * Edit the custom hook function `handleEvent` (triggered on an event) in [hooks.ts](./src/hooks.ts) to perform corresponding indexing using the `Indexer` object.
-
-  * While using the indexer storage methods for indexing, pass `diff` as true if default state is desired to be generated using the state variables being indexed.
-
-* Generating state:
-
-  * Edit the custom hook function `createInitialCheckpoint` (triggered if checkpoint: `true`) in [hooks.ts](./src/hooks.ts) to save an initial checkpoint `IPLDBlock` using the `Indexer` object.
-
-  * Edit the custom hook function `createStateDiff` (triggered on a canonical block) in [hooks.ts](./src/hooks.ts) to save the state in a `diff` `IPLDBlock` using the `Indexer` object. The default state (if exists) is updated.
-
-  * Edit the custom hook function `createStateCheckpoint` (triggered just before default and CLI checkpoint) in [hooks.ts](./src/hooks.ts) to save the state in a `checkpoint` `IPLDBlock` using the `Indexer` object.
-
 ## Run
 
 * Run the watcher:
@@ -92,8 +76,8 @@ GQL console: http://localhost:3009/graphql
     * `checkpoint`: Turn checkpointing on (`true` | `false`).
     * `starting-block`: Starting block for the contract (default: latest indexed block).
 
-    Examples:
-    
+    Example:
+
     Watch a contract with its address and checkpointing on:
 
     ```bash
@@ -131,7 +115,7 @@ GQL console: http://localhost:3009/graphql
       ```bash
       yarn reset job-queue --block-number <previous-block-number>
       ```
-    
+
     * `block-number`: Block number to which to reset the watcher.
 
   * To export and import the watcher state:
@@ -149,7 +133,7 @@ GQL console: http://localhost:3009/graphql
       ```bash
       yarn job-runner
       ```
-    
+
     * Import watcher state:
 
       ```bash
@@ -157,7 +141,7 @@ GQL console: http://localhost:3009/graphql
       ```
 
       * `import-file`: Path of JSON file from which to import the watcher data.
-    
+
     * Run fill:
 
       ```bash
