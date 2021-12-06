@@ -25,15 +25,15 @@ import { SyncStatus } from './entity/SyncStatus';
 import { HookStatus } from './entity/HookStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { IPLDBlock } from './entity/IPLDBlock';
-import artifacts from './artifacts/{{inputFileName}}.json';
+import artifacts from './artifacts/ERC721.json';
 import { createInitialCheckpoint, handleEvent, createStateDiff, createStateCheckpoint } from './hooks';
 import { IPFSClient } from './ipfs';
 
 const log = debug('vulcanize:indexer');
 
-{{#each events as | event |}}
-const {{capitalize event.name}}_EVENT = '{{event.name}}';
-{{/each}}
+const TRANSFER_EVENT = 'Transfer';
+const APPROVAL_EVENT = 'Approval';
+const APPROVALFORALL_EVENT = 'ApprovalForAll';
 
 export type ResultEvent = {
   block: {
@@ -165,18 +165,10 @@ export class Indexer implements IndexerInterface {
     };
   }
 
-  {{#each queries as | query |}}
-  async {{query.name}} (blockHash: string, contractAddress: string
-    {{~#each query.params}}, {{this.name~}}: {{this.type~}} {{/each}}
-    {{~#if query.stateVariableType~}}
-    , diff = false): Promise<ValueResult> {
-    {{else~}}
-    ): Promise<ValueResult> {
-    {{/if}}
-    const entity = await this._db.{{query.getQueryName}}({ blockHash, contractAddress
-    {{~#each query.params}}, {{this.name~}} {{~/each}} });
+  async supportsInterface (blockHash: string, contractAddress: string, interfaceId: string): Promise<ValueResult> {
+    const entity = await this._db.getSupportsInterface({ blockHash, contractAddress, interfaceId });
     if (entity) {
-      log('{{query.name}}: db hit.');
+      log('supportsInterface: db hit.');
 
       return {
         value: entity.value,
@@ -184,67 +176,406 @@ export class Indexer implements IndexerInterface {
       };
     }
 
-    log('{{query.name}}: db miss, fetching from upstream server');
+    log('supportsInterface: db miss, fetching from upstream server');
 
     const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
     const blockNumber = ethers.BigNumber.from(number).toNumber();
 
-    {{#if (compare query.mode @root.constants.MODE_ETH_CALL)}}
     const contract = new ethers.Contract(contractAddress, this._abi, this._ethProvider);
-    {{#if (compare query.returnType 'bigint')}}
-    let value = await contract.{{query.name}}(
-    {{~#each query.params}}{{this.name}}, {{/each}}{ blockTag: blockHash });
-    value = value.toString();
-    value = BigInt(value);
-    {{else}}
-    const value = await contract.{{query.name}}(
-    {{~#each query.params}}{{this.name}}, {{/each}}{ blockTag: blockHash });
-    {{/if}}
+    const value = await contract.supportsInterface(interfaceId, { blockTag: blockHash });
 
     const result: ValueResult = { value };
-    {{/if}}
 
-    {{~#if (compare query.mode @root.constants.MODE_STORAGE)}}
+    await this._db.saveSupportsInterface({ blockHash, blockNumber, contractAddress, interfaceId, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    return result;
+  }
+
+  async balanceOf (blockHash: string, contractAddress: string, owner: string): Promise<ValueResult> {
+    const entity = await this._db.getBalanceOf({ blockHash, contractAddress, owner });
+    if (entity) {
+      log('balanceOf: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('balanceOf: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const contract = new ethers.Contract(contractAddress, this._abi, this._ethProvider);
+    let value = await contract.balanceOf(owner, { blockTag: blockHash });
+    value = value.toString();
+    value = BigInt(value);
+
+    const result: ValueResult = { value };
+
+    await this._db.saveBalanceOf({ blockHash, blockNumber, contractAddress, owner, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    return result;
+  }
+
+  async ownerOf (blockHash: string, contractAddress: string, tokenId: bigint): Promise<ValueResult> {
+    const entity = await this._db.getOwnerOf({ blockHash, contractAddress, tokenId });
+    if (entity) {
+      log('ownerOf: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('ownerOf: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const contract = new ethers.Contract(contractAddress, this._abi, this._ethProvider);
+    const value = await contract.ownerOf(tokenId, { blockTag: blockHash });
+
+    const result: ValueResult = { value };
+
+    await this._db.saveOwnerOf({ blockHash, blockNumber, contractAddress, tokenId, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    return result;
+  }
+
+  async getApproved (blockHash: string, contractAddress: string, tokenId: bigint): Promise<ValueResult> {
+    const entity = await this._db.getGetApproved({ blockHash, contractAddress, tokenId });
+    if (entity) {
+      log('getApproved: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('getApproved: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const contract = new ethers.Contract(contractAddress, this._abi, this._ethProvider);
+    const value = await contract.getApproved(tokenId, { blockTag: blockHash });
+
+    const result: ValueResult = { value };
+
+    await this._db.saveGetApproved({ blockHash, blockNumber, contractAddress, tokenId, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    return result;
+  }
+
+  async isApprovedForAll (blockHash: string, contractAddress: string, owner: string, operator: string): Promise<ValueResult> {
+    const entity = await this._db.getIsApprovedForAll({ blockHash, contractAddress, owner, operator });
+    if (entity) {
+      log('isApprovedForAll: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('isApprovedForAll: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const contract = new ethers.Contract(contractAddress, this._abi, this._ethProvider);
+    const value = await contract.isApprovedForAll(owner, operator, { blockTag: blockHash });
+
+    const result: ValueResult = { value };
+
+    await this._db.saveIsApprovedForAll({ blockHash, blockNumber, contractAddress, owner, operator, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    return result;
+  }
+
+  async name (blockHash: string, contractAddress: string): Promise<ValueResult> {
+    const entity = await this._db.getName({ blockHash, contractAddress });
+    if (entity) {
+      log('name: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('name: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const contract = new ethers.Contract(contractAddress, this._abi, this._ethProvider);
+    const value = await contract.name({ blockTag: blockHash });
+
+    const result: ValueResult = { value };
+
+    await this._db.saveName({ blockHash, blockNumber, contractAddress, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    return result;
+  }
+
+  async symbol (blockHash: string, contractAddress: string): Promise<ValueResult> {
+    const entity = await this._db.getSymbol({ blockHash, contractAddress });
+    if (entity) {
+      log('symbol: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('symbol: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const contract = new ethers.Contract(contractAddress, this._abi, this._ethProvider);
+    const value = await contract.symbol({ blockTag: blockHash });
+
+    const result: ValueResult = { value };
+
+    await this._db.saveSymbol({ blockHash, blockNumber, contractAddress, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    return result;
+  }
+
+  async tokenURI (blockHash: string, contractAddress: string, tokenId: bigint): Promise<ValueResult> {
+    const entity = await this._db.getTokenURI({ blockHash, contractAddress, tokenId });
+    if (entity) {
+      log('tokenURI: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('tokenURI: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const contract = new ethers.Contract(contractAddress, this._abi, this._ethProvider);
+    const value = await contract.tokenURI(tokenId, { blockTag: blockHash });
+
+    const result: ValueResult = { value };
+
+    await this._db.saveTokenURI({ blockHash, blockNumber, contractAddress, tokenId, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    return result;
+  }
+
+  async _name (blockHash: string, contractAddress: string, diff = false): Promise<ValueResult> {
+    const entity = await this._db._getName({ blockHash, contractAddress });
+    if (entity) {
+      log('_name: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('_name: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
     const result = await this._baseIndexer.getStorageValue(
       this._storageLayout,
       blockHash,
       contractAddress,
-      '{{query.name}}'{{#if query.params.length}},{{/if}}
-      {{#each query.params}}
-      {{this.name}}{{#unless @last}},{{/unless}}
-      {{/each}}
+      '_name'
     );
-    {{/if}}
 
-    await this._db.{{query.saveQueryName}}({ blockHash, blockNumber, contractAddress
-    {{~#each query.params}}, {{this.name~}} {{/each}}, value: result.value, proof: JSONbig.stringify(result.proof) });
+    await this._db._saveName({ blockHash, blockNumber, contractAddress, value: result.value, proof: JSONbig.stringify(result.proof) });
 
-    {{#if query.stateVariableType}}
-    {{#if (compare query.stateVariableType 'Mapping')}}
     if (diff) {
-      const stateUpdate = updateStateForMappingType({}, '{{query.name}}', [
-      {{~#each query.params}}
-      {{~this.name}}.toString() {{~#unless @last}}, {{/unless~}}
-      {{/each~}}
-      ], result.value.toString());
+      const stateUpdate = updateStateForElementaryType({}, '_name', result.value.toString());
       await this.createDiffStaged(contractAddress, blockHash, stateUpdate);
     }
 
-    {{else if (compare query.stateVariableType 'ElementaryTypeName')}}
-    if (diff) {
-      const stateUpdate = updateStateForElementaryType({}, '{{query.name}}', result.value.toString());
-      await this.createDiffStaged(contractAddress, blockHash, stateUpdate);
-    }
-
-    {{else}}
-    assert(state === 'none', 'Type not supported for default state.');
-
-    {{/if}}
-    {{/if}}
     return result;
   }
 
-  {{/each}}
+  async _symbol (blockHash: string, contractAddress: string, diff = false): Promise<ValueResult> {
+    const entity = await this._db._getSymbol({ blockHash, contractAddress });
+    if (entity) {
+      log('_symbol: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('_symbol: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const result = await this._baseIndexer.getStorageValue(
+      this._storageLayout,
+      blockHash,
+      contractAddress,
+      '_symbol'
+    );
+
+    await this._db._saveSymbol({ blockHash, blockNumber, contractAddress, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    if (diff) {
+      const stateUpdate = updateStateForElementaryType({}, '_symbol', result.value.toString());
+      await this.createDiffStaged(contractAddress, blockHash, stateUpdate);
+    }
+
+    return result;
+  }
+
+  async _owners (blockHash: string, contractAddress: string, key0: bigint, diff = false): Promise<ValueResult> {
+    const entity = await this._db._getOwners({ blockHash, contractAddress, key0 });
+    if (entity) {
+      log('_owners: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('_owners: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const result = await this._baseIndexer.getStorageValue(
+      this._storageLayout,
+      blockHash,
+      contractAddress,
+      '_owners',
+      key0
+    );
+
+    await this._db._saveOwners({ blockHash, blockNumber, contractAddress, key0, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    if (diff) {
+      const stateUpdate = updateStateForMappingType({}, '_owners', [key0.toString()], result.value.toString());
+      await this.createDiffStaged(contractAddress, blockHash, stateUpdate);
+    }
+
+    return result;
+  }
+
+  async _balances (blockHash: string, contractAddress: string, key0: string, diff = false): Promise<ValueResult> {
+    const entity = await this._db._getBalances({ blockHash, contractAddress, key0 });
+    if (entity) {
+      log('_balances: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const result = await this._baseIndexer.getStorageValue(
+      this._storageLayout,
+      blockHash,
+      contractAddress,
+      '_balances',
+      key0
+    );
+
+    await this._db._saveBalances({ blockHash, blockNumber, contractAddress, key0, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    if (diff) {
+      const stateUpdate = updateStateForMappingType({}, '_balances', [key0.toString()], result.value.toString());
+      await this.createDiffStaged(contractAddress, blockHash, stateUpdate);
+    }
+
+    return result;
+  }
+
+  async _tokenApprovals (blockHash: string, contractAddress: string, key0: bigint, diff = false): Promise<ValueResult> {
+    const entity = await this._db._getTokenApprovals({ blockHash, contractAddress, key0 });
+    if (entity) {
+      log('_tokenApprovals: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('_tokenApprovals: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const result = await this._baseIndexer.getStorageValue(
+      this._storageLayout,
+      blockHash,
+      contractAddress,
+      '_tokenApprovals',
+      key0
+    );
+
+    await this._db._saveTokenApprovals({ blockHash, blockNumber, contractAddress, key0, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    if (diff) {
+      const stateUpdate = updateStateForMappingType({}, '_tokenApprovals', [key0.toString()], result.value.toString());
+      await this.createDiffStaged(contractAddress, blockHash, stateUpdate);
+    }
+
+    return result;
+  }
+
+  async _operatorApprovals (blockHash: string, contractAddress: string, key0: string, key1: string, diff = false): Promise<ValueResult> {
+    const entity = await this._db._getOperatorApprovals({ blockHash, contractAddress, key0, key1 });
+    if (entity) {
+      log('_operatorApprovals: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('_operatorApprovals: db miss, fetching from upstream server');
+
+    const { block: { number } } = await this._ethClient.getBlockByHash(blockHash);
+    const blockNumber = ethers.BigNumber.from(number).toNumber();
+
+    const result = await this._baseIndexer.getStorageValue(
+      this._storageLayout,
+      blockHash,
+      contractAddress,
+      '_operatorApprovals',
+      key0,
+      key1
+    );
+
+    await this._db._saveOperatorApprovals({ blockHash, blockNumber, contractAddress, key0, key1, value: result.value, proof: JSONbig.stringify(result.proof) });
+
+    if (diff) {
+      const stateUpdate = updateStateForMappingType({}, '_operatorApprovals', [key0.toString(), key1.toString()], result.value.toString());
+      await this.createDiffStaged(contractAddress, blockHash, stateUpdate);
+    }
+
+    return result;
+  }
+
   async processCanonicalBlock (job: any): Promise<void> {
     const { data: { blockHash } } = job;
 
@@ -332,32 +663,31 @@ export class Indexer implements IndexerInterface {
     const checkpointBlockHash = await this.createCheckpoint(contractAddress, blockHash);
     assert(checkpointBlockHash);
 
-    const block = await this.getBlockProgress(checkpointBlockHash);
-    const checkpointIPLDBlocks = await this._db.getIPLDBlocks({ block, contractAddress, kind: 'checkpoint' });
+    // Push checkpoint to IPFS if configured.
+    if (this.isIPFSConfigured()) {
+      const block = await this.getBlockProgress(checkpointBlockHash);
+      const checkpointIPLDBlocks = await this._db.getIPLDBlocks({ block, contractAddress, kind: 'checkpoint' });
 
-    // There can be at most one IPLDBlock for a (block, contractAddress, kind) combination.
-    assert(checkpointIPLDBlocks.length <= 1);
-    const checkpointIPLDBlock = checkpointIPLDBlocks[0];
+      // There can be at most one IPLDBlock for a (block, contractAddress, kind) combination.
+      assert(checkpointIPLDBlocks.length <= 1);
+      const checkpointIPLDBlock = checkpointIPLDBlocks[0];
 
-    const checkpointData = this.getIPLDData(checkpointIPLDBlock);
-
-    await this.pushToIPFS(checkpointData);
+      const checkpointData = this.getIPLDData(checkpointIPLDBlock);
+      await this.pushToIPFS(checkpointData);
+    }
 
     return checkpointBlockHash;
   }
 
   async createCheckpoint (contractAddress: string, blockHash?: string, data?: any, checkpointInterval?: number): Promise<string | undefined> {
-    const syncStatus = await this.getSyncStatus();
-    assert(syncStatus);
-
     // Getting the current block.
     let currentBlock;
 
     if (blockHash) {
       currentBlock = await this.getBlockProgress(blockHash);
     } else {
-      // In case of empty blockHash from checkpoint CLI, get the latest canonical block for the checkpoint.
-      currentBlock = await this.getBlockProgress(syncStatus.latestCanonicalBlockHash);
+      // In case of empty blockHash from checkpoint CLI, get the latest processed block from hookStatus for the checkpoint.
+      currentBlock = await this.getLatestHooksProcessedBlock();
     }
 
     assert(currentBlock);
@@ -376,8 +706,11 @@ export class Indexer implements IndexerInterface {
     // Make sure the block is marked complete.
     assert(currentBlock.isComplete, 'Block for a checkpoint should be marked as complete');
 
-    // Make sure the block is in the pruned region.
-    assert(currentBlock.blockNumber <= syncStatus.latestCanonicalBlockNumber, 'Block for a checkpoint should be in the pruned region');
+    const hookStatus = await this.getHookStatus();
+    assert(hookStatus);
+
+    // Make sure the hooks have been processed for the block.
+    assert(currentBlock.blockNumber <= hookStatus.latestProcessedBlockNumber, 'Block for a checkpoint should have hooks processed');
 
     // Fetch the latest checkpoint for the contract.
     const checkpointBlock = await this.getLatestIPLDBlock(contractAddress, 'checkpoint', currentBlock.blockNumber);
@@ -572,24 +905,39 @@ export class Indexer implements IndexerInterface {
     const logDescription = this._contract.parseLog({ data, topics });
 
     switch (logDescription.name) {
-      {{#each events as | event |}}
-      case {{capitalize event.name}}_EVENT: {
+      case TRANSFER_EVENT: {
         eventName = logDescription.name;
-        const { {{#each event.params~}} {{this.name}} {{~#unless @last}}, {{/unless}} {{~/each}} } = logDescription.args;
+        const { from, to, tokenId } = logDescription.args;
         eventInfo = {
-          {{#each event.params}}
-          {{#if (compare this.type 'bigint')}}
-          {{this.name}}: BigInt(ethers.BigNumber.from({{this.name}}).toString())
-          {{~else}}
-          {{this.name}}
-          {{~/if}}
-          {{~#unless @last}},{{/unless}}
-          {{/each}}
+          from,
+          to,
+          tokenId: BigInt(tokenId.toString())
         };
 
         break;
       }
-      {{/each}}
+      case APPROVAL_EVENT: {
+        eventName = logDescription.name;
+        const { owner, approved, tokenId } = logDescription.args;
+        eventInfo = {
+          owner,
+          approved,
+          tokenId: BigInt(tokenId.toString())
+        };
+
+        break;
+      }
+      case APPROVALFORALL_EVENT: {
+        eventName = logDescription.name;
+        const { owner, operator, approved } = logDescription.args;
+        eventInfo = {
+          owner,
+          operator,
+          approved
+        };
+
+        break;
+      }
     }
 
     return { eventName, eventInfo };
@@ -647,11 +995,26 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
-  async getLatestCanonicalBlock (): Promise<BlockProgress | undefined> {
+  async getLatestCanonicalBlock (): Promise<BlockProgress> {
     const syncStatus = await this.getSyncStatus();
     assert(syncStatus);
 
-    return this.getBlockProgress(syncStatus.latestCanonicalBlockHash);
+    const latestCanonicalBlock = await this.getBlockProgress(syncStatus.latestCanonicalBlockHash);
+    assert(latestCanonicalBlock);
+
+    return latestCanonicalBlock;
+  }
+
+  async getLatestHooksProcessedBlock (): Promise<BlockProgress> {
+    const hookStatus = await this.getHookStatus();
+    assert(hookStatus);
+
+    const blocksAtHeight = await this.getBlocksAtHeight(hookStatus.latestProcessedBlockNumber, false);
+
+    // There can exactly one block at hookStatus.latestProcessedBlockNumber height.
+    assert(blocksAtHeight.length === 1);
+
+    return blocksAtHeight[0];
   }
 
   async getEventsByFilter (blockHash: string, contract?: string, name?: string): Promise<Array<Event>> {

@@ -1,0 +1,101 @@
+type Query {
+  supportsInterface(blockHash: String!, contractAddress: String!, interfaceId: String!): ResultBoolean!
+  events(blockHash: String!, contractAddress: String!, name: String): [ResultEvent!]
+  eventsInRange(fromBlockNumber: Int!, toBlockNumber: Int!): [ResultEvent!]
+  balanceOf(blockHash: String!, contractAddress: String!, owner: String!): ResultBigInt!
+  ownerOf(blockHash: String!, contractAddress: String!, tokenId: BigInt!): ResultString!
+  getApproved(blockHash: String!, contractAddress: String!, tokenId: BigInt!): ResultString!
+  isApprovedForAll(blockHash: String!, contractAddress: String!, owner: String!, operator: String!): ResultBoolean!
+  name(blockHash: String!, contractAddress: String!): ResultString!
+  symbol(blockHash: String!, contractAddress: String!): ResultString!
+  tokenURI(blockHash: String!, contractAddress: String!, tokenId: BigInt!): ResultString!
+  _name(blockHash: String!, contractAddress: String!): ResultString!
+  _symbol(blockHash: String!, contractAddress: String!): ResultString!
+  _owners(blockHash: String!, contractAddress: String!, key0: BigInt!): ResultString!
+  _balances(blockHash: String!, contractAddress: String!, key0: String!): ResultBigInt!
+  _tokenApprovals(blockHash: String!, contractAddress: String!, key0: BigInt!): ResultString!
+  _operatorApprovals(blockHash: String!, contractAddress: String!, key0: String!, key1: String!): ResultBoolean!
+  getStateByCID(cid: String!): ResultIPLDBlock
+  getState(blockHash: String!, contractAddress: String!, kind: String): ResultIPLDBlock
+}
+
+type ResultBoolean {
+  value: Boolean!
+  proof: Proof
+}
+
+type Proof {
+  data: String!
+}
+
+type ResultEvent {
+  block: Block!
+  tx: Transaction!
+  contract: String!
+  eventIndex: Int!
+  event: Event!
+  proof: Proof
+}
+
+type Block {
+  cid: String!
+  hash: String!
+  number: Int!
+  timestamp: Int!
+  parentHash: String!
+}
+
+type Transaction {
+  hash: String!
+  index: Int!
+  from: String!
+  to: String!
+}
+
+union Event = TransferEvent | ApprovalEvent | ApprovalForAllEvent
+
+type TransferEvent {
+  from: String!
+  to: String!
+  tokenId: BigInt!
+}
+
+scalar BigInt
+
+type ApprovalEvent {
+  owner: String!
+  approved: String!
+  tokenId: BigInt!
+}
+
+type ApprovalForAllEvent {
+  owner: String!
+  operator: String!
+  approved: Boolean!
+}
+
+type ResultBigInt {
+  value: BigInt!
+  proof: Proof
+}
+
+type ResultString {
+  value: String!
+  proof: Proof
+}
+
+type ResultIPLDBlock {
+  block: Block!
+  contractAddress: String!
+  cid: String!
+  kind: String!
+  data: String!
+}
+
+type Mutation {
+  watchContract(address: String!, kind: String!, checkpoint: Boolean!, startingBlock: Int): Boolean!
+}
+
+type Subscription {
+  onEvent: ResultEvent!
+}
