@@ -55,6 +55,9 @@ export class JobRunner {
 
   async subscribeEventProcessingQueue (): Promise<void> {
     await this._jobQueue.subscribe(QUEUE_EVENT_PROCESSING, async (job) => {
+      // TODO: Support two kind of jobs on the event processing queue.
+      // 1) processEvent  => Current single event
+      // 2) processEvents => Event range (multiple events)
       const event = await this._baseJobRunner.processEvent(job);
 
       let dbEvent;

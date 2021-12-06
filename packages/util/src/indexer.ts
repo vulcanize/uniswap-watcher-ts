@@ -283,6 +283,8 @@ export class Indexer {
   async isWatchedContract (address : string): Promise<ContractInterface | undefined> {
     assert(this._db.getContract);
 
+    // TODO: Cache watched contracts on startup. Method to add contract should also update cache.
+
     return this._db.getContract(ethers.utils.getAddress(address));
   }
 

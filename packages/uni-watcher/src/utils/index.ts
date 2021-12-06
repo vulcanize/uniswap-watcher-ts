@@ -7,6 +7,7 @@ import { ethers } from 'ethers';
 import { Database } from '../database';
 import { Client as UniClient } from '../client';
 
+// TODO: Move to base indexer.
 export async function watchContract (db: Database, address: string, kind: string, startingBlock: number): Promise<void> {
   // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
   const contractAddress = ethers.utils.getAddress(address);

@@ -10,7 +10,7 @@
   username = "postgres"
   password = "postgres"
   synchronize = true
-  logging = false
+  logging = true
 
 [upstream]
   [upstream.ethServer]

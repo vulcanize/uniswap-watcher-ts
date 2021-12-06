@@ -56,10 +56,12 @@ export class JobRunner {
 
     const event = dbEvent;
 
+    // TODO: Fetch as part of the above event loading query
     const blockProgress = await this._indexer.getBlockProgress(event.block.blockHash);
     assert(blockProgress);
 
     const events = await this._indexer.getBlockEvents(event.block.blockHash);
+    // TODO: Use index field in event table?
     const eventIndex = events.findIndex((e: any) => e.id === event.id);
     assert(eventIndex !== -1);
 
