@@ -5,11 +5,11 @@
 import assert from 'assert';
 import yargs from 'yargs';
 import 'reflect-metadata';
-import { ethers } from 'ethers';
 
-import { Config, DEFAULT_CONFIG_PATH, getConfig } from '@vulcanize/util';
+import { Config, DEFAULT_CONFIG_PATH, getConfig, getResetConfig } from '@vulcanize/util';
 
 import { Database } from '../database';
+import { Indexer } from '../indexer';
 
 (async () => {
   const argv = await yargs.parserConfiguration({
@@ -37,16 +37,17 @@ import { Database } from '../database';
   }).argv;
 
   const config: Config = await getConfig(argv.configFile);
-  const { database: dbConfig } = config;
+  const { database: dbConfig, server: { mode } } = config;
+  const { ethClient, postgraphileClient, ethProvider } = await getResetConfig(config);
 
   assert(dbConfig);
 
   const db = new Database(dbConfig);
   await db.init();
 
-  // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
-  const address = ethers.utils.getAddress(argv.address);
+  const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider, mode);
 
-  await db.saveContract(address, argv.startingBlock);
+  await indexer.watchContract(argv.address, argv.startingBlock);
+
   await db.close();
 })();

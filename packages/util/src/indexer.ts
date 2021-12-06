@@ -288,6 +288,24 @@ export class Indexer {
     return this._db.getContract(ethers.utils.getAddress(address));
   }
 
+  async watchContract (address: string, kind: string, startingBlock: number): Promise<void> {
+    assert(this._db.saveContract);
+    const dbTx = await this._db.createTransactionRunner();
+
+    // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
+    const contractAddress = ethers.utils.getAddress(address);
+
+    try {
+      await this._db.saveContract(dbTx, contractAddress, kind, startingBlock);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+  }
+
   async getStorageValue (storageLayout: StorageLayout, blockHash: string, token: string, variable: string, ...mappingKeys: any[]): Promise<ValueResult> {
     return getStorageValue(
       storageLayout,

@@ -29,6 +29,8 @@ const ETH_CALL_MODE = 'eth_call';
 const TRANSFER_EVENT = 'Transfer';
 const APPROVAL_EVENT = 'Approval';
 
+const CONTRACT_KIND = 'token';
+
 interface EventResult {
   event: {
     from?: string;
@@ -290,19 +292,16 @@ export class Indexer {
     return { eventName, eventInfo };
   }
 
-  async watchContract (address: string, startingBlock: number): Promise<boolean> {
-    // Always use the checksum address (https://docs.ethers.io/v5/api/utils/address/#utils-getAddress).
-    await this._db.saveContract(ethers.utils.getAddress(address), startingBlock);
-
-    return true;
-  }
-
   async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<Event>> {
     return this._baseIndexer.getEventsByFilter(blockHash, contract, name);
   }
 
   async isWatchedContract (address : string): Promise<Contract | undefined> {
     return this._baseIndexer.isWatchedContract(address);
+  }
+
+  async watchContract (address: string, startingBlock: number): Promise<void> {
+    return this._baseIndexer.watchContract(address, CONTRACT_KIND, startingBlock);
   }
 
   async saveEventEntity (dbEvent: Event): Promise<Event> {

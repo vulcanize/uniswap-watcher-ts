@@ -154,7 +154,9 @@ export class Database {
   }
 
   async updateBlockProgress (repo: Repository<BlockProgressInterface>, blockHash: string, lastProcessedEventIndex: number): Promise<void> {
+    // TODO: Use updated block entity instead of querying database.
     const entity = await repo.findOne({ where: { blockHash } });
+
     if (entity && !entity.isComplete) {
       if (lastProcessedEventIndex <= entity.lastProcessedEventIndex) {
         throw new Error(`Events processed out of order ${blockHash}, was ${entity.lastProcessedEventIndex}, got ${lastProcessedEventIndex}`);
@@ -166,6 +168,7 @@ export class Database {
         entity.isComplete = true;
       }
 
+      // TODO: Use update query instead of select and update.
       await repo.save(entity);
     }
   }

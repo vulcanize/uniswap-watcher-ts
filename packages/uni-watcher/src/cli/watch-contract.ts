@@ -6,10 +6,10 @@ import assert from 'assert';
 import yargs from 'yargs';
 import 'reflect-metadata';
 
-import { Config, DEFAULT_CONFIG_PATH, getConfig } from '@vulcanize/util';
+import { Config, DEFAULT_CONFIG_PATH, getConfig, getResetConfig } from '@vulcanize/util';
 
 import { Database } from '../database';
-import { watchContract } from '../utils/index';
+import { Indexer } from '../indexer';
 
 (async () => {
   const argv = await yargs.parserConfiguration({
@@ -44,13 +44,16 @@ import { watchContract } from '../utils/index';
 
   const config: Config = await getConfig(argv.configFile);
   const { database: dbConfig } = config;
+  const { ethClient, postgraphileClient, ethProvider } = await getResetConfig(config);
 
   assert(dbConfig);
 
   const db = new Database(dbConfig);
   await db.init();
 
-  await watchContract(db, argv.address, argv.kind, argv.startingBlock);
+  const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider);
+
+  await indexer.watchContract(argv.address, argv.kind, argv.startingBlock);
 
   await db.close();
 })();

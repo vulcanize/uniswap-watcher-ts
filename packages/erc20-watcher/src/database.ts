@@ -15,8 +15,6 @@ import { Event } from './entity/Event';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
 
-const CONTRACT_KIND = 'token';
-
 export class Database {
   _config: ConnectionOptions
   _conn!: Connection
@@ -116,12 +114,10 @@ export class Database {
     return this._baseDatabase.saveEvents(blockRepo, eventRepo, block, events);
   }
 
-  async saveContract (address: string, startingBlock: number): Promise<void> {
-    await this._conn.transaction(async (tx) => {
-      const repo = tx.getRepository(Contract);
+  async saveContract (queryRunner: QueryRunner, address: string, kind: string, startingBlock: number): Promise<void> {
+    const repo = queryRunner.manager.getRepository(Contract);
 
-      return this._baseDatabase.saveContract(repo, address, startingBlock, CONTRACT_KIND);
-    });
+    return this._baseDatabase.saveContract(repo, address, startingBlock, kind);
   }
 
   async updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, force = false): Promise<SyncStatus> {
