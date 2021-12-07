@@ -51,23 +51,17 @@ export class JobRunner {
 
     log(`Processing event ${id}`);
 
-    const dbEvent = await this._indexer.getEvent(id);
-    assert(dbEvent);
-
-    const event = dbEvent;
-
-    const events = await this._indexer.getBlockEvents(event.block.blockHash);
-    // TODO: Use index field in event table?
-    const eventIndex = events.findIndex((e: any) => e.id === event.id);
-    assert(eventIndex !== -1);
+    const event = await this._indexer.getEvent(id);
+    assert(event);
+    const eventIndex = event.index;
 
     // Check if previous event in block has been processed exactly before this and abort if not.
     if (eventIndex > 0) { // Skip the first event in the block.
       const prevIndex = eventIndex - 1;
-      const prevEvent = events[prevIndex];
-      if (prevEvent.index !== event.block.lastProcessedEventIndex) {
+
+      if (prevIndex !== event.block.lastProcessedEventIndex) {
         throw new Error(`Events received out of order for block number ${event.block.blockNumber} hash ${event.block.blockHash},` +
-        ` prev event index ${prevEvent.index}, got event index ${event.index} and lastProcessedEventIndex ${event.block.lastProcessedEventIndex}, aborting`);
+        ` prev event index ${prevIndex}, got event index ${event.index} and lastProcessedEventIndex ${event.block.lastProcessedEventIndex}, aborting`);
       }
     }
 

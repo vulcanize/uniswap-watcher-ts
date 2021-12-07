@@ -66,7 +66,7 @@ export class Indexer implements IndexerInterface {
   getResultEvent (event: Event): ResultEvent {
     const block = event.block;
     const eventFields = JSON.parse(event.eventInfo);
-    const { tx } = JSON.parse(event.extraInfo);
+    const { tx, eventIndex } = JSON.parse(event.extraInfo);
 
     return {
       block: {
@@ -78,7 +78,7 @@ export class Indexer implements IndexerInterface {
 
       tx,
       contract: event.contract,
-      eventIndex: event.index,
+      eventIndex,
 
       event: {
         __typename: event.eventName,
@@ -365,10 +365,10 @@ export class Indexer implements IndexerInterface {
       } = events[i];
 
       const { __typename: eventName, ...eventInfo } = event;
-      const extraInfo = { tx };
+      const extraInfo = { tx, eventIndex };
 
       dbEvents.push({
-        index: eventIndex,
+        index: i,
         txHash: tx.hash,
         contract,
         eventName,
