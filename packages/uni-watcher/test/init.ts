@@ -6,7 +6,7 @@ import { Contract, ethers, Signer } from 'ethers';
 import assert from 'assert';
 
 import {
-  getConfig, getResetConfig
+  getConfig, getResetConfig, JobQueue
 } from '@vulcanize/util';
 import {
   deployWETH9Token,
@@ -52,7 +52,7 @@ const main = async () => {
   // Get config.
   const config = await getConfig(CONFIG_FILE);
 
-  const { database: dbConfig, server: { host, port } } = config;
+  const { database: dbConfig, server: { host, port }, jobQueue: jobQueueConfig } = config;
   assert(dbConfig, 'Missing dbConfig.');
   assert(host, 'Missing host.');
   assert(port, 'Missing port.');
@@ -75,7 +75,13 @@ const main = async () => {
   const provider = ethProvider as ethers.providers.JsonRpcProvider;
   const signer = provider.getSigner();
 
-  const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider);
+  const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
+  assert(dbConnectionString, 'Missing job queue db connection string');
+
+  const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
+  await jobQueue.start();
+
+  const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider, jobQueue);
 
   let factory: Contract;
   // Checking whether factory is deployed.

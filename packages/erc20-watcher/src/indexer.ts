@@ -12,7 +12,7 @@ import { BaseProvider } from '@ethersproject/providers';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { StorageLayout } from '@vulcanize/solidity-mapper';
-import { EventInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME } from '@vulcanize/util';
+import { EventInterface, Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME, JobQueue } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Event } from './entity/Event';
@@ -55,7 +55,7 @@ export class Indexer {
   _contract: ethers.utils.Interface
   _serverMode: string
 
-  constructor (db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider, serverMode: string) {
+  constructor (db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider, jobQueue: JobQueue, serverMode: string) {
     assert(db);
     assert(ethClient);
 
@@ -64,7 +64,7 @@ export class Indexer {
     this._postgraphileClient = postgraphileClient;
     this._ethProvider = ethProvider;
     this._serverMode = serverMode;
-    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient, this._ethProvider);
+    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient, this._ethProvider, jobQueue);
 
     const { abi, storageLayout } = artifacts;
 

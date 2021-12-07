@@ -56,6 +56,10 @@ export class JobRunner {
     await this._jobQueue.subscribe(QUEUE_EVENT_PROCESSING, async (job) => {
       const event = await this._baseJobRunner.processEvent(job);
 
+      if (!event) {
+        return;
+      }
+
       const watchedContract = await this._indexer.isWatchedContract(event.contract);
       if (watchedContract) {
         await this._indexer.processEvent(event);
@@ -107,7 +111,6 @@ export const main = async (): Promise<any> => {
   });
 
   const ethProvider = getCustomProvider(rpcProviderEndpoint);
-  const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider, mode);
 
   assert(jobQueueConfig, 'Missing job queue config');
 
@@ -116,6 +119,8 @@ export const main = async (): Promise<any> => {
 
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
+
+  const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider, jobQueue, mode);
 
   const jobRunner = new JobRunner(jobQueueConfig, indexer, jobQueue);
   await jobRunner.start();

@@ -45,13 +45,13 @@ export class Database implements DatabaseInterface {
       .getOne();
   }
 
-  async getContract (address: string): Promise<Contract | undefined> {
+  async getContracts (): Promise<Contract[]> {
     const repo = this._conn.getRepository(Contract);
 
-    return this._baseDatabase.getContract(repo, address);
+    return this._baseDatabase.getContracts(repo);
   }
 
-  async saveContract (queryRunner: QueryRunner, address: string, kind: string, startingBlock: number): Promise<void> {
+  async saveContract (queryRunner: QueryRunner, address: string, kind: string, startingBlock: number): Promise<Contract> {
     const repo = queryRunner.manager.getRepository(Contract);
 
     return this._baseDatabase.saveContract(repo, address, startingBlock, kind);

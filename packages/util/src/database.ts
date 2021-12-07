@@ -553,21 +553,24 @@ export class Database {
     return { canonicalBlockNumber, blockHashes };
   }
 
-  async getContract (repo: Repository<ContractInterface>, address: string): Promise<ContractInterface | undefined> {
+  async getContracts (repo: Repository<ContractInterface>): Promise<ContractInterface[]> {
     return repo.createQueryBuilder('contract')
-      .where('address = :address', { address })
-      .getOne();
+      .getMany();
   }
 
-  async saveContract (repo: Repository<ContractInterface>, address: string, startingBlock: number, kind?: string): Promise<void> {
-    const numRows = await repo
+  async saveContract (repo: Repository<ContractInterface>, address: string, startingBlock: number, kind?: string): Promise<ContractInterface> {
+    const contract = await repo
       .createQueryBuilder()
       .where('address = :address', { address })
-      .getCount();
+      .getOne();
 
-    if (numRows === 0) {
-      const entity = repo.create({ address, kind, startingBlock });
-      await repo.save(entity);
+    const entity = repo.create({ address, kind, startingBlock });
+
+    // If contract already present, overwrite fields.
+    if (contract) {
+      entity.id = contract.id;
     }
+
+    return repo.save(entity);
   }
 }
