@@ -169,21 +169,20 @@ export class Indexer {
     }
   }
 
-  async updateBlockProgress (block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<void> {
+  async updateBlockProgress (block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<BlockProgressInterface> {
     const dbTx = await this._db.createTransactionRunner();
-    let res;
 
     try {
-      res = await this._db.updateBlockProgress(dbTx, block, lastProcessedEventIndex);
+      const updatedBlock = await this._db.updateBlockProgress(dbTx, block, lastProcessedEventIndex);
       await dbTx.commitTransaction();
+
+      return updatedBlock;
     } catch (error) {
       await dbTx.rollbackTransaction();
       throw error;
     } finally {
       await dbTx.release();
     }
-
-    return res;
   }
 
   async getEvent (id: string): Promise<EventInterface | undefined> {

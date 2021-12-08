@@ -2,7 +2,7 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { DeepPartial, FindConditions, FindManyOptions, QueryRunner } from 'typeorm';
+import { Connection, DeepPartial, FindConditions, FindManyOptions, QueryRunner } from 'typeorm';
 
 export interface BlockProgressInterface {
   id: number;
@@ -56,11 +56,15 @@ export interface IndexerInterface {
   getAncestorAtDepth (blockHash: string, depth: number): Promise<string>
   getOrFetchBlockEvents (block: DeepPartial<BlockProgressInterface>): Promise<Array<EventInterface>>
   removeUnknownEvents (block: BlockProgressInterface): Promise<void>
-  updateBlockProgress (block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<void>
+  updateBlockProgress (block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<BlockProgressInterface>
   updateSyncStatusChainHead (blockHash: string, blockNumber: number): Promise<SyncStatusInterface>
   updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number, force?: boolean): Promise<SyncStatusInterface>
   updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force?: boolean): Promise<SyncStatusInterface>
   markBlocksAsPruned (blocks: BlockProgressInterface[]): Promise<void>;
+  saveEventEntity (dbEvent: EventInterface): Promise<EventInterface>;
+  processEvent (event: EventInterface): Promise<void>;
+  parseEventNameAndArgs?: (kind: string, logObj: any) => any;
+  isWatchedContract?: (address: string) => Promise<ContractInterface | undefined>;
   cacheContract?: (contract: ContractInterface) => void;
 }
 
@@ -71,6 +75,7 @@ export interface EventWatcherInterface {
 }
 
 export interface DatabaseInterface {
+  _conn: Connection;
   createTransactionRunner(): Promise<QueryRunner>;
   getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
   getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>;
@@ -81,7 +86,7 @@ export interface DatabaseInterface {
   getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }>;
   getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<EventInterface>>;
   markBlocksAsPruned (queryRunner: QueryRunner, blocks: BlockProgressInterface[]): Promise<void>;
-  updateBlockProgress (queryRunner: QueryRunner, block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<void>
+  updateBlockProgress (queryRunner: QueryRunner, block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<BlockProgressInterface>
   updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, force?: boolean): Promise<SyncStatusInterface>;
   updateSyncStatusChainHead (queryRunner: QueryRunner, blockHash: string, blockNumber: number): Promise<SyncStatusInterface>;
   updateSyncStatusCanonicalBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, force?: boolean): Promise<SyncStatusInterface>;

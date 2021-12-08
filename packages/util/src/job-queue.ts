@@ -97,7 +97,7 @@ export class JobQueue {
     assert(this._boss);
 
     const jobId = await this._boss.publish(queue, job, options);
-    log(`Created job in queue ${queue}: ${jobId} data: ${job.id}`);
+    log(`Created job in queue ${queue}: ${jobId}`);
   }
 
   async deleteAllJobs (): Promise<void> {

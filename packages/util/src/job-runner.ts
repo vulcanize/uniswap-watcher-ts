@@ -8,9 +8,9 @@ import { wait } from './misc';
 import { createPruningJob } from './common';
 
 import { JobQueueConfig } from './config';
-import { JOB_KIND_INDEX, JOB_KIND_PRUNE, JOB_KIND_EVENT, JOB_KIND_CONTRACT, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING } from './constants';
+import { JOB_KIND_INDEX, JOB_KIND_PRUNE, JOB_KIND_EVENT, JOB_KIND_CONTRACT, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UNKNOWN_EVENT_NAME } from './constants';
 import { JobQueue } from './job-queue';
-import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
+import { EventInterface, IndexerInterface, SyncStatusInterface, BlockProgressInterface } from './types';
 
 const log = debug('vulcanize:job-runner');
 
@@ -18,6 +18,7 @@ export class JobRunner {
   _indexer: IndexerInterface
   _jobQueue: JobQueue
   _jobQueueConfig: JobQueueConfig
+  _blockInProcess?: BlockProgressInterface
 
   constructor (jobQueueConfig: JobQueueConfig, indexer: IndexerInterface, jobQueue: JobQueue) {
     this._jobQueueConfig = jobQueueConfig;
@@ -44,6 +45,8 @@ export class JobRunner {
         log(`Invalid Job kind ${kind} in QUEUE_BLOCK_PROCESSING.`);
         break;
     }
+
+    await this._jobQueue.markComplete(job);
   }
 
   async processEvent (job: any): Promise<EventInterface | void> {
@@ -51,15 +54,19 @@ export class JobRunner {
 
     switch (kind) {
       case JOB_KIND_EVENT:
-        return this._processEvent(job);
+        await this._processEvent(job);
+        break;
 
       case JOB_KIND_CONTRACT:
-        return this._updateWatchedContracts(job);
+        await this._updateWatchedContracts(job);
+        break;
 
       default:
         log(`Invalid Job kind ${kind} in QUEUE_EVENT_PROCESSING.`);
         break;
     }
+
+    await this._jobQueue.markComplete(job);
   }
 
   async _pruneChain (job: any, syncStatus: SyncStatusInterface): Promise<void> {
@@ -165,20 +172,24 @@ export class JobRunner {
       await wait(jobDelayInMilliSecs);
       const events = await this._indexer.getOrFetchBlockEvents({ blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
 
-      for (let ei = 0; ei < events.length; ei++) {
-        await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENT, event: events[ei], publish: true });
+      if (events.length) {
+        this._blockInProcess = events[0].block;
+
+        for (const event of events) {
+          await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENT, event, publish: true });
+        }
       }
     }
   }
 
-  async _processEvent (job: any): Promise<EventInterface> {
-    const event: EventInterface = job.data.event;
+  async _processEvent (job: any): Promise<void> {
+    let event: EventInterface = job.data.event;
     assert(event);
 
     const eventIndex = event.index;
     log(`Processing event ${event.id} index ${eventIndex}`);
 
-    const block = await this._indexer.getBlockProgress(event.block.blockHash);
+    const block = this._blockInProcess;
     assert(block);
 
     event.block = block;
@@ -193,7 +204,33 @@ export class JobRunner {
       }
     }
 
-    return event;
+    let watchedContract;
+
+    if (!this._indexer.isWatchedContract) {
+      // uni-info-watcher indexer doesn't have watched contracts implementation.
+      watchedContract = true;
+    } else {
+      watchedContract = await this._indexer.isWatchedContract(event.contract);
+    }
+    if (watchedContract) {
+      // We might not have parsed this event yet. This can happen if the contract was added
+      // as a result of a previous event in the same block.
+      if (event.eventName === UNKNOWN_EVENT_NAME) {
+        const logObj = JSON.parse(event.extraInfo);
+
+        assert(this._indexer.parseEventNameAndArgs);
+        assert(typeof watchedContract !== 'boolean');
+        const { eventName, eventInfo } = this._indexer.parseEventNameAndArgs(watchedContract.kind, logObj);
+
+        event.eventName = eventName;
+        event.eventInfo = JSON.stringify(eventInfo);
+        event = await this._indexer.saveEventEntity(event);
+      }
+
+      await this._indexer.processEvent(event);
+    }
+
+    this._blockInProcess = await this._indexer.updateBlockProgress(event.block, event.index);
   }
 
   async _updateWatchedContracts (job: any): Promise<void> {
