@@ -166,27 +166,30 @@ export class JobRunner {
       const events = await this._indexer.getOrFetchBlockEvents({ blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
 
       for (let ei = 0; ei < events.length; ei++) {
-        await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENT, id: events[ei].id, publish: true });
+        await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENT, event: events[ei], publish: true });
       }
     }
   }
 
   async _processEvent (job: any): Promise<EventInterface> {
-    const { data: { id } } = job;
-
-    log(`Processing event ${id}`);
-
-    const event = await this._indexer.getEvent(id);
+    const event: EventInterface = job.data.event;
     assert(event);
+
     const eventIndex = event.index;
+    log(`Processing event ${event.id} index ${eventIndex}`);
+
+    const block = await this._indexer.getBlockProgress(event.block.blockHash);
+    assert(block);
+
+    event.block = block;
 
     // Check if previous event in block has been processed exactly before this and abort if not.
     if (eventIndex > 0) { // Skip the first event in the block.
       const prevIndex = eventIndex - 1;
 
-      if (prevIndex !== event.block.lastProcessedEventIndex) {
-        throw new Error(`Events received out of order for block number ${event.block.blockNumber} hash ${event.block.blockHash},` +
-        ` prev event index ${prevIndex}, got event index ${event.index} and lastProcessedEventIndex ${event.block.lastProcessedEventIndex}, aborting`);
+      if (prevIndex !== block.lastProcessedEventIndex) {
+        throw new Error(`Events received out of order for block number ${block.blockNumber} hash ${block.blockHash},` +
+        ` prev event index ${prevIndex}, got event index ${event.index} and lastProcessedEventIndex ${block.lastProcessedEventIndex}, aborting`);
       }
     }
 

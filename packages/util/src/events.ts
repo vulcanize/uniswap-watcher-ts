@@ -100,12 +100,10 @@ export class EventWatcher {
   }
 
   async eventProcessingCompleteHandler (job: any): Promise<EventInterface> {
-    const { data: { request } } = job;
+    const { data: { request: { data: { event } } } } = job;
+    assert(event);
 
-    const dbEvent = await this._indexer.getEvent(request.data.id);
-    assert(dbEvent);
-
-    const blockProgress = await this._indexer.getBlockProgress(dbEvent.block.blockHash);
+    const blockProgress = await this._indexer.getBlockProgress(event.block.blockHash);
 
     if (blockProgress) {
       await this.publishBlockProgressToSubscribers(blockProgress);
@@ -115,7 +113,7 @@ export class EventWatcher {
       }
     }
 
-    return dbEvent;
+    return event;
   }
 
   async publishBlockProgressToSubscribers (blockProgress: BlockProgressInterface): Promise<void> {
