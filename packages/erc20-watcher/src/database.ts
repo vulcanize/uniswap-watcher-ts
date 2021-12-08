@@ -167,10 +167,10 @@ export class Database {
     return this._baseDatabase.getBlockProgress(repo, blockHash);
   }
 
-  async updateBlockProgress (queryRunner: QueryRunner, blockHash: string, lastProcessedEventIndex: number): Promise<void> {
+  async updateBlockProgress (queryRunner: QueryRunner, block: BlockProgress, lastProcessedEventIndex: number): Promise<void> {
     const repo = queryRunner.manager.getRepository(BlockProgress);
 
-    return this._baseDatabase.updateBlockProgress(repo, blockHash, lastProcessedEventIndex);
+    return this._baseDatabase.updateBlockProgress(repo, block, lastProcessedEventIndex);
   }
 
   async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindManyOptions<Entity> | FindConditions<Entity>): Promise<void> {

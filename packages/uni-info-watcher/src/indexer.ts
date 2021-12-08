@@ -346,8 +346,8 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getBlocksAtHeight(height, isPruned);
   }
 
-  async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {
-    return this._baseIndexer.updateBlockProgress(blockHash, lastProcessedEventIndex);
+  async updateBlockProgress (block: BlockProgress, lastProcessedEventIndex: number): Promise<void> {
+    return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
   }
 
   async _fetchAndSaveEvents (block: DeepPartial<BlockProgress>): Promise<void> {

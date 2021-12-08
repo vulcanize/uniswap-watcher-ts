@@ -153,23 +153,20 @@ export class Database {
       .getMany();
   }
 
-  async updateBlockProgress (repo: Repository<BlockProgressInterface>, blockHash: string, lastProcessedEventIndex: number): Promise<void> {
-    // TODO: Use updated block entity instead of querying database.
-    const entity = await repo.findOne({ where: { blockHash } });
-
-    if (entity && !entity.isComplete) {
-      if (lastProcessedEventIndex <= entity.lastProcessedEventIndex) {
-        throw new Error(`Events processed out of order ${blockHash}, was ${entity.lastProcessedEventIndex}, got ${lastProcessedEventIndex}`);
+  async updateBlockProgress (repo: Repository<BlockProgressInterface>, block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<void> {
+    if (!block.isComplete) {
+      if (lastProcessedEventIndex <= block.lastProcessedEventIndex) {
+        throw new Error(`Events processed out of order ${block.blockHash}, was ${block.lastProcessedEventIndex}, got ${lastProcessedEventIndex}`);
       }
 
-      entity.lastProcessedEventIndex = lastProcessedEventIndex;
-      entity.numProcessedEvents++;
-      if (entity.numProcessedEvents >= entity.numEvents) {
-        entity.isComplete = true;
+      block.lastProcessedEventIndex = lastProcessedEventIndex;
+      block.numProcessedEvents++;
+      if (block.numProcessedEvents >= block.numEvents) {
+        block.isComplete = true;
       }
 
-      // TODO: Use update query instead of select and update.
-      await repo.save(entity);
+      const { id, ...blockData } = block;
+      await repo.update(id, blockData);
     }
   }
 

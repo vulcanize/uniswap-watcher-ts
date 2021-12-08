@@ -364,8 +364,8 @@ export class Indexer {
     return this._baseIndexer.markBlocksAsPruned(blocks);
   }
 
-  async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {
-    return this._baseIndexer.updateBlockProgress(blockHash, lastProcessedEventIndex);
+  async updateBlockProgress (block: BlockProgress, lastProcessedEventIndex: number): Promise<void> {
+    return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
   }
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {

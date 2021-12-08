@@ -169,12 +169,12 @@ export class Indexer {
     }
   }
 
-  async updateBlockProgress (blockHash: string, lastProcessedEventIndex: number): Promise<void> {
+  async updateBlockProgress (block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
     try {
-      res = await this._db.updateBlockProgress(dbTx, blockHash, lastProcessedEventIndex);
+      res = await this._db.updateBlockProgress(dbTx, block, lastProcessedEventIndex);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
@@ -310,7 +310,7 @@ export class Indexer {
 
     try {
       const contract = await this._db.saveContract(dbTx, contractAddress, kind, startingBlock);
-      this._watchedContracts[contract.address] = contract;
+      this.cacheContract(contract);
       await dbTx.commitTransaction();
 
       await this._jobQueue.pushJob(
