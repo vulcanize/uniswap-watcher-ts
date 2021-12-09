@@ -3,7 +3,7 @@
 //
 
 import assert from 'assert';
-import { DeepPartial, FindConditions, Not } from 'typeorm';
+import { DeepPartial, FindConditions, FindManyOptions, Not } from 'typeorm';
 import debug from 'debug';
 import { ethers } from 'ethers';
 
@@ -204,8 +204,8 @@ export class Indexer {
     return events;
   }
 
-  async getBlockEvents (blockHash: string): Promise<Array<EventInterface>> {
-    return this._db.getBlockEvents(blockHash);
+  async getBlockEvents (blockHash: string, options: FindManyOptions<EventInterface> = {}): Promise<Array<EventInterface>> {
+    return this._db.getBlockEvents(blockHash, options);
   }
 
   async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<EventInterface>> {
@@ -228,7 +228,7 @@ export class Indexer {
       where.eventName = name;
     }
 
-    const events = await this._db.getBlockEvents(blockHash, where);
+    const events = await this._db.getBlockEvents(blockHash, { where });
     log(`getEvents: db hit, num events: ${events.length}`);
 
     return events;

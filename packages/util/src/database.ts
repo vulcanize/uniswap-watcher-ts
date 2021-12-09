@@ -189,19 +189,26 @@ export class Database {
     return repo.findOne(id, { relations: ['block'] });
   }
 
-  async getBlockEvents (repo: Repository<EventInterface>, blockHash: string, where: FindConditions<EventInterface> = {}): Promise<EventInterface[]> {
-    where.block = {
-      ...where.block,
-      blockHash
+  async getBlockEvents (repo: Repository<EventInterface>, blockHash: string, options: FindManyOptions<EventInterface> = {}): Promise<EventInterface[]> {
+    if (!Array.isArray(options.where)) {
+      options.where = [options.where || {}];
+    }
+
+    options.where.forEach((where: FindConditions<EventInterface> = {}) => {
+      where.block = {
+        ...where.block,
+        blockHash
+      };
+    });
+
+    options.relations = ['block'];
+
+    options.order = {
+      ...options.order,
+      id: 'ASC'
     };
 
-    return repo.find({
-      where,
-      relations: ['block'],
-      order: {
-        id: 'ASC'
-      }
-    });
+    return repo.find(options);
   }
 
   async saveEvents (blockRepo: Repository<BlockProgressInterface>, eventRepo: Repository<EventInterface>, block: DeepPartial<BlockProgressInterface>, events: DeepPartial<EventInterface>[]): Promise<void> {

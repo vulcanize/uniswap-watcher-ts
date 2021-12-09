@@ -99,21 +99,27 @@ export class EventWatcher {
     }
   }
 
-  async eventProcessingCompleteHandler (job: any): Promise<EventInterface> {
-    const { data: { request: { data: { event } } } } = job;
-    assert(event);
+  async eventProcessingCompleteHandler (job: any): Promise<EventInterface[]> {
+    const { data: { request: { data: { blockHash } } } } = job;
+    assert(blockHash);
 
-    const blockProgress = await this._indexer.getBlockProgress(event.block.blockHash);
+    const blockProgress = await this._indexer.getBlockProgress(blockHash);
+    assert(blockProgress);
 
-    if (blockProgress) {
-      await this.publishBlockProgressToSubscribers(blockProgress);
+    await this.publishBlockProgressToSubscribers(blockProgress);
 
-      if (blockProgress.isComplete) {
-        await this._indexer.removeUnknownEvents(blockProgress);
-      }
+    if (blockProgress.isComplete) {
+      await this._indexer.removeUnknownEvents(blockProgress);
     }
 
-    return event;
+    return this._indexer.getBlockEvents(
+      blockProgress.blockHash,
+      {
+        order: {
+          index: 'ASC'
+        }
+      }
+    );
   }
 
   async publishBlockProgressToSubscribers (blockProgress: BlockProgressInterface): Promise<void> {

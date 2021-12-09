@@ -11,7 +11,7 @@ export const QUEUE_CHAIN_PRUNING = 'chain-pruning';
 export const JOB_KIND_INDEX = 'index';
 export const JOB_KIND_PRUNE = 'prune';
 
-export const JOB_KIND_EVENT = 'event';
+export const JOB_KIND_EVENTS = 'events';
 export const JOB_KIND_CONTRACT = 'contract';
 
 export const DEFAULT_CONFIG_PATH = 'environments/local.toml';

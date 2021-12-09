@@ -52,7 +52,7 @@ export interface IndexerInterface {
   getSyncStatus (): Promise<SyncStatusInterface | undefined>;
   getBlocks (blockFilter: { blockHash?: string, blockNumber?: number }): Promise<any>
   getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
-  getBlockEvents (blockHash: string): Promise<Array<EventInterface>>
+  getBlockEvents (blockHash: string, options: FindManyOptions<EventInterface>): Promise<Array<EventInterface>>
   getAncestorAtDepth (blockHash: string, depth: number): Promise<string>
   getOrFetchBlockEvents (block: DeepPartial<BlockProgressInterface>): Promise<Array<EventInterface>>
   removeUnknownEvents (block: BlockProgressInterface): Promise<void>
@@ -79,7 +79,7 @@ export interface DatabaseInterface {
   createTransactionRunner(): Promise<QueryRunner>;
   getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
   getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>;
-  getBlockEvents (blockHash: string, where?: FindConditions<EventInterface>): Promise<EventInterface[]>;
+  getBlockEvents (blockHash: string, where?: FindManyOptions<EventInterface>): Promise<EventInterface[]>;
   getEvent (id: string): Promise<EventInterface | undefined>
   getSyncStatus (queryRunner: QueryRunner): Promise<SyncStatusInterface | undefined>
   getAncestorAtDepth (blockHash: string, depth: number): Promise<string>
