@@ -13,7 +13,7 @@ import { EventInterface, IndexerInterface, SyncStatusInterface, BlockProgressInt
 import { wait } from './misc';
 import { createPruningJob } from './common';
 
-const EVENTS_IN_BATCH = 50;
+const DEFAULT_EVENTS_IN_BATCH = 50;
 
 const log = debug('vulcanize:job-runner');
 
@@ -194,7 +194,7 @@ export class JobRunner {
       const events: EventInterface[] = await this._indexer.getBlockEvents(
         blockHash,
         {
-          take: EVENTS_IN_BATCH,
+          take: this._jobQueueConfig.eventsInBatch || DEFAULT_EVENTS_IN_BATCH,
           where: {
             index: MoreThanOrEqual(block.lastProcessedEventIndex + 1)
           },

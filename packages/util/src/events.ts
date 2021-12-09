@@ -5,12 +5,13 @@
 import assert from 'assert';
 import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
+import { Not } from 'typeorm';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { JobQueue } from './job-queue';
 import { BlockProgressInterface, EventInterface, IndexerInterface } from './types';
-import { MAX_REORG_DEPTH, JOB_KIND_PRUNE, JOB_KIND_INDEX } from './constants';
+import { MAX_REORG_DEPTH, JOB_KIND_PRUNE, JOB_KIND_INDEX, UNKNOWN_EVENT_NAME } from './constants';
 import { createPruningJob, processBlockByNumber } from './common';
 import { UpstreamConfig } from './config';
 
@@ -115,6 +116,9 @@ export class EventWatcher {
     return this._indexer.getBlockEvents(
       blockProgress.blockHash,
       {
+        where: {
+          eventName: Not(UNKNOWN_EVENT_NAME)
+        },
         order: {
           index: 'ASC'
         }
