@@ -3,7 +3,7 @@
 //
 
 import assert from 'assert';
-import { DeepPartial, FindConditions, FindManyOptions, Not } from 'typeorm';
+import { DeepPartial, FindConditions, FindManyOptions } from 'typeorm';
 import debug from 'debug';
 import { ethers } from 'ethers';
 
@@ -13,6 +13,7 @@ import { GetStorageAt, getStorageValue, StorageLayout } from '@vulcanize/solidit
 import { BlockProgressInterface, DatabaseInterface, EventInterface, SyncStatusInterface, ContractInterface } from './types';
 import { UNKNOWN_EVENT_NAME, JOB_KIND_CONTRACT, QUEUE_EVENT_PROCESSING } from './constants';
 import { JobQueue } from './job-queue';
+import { Where, QueryOptions } from './database';
 
 const MAX_EVENTS_BLOCK_RANGE = 1000;
 
@@ -203,8 +204,8 @@ export class Indexer {
     return blockProgress;
   }
 
-  async getBlockEvents (blockHash: string, options: FindManyOptions<EventInterface> = {}): Promise<Array<EventInterface>> {
-    return this._db.getBlockEvents(blockHash, options);
+  async getBlockEvents (blockHash: string, where: Where, queryOptions: QueryOptions): Promise<Array<EventInterface>> {
+    return this._db.getBlockEvents(blockHash, where, queryOptions);
   }
 
   async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<EventInterface>> {
@@ -215,19 +216,27 @@ export class Indexer {
       }
     }
 
-    const where: FindConditions<EventInterface> = {
-      eventName: Not(UNKNOWN_EVENT_NAME)
+    const where: Where = {
+      eventName: [{
+        value: UNKNOWN_EVENT_NAME,
+        not: true,
+        operator: 'equals'
+      }]
     };
 
     if (contract) {
-      where.contract = contract;
+      where.contract = [
+        { value: contract, operator: 'equals', not: false }
+      ];
     }
 
     if (name) {
-      where.eventName = name;
+      where.eventName = [
+        { value: name, operator: 'equals', not: false }
+      ];
     }
 
-    const events = await this._db.getBlockEvents(blockHash, { where });
+    const events = await this._db.getBlockEvents(blockHash, where);
     log(`getEvents: db hit, num events: ${events.length}`);
 
     return events;

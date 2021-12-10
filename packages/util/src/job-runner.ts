@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { In, MoreThanOrEqual } from 'typeorm';
+import { In } from 'typeorm';
 
 import { JobQueueConfig } from './config';
 import { JOB_KIND_INDEX, JOB_KIND_PRUNE, JOB_KIND_EVENTS, JOB_KIND_CONTRACT, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UNKNOWN_EVENT_NAME } from './constants';
@@ -12,6 +12,7 @@ import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
 import { wait } from './misc';
 import { createPruningJob } from './common';
+import { OrderDirection } from './database';
 
 const DEFAULT_EVENTS_IN_BATCH = 50;
 
@@ -198,13 +199,14 @@ export class JobRunner {
       const events: EventInterface[] = await this._indexer.getBlockEvents(
         blockHash,
         {
-          take: this._jobQueueConfig.eventsInBatch || DEFAULT_EVENTS_IN_BATCH,
-          where: {
-            index: MoreThanOrEqual(block.lastProcessedEventIndex + 1)
-          },
-          order: {
-            index: 'ASC'
-          }
+          index: [
+            { value: block.lastProcessedEventIndex + 1, operator: 'gte', not: false }
+          ]
+        },
+        {
+          limit: this._jobQueueConfig.eventsInBatch || DEFAULT_EVENTS_IN_BATCH,
+          orderBy: 'index',
+          orderDirection: OrderDirection.asc
         }
       );
 

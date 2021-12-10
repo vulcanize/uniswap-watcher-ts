@@ -603,10 +603,10 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.saveEventEntity(repo, entity);
   }
 
-  async getBlockEvents (blockHash: string, options?: FindManyOptions<Event>): Promise<Event[]> {
+  async getBlockEvents (blockHash: string, where: Where, queryOptions: QueryOptions): Promise<Event[]> {
     const repo = this._conn.getRepository(Event);
 
-    return this._baseDatabase.getBlockEvents(repo, blockHash, options);
+    return this._baseDatabase.getBlockEvents(repo, blockHash, where, queryOptions);
   }
 
   async saveEvents (queryRunner: QueryRunner, block: DeepPartial<BlockProgress>, events: DeepPartial<Event>[]): Promise<BlockProgress> {

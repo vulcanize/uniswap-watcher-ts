@@ -12,7 +12,7 @@ import { BaseProvider } from '@ethersproject/providers';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { StorageLayout } from '@vulcanize/solidity-mapper';
-import { Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME, JobQueue } from '@vulcanize/util';
+import { Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME, JobQueue, Where, QueryOptions } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Event } from './entity/Event';
@@ -356,8 +356,8 @@ export class Indexer {
     return this._baseIndexer.fetchBlockEvents(block, this._fetchAndSaveEvents.bind(this));
   }
 
-  async getBlockEvents (blockHash: string, options: FindManyOptions<Event>): Promise<Array<Event>> {
-    return this._baseIndexer.getBlockEvents(blockHash, options);
+  async getBlockEvents (blockHash: string, where: Where, queryOptions: QueryOptions): Promise<Array<Event>> {
+    return this._baseIndexer.getBlockEvents(blockHash, where, queryOptions);
   }
 
   async removeUnknownEvents (block: BlockProgress): Promise<void> {

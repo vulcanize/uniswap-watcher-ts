@@ -6,7 +6,7 @@ import assert from 'assert';
 import { Connection, ConnectionOptions, DeepPartial, FindConditions, FindManyOptions, QueryRunner } from 'typeorm';
 import path from 'path';
 
-import { Database as BaseDatabase } from '@vulcanize/util';
+import { Database as BaseDatabase, QueryOptions, Where } from '@vulcanize/util';
 
 import { Allowance } from './entity/Allowance';
 import { Balance } from './entity/Balance';
@@ -101,10 +101,10 @@ export class Database {
     return this._baseDatabase.saveEventEntity(repo, entity);
   }
 
-  async getBlockEvents (blockHash: string, options: FindManyOptions<Event>): Promise<Event[]> {
+  async getBlockEvents (blockHash: string, where: Where, queryOptions: QueryOptions): Promise<Event[]> {
     const repo = this._conn.getRepository(Event);
 
-    return this._baseDatabase.getBlockEvents(repo, blockHash, options);
+    return this._baseDatabase.getBlockEvents(repo, blockHash, where, queryOptions);
   }
 
   async saveEvents (queryRunner: QueryRunner, block: DeepPartial<BlockProgress>, events: DeepPartial<Event>[]): Promise<BlockProgress> {

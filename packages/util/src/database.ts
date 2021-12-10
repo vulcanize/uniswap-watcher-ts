@@ -13,7 +13,8 @@ import {
   FindManyOptions,
   In,
   QueryRunner,
-  Repository
+  Repository,
+  SelectQueryBuilder
 } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import _ from 'lodash';
@@ -195,27 +196,20 @@ export class Database {
     return repo.findOne(id, { relations: ['block'] });
   }
 
-  async getBlockEvents (repo: Repository<EventInterface>, blockHash: string, options: FindManyOptions<EventInterface> = {}): Promise<EventInterface[]> {
-    if (!Array.isArray(options.where)) {
-      options.where = [options.where || {}];
-    }
+  async getBlockEvents (repo: Repository<EventInterface>, blockHash: string, where: Where = {}, queryOptions: QueryOptions = {}): Promise<EventInterface[]> {
+    let queryBuilder = repo.createQueryBuilder('event')
+      .innerJoinAndSelect('event.block', 'block')
+      .where('block.block_hash = :blockHash AND block.is_pruned = false', { blockHash });
 
-    options.where.forEach((where: FindConditions<EventInterface> = {}) => {
-      where.block = {
-        ...where.block,
-        blockHash
-      };
-    });
+    queryBuilder = this._buildQuery(repo, queryBuilder, where, queryOptions);
+    queryBuilder.addOrderBy('event.id', 'ASC');
 
-    options.relations = ['block'];
+    const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
 
-    options.order = {
-      ...options.order,
-      id: 'ASC'
-    };
+    queryBuilder = queryBuilder.offset(skip)
+      .limit(limit);
 
-    // TODO: Making 2 queries when querying for batch events. Try query builder.
-    return repo.find(options);
+    return queryBuilder.getMany();
   }
 
   async saveEvents (blockRepo: Repository<BlockProgressInterface>, eventRepo: Repository<EventInterface>, block: DeepPartial<BlockProgressInterface>, events: DeepPartial<EventInterface>[]): Promise<BlockProgressInterface> {
@@ -406,62 +400,12 @@ export class Database {
       selectQueryBuilder = selectQueryBuilder.leftJoinAndSelect(property, alias);
     });
 
-    Object.entries(where).forEach(([field, filters]) => {
-      filters.forEach((filter, index) => {
-        // Form the where clause.
-        let { not, operator, value } = filter;
-        const columnMetadata = repo.metadata.findColumnWithPropertyName(field);
-        assert(columnMetadata);
-        let whereClause = `${tableName}.${columnMetadata.propertyAliasName} `;
+    selectQueryBuilder = this._buildQuery(repo, selectQueryBuilder, where, queryOptions);
 
-        if (not) {
-          if (operator === 'equals') {
-            whereClause += '!';
-          } else {
-            whereClause += 'NOT ';
-          }
-        }
-
-        whereClause += `${OPERATOR_MAP[operator]} `;
-
-        if (['contains', 'starts'].some(el => el === operator)) {
-          whereClause += '%:';
-        } else if (operator === 'in') {
-          whereClause += '(:...';
-        } else {
-          // Convert to string type value as bigint type throws error in query.
-          value = value.toString();
-
-          whereClause += ':';
-        }
-
-        const variableName = `${field}${index}`;
-        whereClause += variableName;
-
-        if (['contains', 'ends'].some(el => el === operator)) {
-          whereClause += '%';
-        } else if (operator === 'in') {
-          whereClause += ')';
-
-          if (!value.length) {
-            whereClause = 'FALSE';
-          }
-        }
-
-        selectQueryBuilder = selectQueryBuilder.andWhere(whereClause, { [variableName]: value });
-      });
-    });
-
-    const { limit = DEFAULT_LIMIT, orderBy, orderDirection, skip = DEFAULT_SKIP } = queryOptions;
+    const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
 
     selectQueryBuilder = selectQueryBuilder.skip(skip)
       .take(limit);
-
-    if (orderBy) {
-      const columnMetadata = repo.metadata.findColumnWithPropertyName(orderBy);
-      assert(columnMetadata);
-      selectQueryBuilder = selectQueryBuilder.orderBy(`${tableName}.${columnMetadata.propertyAliasName}`, orderDirection === 'desc' ? 'DESC' : 'ASC');
-    }
 
     return selectQueryBuilder.getMany();
   }
@@ -595,5 +539,65 @@ export class Database {
     }
 
     return repo.save(entity);
+  }
+
+  _buildQuery<Entity> (repo: Repository<Entity>, selectQueryBuilder: SelectQueryBuilder<Entity>, where: Where = {}, queryOptions: QueryOptions = {}): SelectQueryBuilder<Entity> {
+    const { tableName } = repo.metadata;
+
+    Object.entries(where).forEach(([field, filters]) => {
+      filters.forEach((filter, index) => {
+        // Form the where clause.
+        let { not, operator, value } = filter;
+        const columnMetadata = repo.metadata.findColumnWithPropertyName(field);
+        assert(columnMetadata);
+        let whereClause = `${tableName}.${columnMetadata.propertyAliasName} `;
+
+        if (not) {
+          if (operator === 'equals') {
+            whereClause += '!';
+          } else {
+            whereClause += 'NOT ';
+          }
+        }
+
+        whereClause += `${OPERATOR_MAP[operator]} `;
+
+        if (['contains', 'starts'].some(el => el === operator)) {
+          whereClause += '%:';
+        } else if (operator === 'in') {
+          whereClause += '(:...';
+        } else {
+          // Convert to string type value as bigint type throws error in query.
+          value = value.toString();
+
+          whereClause += ':';
+        }
+
+        const variableName = `${field}${index}`;
+        whereClause += variableName;
+
+        if (['contains', 'ends'].some(el => el === operator)) {
+          whereClause += '%';
+        } else if (operator === 'in') {
+          whereClause += ')';
+
+          if (!value.length) {
+            whereClause = 'FALSE';
+          }
+        }
+
+        selectQueryBuilder = selectQueryBuilder.andWhere(whereClause, { [variableName]: value });
+      });
+    });
+
+    const { orderBy, orderDirection } = queryOptions;
+
+    if (orderBy) {
+      const columnMetadata = repo.metadata.findColumnWithPropertyName(orderBy);
+      assert(columnMetadata);
+      selectQueryBuilder = selectQueryBuilder.orderBy(`${tableName}.${columnMetadata.propertyAliasName}`, orderDirection === 'desc' ? 'DESC' : 'ASC');
+    }
+
+    return selectQueryBuilder;
   }
 }
