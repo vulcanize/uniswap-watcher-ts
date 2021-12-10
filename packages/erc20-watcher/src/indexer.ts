@@ -5,7 +5,7 @@
 import assert from 'assert';
 import debug from 'debug';
 import { JsonFragment } from '@ethersproject/abi';
-import { DeepPartial, FindManyOptions } from 'typeorm';
+import { DeepPartial, FindConditions, FindManyOptions } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
 import { BaseProvider } from '@ethersproject/providers';
@@ -342,6 +342,10 @@ export class Indexer {
 
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
     return this._baseIndexer.getBlockProgress(blockHash);
+  }
+
+  async getBlockProgressEntities (where: FindConditions<BlockProgress>, options: FindManyOptions<BlockProgress>): Promise<BlockProgress[]> {
+    return this._baseIndexer.getBlockProgressEntities(where, options);
   }
 
   async getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgress[]> {

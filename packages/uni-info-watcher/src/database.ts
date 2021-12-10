@@ -663,6 +663,12 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getBlockProgress(repo, blockHash);
   }
 
+  async getBlockProgressEntities (where: FindConditions<BlockProgress>, options: FindManyOptions<BlockProgress>): Promise<BlockProgress[]> {
+    const repo = this._conn.getRepository(BlockProgress);
+
+    return this._baseDatabase.getBlockProgressEntities(repo, where, options);
+  }
+
   async updateBlockProgress (queryRunner: QueryRunner, block: BlockProgress, lastProcessedEventIndex: number): Promise<BlockProgress> {
     const repo = queryRunner.manager.getRepository(BlockProgress);
 

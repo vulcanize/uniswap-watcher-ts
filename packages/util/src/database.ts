@@ -147,6 +147,12 @@ export class Database {
     return repo.findOne({ where: { blockHash } });
   }
 
+  async getBlockProgressEntities (repo: Repository<BlockProgressInterface>, where: FindConditions<BlockProgressInterface>, options: FindManyOptions<BlockProgressInterface>): Promise<BlockProgressInterface[]> {
+    options.where = where;
+
+    return repo.find(options);
+  }
+
   async getBlocksAtHeight (repo: Repository<BlockProgressInterface>, height: number, isPruned: boolean): Promise<BlockProgressInterface[]> {
     return repo.createQueryBuilder('block_progress')
       .where('block_number = :height AND is_pruned = :isPruned', { height, isPruned })

@@ -151,6 +151,10 @@ export class Indexer {
     return this._db.getBlockProgress(blockHash);
   }
 
+  async getBlockProgressEntities (where: FindConditions<BlockProgressInterface>, options: FindManyOptions<BlockProgressInterface>): Promise<BlockProgressInterface[]> {
+    return this._db.getBlockProgressEntities(where, options);
+  }
+
   async getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]> {
     return this._db.getBlocksAtHeight(height, isPruned);
   }

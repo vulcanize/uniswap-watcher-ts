@@ -4,12 +4,12 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { MoreThanOrEqual } from 'typeorm';
+import { In, MoreThanOrEqual } from 'typeorm';
 
 import { JobQueueConfig } from './config';
 import { JOB_KIND_INDEX, JOB_KIND_PRUNE, JOB_KIND_EVENTS, JOB_KIND_CONTRACT, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UNKNOWN_EVENT_NAME } from './constants';
 import { JobQueue } from './job-queue';
-import { EventInterface, IndexerInterface, SyncStatusInterface, BlockProgressInterface } from './types';
+import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
 import { wait } from './misc';
 import { createPruningJob } from './common';
 
@@ -21,7 +21,6 @@ export class JobRunner {
   _indexer: IndexerInterface
   _jobQueue: JobQueue
   _jobQueueConfig: JobQueueConfig
-  _blockInProcess?: BlockProgressInterface
 
   constructor (jobQueueConfig: JobQueueConfig, indexer: IndexerInterface, jobQueue: JobQueue) {
     this._jobQueueConfig = jobQueueConfig;
@@ -121,13 +120,21 @@ export class JobRunner {
       throw new Error(message);
     }
 
+    const [parentBlock, blockProgress] = await this._indexer.getBlockProgressEntities(
+      {
+        blockHash: In([parentHash, blockHash])
+      },
+      {
+        order: {
+          blockNumber: 'ASC'
+        }
+      }
+    );
+
     // Check if parent block has been processed yet, if not, push a high priority job to process that first and abort.
     // However, don't go beyond the `latestCanonicalBlockHash` from SyncStatus as we have to assume the reorg can't be that deep.
     if (blockHash !== syncStatus.latestCanonicalBlockHash) {
-      // TODO: Get parent block together with block being processed.
-      const parent = await this._indexer.getBlockProgress(parentHash);
-
-      if (!parent) {
+      if (!parentBlock || parentBlock.blockHash !== parentHash) {
         const blocks = await this._indexer.getBlocks({ blockHash: parentHash });
 
         if (!blocks.length) {
@@ -157,9 +164,9 @@ export class JobRunner {
         throw new Error(message);
       }
 
-      if (!parent.isComplete) {
+      if (!parentBlock.isComplete) {
         // Parent block indexing needs to finish before this block can be indexed.
-        const message = `Indexing incomplete for parent block number ${parent.blockNumber} hash ${parentHash} of block number ${blockNumber} hash ${blockHash}, aborting`;
+        const message = `Indexing incomplete for parent block number ${parentBlock.blockNumber} hash ${parentHash} of block number ${blockNumber} hash ${blockHash}, aborting`;
         log(message);
 
         throw new Error(message);
@@ -167,8 +174,6 @@ export class JobRunner {
     }
 
     // Check if block is being already processed.
-    const blockProgress = await this._indexer.getBlockProgress(blockHash);
-
     if (!blockProgress) {
       const { jobDelayInMilliSecs = 0 } = this._jobQueueConfig;
 

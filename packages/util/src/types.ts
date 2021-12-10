@@ -48,6 +48,7 @@ export interface ContractInterface {
 
 export interface IndexerInterface {
   getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>
+  getBlockProgressEntities (where: FindConditions<BlockProgressInterface>, options: FindManyOptions<BlockProgressInterface>): Promise<BlockProgressInterface[]>
   getEvent (id: string): Promise<EventInterface | undefined>
   getSyncStatus (): Promise<SyncStatusInterface | undefined>;
   getBlocks (blockFilter: { blockHash?: string, blockNumber?: number }): Promise<any>
@@ -79,6 +80,7 @@ export interface DatabaseInterface {
   createTransactionRunner(): Promise<QueryRunner>;
   getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
   getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>;
+  getBlockProgressEntities (where: FindConditions<BlockProgressInterface>, options: FindManyOptions<BlockProgressInterface>): Promise<BlockProgressInterface[]>
   getBlockEvents (blockHash: string, where?: FindManyOptions<EventInterface>): Promise<EventInterface[]>;
   getEvent (id: string): Promise<EventInterface | undefined>
   getSyncStatus (queryRunner: QueryRunner): Promise<SyncStatusInterface | undefined>
