@@ -191,13 +191,19 @@ export class Indexer {
 
   async getOrFetchBlockEvents (block: DeepPartial<BlockProgressInterface>, fetchAndSaveEvents: (block: DeepPartial<BlockProgressInterface>) => Promise<void>): Promise<Array<EventInterface>> {
     assert(block.blockHash);
+
+    // TODO: Remove query for check as already done before.
     const blockProgress = await this._db.getBlockProgress(block.blockHash);
+
     if (!blockProgress) {
       // Fetch and save events first and make a note in the event sync progress table.
       log(`getBlockEvents: db miss, fetching from upstream server ${block.blockHash}`);
+
+      // TODO: Get events from query.
       await fetchAndSaveEvents(block);
     }
 
+    // TODO: Get events from above query.
     const events = await this._db.getBlockEvents(block.blockHash);
     log(`getBlockEvents: db hit, ${block.blockHash} num events: ${events.length}`);
 

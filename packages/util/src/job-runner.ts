@@ -124,6 +124,7 @@ export class JobRunner {
     // Check if parent block has been processed yet, if not, push a high priority job to process that first and abort.
     // However, don't go beyond the `latestCanonicalBlockHash` from SyncStatus as we have to assume the reorg can't be that deep.
     if (blockHash !== syncStatus.latestCanonicalBlockHash) {
+      // TODO: Get parent block together with block being processed.
       const parent = await this._indexer.getBlockProgress(parentHash);
 
       if (!parent) {

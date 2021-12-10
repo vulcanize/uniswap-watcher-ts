@@ -208,6 +208,7 @@ export class Database {
       id: 'ASC'
     };
 
+    // TODO: Making 2 queries when querying for batch events. Try query builder.
     return repo.find(options);
   }
 
@@ -229,6 +230,8 @@ export class Database {
     // (1) Save all the events in the database.
     // (2) Add an entry to the block progress table.
     const numEvents = events.length;
+
+    // TODO: Can avoid check as already done before calling method.
     let blockProgress = await blockRepo.findOne({ where: { blockHash } });
 
     if (!blockProgress) {
