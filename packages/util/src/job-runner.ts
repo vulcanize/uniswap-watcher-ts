@@ -120,7 +120,7 @@ export class JobRunner {
       throw new Error(message);
     }
 
-    const [parentBlock, blockProgress] = await this._indexer.getBlockProgressEntities(
+    let [parentBlock, blockProgress] = await this._indexer.getBlockProgressEntities(
       {
         blockHash: In([parentHash, blockHash])
       },
@@ -179,12 +179,10 @@ export class JobRunner {
 
       // Delay required to process block.
       await wait(jobDelayInMilliSecs);
-      const events = await this._indexer.getOrFetchBlockEvents({ blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
+      blockProgress = await this._indexer.fetchBlockEvents({ blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
 
-      if (events.length) {
-        const block = events[0].block;
-
-        await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENTS, blockHash: block.blockHash, publish: true });
+      if (blockProgress.numEvents) {
+        await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENTS, blockHash: blockProgress.blockHash, publish: true });
       }
     }
   }

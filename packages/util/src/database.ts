@@ -172,7 +172,7 @@ export class Database {
       }
 
       const { generatedMaps } = await repo.createQueryBuilder()
-        .update(block)
+        .update()
         .set(block)
         .where('id = :id', { id: block.id })
         .whereEntity(block)
@@ -218,7 +218,7 @@ export class Database {
     return repo.find(options);
   }
 
-  async saveEvents (blockRepo: Repository<BlockProgressInterface>, eventRepo: Repository<EventInterface>, block: DeepPartial<BlockProgressInterface>, events: DeepPartial<EventInterface>[]): Promise<void> {
+  async saveEvents (blockRepo: Repository<BlockProgressInterface>, eventRepo: Repository<EventInterface>, block: DeepPartial<BlockProgressInterface>, events: DeepPartial<EventInterface>[]): Promise<BlockProgressInterface> {
     const {
       blockHash,
       blockNumber,
@@ -237,30 +237,31 @@ export class Database {
     // (2) Add an entry to the block progress table.
     const numEvents = events.length;
 
-    // TODO: Can avoid check as already done before calling method.
-    let blockProgress = await blockRepo.findOne({ where: { blockHash } });
+    const entity = blockRepo.create({
+      blockHash,
+      parentHash,
+      blockNumber,
+      blockTimestamp,
+      numEvents,
+      numProcessedEvents: 0,
+      lastProcessedEventIndex: -1,
+      isComplete: (numEvents === 0)
+    });
 
-    if (!blockProgress) {
-      const entity = blockRepo.create({
-        blockHash,
-        parentHash,
-        blockNumber,
-        blockTimestamp,
-        numEvents,
-        numProcessedEvents: 0,
-        lastProcessedEventIndex: -1,
-        isComplete: (numEvents === 0)
-      });
+    const blockProgress = await blockRepo.save(entity);
 
-      blockProgress = await blockRepo.save(entity);
+    // Bulk insert events.
+    events.forEach(event => {
+      event.block = blockProgress;
+    });
 
-      // Bulk insert events.
-      events.forEach(event => {
-        event.block = blockProgress;
-      });
+    await eventRepo.createQueryBuilder()
+      .insert()
+      .values(events)
+      .updateEntity(false)
+      .execute();
 
-      await eventRepo.createQueryBuilder().insert().values(events).execute();
-    }
+    return blockProgress;
   }
 
   async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<Entity[]> {

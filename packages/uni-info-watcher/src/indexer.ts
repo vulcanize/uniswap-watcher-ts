@@ -306,8 +306,8 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
-  async getOrFetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<Array<Event>> {
-    return this._baseIndexer.getOrFetchBlockEvents(block, this._fetchAndSaveEvents.bind(this));
+  async fetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+    return this._baseIndexer.fetchBlockEvents(block, this._fetchAndSaveEvents.bind(this));
   }
 
   async getBlockEvents (blockHash: string, options: FindManyOptions<Event>): Promise<Array<Event>> {
@@ -358,7 +358,7 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
   }
 
-  async _fetchAndSaveEvents (block: DeepPartial<BlockProgress>): Promise<void> {
+  async _fetchAndSaveEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
     assert(block.blockHash);
     const events = await this._uniClient.getEvents(block.blockHash);
     const dbEvents: Array<DeepPartial<Event>> = [];
@@ -389,8 +389,10 @@ export class Indexer implements IndexerInterface {
     const dbTx = await this._db.createTransactionRunner();
 
     try {
-      await this._db.saveEvents(dbTx, block, dbEvents);
+      const blockProgress = await this._db.saveEvents(dbTx, block, dbEvents);
       await dbTx.commitTransaction();
+
+      return blockProgress;
     } catch (error) {
       await dbTx.rollbackTransaction();
       throw error;

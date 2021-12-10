@@ -84,7 +84,7 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getBlockEvents(repo, blockHash, options);
   }
 
-  async saveEvents (queryRunner: QueryRunner, block: DeepPartial<BlockProgress>, events: DeepPartial<Event>[]): Promise<void> {
+  async saveEvents (queryRunner: QueryRunner, block: DeepPartial<BlockProgress>, events: DeepPartial<Event>[]): Promise<BlockProgress> {
     const blockRepo = queryRunner.manager.getRepository(BlockProgress);
     const eventRepo = queryRunner.manager.getRepository(Event);
 
