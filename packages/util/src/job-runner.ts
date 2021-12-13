@@ -250,7 +250,9 @@ export class JobRunner {
             event = await this._indexer.saveEventEntity(event);
           }
 
+          console.time(`time:job-runner#_processEvents-event_${eventIndex}`);
           await this._indexer.processEvent(event);
+          console.timeEnd(`time:job-runner#_processEvents-event_${eventIndex}`);
         }
 
         block = await this._indexer.updateBlockProgress(block, event.index);
