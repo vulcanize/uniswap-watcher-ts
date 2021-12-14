@@ -109,6 +109,7 @@ export class JobRunner {
   }
 
   async _indexBlock (job: any, syncStatus: SyncStatusInterface): Promise<void> {
+    console.time('time:job-runner#_indexBlock');
     const { data: { blockHash, blockNumber, parentHash, priority, timestamp } } = job;
     log(`Processing block number ${blockNumber} hash ${blockHash} `);
 
@@ -186,12 +187,15 @@ export class JobRunner {
         await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENTS, blockHash: blockProgress.blockHash, publish: true });
       }
     }
+    console.timeEnd('time:job-runner#_indexBlock');
   }
 
   async _processEvents (job: any): Promise<void> {
     const { blockHash } = job.data;
 
+    console.time('time:job-runner#processEvents-get-block-process');
     let block = await this._indexer.getBlockProgress(blockHash);
+    console.timeEnd('time:job-runner#processEvents-get-block-process');
     assert(block);
 
     console.time('time:job-runner#_processEvents-events');
@@ -216,13 +220,17 @@ export class JobRunner {
 
       console.timeEnd('time:job-runner#_processEvents-fetching_events_batch');
 
+      if (events.length) {
+        log(`Processing events batch from index ${events[0].index} to ${events[0].index + events.length - 1}`);
+      }
+
       console.time('time:job-runner#_processEvents-processing_events_batch');
 
       for (let event of events) {
         // Process events in loop
 
         const eventIndex = event.index;
-        log(`Processing event ${event.id} index ${eventIndex}`);
+        // log(`Processing event ${event.id} index ${eventIndex}`);
 
         // Check if previous event in block has been processed exactly before this and abort if not.
         if (eventIndex > 0) { // Skip the first event in the block.

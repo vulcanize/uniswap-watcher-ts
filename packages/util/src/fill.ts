@@ -23,20 +23,19 @@ export const fillBlocks = async (
   await eventWatcher.initBlockProcessingOnCompleteHandler();
   await eventWatcher.initEventProcessingOnCompleteHandler();
 
-  let currentBlockNumber = startBlock;
   const syncStatus = await indexer.getSyncStatus();
 
   if (syncStatus) {
-    if (currentBlockNumber > syncStatus.latestIndexedBlockNumber + 1) {
-      throw new Error(`Missing blocks between startBlock ${currentBlockNumber} and latestIndexedBlockNumber ${syncStatus.latestIndexedBlockNumber}`);
+    if (startBlock > syncStatus.latestIndexedBlockNumber + 1) {
+      throw new Error(`Missing blocks between startBlock ${startBlock} and latestIndexedBlockNumber ${syncStatus.latestIndexedBlockNumber}`);
     }
 
-    currentBlockNumber = syncStatus.latestIndexedBlockNumber + 1;
+    startBlock = syncStatus.latestIndexedBlockNumber + 1;
   }
 
-  console.time(`time:fill#fillBlocks-process_block_${currentBlockNumber}`);
+  console.time(`time:fill#fillBlocks-process_block_${startBlock}`);
 
-  processBlockByNumber(jobQueue, indexer, blockDelayInMilliSecs, currentBlockNumber);
+  processBlockByNumber(jobQueue, indexer, blockDelayInMilliSecs, startBlock);
 
   // Creating an AsyncIterable from AsyncIterator to iterate over the values.
   // https://www.codementor.io/@tiagolopesferreira/asynchronous-iterators-in-javascript-jl1yg8la1#for-wait-of
@@ -52,19 +51,17 @@ export const fillBlocks = async (
   for await (const data of blockProgressEventIterable) {
     const { onBlockProgressEvent: { blockNumber, isComplete } } = data;
 
-    if (blockNumber === currentBlockNumber && isComplete) {
-      console.timeEnd(`time:fill#fillBlocks-process_block_${currentBlockNumber}`);
+    if (isComplete) {
+      console.timeEnd(`time:fill#fillBlocks-process_block_${blockNumber}`);
 
-      if (blockNumber >= endBlock) {
+      console.time(`time:fill#fillBlocks-process_block_${blockNumber + 1}`);
+
+      await processBlockByNumber(jobQueue, indexer, blockDelayInMilliSecs, blockNumber + 1);
+
+      if (blockNumber + 1 >= endBlock) {
         // Break the async loop when blockProgress event is for the endBlock and processing is complete.
         break;
       }
-
-      currentBlockNumber++;
-
-      console.time(`time:fill#fillBlocks-process_block_${currentBlockNumber}`);
-
-      processBlockByNumber(jobQueue, indexer, blockDelayInMilliSecs, currentBlockNumber);
     }
   }
 
