@@ -35,6 +35,7 @@ export const fillBlocks = async (
   }
 
   console.time(`time:fill#fillBlocks-process_block_${currentBlockNumber}`);
+
   processBlockByNumber(jobQueue, indexer, blockDelayInMilliSecs, currentBlockNumber);
 
   // Creating an AsyncIterable from AsyncIterator to iterate over the values.
@@ -45,6 +46,7 @@ export const fillBlocks = async (
   };
 
   console.time('time:fill#fillBlocks-process_blocks');
+
   // Iterate over async iterable.
   // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for-await...of
   for await (const data of blockProgressEventIterable) {
@@ -52,13 +54,16 @@ export const fillBlocks = async (
 
     if (blockNumber === currentBlockNumber && isComplete) {
       console.timeEnd(`time:fill#fillBlocks-process_block_${currentBlockNumber}`);
+
       if (blockNumber >= endBlock) {
         // Break the async loop when blockProgress event is for the endBlock and processing is complete.
         break;
       }
 
       currentBlockNumber++;
+
       console.time(`time:fill#fillBlocks-process_block_${currentBlockNumber}`);
+
       processBlockByNumber(jobQueue, indexer, blockDelayInMilliSecs, currentBlockNumber);
     }
   }

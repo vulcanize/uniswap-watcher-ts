@@ -48,7 +48,9 @@ export const processBlockByNumber = async (
 
   while (true) {
     console.time('time:common#processBlockByNumber-postgraphile');
+
     const blocks = await indexer.getBlocks({ blockNumber });
+
     console.timeEnd('time:common#processBlockByNumber-postgraphile');
 
     if (blocks.length) {
