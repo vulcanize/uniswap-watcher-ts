@@ -47,29 +47,29 @@ export const processBlockByNumber = async (
   log(`Process block ${blockNumber}`);
 
   while (true) {
-    console.time('time:common#processBlockByNumber-postgraphile');
+    const blockProgressEntities = await indexer.getBlocksAtHeight(blockNumber, false);
 
-    const blocks = await indexer.getBlocks({ blockNumber });
+    let blocks = blockProgressEntities.map((block: any) => {
+      block.timestamp = block.blockTimestamp;
 
-    console.timeEnd('time:common#processBlockByNumber-postgraphile');
+      return block;
+    });
+
+    if (!blocks.length) {
+      console.time('time:common#processBlockByNumber-postgraphile');
+      blocks = await indexer.getBlocks({ blockNumber });
+      console.timeEnd('time:common#processBlockByNumber-postgraphile');
+    }
 
     if (blocks.length) {
       for (let bi = 0; bi < blocks.length; bi++) {
         const { blockHash, blockNumber, parentHash, timestamp } = blocks[bi];
 
-        console.time('time:common#processBlockByNumber-get_block_progress');
-        const blockProgress = await indexer.getBlockProgress(blockHash);
-        console.timeEnd('time:common#processBlockByNumber-get_block_progress');
+        console.time('time:common#processBlockByNumber-updateSyncStatusChainHead');
+        await indexer.updateSyncStatusChainHead(blockHash, blockNumber);
+        console.timeEnd('time:common#processBlockByNumber-updateSyncStatusChainHead');
 
-        if (blockProgress) {
-          log(`Block number ${blockNumber}, block hash ${blockHash} already processed`);
-        } else {
-          console.time('time:common#processBlockByNumber-updateSyncStatusChainHead');
-          await indexer.updateSyncStatusChainHead(blockHash, blockNumber);
-          console.timeEnd('time:common#processBlockByNumber-updateSyncStatusChainHead');
-
-          await jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { kind: JOB_KIND_INDEX, blockHash, blockNumber, parentHash, timestamp });
-        }
+        await jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { kind: JOB_KIND_INDEX, blockHash, blockNumber, parentHash, timestamp });
       }
 
       return;

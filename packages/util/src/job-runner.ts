@@ -173,20 +173,23 @@ export class JobRunner {
 
         throw new Error(message);
       }
+    } else {
+      blockProgress = parentBlock;
     }
 
-    // Check if block is being already processed.
     if (!blockProgress) {
       const { jobDelayInMilliSecs = 0 } = this._jobQueueConfig;
 
       // Delay required to process block.
       await wait(jobDelayInMilliSecs);
       blockProgress = await this._indexer.fetchBlockEvents({ blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
-
-      if (blockProgress.numEvents) {
-        await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENTS, blockHash: blockProgress.blockHash, publish: true });
-      }
     }
+
+    // Check if block is being already processed.
+    if (blockProgress.numProcessedEvents === 0 && blockProgress.numEvents) {
+      await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENTS, blockHash: blockProgress.blockHash, publish: true });
+    }
+
     console.timeEnd('time:job-runner#_indexBlock');
   }
 

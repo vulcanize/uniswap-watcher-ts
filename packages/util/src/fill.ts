@@ -5,10 +5,9 @@
 import assert from 'assert';
 import debug from 'debug';
 
-import { EthClient } from '@vulcanize/ipld-eth-client';
-
 import { JobQueue } from './job-queue';
 import { EventWatcherInterface, IndexerInterface } from './types';
+import { wait } from './misc';
 import { processBlockByNumber } from './common';
 
 const log = debug('vulcanize:fill');
@@ -16,25 +15,39 @@ const log = debug('vulcanize:fill');
 export const fillBlocks = async (
   jobQueue: JobQueue,
   indexer: IndexerInterface,
-  ethClient: EthClient,
   eventWatcher: EventWatcherInterface,
   blockDelayInMilliSecs: number,
-  { startBlock, endBlock }: { startBlock: number, endBlock: number}
+  argv: {
+    startBlock: number,
+    endBlock: number,
+    prefetch: boolean,
+    batchBlocks: number,
+  }
 ): Promise<any> => {
+  let { startBlock, endBlock, prefetch, batchBlocks } = argv;
   assert(startBlock < endBlock, 'endBlock should be greater than startBlock');
-
-  await eventWatcher.initBlockProcessingOnCompleteHandler();
-  await eventWatcher.initEventProcessingOnCompleteHandler();
 
   const syncStatus = await indexer.getSyncStatus();
 
-  if (syncStatus) {
+  if (prefetch) {
+    if (syncStatus) {
+      startBlock = syncStatus.chainHeadBlockNumber + 1;
+    }
+
+    await prefetchBlocks(indexer, blockDelayInMilliSecs, { startBlock, endBlock, batchBlocks });
+    return;
+  }
+
+  if (syncStatus && syncStatus.latestIndexedBlockNumber > -1) {
     if (startBlock > syncStatus.latestIndexedBlockNumber + 1) {
       throw new Error(`Missing blocks between startBlock ${startBlock} and latestIndexedBlockNumber ${syncStatus.latestIndexedBlockNumber}`);
     }
 
     startBlock = syncStatus.latestIndexedBlockNumber + 1;
   }
+
+  await eventWatcher.initBlockProcessingOnCompleteHandler();
+  await eventWatcher.initEventProcessingOnCompleteHandler();
 
   const numberOfBlocks = endBlock - startBlock + 1;
   console.time(`time:fill#fillBlocks-process_block_${startBlock}`);
@@ -75,4 +88,49 @@ export const fillBlocks = async (
 
   log('Processed all blocks (100%)');
   console.timeEnd('time:fill#fillBlocks-process_blocks');
+};
+
+const prefetchBlocks = async (
+  indexer: IndexerInterface,
+  blockDelayInMilliSecs: number,
+  { startBlock, endBlock, batchBlocks }: {
+    startBlock: number,
+    endBlock: number,
+    batchBlocks: number,
+  }
+) => {
+  for (let i = startBlock; i <= endBlock; i = i + batchBlocks) {
+    const batchEndBlock = Math.min(i + batchBlocks, endBlock + 1);
+    let blockNumbers = [...Array(batchEndBlock - i).keys()].map(n => n + i);
+    log('Fetching blockNumbers:', blockNumbers);
+
+    let blocks = [];
+
+    // Fetch blocks again if there are missing blocks.
+    while (true) {
+      const blockPromises = blockNumbers.map(async blockNumber => indexer.getBlocks({ blockNumber }));
+      const res = await Promise.all(blockPromises);
+
+      const missingIndex = res.findIndex(blocks => blocks.length === 0);
+
+      if (missingIndex < 0) {
+        blocks = res.flat();
+        break;
+      }
+
+      blockNumbers = blockNumbers.slice(missingIndex);
+      await wait(blockDelayInMilliSecs);
+    }
+
+    const fetchBlockPromises = blocks.map(async block => {
+      const { blockHash, blockNumber, parentHash, timestamp } = block;
+      const blockProgress = await indexer.getBlockProgress(blockHash);
+
+      if (!blockProgress) {
+        await indexer.fetchBlockEvents({ blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
+      }
+    });
+
+    await Promise.all(fetchBlockPromises);
+  }
 };
