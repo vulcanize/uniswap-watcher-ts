@@ -3,12 +3,15 @@
 //
 
 import assert from 'assert';
+import debug from 'debug';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 
 import { JobQueue } from './job-queue';
 import { EventWatcherInterface, IndexerInterface } from './types';
 import { processBlockByNumber } from './common';
+
+const log = debug('vulcanize:fill');
 
 export const fillBlocks = async (
   jobQueue: JobQueue,
@@ -33,6 +36,7 @@ export const fillBlocks = async (
     startBlock = syncStatus.latestIndexedBlockNumber + 1;
   }
 
+  const numberOfBlocks = endBlock - startBlock + 1;
   console.time(`time:fill#fillBlocks-process_block_${startBlock}`);
 
   processBlockByNumber(jobQueue, indexer, blockDelayInMilliSecs, startBlock);
@@ -56,6 +60,10 @@ export const fillBlocks = async (
 
       console.time(`time:fill#fillBlocks-process_block_${blockNumber + 1}`);
 
+      const blocksProcessed = blockNumber - startBlock + 1;
+      const completePercentage = Math.round(blocksProcessed / numberOfBlocks * 100);
+      log(`Processed ${blocksProcessed} of ${numberOfBlocks} blocks (${completePercentage}%)`);
+
       await processBlockByNumber(jobQueue, indexer, blockDelayInMilliSecs, blockNumber + 1);
 
       if (blockNumber + 1 >= endBlock) {
@@ -65,5 +73,6 @@ export const fillBlocks = async (
     }
   }
 
+  log('Processed all blocks (100%)');
   console.timeEnd('time:fill#fillBlocks-process_blocks');
 };

@@ -193,9 +193,9 @@ export class JobRunner {
   async _processEvents (job: any): Promise<void> {
     const { blockHash } = job.data;
 
-    console.time('time:job-runner#processEvents-get-block-process');
+    console.time('time:job-runner#_processEvents-get-block-process');
     let block = await this._indexer.getBlockProgress(blockHash);
-    console.timeEnd('time:job-runner#processEvents-get-block-process');
+    console.timeEnd('time:job-runner#_processEvents-get-block-process');
     assert(block);
 
     console.time('time:job-runner#_processEvents-events');
