@@ -148,19 +148,18 @@ export class EventWatcher {
 
     const [blockProgress, syncStatus] = await Promise.all([
       this._indexer.getBlockProgress(blockHash),
-      // Update sync progress.
       this._indexer.updateSyncStatusIndexedBlock(blockHash, blockNumber)
     ]);
+
+    // Create pruning job if required.
+    if (syncStatus && syncStatus.latestIndexedBlockNumber > (syncStatus.latestCanonicalBlockNumber + MAX_REORG_DEPTH)) {
+      await createPruningJob(this._jobQueue, syncStatus.latestCanonicalBlockNumber, priority);
+    }
 
     // Publish block progress event if no events exist.
     // Event for blocks with events will be pusblished from eventProcessingCompleteHandler.
     if (blockProgress && blockProgress.numEvents === 0) {
       await this.publishBlockProgressToSubscribers(blockProgress);
-    }
-
-    // Create pruning job if required.
-    if (syncStatus && syncStatus.latestIndexedBlockNumber > (syncStatus.latestCanonicalBlockNumber + MAX_REORG_DEPTH)) {
-      await createPruningJob(this._jobQueue, syncStatus.latestCanonicalBlockNumber, priority);
     }
   }
 
