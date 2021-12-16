@@ -50,19 +50,19 @@ export class EventWatcher {
 
   async startBlockProcessing (): Promise<void> {
     const syncStatus = await this._indexer.getSyncStatus();
-    let blockNumber;
+    let startBlockNumber;
 
     if (!syncStatus) {
       // Get latest block in chain.
       const { block: currentBlock } = await this._ethClient.getBlockByHash();
-      blockNumber = currentBlock.number + 1;
+      startBlockNumber = currentBlock.number;
     } else {
-      blockNumber = syncStatus.latestIndexedBlockNumber + 1;
+      startBlockNumber = syncStatus.chainHeadBlockNumber + 1;
     }
 
     const { ethServer: { blockDelayInMilliSecs } } = this._upstreamConfig;
 
-    processBlockByNumber(this._jobQueue, this._indexer, blockDelayInMilliSecs, blockNumber + 1);
+    processBlockByNumber(this._jobQueue, this._indexer, blockDelayInMilliSecs, startBlockNumber);
 
     // Creating an AsyncIterable from AsyncIterator to iterate over the values.
     // https://www.codementor.io/@tiagolopesferreira/asynchronous-iterators-in-javascript-jl1yg8la1#for-wait-of
