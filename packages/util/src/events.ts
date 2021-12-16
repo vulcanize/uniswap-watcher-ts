@@ -152,8 +152,9 @@ export class EventWatcher {
       this._indexer.updateSyncStatusIndexedBlock(blockHash, blockNumber)
     ]);
 
-    // Publish block progress event.
-    if (blockProgress) {
+    // Publish block progress event if no events exist.
+    // Event for blocks with events will be pusblished from eventProcessingCompleteHandler.
+    if (blockProgress && blockProgress.numEvents === 0) {
       await this.publishBlockProgressToSubscribers(blockProgress);
     }
 

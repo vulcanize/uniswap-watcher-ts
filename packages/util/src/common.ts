@@ -66,10 +66,13 @@ export const processBlockByNumber = async (
         const { blockHash, blockNumber, parentHash, timestamp } = blocks[bi];
 
         console.time('time:common#processBlockByNumber-updateSyncStatusChainHead');
-        await indexer.updateSyncStatusChainHead(blockHash, blockNumber);
+        const syncStatus = await indexer.updateSyncStatusChainHead(blockHash, blockNumber);
         console.timeEnd('time:common#processBlockByNumber-updateSyncStatusChainHead');
 
-        await jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { kind: JOB_KIND_INDEX, blockHash, blockNumber, parentHash, timestamp });
+        // Stop old blocks from getting pushed to job queue. They are already retried after fail.
+        if (syncStatus.latestIndexedBlockNumber < blockNumber) {
+          await jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, { kind: JOB_KIND_INDEX, blockHash, blockNumber, parentHash, timestamp });
+        }
       }
 
       return;
