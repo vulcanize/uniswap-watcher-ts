@@ -1104,7 +1104,7 @@ export class Indexer implements IndexerInterface {
 
       if (modulo === BigInt(0)) {
         // Current tick is initialized and needs to be updated.
-        this._loadTickUpdateFeeVarsAndSave(dbTx, Number(newTick), block, contractAddress);
+        await this._loadTickUpdateFeeVarsAndSave(dbTx, Number(newTick), block, contractAddress);
       }
 
       const numIters = BigInt(
@@ -1124,13 +1124,13 @@ export class Indexer implements IndexerInterface {
         const firstInitialized = oldTick + tickSpacing - modulo;
 
         for (let i = firstInitialized; i < newTick; i = i + tickSpacing) {
-          this._loadTickUpdateFeeVarsAndSave(dbTx, Number(i), block, contractAddress);
+          await this._loadTickUpdateFeeVarsAndSave(dbTx, Number(i), block, contractAddress);
         }
       } else if (newTick < oldTick) {
         const firstInitialized = oldTick - modulo;
 
         for (let i = firstInitialized; i >= newTick; i = i - tickSpacing) {
-          this._loadTickUpdateFeeVarsAndSave(dbTx, Number(i), block, contractAddress);
+          await this._loadTickUpdateFeeVarsAndSave(dbTx, Number(i), block, contractAddress);
         }
       }
 

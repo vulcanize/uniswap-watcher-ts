@@ -52,7 +52,7 @@ export const main = async (): Promise<any> => {
     },
     batchBlocks: {
       type: 'number',
-      default: 5,
+      default: 10,
       describe: 'Number of blocks prefetched in batch'
     }
   }).argv;
