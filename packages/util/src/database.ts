@@ -173,17 +173,17 @@ export class Database {
       if (block.numProcessedEvents >= block.numEvents) {
         block.isComplete = true;
       }
-
-      const { generatedMaps } = await repo.createQueryBuilder()
-        .update()
-        .set(block)
-        .where('id = :id', { id: block.id })
-        .whereEntity(block)
-        .returning('*')
-        .execute();
-
-      block = generatedMaps[0] as BlockProgressInterface;
     }
+
+    const { generatedMaps } = await repo.createQueryBuilder()
+      .update()
+      .set(block)
+      .where('id = :id', { id: block.id })
+      .whereEntity(block)
+      .returning('*')
+      .execute();
+
+    block = generatedMaps[0] as BlockProgressInterface;
 
     return block;
   }

@@ -304,10 +304,25 @@ export class JobRunner {
           await this._indexer.processEvent(event);
         }
 
-        block = await this._indexer.updateBlockProgress(block, event.index);
+        // Check for lazy update blockProgress.
+        if (this._jobQueueConfig.lazyUpdateBlockProgress) {
+          block.lastProcessedEventIndex = event.index;
+          block.numProcessedEvents++;
+
+          if (block.numProcessedEvents >= block.numEvents) {
+            block.isComplete = true;
+          }
+        } else {
+          block = await this._indexer.updateBlockProgress(block, event.index);
+        }
       }
 
       console.timeEnd('time:job-runner#_processEvents-processing_events_batch');
+    }
+
+    if (this._jobQueueConfig.lazyUpdateBlockProgress) {
+      // Update in database at end of all events processing.
+      await this._indexer.updateBlockProgress(block, block.lastProcessedEventIndex);
     }
 
     console.timeEnd('time:job-runner#_processEvents-events');
