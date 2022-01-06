@@ -11,6 +11,7 @@
   password = "postgres"
   synchronize = true
   logging = false
+  maxQueryExecutionTime = 100
 
 [upstream]
   [upstream.ethServer]
@@ -27,5 +28,5 @@
 [jobQueue]
   dbConnectionString = "postgres://postgres:postgres@localhost/uni-watcher-job-queue"
   maxCompletionLagInSecs = 300
-  jobDelayInMilliSecs = 100
+  jobDelayInMilliSecs = 0
   eventsInBatch = 50
