@@ -13,6 +13,7 @@
   password = "postgres"
   synchronize = true
   logging = false
+  maxQueryExecutionTime = 100
 
 [upstream]
   [upstream.ethServer]
