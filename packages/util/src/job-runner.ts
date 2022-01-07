@@ -33,7 +33,9 @@ export class JobRunner {
   async processBlock (job: any): Promise<void> {
     const { data: { kind } } = job;
 
+    console.time('time:job-runner#processBlock-getSyncStatus');
     const syncStatus = await this._indexer.getSyncStatus();
+    console.timeEnd('time:job-runner#processBlock-getSyncStatus');
     assert(syncStatus);
 
     switch (kind) {
@@ -140,6 +142,7 @@ export class JobRunner {
       throw new Error(message);
     }
 
+    console.time('time:job-runner#_indexBlock-getBlockProgressEntities');
     let [parentBlock, blockProgress] = await this._indexer.getBlockProgressEntities(
       {
         blockHash: In([parentHash, blockHash])
@@ -150,6 +153,7 @@ export class JobRunner {
         }
       }
     );
+    console.timeEnd('time:job-runner#_indexBlock-getBlockProgressEntities');
 
     // Check if parent block has been processed yet, if not, push a high priority job to process that first and abort.
     // However, don't go beyond the `latestCanonicalBlockHash` from SyncStatus as we have to assume the reorg can't be that deep.
@@ -304,10 +308,25 @@ export class JobRunner {
           await this._indexer.processEvent(event);
         }
 
-        block = await this._indexer.updateBlockProgress(block, event.index);
+        // Check for lazy update blockProgress.
+        if (this._jobQueueConfig.lazyUpdateBlockProgress) {
+          block.lastProcessedEventIndex = event.index;
+          block.numProcessedEvents++;
+
+          if (block.numProcessedEvents >= block.numEvents) {
+            block.isComplete = true;
+          }
+        } else {
+          block = await this._indexer.updateBlockProgress(block, event.index);
+        }
       }
 
       console.timeEnd('time:job-runner#_processEvents-processing_events_batch');
+    }
+
+    if (this._jobQueueConfig.lazyUpdateBlockProgress) {
+      // Update in database at end of all events processing.
+      await this._indexer.updateBlockProgress(block, block.lastProcessedEventIndex);
     }
 
     console.timeEnd('time:job-runner#_processEvents-events');

@@ -198,7 +198,9 @@ export class Indexer {
     assert(block.blockHash);
 
     log(`getBlockEvents: fetching from upstream server ${block.blockHash}`);
+    console.time('time:indexer#fetchBlockEvents-fetchAndSaveEvents');
     const blockProgress = await fetchAndSaveEvents(block);
+    console.timeEnd('time:indexer#fetchBlockEvents-fetchAndSaveEvents');
     log(`getBlockEvents: fetched for block: ${blockProgress.blockHash} num events: ${blockProgress.numEvents}`);
 
     return blockProgress;
