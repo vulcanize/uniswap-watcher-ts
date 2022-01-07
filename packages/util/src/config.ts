@@ -23,6 +23,9 @@ export interface JobQueueConfig {
   jobDelayInMilliSecs?: number;
   eventsInBatch: number;
   lazyUpdateBlockProgress?: boolean;
+  blockDelayInMilliSecs: number;
+  prefetchBlocksInMem: boolean;
+  prefetchBlockCount: number;
 }
 
 interface ServerConfig {
@@ -38,7 +41,6 @@ export interface UpstreamConfig {
     gqlApiEndpoint: string;
     gqlPostgraphileEndpoint: string;
     rpcProviderEndpoint: string;
-    blockDelayInMilliSecs: number;
   }
   traceProviderEndpoint: string;
   uniWatcher: {

@@ -8,6 +8,7 @@ export const QUEUE_BLOCK_PROCESSING = 'block-processing';
 export const QUEUE_EVENT_PROCESSING = 'event-processing';
 export const QUEUE_CHAIN_PRUNING = 'chain-pruning';
 
+export const JOB_KIND_FETCH_BLOCKS = 'fetch-blocks';
 export const JOB_KIND_INDEX = 'index';
 export const JOB_KIND_PRUNE = 'prune';
 

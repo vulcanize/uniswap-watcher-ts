@@ -4,25 +4,32 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { In } from 'typeorm';
+import { DeepPartial, In } from 'typeorm';
 
 import { JobQueueConfig } from './config';
-import { JOB_KIND_INDEX, JOB_KIND_PRUNE, JOB_KIND_EVENTS, JOB_KIND_CONTRACT, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UNKNOWN_EVENT_NAME } from './constants';
+import { JOB_KIND_INDEX, JOB_KIND_PRUNE, JOB_KIND_EVENTS, JOB_KIND_CONTRACT, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UNKNOWN_EVENT_NAME, JOB_KIND_FETCH_BLOCKS } from './constants';
 import { JobQueue } from './job-queue';
-import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
+import { EventInterface, IndexerInterface } from './types';
 import { wait } from './misc';
-import { createPruningJob } from './common';
+import { createPruningJob, fetchBatchBlocks } from './common';
 import { OrderDirection } from './database';
 
 const DEFAULT_EVENTS_IN_BATCH = 50;
 
 const log = debug('vulcanize:job-runner');
 
+interface PrefetchedBlock {
+  block: any;
+  events: DeepPartial<EventInterface>[];
+}
+
 export class JobRunner {
   _indexer: IndexerInterface
   _jobQueue: JobQueue
   _jobQueueConfig: JobQueueConfig
   _blockProcessStartTime?: Date
+  _prefetchedBlocksMap: { [key: string]: PrefetchedBlock } = {}
+  _latestPrefetchedBlockNumber = -1
 
   constructor (jobQueueConfig: JobQueueConfig, indexer: IndexerInterface, jobQueue: JobQueue) {
     this._jobQueueConfig = jobQueueConfig;
@@ -33,18 +40,17 @@ export class JobRunner {
   async processBlock (job: any): Promise<void> {
     const { data: { kind } } = job;
 
-    console.time('time:job-runner#processBlock-getSyncStatus');
-    const syncStatus = await this._indexer.getSyncStatus();
-    console.timeEnd('time:job-runner#processBlock-getSyncStatus');
-    assert(syncStatus);
-
     switch (kind) {
+      case JOB_KIND_FETCH_BLOCKS:
+        await this._fetchBlocks(job);
+        break;
+
       case JOB_KIND_INDEX:
-        await this._indexBlock(job, syncStatus);
+        await this._indexBlock(job);
         break;
 
       case JOB_KIND_PRUNE:
-        await this._pruneChain(job, syncStatus);
+        await this._pruneChain(job);
         break;
 
       default:
@@ -75,8 +81,71 @@ export class JobRunner {
     await this._jobQueue.markComplete(job);
   }
 
-  async _pruneChain (job: any, syncStatus: SyncStatusInterface): Promise<void> {
+  async _fetchBlocks (job: any): Promise<void> {
+    const { blockNumber } = job.data;
+    let blocks = [];
+
+    console.time('time:job-runner#processBlock-getSyncStatus');
+    const syncStatus = await this._indexer.getSyncStatus();
+    console.timeEnd('time:job-runner#processBlock-getSyncStatus');
+
+    // Check if prefetchBlocksInMem flag set.
+    if (this._jobQueueConfig.prefetchBlocksInMem) {
+      // Dont wait for prefetching blocks.
+      this._prefetchBlocks(blockNumber);
+
+      log('size:job-runner#_fetchBlocks-_prefetchBlocksMap-size:', Object.keys(this._prefetchedBlocksMap).length);
+
+      // Get blocks prefetched in memory.
+      blocks = Object.values(this._prefetchedBlocksMap)
+        .filter(({ block }) => Number(block.blockNumber) === blockNumber);
+    }
+
+    if (!blocks.length) {
+      const blockProgressEntities = await this._indexer.getBlocksAtHeight(blockNumber, false);
+
+      blocks = blockProgressEntities.map((block: any) => {
+        block.timestamp = block.blockTimestamp;
+
+        return block;
+      });
+    }
+
+    // Fetch blocks from postgraphile.
+    while (!blocks.length) {
+      console.time('time:common#processBlockByNumber-postgraphile');
+      blocks = await this._indexer.getBlocks({ blockNumber });
+      console.timeEnd('time:common#processBlockByNumber-postgraphile');
+    }
+
+    for (const block of blocks) {
+      const { blockHash, blockNumber, parentHash, timestamp } = block;
+
+      // Stop blocks already pushed to job queue. They are already retried after fail.
+      if (!syncStatus || syncStatus.chainHeadBlockNumber < blockNumber) {
+        await this._jobQueue.pushJob(
+          QUEUE_BLOCK_PROCESSING,
+          {
+            kind: JOB_KIND_INDEX,
+            blockNumber: Number(blockNumber),
+            blockHash,
+            parentHash,
+            timestamp
+          }
+        );
+      }
+    }
+
+    await this._indexer.updateSyncStatusChainHead(blocks[0].blockHash, blocks[0].blockNumber);
+  }
+
+  async _pruneChain (job: any): Promise<void> {
     const { pruneBlockHeight } = job.data;
+
+    console.time('time:job-runner#processBlock-getSyncStatus');
+    const syncStatus = await this._indexer.getSyncStatus();
+    console.timeEnd('time:job-runner#processBlock-getSyncStatus');
+    assert(syncStatus);
 
     log(`Processing chain pruning at ${pruneBlockHeight}`);
 
@@ -118,10 +187,14 @@ export class JobRunner {
     }
   }
 
-  async _indexBlock (job: any, syncStatus: SyncStatusInterface): Promise<void> {
+  async _indexBlock (job: any): Promise<void> {
     const { data: { blockHash, blockNumber, parentHash, priority, timestamp } } = job;
-
     const indexBlockStartTime = new Date();
+
+    console.time('time:job-runner#processBlock-getSyncStatus');
+    const syncStatus = await this._indexer.getSyncStatus();
+    console.timeEnd('time:job-runner#processBlock-getSyncStatus');
+    assert(syncStatus);
 
     // Log time taken to complete processing of previous block.
     if (this._blockProcessStartTime) {
@@ -213,11 +286,22 @@ export class JobRunner {
     }
 
     if (!blockProgress) {
-      const { jobDelayInMilliSecs = 0 } = this._jobQueueConfig;
+      const prefetchedBlock = this._prefetchedBlocksMap[blockHash];
+      const block = { blockHash, blockNumber, parentHash, blockTimestamp: timestamp };
+      let events;
 
-      // Delay required to process block.
-      await wait(jobDelayInMilliSecs);
-      blockProgress = await this._indexer.fetchBlockEvents({ blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
+      if (prefetchedBlock) {
+        ({ events } = prefetchedBlock);
+      } else {
+        // Delay required to process block.
+        const { jobDelayInMilliSecs = 0 } = this._jobQueueConfig;
+        await wait(jobDelayInMilliSecs);
+
+        events = await this._indexer.fetchBlockEvents(block);
+      }
+
+      blockProgress = await this._indexer.saveBlockEvents(block, events);
+      delete this._prefetchedBlocksMap[blockProgress.blockHash];
     }
 
     // Check if block has unprocessed events.
@@ -337,5 +421,29 @@ export class JobRunner {
 
     assert(this._indexer.cacheContract);
     this._indexer.cacheContract(contract);
+  }
+
+  async _prefetchBlocks (blockNumber: number): Promise<void> {
+    const halfPrefetchBlockCount = this._jobQueueConfig.prefetchBlockCount / 2;
+
+    if (this._latestPrefetchedBlockNumber < 0) {
+      // Set latest prefetched block number for the first time.
+      this._latestPrefetchedBlockNumber = blockNumber + 1;
+    }
+
+    // Check if prefetched blocks are less than half.
+    if (Object.keys(this._prefetchedBlocksMap).length < halfPrefetchBlockCount) {
+      const blocksWithEvents = await fetchBatchBlocks(
+        this._indexer,
+        this._jobQueueConfig.blockDelayInMilliSecs,
+        this._latestPrefetchedBlockNumber + 1,
+        this._latestPrefetchedBlockNumber + halfPrefetchBlockCount
+      );
+
+      blocksWithEvents.forEach(({ block, events }) => {
+        this._prefetchedBlocksMap[block.blockHash] = { block, events };
+        this._latestPrefetchedBlockNumber = Number(block.blockNumber);
+      });
+    }
   }
 }

@@ -1,6 +1,6 @@
 import debug from 'debug';
 
-import { JOB_KIND_PRUNE, QUEUE_BLOCK_PROCESSING, JOB_KIND_INDEX } from './constants';
+import { JOB_KIND_PRUNE, QUEUE_BLOCK_PROCESSING, JOB_KIND_FETCH_BLOCKS } from './constants';
 import { JobQueue } from './job-queue';
 import { IndexerInterface } from './types';
 import { wait } from './misc';
@@ -41,59 +41,52 @@ export const createPruningJob = async (jobQueue: JobQueue, latestCanonicalBlockN
 export const processBlockByNumber = async (
   jobQueue: JobQueue,
   indexer: IndexerInterface,
-  blockDelayInMilliSecs: number,
   blockNumber: number
 ): Promise<void> => {
   log(`Process block ${blockNumber}`);
 
-  console.time('time:common#processBlockByNumber-get-blockProgress-syncStatus');
+  await jobQueue.pushJob(
+    QUEUE_BLOCK_PROCESSING,
+    {
+      kind: JOB_KIND_FETCH_BLOCKS,
+      blockNumber
+    }
+  );
+};
 
-  const [blockProgressEntities, syncStatus] = await Promise.all([
-    indexer.getBlocksAtHeight(blockNumber, false),
-    indexer.getSyncStatus()
-  ]);
+export const fetchBatchBlocks = async (indexer: IndexerInterface, blockDelayInMilliSecs: number, startBlock: number, endBlock: number): Promise<any[]> => {
+  let blockNumbers = [...Array(endBlock - startBlock).keys()].map(n => n + startBlock);
+  let blocks = [];
 
-  console.timeEnd('time:common#processBlockByNumber-get-blockProgress-syncStatus');
-
+  // Fetch blocks again if there are missing blocks.
   while (true) {
-    let blocks = blockProgressEntities.map((block: any) => {
-      block.timestamp = block.blockTimestamp;
+    console.time('time:common#fetchBatchBlocks-getBlocks-postgraphile');
+    const blockPromises = blockNumbers.map(async blockNumber => indexer.getBlocks({ blockNumber }));
+    console.timeEnd('time:common#fetchBatchBlocks-getBlocks-postgraphile');
 
-      return block;
-    });
+    const res = await Promise.all(blockPromises);
+    const missingIndex = res.findIndex(blocks => blocks.length === 0);
 
-    if (!blocks.length) {
-      console.time('time:common#processBlockByNumber-postgraphile');
-      blocks = await indexer.getBlocks({ blockNumber });
-      console.timeEnd('time:common#processBlockByNumber-postgraphile');
+    if (missingIndex < 0) {
+      blocks = blocks.concat(res);
+      break;
     }
 
-    if (blocks.length) {
-      for (let bi = 0; bi < blocks.length; bi++) {
-        const { blockHash, blockNumber, parentHash, timestamp } = blocks[bi];
+    log('missing block number:', blockNumbers[missingIndex]);
 
-        // Stop blocks already pushed to job queue. They are already retried after fail.
-        if (!syncStatus || syncStatus.chainHeadBlockNumber < blockNumber) {
-          await jobQueue.pushJob(
-            QUEUE_BLOCK_PROCESSING,
-            {
-              kind: JOB_KIND_INDEX,
-              blockNumber: Number(blockNumber),
-              blockHash,
-              parentHash,
-              timestamp
-            }
-          );
-        }
-      }
-
-      await indexer.updateSyncStatusChainHead(blocks[0].blockHash, blocks[0].blockNumber);
-
-      return;
-    }
-
-    log(`No blocks fetched for block number ${blockNumber}, retrying after ${blockDelayInMilliSecs} ms delay.`);
-
+    blocks.push(res.slice(0, missingIndex));
+    blockNumbers = blockNumbers.slice(missingIndex);
     await wait(blockDelayInMilliSecs);
   }
+
+  blocks = blocks.flat();
+
+  const blockAndEventPromises = blocks.map(async block => {
+    block.blockTimestamp = block.timestamp;
+    const events = await indexer.fetchBlockEvents(block);
+
+    return { block, events };
+  });
+
+  return Promise.all(blockAndEventPromises);
 };

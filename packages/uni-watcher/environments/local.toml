@@ -31,3 +31,6 @@
   jobDelayInMilliSecs = 0
   eventsInBatch = 50
   lazyUpdateBlockProgress = true
+  blockDelayInMilliSecs = 2000
+  prefetchBlocksInMem = true
+  prefetchBlockCount = 10

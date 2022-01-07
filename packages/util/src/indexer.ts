@@ -194,16 +194,34 @@ export class Indexer {
     return this._db.getEvent(id);
   }
 
-  async fetchBlockEvents (block: DeepPartial<BlockProgressInterface>, fetchAndSaveEvents: (block: DeepPartial<BlockProgressInterface>) => Promise<BlockProgressInterface>): Promise<BlockProgressInterface> {
+  async fetchBlockEvents (block: DeepPartial<BlockProgressInterface>, fetchEvents: (block: DeepPartial<BlockProgressInterface>) => Promise<DeepPartial<EventInterface>[]>): Promise<DeepPartial<EventInterface>[]> {
     assert(block.blockHash);
 
     log(`getBlockEvents: fetching from upstream server ${block.blockHash}`);
-    console.time('time:indexer#fetchBlockEvents-fetchAndSaveEvents');
-    const blockProgress = await fetchAndSaveEvents(block);
-    console.timeEnd('time:indexer#fetchBlockEvents-fetchAndSaveEvents');
-    log(`getBlockEvents: fetched for block: ${blockProgress.blockHash} num events: ${blockProgress.numEvents}`);
+    const fetchEventsStartTime = new Date();
+    const events = await fetchEvents(block);
+    const fetchEventsDuration = new Date().getTime() - fetchEventsStartTime.getTime();
+    log(`time:indexer#fetchBlockEvents-fetchEvents: ${fetchEventsDuration}ms`);
+    log(`getBlockEvents: fetched for block: ${block.blockHash} num events: ${events.length}`);
 
-    return blockProgress;
+    return events;
+  }
+
+  async saveBlockEvents (block: DeepPartial<BlockProgressInterface>, events: DeepPartial<EventInterface>[]): Promise<BlockProgressInterface> {
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
+
+    try {
+      res = await this._db.saveEvents(dbTx, block, events);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+
+    return res;
   }
 
   async getBlockEvents (blockHash: string, where: Where, queryOptions: QueryOptions): Promise<Array<EventInterface>> {
