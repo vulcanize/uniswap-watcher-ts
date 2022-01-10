@@ -29,10 +29,10 @@ export class BlockProgress implements BlockProgressInterface {
   @Column('integer')
   numEvents!: number;
 
-  @Column('integer')
+  @Column('integer', { default: 0 })
   numProcessedEvents!: number;
 
-  @Column('integer')
+  @Column('integer', { default: -1 })
   lastProcessedEventIndex!: number;
 
   @Column('boolean')

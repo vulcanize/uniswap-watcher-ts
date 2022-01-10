@@ -8,8 +8,10 @@ import { BlockProgress } from './BlockProgress';
 export const UNKNOWN_EVENT_NAME = '__unknown__';
 
 @Entity()
-// Index to query all events for a contract efficiently.
-@Index(['contract'])
+// Index to query events by block.
+@Index(['block'])
+// Index to query events by index column.
+@Index(['index'])
 export class Event {
   @PrimaryGeneratedColumn()
   id!: number;
