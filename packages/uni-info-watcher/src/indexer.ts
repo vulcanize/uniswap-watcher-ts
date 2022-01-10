@@ -546,11 +546,6 @@ export class Indexer implements IndexerInterface {
       pool.sqrtPrice = BigInt(sqrtPriceX96);
       pool.tick = BigInt(tick);
 
-      // Update ETH price now that prices could have changed.
-      const bundle = await this._db.getBundle(dbTx, { id: '1', blockHash: block.hash });
-      assert(bundle);
-      bundle.ethPriceUSD = await getEthPriceInUSD(this._db, dbTx, block, this._isDemo);
-
       // Update token prices.
       const [token0, token1] = await Promise.all([
         this._db.getToken(dbTx, { id: pool.token0.id, blockHash: block.hash }),
@@ -559,16 +554,18 @@ export class Indexer implements IndexerInterface {
 
       assert(token0 && token1, 'Pool tokens not found.');
 
-      token0.derivedETH = await findEthPerToken(this._db, dbTx, token0, this._isDemo);
-      token1.derivedETH = await findEthPerToken(this._db, dbTx, token1, this._isDemo);
-
-      pool.token0 = token0;
-      pool.token1 = token1;
-      await this._db.savePool(dbTx, pool, block);
-      await this._db.saveBundle(dbTx, bundle, block);
+      // Update ETH price now that prices could have changed.
+      const bundle = await this._db.getBundle(dbTx, { id: '1', blockHash: block.hash });
+      assert(bundle);
+      bundle.ethPriceUSD = await getEthPriceInUSD(this._db, dbTx, block, this._isDemo);
 
       await updatePoolDayData(this._db, dbTx, { contractAddress, block });
       await updatePoolHourData(this._db, dbTx, { contractAddress, block });
+
+      token0.derivedETH = await findEthPerToken(this._db, dbTx, token0, this._isDemo);
+      token1.derivedETH = await findEthPerToken(this._db, dbTx, token1, this._isDemo);
+
+      await this._db.saveBundle(dbTx, bundle, block);
 
       await Promise.all([
         this._db.saveToken(dbTx, token0, block),
@@ -662,9 +659,9 @@ export class Indexer implements IndexerInterface {
       mint.pool = pool;
       mint.token0 = pool.token0;
       mint.token1 = pool.token1;
-      mint.owner = mintEvent.owner;
-      mint.sender = mintEvent.sender;
-      mint.origin = tx.from;
+      mint.owner = utils.hexlify(mintEvent.owner);
+      mint.sender = utils.hexlify(mintEvent.sender);
+      mint.origin = utils.hexlify(tx.from);
       mint.amount = BigInt(mintEvent.amount);
       mint.amount0 = amount0;
       mint.amount1 = amount1;
@@ -694,7 +691,7 @@ export class Indexer implements IndexerInterface {
       lowerTick.liquidityGross = BigInt(lowerTick.liquidityGross) + amount;
       lowerTick.liquidityNet = BigInt(lowerTick.liquidityNet) + amount;
       upperTick.liquidityGross = BigInt(upperTick.liquidityGross) + amount;
-      upperTick.liquidityNet = BigInt(upperTick.liquidityNet) + amount;
+      upperTick.liquidityNet = BigInt(upperTick.liquidityNet) - amount;
 
       // TODO: Update Tick's volume, fees, and liquidity provider count.
       // Computing these on the tick level requires reimplementing some of the swapping code from v3-core.
@@ -824,8 +821,8 @@ export class Indexer implements IndexerInterface {
       burn.pool = pool;
       burn.token0 = pool.token0;
       burn.token1 = pool.token1;
-      burn.owner = burnEvent.owner;
-      burn.origin = tx.from;
+      burn.owner = utils.hexlify(burnEvent.owner);
+      burn.origin = utils.hexlify(tx.from);
       burn.amount = BigInt(burnEvent.amount);
       burn.amount0 = amount0;
       burn.amount1 = amount1;
@@ -915,9 +912,7 @@ export class Indexer implements IndexerInterface {
 
       assert(token0 && token1, 'Pool tokens not found.');
 
-      const oldTick = pool.tick;
-      // Check that the tick value is not null (can be zero).
-      assert(oldTick !== null);
+      let oldTick = pool.tick;
 
       // Amounts - 0/1 are token deltas. Can be positive or negative.
       const amount0 = convertTokenToDecimal(BigInt(swapEvent.amount0), BigInt(token0.decimals));
@@ -1028,9 +1023,9 @@ export class Indexer implements IndexerInterface {
       swap.pool = pool;
       swap.token0 = pool.token0;
       swap.token1 = pool.token1;
-      swap.sender = swapEvent.sender;
-      swap.origin = tx.from;
-      swap.recipient = swapEvent.recipient;
+      swap.sender = utils.hexlify(swapEvent.sender);
+      swap.origin = utils.hexlify(tx.from);
+      swap.recipient = utils.hexlify(swapEvent.recipient);
       swap.amount0 = amount0;
       swap.amount1 = amount1;
       swap.amountUSD = amountTotalUSDTracked;
@@ -1120,6 +1115,11 @@ export class Indexer implements IndexerInterface {
       if (modulo === BigInt(0)) {
         // Current tick is initialized and needs to be updated.
         await this._loadTickUpdateFeeVarsAndSave(dbTx, Number(newTick), block, contractAddress);
+      }
+
+      if (!oldTick) {
+        // In subgraph mapping code when oldTick is null, it is converted to zero in the operation below.
+        oldTick = BigInt(0);
       }
 
       const numIters = BigInt(
@@ -1297,7 +1297,7 @@ export class Indexer implements IndexerInterface {
         position = await this._db.savePosition(dbTx, position, block);
       }
 
-      position.owner = event.to;
+      position.owner = utils.hexlify(event.to);
       await this._db.savePosition(dbTx, position, block);
 
       await this._savePositionSnapshot(dbTx, position, block, tx);
