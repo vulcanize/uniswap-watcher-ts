@@ -74,10 +74,10 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(Bundle, block, {}, { limit: first });
       },
 
-      burns: async (_: any, { first, orderBy, orderDirection, where }: { first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      burns: async (_: any, { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
         log('burns', first, orderBy, orderDirection, where);
 
-        return indexer.getEntities(Burn, {}, where, { limit: first, orderBy, orderDirection }, ['burn.pool', 'burn.transaction', 'pool.token0', 'pool.token1']);
+        return indexer.getEntities(Burn, block, where, { limit: first, orderBy, orderDirection }, ['burn.pool', 'burn.transaction', 'pool.token0', 'pool.token1']);
       },
 
       factories: async (_: any, { block = {}, first }: { first: number, block: BlockHeight }) => {
@@ -86,10 +86,10 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(Factory, block, {}, { limit: first });
       },
 
-      mints: async (_: any, { first, orderBy, orderDirection, where }: { first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      mints: async (_: any, { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
         log('mints', first, orderBy, orderDirection, where);
 
-        return indexer.getEntities(Mint, {}, where, { limit: first, orderBy, orderDirection }, ['mint.pool', 'mint.transaction', 'pool.token0', 'pool.token1']);
+        return indexer.getEntities(Mint, block, where, { limit: first, orderBy, orderDirection }, ['mint.pool', 'mint.transaction', 'pool.token0', 'pool.token1']);
       },
 
       pool: async (_: any, { id, block = {} }: { id: string, block: BlockHeight }) => {
@@ -98,10 +98,10 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getPool(id, block);
       },
 
-      poolDayDatas: async (_: any, { first, skip, orderBy, orderDirection, where }: { first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      poolDayDatas: async (_: any, { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
         log('poolDayDatas', first, skip, orderBy, orderDirection, where);
 
-        return indexer.getEntities(PoolDayData, {}, where, { limit: first, skip, orderBy, orderDirection });
+        return indexer.getEntities(PoolDayData, block, where, { limit: first, skip, orderBy, orderDirection });
       },
 
       pools: async (_: any, { block = {}, first, orderBy, orderDirection, where = {} }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
@@ -110,10 +110,10 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(Pool, block, where, { limit: first, orderBy, orderDirection }, ['pool.token0', 'pool.token1']);
       },
 
-      swaps: async (_: any, { first, orderBy, orderDirection, where }: { first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      swaps: async (_: any, { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
         log('swaps', first, orderBy, orderDirection, where);
 
-        return indexer.getEntities(Swap, {}, where, { limit: first, orderBy, orderDirection }, ['swap.pool', 'swap.transaction', 'pool.token0', 'pool.token1']);
+        return indexer.getEntities(Swap, block, where, { limit: first, orderBy, orderDirection }, ['swap.pool', 'swap.transaction', 'pool.token0', 'pool.token1']);
       },
 
       ticks: async (_: any, { block = {}, first, skip, where = {} }: { block: BlockHeight, first: number, skip: number, where: { [key: string]: any } }) => {
@@ -134,24 +134,24 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(Token, block, where, { limit: first, orderBy, orderDirection }, ['token.whitelistPools']);
       },
 
-      tokenDayDatas: async (_: any, { first, skip, orderBy, orderDirection, where }: { first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      tokenDayDatas: async (_: any, { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
         log('tokenDayDatas', first, skip, orderBy, orderDirection, where);
 
-        return indexer.getEntities(TokenDayData, {}, where, { limit: first, skip, orderBy, orderDirection });
+        return indexer.getEntities(TokenDayData, block, where, { limit: first, skip, orderBy, orderDirection });
       },
 
-      tokenHourDatas: async (_: any, { first, skip, orderBy, orderDirection, where }: { first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      tokenHourDatas: async (_: any, { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
         log('tokenHourDatas', first, skip, orderBy, orderDirection, where);
 
-        return indexer.getEntities(TokenHourData, {}, where, { limit: first, skip, orderBy, orderDirection });
+        return indexer.getEntities(TokenHourData, block, where, { limit: first, skip, orderBy, orderDirection });
       },
 
-      transactions: async (_: any, { first, orderBy, orderDirection }: { first: number, orderBy: string, orderDirection: OrderDirection}) => {
+      transactions: async (_: any, { block = {}, first, orderBy, orderDirection }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection}) => {
         log('transactions', first, orderBy, orderDirection);
 
         return indexer.getEntities(
           Transaction,
-          {},
+          block,
           {},
           { limit: first, orderBy, orderDirection },
           [
@@ -210,18 +210,18 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         );
       },
 
-      uniswapDayDatas: async (_: any, { first, skip, orderBy, orderDirection, where }: { first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      uniswapDayDatas: async (_: any, { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
         log('uniswapDayDatas', first, skip, orderBy, orderDirection, where);
 
-        return indexer.getEntities(UniswapDayData, {}, where, { limit: first, skip, orderBy, orderDirection });
+        return indexer.getEntities(UniswapDayData, block, where, { limit: first, skip, orderBy, orderDirection });
       },
 
-      positions: async (_: any, { first, where }: { first: number, where: { [key: string]: any } }) => {
+      positions: async (_: any, { block = {}, first, where }: { block: BlockHeight, first: number, where: { [key: string]: any } }) => {
         log('positions', first, where);
 
         return indexer.getEntities(
           Position,
-          {},
+          block,
           where,
           { limit: first },
           [

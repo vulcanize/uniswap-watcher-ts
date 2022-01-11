@@ -348,6 +348,7 @@ type Query {
     orderBy: Burn_orderBy
     orderDirection: OrderDirection
     where: Burn_filter
+    block: Block_height
   ): [Burn!]!
 
   factories(
@@ -366,6 +367,7 @@ type Query {
     orderBy: Mint_orderBy
     orderDirection: OrderDirection
     where: Mint_filter
+    block: Block_height
   ): [Mint!]!
 
   pool(
@@ -378,6 +380,7 @@ type Query {
     orderBy: PoolDayData_orderBy
     orderDirection: OrderDirection
     where: PoolDayData_filter
+    block: Block_height
   ): [PoolDayData!]!
 
   pools(
@@ -399,6 +402,7 @@ type Query {
     orderBy: Swap_orderBy
     orderDirection: OrderDirection
     where: Swap_filter
+    block: Block_height
   ): [Swap!]!
 
   ticks(
@@ -431,6 +435,7 @@ type Query {
     orderBy: TokenDayData_orderBy
     orderDirection: OrderDirection
     where: TokenDayData_filter
+    block: Block_height
   ): [TokenDayData!]!
 
   tokenHourDatas(
@@ -439,6 +444,7 @@ type Query {
     orderBy: TokenHourData_orderBy
     orderDirection: OrderDirection
     where: TokenHourData_filter
+    block: Block_height
   ): [TokenHourData!]!
 
   tokens(
@@ -453,6 +459,7 @@ type Query {
     first: Int = 100
     orderBy: Transaction_orderBy
     orderDirection: OrderDirection
+    block: Block_height
   ): [Transaction!]!
 
   uniswapDayDatas(
@@ -461,11 +468,13 @@ type Query {
     orderBy: UniswapDayData_orderBy
     orderDirection: OrderDirection
     where: UniswapDayData_filter
+    block: Block_height
   ): [UniswapDayData!]!
 
   positions(
     first: Int = 100
     where: Position_filter
+    block: Block_height
   ): [Position!]!
 
   blocks(

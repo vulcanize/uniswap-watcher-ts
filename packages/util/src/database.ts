@@ -162,6 +162,10 @@ export class Database {
       .getMany();
   }
 
+  async saveBlockProgress (repo: Repository<BlockProgressInterface>, block: DeepPartial<BlockProgressInterface>): Promise<BlockProgressInterface> {
+    return await repo.save(block);
+  }
+
   async updateBlockProgress (repo: Repository<BlockProgressInterface>, block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<BlockProgressInterface> {
     if (!block.isComplete) {
       if (lastProcessedEventIndex <= block.lastProcessedEventIndex) {
@@ -214,43 +218,8 @@ export class Database {
     return queryBuilder.getMany();
   }
 
-  async saveEvents (blockRepo: Repository<BlockProgressInterface>, eventRepo: Repository<EventInterface>, block: DeepPartial<BlockProgressInterface>, events: DeepPartial<EventInterface>[]): Promise<BlockProgressInterface> {
-    const {
-      blockHash,
-      blockNumber,
-      blockTimestamp,
-      parentHash
-    } = block;
-
-    assert(blockHash);
-    assert(blockNumber !== undefined);
-    assert(blockNumber > -1);
-    assert(blockTimestamp !== undefined);
-    assert(blockTimestamp > -1);
-
-    // In a transaction:
-    // (1) Save all the events in the database.
-    // (2) Add an entry to the block progress table.
-    const numEvents = events.length;
-
-    const entity = blockRepo.create({
-      blockHash,
-      parentHash,
-      blockNumber,
-      blockTimestamp,
-      numEvents,
-      numProcessedEvents: 0,
-      lastProcessedEventIndex: -1,
-      isComplete: (numEvents === 0)
-    });
-
-    const blockProgress = await blockRepo.save(entity);
-
+  async saveEvents (eventRepo: Repository<EventInterface>, events: DeepPartial<EventInterface>[]): Promise<void> {
     // Bulk insert events.
-    events.forEach(event => {
-      event.block = blockProgress;
-    });
-
     const eventBatches = _.chunk(events, INSERT_EVENTS_BATCH);
 
     const insertPromises = eventBatches.map(async events => {
@@ -262,8 +231,6 @@ export class Database {
     });
 
     await Promise.all(insertPromises);
-
-    return blockProgress;
   }
 
   async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<Entity[]> {

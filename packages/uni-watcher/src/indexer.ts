@@ -359,6 +359,10 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.saveEventEntity(dbEvent);
   }
 
+  async saveEvents (dbEvents: Event[]): Promise<void> {
+    return this._baseIndexer.saveEvents(dbEvents);
+  }
+
   async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
     return this._baseIndexer.getProcessedBlockCountForRange(fromBlockNumber, toBlockNumber);
   }
@@ -368,8 +372,15 @@ export class Indexer implements IndexerInterface {
   }
 
   // Note: Some event names might be unknown at this point, as earlier events might not yet be processed.
-  async fetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
-    return this._baseIndexer.fetchBlockEvents(block, this._fetchAndSaveEvents.bind(this));
+  async fetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
+    return this._baseIndexer.fetchBlockEvents(
+      block,
+      this._fetchEvents.bind(this)
+    );
+  }
+
+  async saveBlockProgress (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+    return this._baseIndexer.saveBlockProgress(block);
   }
 
   async getBlockEvents (blockHash: string, where: Where, queryOptions: QueryOptions): Promise<Array<Event>> {
@@ -428,15 +439,15 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
-  async _fetchAndSaveEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+  async _fetchEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
     assert(blockHash);
 
     console.time('time:indexer#_fetchAndSaveEvents-get-logs-txs');
     const logsPromise = this._ethClient.getLogs({ blockHash });
     const transactionsPromise = this._postgraphileClient.getBlockWithTransactions({ blockHash });
 
-    let [
-      { block, logs },
+    const [
+      { logs },
       {
         allEthHeaderCids: {
           nodes: [
@@ -514,27 +525,6 @@ export class Indexer implements IndexerInterface {
       }
     }
 
-    const dbTx = await this._db.createTransactionRunner();
-
-    try {
-      block = {
-        blockHash,
-        blockNumber: block.number,
-        blockTimestamp: block.timestamp,
-        parentHash: block.parent?.hash
-      };
-
-      console.time('time:indexer#_fetchAndSaveEvents-save-events-block');
-      const blockProgress = await this._db.saveEvents(dbTx, block, dbEvents);
-      await dbTx.commitTransaction();
-      console.timeEnd('time:indexer#_fetchAndSaveEvents-save-events-block');
-
-      return blockProgress;
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
+    return dbEvents;
   }
 }

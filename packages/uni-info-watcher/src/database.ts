@@ -609,11 +609,10 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getBlockEvents(repo, blockHash, where, queryOptions);
   }
 
-  async saveEvents (queryRunner: QueryRunner, block: DeepPartial<BlockProgress>, events: DeepPartial<Event>[]): Promise<BlockProgress> {
-    const blockRepo = queryRunner.manager.getRepository(BlockProgress);
+  async saveEvents (queryRunner: QueryRunner, events: Event[]): Promise<void> {
     const eventRepo = queryRunner.manager.getRepository(Event);
 
-    return this._baseDatabase.saveEvents(blockRepo, eventRepo, block, events);
+    return this._baseDatabase.saveEvents(eventRepo, events);
   }
 
   async updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, force = false): Promise<SyncStatus> {
@@ -667,6 +666,12 @@ export class Database implements DatabaseInterface {
     const repo = this._conn.getRepository(BlockProgress);
 
     return this._baseDatabase.getBlockProgressEntities(repo, where, options);
+  }
+
+  async saveBlockProgress (queryRunner: QueryRunner, block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+    const repo = queryRunner.manager.getRepository(BlockProgress);
+
+    return this._baseDatabase.saveBlockProgress(repo, block);
   }
 
   async updateBlockProgress (queryRunner: QueryRunner, block: BlockProgress, lastProcessedEventIndex: number): Promise<BlockProgress> {

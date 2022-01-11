@@ -14,7 +14,7 @@ import { Block, Transaction } from '../events';
 export const exponentToBigDecimal = (decimals: bigint): GraphDecimal => {
   let bd = new GraphDecimal(1);
 
-  for (let i = 0; BigNumber.from(decimals).gte(i); i++) {
+  for (let i = BigInt(0); i < BigInt(decimals); i++) {
     bd = bd.times(10);
   }
 
@@ -60,7 +60,7 @@ export const bigDecimalExponated = (value: GraphDecimal, power: bigint): GraphDe
     return new GraphDecimal(1);
   }
 
-  const negativePower = power > BigInt(0);
+  const negativePower = power < BigInt(0);
   let result = (new GraphDecimal(0)).plus(value);
   const powerAbs = BigNumber.from(power).abs();
 
