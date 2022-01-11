@@ -17,7 +17,6 @@ import {
   deployTokens,
   deployUniswapV3Callee,
   TESTERC20_ABI,
-  TICK_MIN,
   createPool,
   initializePool,
   getMinTick,
@@ -193,7 +192,6 @@ describe('uni-info-watcher', () => {
     // Unchecked entities: Bundle, Token.
 
     const sqrtPrice = '4295128939';
-    const tick = TICK_MIN;
 
     it('should not have pool entity initialized', async () => {
       const poolData = await client.getPoolById(pool.address);
@@ -217,8 +215,8 @@ describe('uni-info-watcher', () => {
       // Checked values: sqrtPrice, tick.
 
       const poolData = await client.getPoolById(pool.address);
-      expect(poolData.sqrtPrice).to.be.equal(sqrtPrice);
-      expect(poolData.tick).to.be.equal(tick.toString());
+      expect(poolData.sqrtPrice).to.be.equal('0');
+      expect(poolData.tick).to.be.equal(null);
     });
 
     it('should update PoolDayData entity', async () => {
@@ -346,9 +344,9 @@ describe('uni-info-watcher', () => {
 
       const poolData = await client.getPoolById(pool.address);
       const poolTxCount = poolData.txCount;
-      const expectedOrigin = recipient;
-      const expectedOwner = recipient;
-      const expectedSender = poolCallee.address;
+      const expectedOrigin = utils.hexlify(recipient);
+      const expectedOwner = utils.hexlify(recipient);
+      const expectedSender = utils.hexlify(poolCallee.address);
 
       expect(txID).to.be.equal(expectedTxID);
       expect(txCountID).to.be.equal(poolTxCount);
@@ -374,7 +372,7 @@ describe('uni-info-watcher', () => {
       expect(lowerTick.liquidityGross).to.be.equal(amount.toString());
       expect(lowerTick.liquidityNet).to.be.equal(amount.toString());
       expect(upperTick.liquidityGross).to.be.equal(amount.toString());
-      expect(upperTick.liquidityNet).to.be.equal(amount.toString());
+      expect(upperTick.liquidityNet).to.be.equal((-amount).toString());
     });
 
     it('should update UniswapDayData entity', async () => {
@@ -512,8 +510,8 @@ describe('uni-info-watcher', () => {
 
       const poolData = await client.getPoolById(pool.address);
       const poolTxCount = poolData.txCount;
-      const expectedOrigin = recipient;
-      const expectedOwner = recipient;
+      const expectedOrigin = utils.hexlify(recipient);
+      const expectedOwner = utils.hexlify(recipient);
 
       expect(txID).to.be.equal(expectedTxID);
       expect(txCountID).to.be.equal(poolTxCount);
@@ -671,7 +669,7 @@ describe('uni-info-watcher', () => {
 
       const poolData = await client.getPoolById(pool.address);
       const poolTxCount = poolData.txCount;
-      const expectedOrigin = recipient;
+      const expectedOrigin = utils.hexlify(recipient);
 
       expect(txID).to.be.equal(expectedTxID);
       expect(txCountID).to.be.equal(poolTxCount);
@@ -817,7 +815,7 @@ describe('uni-info-watcher', () => {
       const positionTickLower = position.tickLower.id.split('#')[1];
       const positionTickUpper = position.tickUpper.id.split('#')[1];
 
-      const expectedOwner = eventValue.event.to;
+      const expectedOwner = utils.hexlify(eventValue.event.to);
 
       expect(position.pool.id).to.be.equal(utils.hexlify(pool.address));
       expect(position.token0.id).to.be.equal(token0.address);

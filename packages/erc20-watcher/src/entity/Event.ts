@@ -6,9 +6,7 @@ import { Entity, PrimaryGeneratedColumn, Column, Index, ManyToOne } from 'typeor
 import { BlockProgress } from './BlockProgress';
 
 @Entity()
-// Index to query all events for a contract efficiently.
-@Index(['block', 'contract'])
-// Index to query events by name efficiently.
+// Index to query events by contract and name efficiently.
 @Index(['block', 'contract', 'eventName'])
 export class Event {
   @PrimaryGeneratedColumn()

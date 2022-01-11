@@ -203,6 +203,10 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.saveEventEntity(dbEvent);
   }
 
+  async saveEvents (dbEvents: Event[]): Promise<void> {
+    return this._baseIndexer.saveEvents(dbEvents);
+  }
+
   async markBlocksAsPruned (blocks: BlockProgress[]): Promise<void> {
     return this._baseIndexer.markBlocksAsPruned(blocks);
   }
@@ -308,8 +312,15 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
-  async fetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
-    return this._baseIndexer.fetchBlockEvents(block, this._fetchAndSaveEvents.bind(this));
+  async fetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
+    return this._baseIndexer.fetchBlockEvents(
+      block,
+      this._fetchEvents.bind(this)
+    );
+  }
+
+  async saveBlockProgress (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+    return this._baseIndexer.saveBlockProgress(block);
   }
 
   async getBlockEvents (blockHash: string, where: Where, queryOptions: QueryOptions): Promise<Array<Event>> {
@@ -360,7 +371,7 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
   }
 
-  async _fetchAndSaveEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+  async _fetchEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
     assert(block.blockHash);
 
     const events = await this._uniClient.getEvents(block.blockHash);
@@ -390,19 +401,7 @@ export class Indexer implements IndexerInterface {
       });
     }
 
-    const dbTx = await this._db.createTransactionRunner();
-
-    try {
-      const blockProgress = await this._db.saveEvents(dbTx, block, dbEvents);
-      await dbTx.commitTransaction();
-
-      return blockProgress;
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
+    return dbEvents;
   }
 
   async _handlePoolCreated (block: Block, contractAddress: string, tx: Transaction, poolCreatedEvent: PoolCreatedEvent): Promise<void> {

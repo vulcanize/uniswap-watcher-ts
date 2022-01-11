@@ -8,10 +8,8 @@ import { BlockProgress } from './BlockProgress';
 export const UNKNOWN_EVENT_NAME = '__unknown__';
 
 @Entity()
-// Index to query events by block.
-@Index(['block'])
-// Index to query events by index column.
-@Index(['index'])
+// Index to query events by block and event index.
+@Index(['block', 'index'])
 export class Event {
   @PrimaryGeneratedColumn()
   id!: number;

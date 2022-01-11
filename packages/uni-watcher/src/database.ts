@@ -145,6 +145,7 @@ export class Database implements DatabaseInterface {
 
   async saveBlockProgress (queryRunner: QueryRunner, block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
     const repo = queryRunner.manager.getRepository(BlockProgress);
+
     return this._baseDatabase.saveBlockProgress(repo, block);
   }
 

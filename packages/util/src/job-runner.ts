@@ -216,7 +216,10 @@ export class JobRunner {
       // Delay required to process block.
       await wait(jobDelayInMilliSecs);
       const events = await this._indexer.fetchBlockEvents({ blockHash });
-      this._blockEventsMap.set(blockHash, events);
+
+      if (events.length) {
+        this._blockEventsMap.set(blockHash, events);
+      }
 
       blockProgress = await this._indexer.saveBlockProgress({
         blockHash,

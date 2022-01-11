@@ -308,6 +308,10 @@ export class Indexer {
     return this._baseIndexer.saveEventEntity(dbEvent);
   }
 
+  async saveEvents (dbEvents: Event[]): Promise<void> {
+    return this._baseIndexer.saveEvents(dbEvents);
+  }
+
   async getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }> {
     return this._baseIndexer.getProcessedBlockCountForRange(fromBlockNumber, toBlockNumber);
   }
@@ -352,8 +356,15 @@ export class Indexer {
     return this._baseIndexer.getBlocksAtHeight(height, isPruned);
   }
 
-  async fetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
-    return this._baseIndexer.fetchBlockEvents(block, this._fetchAndSaveEvents.bind(this));
+  async fetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
+    return this._baseIndexer.fetchBlockEvents(
+      block,
+      this._fetchEvents.bind(this)
+    );
+  }
+
+  async saveBlockProgress (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+    return this._baseIndexer.saveBlockProgress(block);
   }
 
   async getBlockEvents (blockHash: string, where: Where, queryOptions: QueryOptions): Promise<Array<Event>> {
@@ -376,9 +387,9 @@ export class Indexer {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
-  async _fetchAndSaveEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+  async _fetchEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
     assert(blockHash);
-    let { block, logs } = await this._ethClient.getLogs({ blockHash });
+    const { logs } = await this._ethClient.getLogs({ blockHash });
 
     const dbEvents: Array<DeepPartial<Event>> = [];
 
@@ -437,25 +448,6 @@ export class Indexer {
       }
     }
 
-    const dbTx = await this._db.createTransactionRunner();
-
-    try {
-      block = {
-        blockHash,
-        blockNumber: block.number,
-        blockTimestamp: block.timestamp,
-        parentHash: block.parent.hash
-      };
-
-      const blockProgress = await this._db.saveEvents(dbTx, block, dbEvents);
-      await dbTx.commitTransaction();
-
-      return blockProgress;
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
+    return dbEvents;
   }
 }
