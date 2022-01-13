@@ -296,6 +296,11 @@ export class Indexer implements IndexerInterface {
         return acc;
       }, {});
 
+      if (!queryOptions.orderBy) {
+        // Default order by id.
+        queryOptions.orderBy = 'id';
+      }
+
       res = await this._db.getModelEntities(dbTx, entity, block, where, queryOptions, relations);
       dbTx.commitTransaction();
     } catch (error) {
@@ -596,8 +601,8 @@ export class Indexer implements IndexerInterface {
       // Currently fetching first factory in database as only one exists.
       const [factory] = await this._db.getModelEntities(dbTx, Factory, { hash: block.hash }, {}, { limit: 1 });
 
-      let token0 = await this._db.getToken(dbTx, pool.token0);
-      let token1 = await this._db.getToken(dbTx, pool.token1);
+      let token0 = await this._db.getToken(dbTx, { id: pool.token0.id, blockHash: block.hash });
+      let token1 = await this._db.getToken(dbTx, { id: pool.token1.id, blockHash: block.hash });
       assert(token0);
       assert(token1);
       const amount0 = convertTokenToDecimal(BigInt(mintEvent.amount0), BigInt(token0.decimals));
@@ -756,8 +761,8 @@ export class Indexer implements IndexerInterface {
       // Currently fetching first factory in database as only one exists.
       const [factory] = await this._db.getModelEntities(dbTx, Factory, { hash: block.hash }, {}, { limit: 1 });
 
-      let token0 = await this._db.getToken(dbTx, pool.token0);
-      let token1 = await this._db.getToken(dbTx, pool.token1);
+      let token0 = await this._db.getToken(dbTx, { id: pool.token0.id, blockHash: block.hash });
+      let token1 = await this._db.getToken(dbTx, { id: pool.token1.id, blockHash: block.hash });
       assert(token0);
       assert(token1);
       const amount0 = convertTokenToDecimal(BigInt(burnEvent.amount0), BigInt(token0.decimals));
@@ -1231,8 +1236,8 @@ export class Indexer implements IndexerInterface {
       const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
 
       position.liquidity = BigInt(position.liquidity) - BigInt(event.liquidity);
-      position.depositedToken0 = position.depositedToken0.plus(amount0);
-      position.depositedToken1 = position.depositedToken1.plus(amount1);
+      position.withdrawnToken0 = position.withdrawnToken0.plus(amount0);
+      position.withdrawnToken1 = position.withdrawnToken1.plus(amount1);
 
       await this._db.savePosition(dbTx, position, block);
 

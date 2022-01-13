@@ -122,12 +122,16 @@ export class Database implements DatabaseInterface {
     return entity;
   }
 
-  async getToken (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Token>): Promise<Token | undefined> {
+  async getToken (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Token>): Promise<Token | undefined> {
     const repo = queryRunner.manager.getRepository(Token);
     const whereOptions: FindConditions<Token> = { id };
 
     if (blockHash) {
       whereOptions.blockHash = blockHash;
+    }
+
+    if (blockNumber) {
+      whereOptions.blockNumber = LessThanOrEqual(blockNumber);
     }
 
     const findOptions = {
