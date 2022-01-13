@@ -38,9 +38,6 @@ export const feeTierToTickSpacing = (feeTier: bigint): bigint => {
   if (feeTier === BigInt(500)) {
     return BigInt(10);
   }
-  if (feeTier === BigInt(100)) {
-    return BigInt(1);
-  }
 
   throw Error('Unexpected fee tier');
 };
