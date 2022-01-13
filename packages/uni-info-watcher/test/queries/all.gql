@@ -1,0 +1,151 @@
+query all($block: Block_height){
+  bundles(block: $block) {
+    id
+    ethPriceUSD
+  }
+
+  tokens(block: $block) {
+    id
+    decimals
+    derivedETH
+    feesUSD
+    name
+    totalValueLocked
+    totalValueLockedUSD
+    txCount
+    volume
+    volumeUSD
+    whitelistPools {
+      id
+    }
+  }
+
+  factories(block: $block) {
+    id
+    totalFeesUSD
+    totalValueLockedUSD
+    totalVolumeUSD
+    txCount
+  }
+
+  pools(block: $block) {
+    feeTier
+    id
+    liquidity
+    sqrtPrice
+    tick
+    token0 {
+      id
+    }
+    token0Price
+    token1 {
+      id
+    }
+    token1Price
+    totalValueLockedToken0
+    totalValueLockedToken1
+    totalValueLockedUSD
+    txCount
+    volumeUSD
+  }
+
+  ticks (block: $block) {
+    id
+    liquidityGross
+    liquidityNet
+    price0
+    price1
+    tickIdx
+  }
+
+  positions (block: $block) {
+    id
+    pool { id }
+    token0 { id }
+    token1 { id }
+    tickLower { id }
+    tickUpper { id }
+    transaction { id }
+    liquidity
+    depositedToken0
+    depositedToken1
+    collectedFeesToken0
+    collectedFeesToken1
+    owner
+    feeGrowthInside0LastX128
+    feeGrowthInside1LastX128
+  }
+
+  transactions (block: $block) {
+    burns { id }
+    id
+    mints { id }
+    swaps { id }
+    timestamp
+  }
+
+  mints (block: $block) {
+    amount0
+    amount1
+    amountUSD
+    id
+    origin
+    owner
+    pool { id }
+    sender
+    timestamp
+    transaction { id }
+  }
+
+  swaps (block: $block) {
+    amount0
+    amount1
+    amountUSD
+    id
+    origin
+    pool { id }
+    timestamp
+    transaction { id }
+  }
+
+  burns (block: $block) {
+    amount0
+    amount1
+    amountUSD
+    id
+    origin
+    pool { id }
+    timestamp
+    transaction { id }
+  }
+
+  uniswapDayDatas (block: $block) {
+    date
+    id
+    tvlUSD
+    volumeUSD
+  }
+
+  poolDayDatas (block: $block) {
+    date
+    id
+    tvlUSD
+    volumeUSD
+  }
+
+  tokenDayDatas (block: $block) {
+    date
+    id
+    totalValueLockedUSD
+    volumeUSD
+  }
+
+  tokenHourDatas (block: $block) {
+    close
+    high
+    id
+    low
+    open
+    periodStartUnix
+  }
+}

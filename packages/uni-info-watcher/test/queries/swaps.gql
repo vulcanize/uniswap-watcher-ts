@@ -1,0 +1,16 @@
+query swaps($block: Block_height){
+  swaps(block: $block){
+    amount0
+    amount1
+    amountUSD
+    id
+    origin
+    pool {
+      id
+    }
+    timestamp
+    transaction {
+      id
+    }
+  }
+}

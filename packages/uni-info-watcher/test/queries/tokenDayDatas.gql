@@ -1,0 +1,8 @@
+query tokenDayDatas($block: Block_height){
+  tokenDayDatas(block: $block){
+    date
+    id
+    totalValueLockedUSD
+    volumeUSD
+  }
+}

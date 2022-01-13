@@ -1,0 +1,9 @@
+query factories($block: Block_height){
+  factories(block: $block){
+    id
+    totalFeesUSD
+    totalValueLockedUSD
+    totalVolumeUSD
+    txCount
+  }
+}

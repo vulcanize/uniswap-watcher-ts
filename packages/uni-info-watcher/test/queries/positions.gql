@@ -1,0 +1,31 @@
+query positions($block: Block_height){
+  positions(block: $block){
+    id
+    liquidity
+    depositedToken0
+    depositedToken1
+    collectedFeesToken0
+    collectedFeesToken1
+    owner
+    feeGrowthInside0LastX128
+    feeGrowthInside1LastX128
+    pool{
+      id
+    }
+    token0{
+      id
+    }
+    token1{
+      id
+    }
+    tickLower{
+      id
+    }
+    tickUpper{
+      id
+    }
+    transaction{
+      id
+    }
+  }
+}

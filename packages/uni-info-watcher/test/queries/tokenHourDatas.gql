@@ -1,0 +1,10 @@
+query tokenHourDatas($block: Block_height){
+  tokenHourDatas(block: $block){
+    close
+    high
+    id
+    low
+    open
+    periodStartUnix
+  }
+}

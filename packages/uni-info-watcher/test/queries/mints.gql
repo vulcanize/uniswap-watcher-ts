@@ -1,0 +1,18 @@
+query mints($block: Block_height){
+  mints(block: $block){
+    amount0
+    amount1
+    amountUSD
+    id
+    origin
+    owner
+    sender
+    timestamp
+    transaction{
+      id
+    }
+    pool{
+      id
+    }
+  }
+}
