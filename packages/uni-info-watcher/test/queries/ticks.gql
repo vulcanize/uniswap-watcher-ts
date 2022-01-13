@@ -1,0 +1,10 @@
+query ticks($block: Block_height){
+  ticks(block: $block){
+    id
+    liquidityGross
+    liquidityNet
+    price0
+    price1
+    tickIdx
+  }
+}

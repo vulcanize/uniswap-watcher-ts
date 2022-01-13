@@ -1,0 +1,8 @@
+query poolDayDatas($block: Block_height){
+  poolDayDatas(block: $block){
+    date
+    id
+    tvlUSD
+    volumeUSD
+  }
+}

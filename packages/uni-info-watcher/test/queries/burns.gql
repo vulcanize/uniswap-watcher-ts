@@ -1,0 +1,17 @@
+query burns($block: Block_height){
+  burns(block: $block){
+    amount0
+    amount1
+    amountUSD
+    id
+    origin
+    owner
+    timestamp
+    transaction{
+      id
+    }
+    pool{
+      id
+    }
+  }
+}

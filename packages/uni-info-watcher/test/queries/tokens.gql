@@ -1,0 +1,18 @@
+query tokens($block: Block_height){
+  tokens(block: $block){
+    decimals
+    derivedETH
+    feesUSD
+    id
+    name
+    symbol
+    totalValueLocked
+    totalValueLockedUSD
+    txCount
+    volume
+    volumeUSD
+    whitelistPools {
+      id
+    }
+  }
+}

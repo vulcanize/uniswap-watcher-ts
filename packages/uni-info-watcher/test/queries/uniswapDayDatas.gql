@@ -1,0 +1,8 @@
+query uniswapDayDatas($block: Block_height){
+  uniswapDayDatas(block: $block){
+    date
+    id
+    tvlUSD
+    volumeUSD
+  }
+}
