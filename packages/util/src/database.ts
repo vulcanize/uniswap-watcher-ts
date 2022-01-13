@@ -361,6 +361,8 @@ export class Database {
       .where(`${tableName}.block_number IN (${subQuery.getQuery()})`)
       .setParameters(subQuery.getParameters());
 
+    selectQueryBuilder = this._buildQuery(repo, selectQueryBuilder, where, queryOptions);
+
     relations.forEach(relation => {
       let alias, property;
 
@@ -373,9 +375,8 @@ export class Database {
       }
 
       selectQueryBuilder = selectQueryBuilder.leftJoinAndSelect(property, alias);
+      selectQueryBuilder.addOrderBy(`${alias}.id`);
     });
-
-    selectQueryBuilder = this._buildQuery(repo, selectQueryBuilder, where, queryOptions);
 
     const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
 
@@ -572,7 +573,7 @@ export class Database {
     if (orderBy) {
       const columnMetadata = repo.metadata.findColumnWithPropertyName(orderBy);
       assert(columnMetadata);
-      selectQueryBuilder = selectQueryBuilder.orderBy(`${tableName}.${columnMetadata.propertyAliasName}`, orderDirection === 'desc' ? 'DESC' : 'ASC');
+      selectQueryBuilder = selectQueryBuilder.addOrderBy(`${tableName}.${columnMetadata.propertyAliasName}`, orderDirection === 'desc' ? 'DESC' : 'ASC');
     }
 
     return selectQueryBuilder;

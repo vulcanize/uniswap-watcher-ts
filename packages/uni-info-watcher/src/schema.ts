@@ -372,6 +372,7 @@ type Query {
 
   pool(
     id: ID!
+    block: Block_height
   ): Pool
 
   poolDayDatas(
