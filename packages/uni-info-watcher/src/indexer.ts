@@ -848,9 +848,9 @@ export class Indexer implements IndexerInterface {
 
       await updateUniswapDayData(this._db, dbTx, { block, contractAddress });
       await updateTokenDayData(this._db, dbTx, token0, { block });
-      await updateTokenDayData(this._db, dbTx, token0, { block });
+      await updateTokenDayData(this._db, dbTx, token1, { block });
       await updateTokenHourData(this._db, dbTx, token0, { block });
-      await updateTokenHourData(this._db, dbTx, token0, { block });
+      await updateTokenHourData(this._db, dbTx, token1, { block });
       await updatePoolDayData(this._db, dbTx, { block, contractAddress });
       await updatePoolHourData(this._db, dbTx, { block, contractAddress });
       await this._updateTickFeeVarsAndSave(dbTx, lowerTick, block);
@@ -995,6 +995,7 @@ export class Indexer implements IndexerInterface {
       const prices = sqrtPriceX96ToTokenPrices(pool.sqrtPrice, token0 as Token, token1 as Token);
       pool.token0Price = prices[0];
       pool.token1Price = prices[1];
+      await this._db.savePool(dbTx, pool, block);
 
       // Update USD pricing.
       bundle.ethPriceUSD = await getEthPriceInUSD(this._db, dbTx, block, this._isDemo);
@@ -1043,9 +1044,9 @@ export class Indexer implements IndexerInterface {
       const poolDayData = await updatePoolDayData(this._db, dbTx, { block, contractAddress });
       const poolHourData = await updatePoolHourData(this._db, dbTx, { block, contractAddress });
       const token0DayData = await updateTokenDayData(this._db, dbTx, token0, { block });
-      const token1DayData = await updateTokenDayData(this._db, dbTx, token0, { block });
+      const token1DayData = await updateTokenDayData(this._db, dbTx, token1, { block });
       const token0HourData = await updateTokenHourData(this._db, dbTx, token0, { block });
-      const token1HourData = await updateTokenHourData(this._db, dbTx, token0, { block });
+      const token1HourData = await updateTokenHourData(this._db, dbTx, token1, { block });
 
       // Update volume metrics.
       uniswapDayData.volumeETH = uniswapDayData.volumeETH.plus(amountTotalETHTracked);

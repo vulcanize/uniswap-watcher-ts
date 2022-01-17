@@ -317,7 +317,8 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      }
+      },
+      relations: ['pool']
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<PoolHourData>);
@@ -365,7 +366,8 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      }
+      },
+      relations: ['token']
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<TokenDayData>);
@@ -389,7 +391,8 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      }
+      },
+      relations: ['token']
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<TokenHourData>);
@@ -413,7 +416,8 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      }
+      },
+      relations: ['tick', 'pool']
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<TickDayData>);
