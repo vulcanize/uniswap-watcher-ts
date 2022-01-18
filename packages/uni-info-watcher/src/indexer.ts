@@ -566,8 +566,8 @@ export class Indexer implements IndexerInterface {
       await updatePoolDayData(this._db, dbTx, { contractAddress, block });
       await updatePoolHourData(this._db, dbTx, { contractAddress, block });
 
-      token0.derivedETH = await findEthPerToken(this._db, dbTx, token0, this._isDemo);
-      token1.derivedETH = await findEthPerToken(this._db, dbTx, token1, this._isDemo);
+      token0.derivedETH = await findEthPerToken(this._db, dbTx, token0, block, this._isDemo);
+      token1.derivedETH = await findEthPerToken(this._db, dbTx, token1, block, this._isDemo);
 
       await this._db.saveBundle(dbTx, bundle, block);
 
@@ -1000,8 +1000,8 @@ export class Indexer implements IndexerInterface {
       // Update USD pricing.
       bundle.ethPriceUSD = await getEthPriceInUSD(this._db, dbTx, block, this._isDemo);
       bundle = await this._db.saveBundle(dbTx, bundle, block);
-      token0.derivedETH = await findEthPerToken(this._db, dbTx, token0, this._isDemo);
-      token1.derivedETH = await findEthPerToken(this._db, dbTx, token1, this._isDemo);
+      token0.derivedETH = await findEthPerToken(this._db, dbTx, token0, block, this._isDemo);
+      token1.derivedETH = await findEthPerToken(this._db, dbTx, token1, block, this._isDemo);
 
       /**
        * Things afffected by new USD rates.
