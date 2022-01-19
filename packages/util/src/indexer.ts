@@ -269,11 +269,8 @@ export class Indexer {
         dbTx,
         eventEntityClass,
         {
-          where: {
-            block: { id: block.id },
-            eventName: UNKNOWN_EVENT_NAME
-          },
-          relations: ['block']
+          block: { id: block.id },
+          eventName: UNKNOWN_EVENT_NAME
         }
       );
 

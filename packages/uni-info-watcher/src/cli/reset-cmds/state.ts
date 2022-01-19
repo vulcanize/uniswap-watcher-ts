@@ -22,6 +22,14 @@ import { Swap } from '../../entity/Swap';
 import { PositionSnapshot } from '../../entity/PositionSnapshot';
 import { Position } from '../../entity/Position';
 import { Token } from '../../entity/Token';
+import { PoolDayData } from '../../entity/PoolDayData';
+import { PoolHourData } from '../../entity/PoolHourData';
+import { Tick } from '../../entity/Tick';
+import { TickDayData } from '../../entity/TickDayData';
+import { TokenDayData } from '../../entity/TokenDayData';
+import { TokenHourData } from '../../entity/TokenHourData';
+import { Transaction } from '../../entity/Transaction';
+import { UniswapDayData } from '../../entity/UniswapDayData';
 
 const log = debug('vulcanize:reset-state');
 
@@ -74,7 +82,26 @@ export const handler = async (argv: any): Promise<void> => {
   const dbTx = await db.createTransactionRunner();
 
   try {
-    const removeEntitiesPromise = [BlockProgress, Factory, Bundle, Pool, Mint, Burn, Swap, PositionSnapshot, Position, Token].map(async entityClass => {
+    const removeEntitiesPromise = [
+      BlockProgress,
+      Factory,
+      Bundle,
+      Pool,
+      Mint,
+      Burn,
+      Swap,
+      PositionSnapshot,
+      Position,
+      Token,
+      PoolDayData,
+      PoolHourData,
+      Tick,
+      TickDayData,
+      TokenDayData,
+      TokenHourData,
+      Transaction,
+      UniswapDayData
+    ].map(async entityClass => {
       return db.removeEntities<any>(dbTx, entityClass, { blockNumber: MoreThan(argv.blockNumber) });
     });
 

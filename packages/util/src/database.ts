@@ -22,8 +22,8 @@ import _ from 'lodash';
 import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
 import { MAX_REORG_DEPTH, UNKNOWN_EVENT_NAME } from './constants';
 
-const DEFAULT_LIMIT = 100;
-const DEFAULT_SKIP = 0;
+export const DEFAULT_LIMIT = 100;
+export const DEFAULT_SKIP = 0;
 
 const OPERATOR_MAP = {
   equals: '=',
@@ -257,11 +257,16 @@ export class Database {
     }
   }
 
-  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindManyOptions<Entity> | FindConditions<Entity>): Promise<void> {
+  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void> {
     const repo = queryRunner.manager.getRepository(entity);
 
-    const entities = await repo.find(findConditions);
-    await repo.remove(entities);
+    if (findConditions) {
+      await repo.delete(findConditions);
+
+      return;
+    }
+
+    await repo.clear();
   }
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
@@ -358,10 +363,32 @@ export class Database {
     }
 
     let selectQueryBuilder = repo.createQueryBuilder(tableName)
+      .select([
+        `${tableName}.id`,
+        `${tableName}.blockHash`
+      ])
       .where(`${tableName}.block_number IN (${subQuery.getQuery()})`)
       .setParameters(subQuery.getParameters());
 
     selectQueryBuilder = this._buildQuery(repo, selectQueryBuilder, where, queryOptions);
+
+    const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
+
+    selectQueryBuilder = selectQueryBuilder.offset(skip)
+      .limit(limit);
+
+    const entities = await selectQueryBuilder.getMany();
+
+    if (!entities.length) {
+      return [];
+    }
+
+    selectQueryBuilder = repo.createQueryBuilder(tableName)
+      .whereInIds(entities);
+
+    if (queryOptions.orderBy) {
+      selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions);
+    }
 
     relations.forEach(relation => {
       let alias, property;
@@ -377,11 +404,6 @@ export class Database {
       selectQueryBuilder = selectQueryBuilder.leftJoinAndSelect(property, alias);
       selectQueryBuilder.addOrderBy(`${alias}.id`);
     });
-
-    const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
-
-    selectQueryBuilder = selectQueryBuilder.skip(skip)
-      .take(limit);
 
     return selectQueryBuilder.getMany();
   }
@@ -568,14 +590,28 @@ export class Database {
       });
     });
 
-    const { orderBy, orderDirection } = queryOptions;
-
-    if (orderBy) {
-      const columnMetadata = repo.metadata.findColumnWithPropertyName(orderBy);
-      assert(columnMetadata);
-      selectQueryBuilder = selectQueryBuilder.addOrderBy(`${tableName}.${columnMetadata.propertyAliasName}`, orderDirection === 'desc' ? 'DESC' : 'ASC');
+    if (queryOptions.orderBy) {
+      selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions);
     }
 
     return selectQueryBuilder;
+  }
+
+  _orderQuery<Entity> (
+    repo: Repository<Entity>,
+    selectQueryBuilder: SelectQueryBuilder<Entity>,
+    orderOptions: { orderBy?: string, orderDirection?: string }
+  ): SelectQueryBuilder<Entity> {
+    const { orderBy, orderDirection } = orderOptions;
+    assert(orderBy);
+    const { tableName } = repo.metadata;
+
+    const columnMetadata = repo.metadata.findColumnWithPropertyName(orderBy);
+    assert(columnMetadata);
+
+    return selectQueryBuilder.addOrderBy(
+      `${tableName}.${columnMetadata.propertyAliasName}`,
+      orderDirection === 'desc' ? 'DESC' : 'ASC'
+    );
   }
 }

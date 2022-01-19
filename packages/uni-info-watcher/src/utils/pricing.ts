@@ -85,7 +85,7 @@ export const getEthPriceInUSD = async (db: Database, dbTx: QueryRunner, block: B
  * Search through graph to find derived Eth per token.
  * @todo update to be derived ETH (add stablecoin estimates)
  **/
-export const findEthPerToken = async (db: Database, dbTx: QueryRunner, token: Token, isDemo: boolean): Promise<GraphDecimal> => {
+export const findEthPerToken = async (db: Database, dbTx: QueryRunner, token: Token, block: Block, isDemo: boolean): Promise<GraphDecimal> => {
   if (token.id === WETH_ADDRESS || isDemo) {
     return new GraphDecimal(1);
   }
@@ -98,13 +98,14 @@ export const findEthPerToken = async (db: Database, dbTx: QueryRunner, token: To
 
   for (let i = 0; i < whiteList.length; ++i) {
     const poolAddress = whiteList[i].id;
-    const pool = await db.getPool(dbTx, { id: poolAddress });
+    const pool = await db.getPool(dbTx, { id: poolAddress, blockHash: block.hash });
     assert(pool);
 
     if (BigNumber.from(pool.liquidity).gt(0)) {
       if (pool.token0.id === token.id) {
         // whitelist token is token1
-        const token1 = pool.token1;
+        const token1 = await db.getToken(dbTx, { id: pool.token1.id, blockHash: block.hash });
+        assert(token1);
 
         // get the derived ETH in pool
         const ethLocked = pool.totalValueLockedToken1.times(token1.derivedETH);
@@ -116,7 +117,8 @@ export const findEthPerToken = async (db: Database, dbTx: QueryRunner, token: To
         }
       }
       if (pool.token1.id === token.id) {
-        const token0 = pool.token0;
+        const token0 = await db.getToken(dbTx, { id: pool.token0.id, blockHash: block.hash });
+        assert(token0);
 
         // get the derived ETH in pool
         const ethLocked = pool.totalValueLockedToken0.times(token0.derivedETH);

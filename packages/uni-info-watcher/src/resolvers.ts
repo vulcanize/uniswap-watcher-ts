@@ -21,10 +21,10 @@ import { Tick } from './entity/Tick';
 import { Token } from './entity/Token';
 import { TokenDayData } from './entity/TokenDayData';
 import { TokenHourData } from './entity/TokenHourData';
-import { Transaction } from './entity/Transaction';
 import { UniswapDayData } from './entity/UniswapDayData';
 import { Position } from './entity/Position';
 import { EventWatcher } from './events';
+import { Transaction } from './entity/Transaction';
 
 const log = debug('vulcanize:resolver');
 
@@ -146,13 +146,13 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(TokenHourData, block, where, { limit: first, skip, orderBy, orderDirection });
       },
 
-      transactions: async (_: any, { block = {}, first, orderBy, orderDirection }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection}) => {
+      transactions: async (_: any, { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
         log('transactions', first, orderBy, orderDirection);
 
         return indexer.getEntities(
           Transaction,
           block,
-          {},
+          where,
           { limit: first, orderBy, orderDirection },
           [
             'transaction.mints',

@@ -118,7 +118,20 @@ const prefetchBlocks = async (
       const blockProgress = await indexer.getBlockProgress(blockHash);
 
       if (!blockProgress) {
-        await indexer.fetchBlockEvents({ blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
+        const events = await indexer.fetchBlockEvents({ blockHash });
+
+        // Save block progress in database.
+        await indexer.saveBlockProgress({
+          blockHash,
+          blockNumber,
+          parentHash,
+          blockTimestamp: timestamp,
+          numEvents: events.length,
+          isComplete: events.length === 0
+        });
+
+        // In fill prefetch, not saving events to database as now events are saved after processing them in job-runner.
+        // Saving them in fill prefetch will result to error when events get saved after processing.
       }
     });
 

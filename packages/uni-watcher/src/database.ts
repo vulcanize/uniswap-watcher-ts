@@ -159,7 +159,7 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getEntities(queryRunner, entity, findConditions);
   }
 
-  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindManyOptions<Entity> | FindConditions<Entity>): Promise<void> {
+  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void> {
     return this._baseDatabase.removeEntities(queryRunner, entity, findConditions);
   }
 

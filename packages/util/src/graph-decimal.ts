@@ -115,14 +115,14 @@ export class GraphDecimal {
     this._checkOutOfRange(this);
     const param = this._checkOutOfRange(n);
 
-    return this.value.lessThan(param);
+    return this.value.greaterThan(param);
   }
 
   gt (n: Decimal.Value | GraphDecimal): boolean {
     this._checkOutOfRange(this);
     const param = this._checkOutOfRange(n);
 
-    return this.value.lessThan(param);
+    return this.value.gt(param);
   }
 
   comparedTo (n: Decimal.Value | GraphDecimal): number {

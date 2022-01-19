@@ -213,6 +213,7 @@ input Mint_filter {
   pool: String
   token0: String
   token1: String
+  id: ID
 }
 
 enum Mint_orderBy {
@@ -249,6 +250,10 @@ input UniswapDayData_filter {
 
 enum Transaction_orderBy {
   timestamp
+}
+
+input Transaction_filter {
+  id: ID
 }
 
 input Token_filter {
@@ -460,6 +465,7 @@ type Query {
     first: Int = 100
     orderBy: Transaction_orderBy
     orderDirection: OrderDirection
+    where: Transaction_filter
     block: Block_height
   ): [Transaction!]!
 
