@@ -1216,7 +1216,11 @@ export class Indexer implements IndexerInterface {
     }
 
     // Temp fix from Subgraph mapping code.
-    if (utils.getAddress(position.pool.id) === utils.getAddress('0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248')) {
+    // if (utils.getAddress(position.pool.id) === utils.getAddress('0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248')) {
+    //   return;
+    // }
+    // For the above scenario position.pool is null which is computed in this._getPosition.
+    if (!position.pool) {
       return;
     }
 
@@ -1261,7 +1265,11 @@ export class Indexer implements IndexerInterface {
     }
 
     // Temp fix from Subgraph mapping code.
-    if (utils.getAddress(position.pool.id) === utils.getAddress('0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248')) {
+    // if (utils.getAddress(position.pool.id) === utils.getAddress('0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248')) {
+    //   return;
+    // }
+    // For the above scenario position.pool is null which is computed in this._getPosition.
+    if (!position.pool) {
       return;
     }
 
@@ -1305,7 +1313,11 @@ export class Indexer implements IndexerInterface {
     }
 
     // Temp fix from Subgraph mapping code.
-    if (utils.getAddress(position.pool.id) === utils.getAddress('0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248')) {
+    // if (utils.getAddress(position.pool.id) === utils.getAddress('0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248')) {
+    //   return;
+    // }
+    // For the above scenario position.pool is null which is computed in this._getPosition.
+    if (!position.pool) {
       return;
     }
 
