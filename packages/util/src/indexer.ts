@@ -334,7 +334,7 @@ export class Indexer {
     return this._db.getEventsInRange(fromBlockNumber, toBlockNumber);
   }
 
-  async isWatchedContract (address : string): Promise<ContractInterface | undefined> {
+  isWatchedContract (address : string): ContractInterface | undefined {
     return this._watchedContracts[address];
   }
 

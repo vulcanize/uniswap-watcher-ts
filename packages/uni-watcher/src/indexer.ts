@@ -343,7 +343,7 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getEventsByFilter(blockHash, contract, name);
   }
 
-  async isWatchedContract (address: string): Promise<Contract | undefined> {
+  isWatchedContract (address: string): Contract | undefined {
     return this._baseIndexer.isWatchedContract(address);
   }
 

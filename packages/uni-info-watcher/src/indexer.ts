@@ -32,6 +32,20 @@ import { PositionSnapshot } from './entity/PositionSnapshot';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { Tick } from './entity/Tick';
+import { Contract, KIND_FACTORY, KIND_NFPM, KIND_POOL } from './entity/Contract';
+
+const WATCHED_CONTRACTS = [
+  {
+    kind: KIND_FACTORY,
+    address: '0x1F98431c8aD98523631AE4a59f267346ea31F984',
+    startingBlock: 12369621
+  },
+  {
+    kind: KIND_NFPM,
+    address: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
+    startingBlock: 12369651
+  }
+];
 
 const SYNC_DELTA = 5;
 
@@ -61,6 +75,10 @@ export class Indexer implements IndexerInterface {
     this._postgraphileClient = postgraphileClient;
     this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient, ethProvider, jobQueue);
     this._isDemo = mode === 'demo';
+  }
+
+  async init (): Promise<void> {
+    await this._baseIndexer.fetchContracts();
   }
 
   getResultEvent (event: Event): ResultEvent {
@@ -199,18 +217,6 @@ export class Indexer implements IndexerInterface {
     };
   }
 
-  async saveEventEntity (dbEvent: Event): Promise<Event> {
-    return this._baseIndexer.saveEventEntity(dbEvent);
-  }
-
-  async saveEvents (dbEvents: Event[]): Promise<void> {
-    return this._baseIndexer.saveEvents(dbEvents);
-  }
-
-  async markBlocksAsPruned (blocks: BlockProgress[]): Promise<void> {
-    return this._baseIndexer.markBlocksAsPruned(blocks);
-  }
-
   async getBundle (id: string, block: BlockHeight): Promise<Bundle | undefined> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
@@ -311,6 +317,42 @@ export class Indexer implements IndexerInterface {
     }
 
     return res;
+  }
+
+  async addContracts (): Promise<void> {
+    // Watching the contract(s) if not watched already.
+    for (const contract of WATCHED_CONTRACTS) {
+      const { address, startingBlock, kind } = contract;
+      const watchedContract = this.isWatchedContract(address);
+
+      if (!watchedContract) {
+        await this.watchContract(address, kind, startingBlock);
+      }
+    }
+  }
+
+  isWatchedContract (address: string): Contract | undefined {
+    return this._baseIndexer.isWatchedContract(address);
+  }
+
+  async watchContract (address: string, kind: string, startingBlock: number): Promise<void> {
+    return this._baseIndexer.watchContract(address, kind, startingBlock);
+  }
+
+  cacheContract (contract: Contract): void {
+    return this._baseIndexer.cacheContract(contract);
+  }
+
+  async saveEventEntity (dbEvent: Event): Promise<Event> {
+    return this._baseIndexer.saveEventEntity(dbEvent);
+  }
+
+  async saveEvents (dbEvents: Event[]): Promise<void> {
+    return this._baseIndexer.saveEvents(dbEvents);
+  }
+
+  async markBlocksAsPruned (blocks: BlockProgress[]): Promise<void> {
+    return this._baseIndexer.markBlocksAsPruned(blocks);
   }
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
@@ -503,6 +545,8 @@ export class Indexer implements IndexerInterface {
     } finally {
       await dbTx.release();
     }
+
+    await this.watchContract(poolCreatedEvent.pool, KIND_POOL, block.number);
   }
 
   /**
@@ -1385,24 +1429,55 @@ export class Indexer implements IndexerInterface {
         position.id = tokenId.toString();
 
         const pool = await this._db.getPoolNoTx({ id: poolAddress, blockHash });
-        assert(pool);
-        position.pool = pool;
 
-        const [token0, token1] = await Promise.all([
-          this._db.getTokenNoTx({ id: utils.hexlify(positionResult.token0), blockHash }),
-          this._db.getTokenNoTx({ id: utils.hexlify(positionResult.token1), blockHash })
-        ]);
-        assert(token0 && token1);
-        position.token0 = token0;
-        position.token1 = token1;
+        // No pool present for nfpm token related to pool 0x8fe8d9bb8eeba3ed688069c3d6b556c9ca258248 skipped in mapping code.
+        // Skipping assigning relation fields to follow subgraph behaviour for Position entity id 2074.
+        if (pool) {
+          position.pool = pool;
 
-        const [tickLower, tickUpper] = await Promise.all([
-          this._db.getTickNoTx({ id: poolAddress.concat('#').concat(positionResult.tickLower.toString()), blockHash }),
-          this._db.getTickNoTx({ id: poolAddress.concat('#').concat(positionResult.tickUpper.toString()), blockHash })
-        ]);
-        assert(tickLower && tickUpper);
-        position.tickLower = tickLower;
-        position.tickUpper = tickUpper;
+          const [token0, token1] = await Promise.all([
+            this._db.getTokenNoTx({ id: utils.hexlify(positionResult.token0), blockHash }),
+            this._db.getTokenNoTx({ id: utils.hexlify(positionResult.token1), blockHash })
+          ]);
+          assert(token0 && token1);
+          position.token0 = token0;
+          position.token1 = token1;
+
+          const lowerTickIdx = positionResult.tickLower;
+          const upperTickIdx = positionResult.tickUpper;
+
+          const lowerTickId = poolAddress.concat('#').concat(positionResult.tickLower.toString());
+          const upperTickId = poolAddress.concat('#').concat(positionResult.tickUpper.toString());
+
+          let [tickLower, tickUpper] = await Promise.all([
+            this._db.getTickNoTx({ id: lowerTickId, blockHash }),
+            this._db.getTickNoTx({ id: upperTickId, blockHash })
+          ]);
+
+          const dbTx = await this._db.createTransactionRunner();
+
+          try {
+            // Tick entities not present when Transfer event is processed before Pool Mint event.
+            // TODO: Save entity ids similar to subgraph mapping code.
+            if (!tickLower) {
+              tickLower = await createTick(this._db, dbTx, lowerTickId, BigInt(lowerTickIdx), pool, block);
+            }
+
+            if (!tickUpper) {
+              tickUpper = await createTick(this._db, dbTx, upperTickId, BigInt(upperTickIdx), pool, block);
+            }
+
+            await dbTx.commitTransaction();
+          } catch (error) {
+            await dbTx.rollbackTransaction();
+            throw error;
+          } finally {
+            await dbTx.release();
+          }
+
+          position.tickLower = tickLower;
+          position.tickUpper = tickUpper;
+        }
 
         position.feeGrowthInside0LastX128 = BigInt(positionResult.feeGrowthInside0LastX128.toString());
         position.feeGrowthInside1LastX128 = BigInt(positionResult.feeGrowthInside1LastX128.toString());

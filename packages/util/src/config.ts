@@ -23,6 +23,7 @@ export interface JobQueueConfig {
   jobDelayInMilliSecs?: number;
   eventsInBatch: number;
   lazyUpdateBlockProgress?: boolean;
+  subgraphEventsOrder: boolean;
 }
 
 interface ServerConfig {
