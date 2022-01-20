@@ -4,12 +4,15 @@
 
 import { BigNumber, utils } from 'ethers';
 import { QueryRunner } from 'typeorm';
+import assert from 'assert';
 
 import { GraphDecimal } from '@vulcanize/util';
 
 import { Transaction as TransactionEntity } from '../entity/Transaction';
 import { Database } from '../database';
 import { Block, Transaction } from '../events';
+import { Factory } from '../entity/Factory';
+import { FACTORY_ADDRESS } from './constants';
 
 export const exponentToBigDecimal = (decimals: bigint): GraphDecimal => {
   let bd = new GraphDecimal(1);
@@ -73,4 +76,17 @@ export const bigDecimalExponated = (value: GraphDecimal, power: bigint): GraphDe
   }
 
   return result;
+};
+
+export const loadFactory = async (db: Database, dbTx: QueryRunner, block: Block, isDemo: boolean): Promise<Factory> => {
+  let factory = await db.getFactory(dbTx, { blockHash: block.hash, id: FACTORY_ADDRESS });
+
+  if (isDemo) {
+    // Currently fetching first factory in database as only one exists.
+    [factory] = await db.getModelEntities(dbTx, Factory, { hash: block.hash }, {}, { limit: 1 });
+  }
+
+  assert(factory);
+
+  return factory;
 };

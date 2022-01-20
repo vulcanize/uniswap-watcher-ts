@@ -16,8 +16,9 @@ import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection,
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
 import { Token } from './entity/Token';
-import { convertTokenToDecimal, loadTransaction, safeDiv } from './utils';
+import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv } from './utils';
 import { createTick, feeTierToTickSpacing } from './utils/tick';
+import { FACTORY_ADDRESS, WATCHED_CONTRACTS } from './utils/constants';
 import { Position } from './entity/Position';
 import { Database } from './database';
 import { Event } from './entity/Event';
@@ -32,20 +33,7 @@ import { PositionSnapshot } from './entity/PositionSnapshot';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { Tick } from './entity/Tick';
-import { Contract, KIND_FACTORY, KIND_NFPM, KIND_POOL } from './entity/Contract';
-
-const WATCHED_CONTRACTS = [
-  {
-    kind: KIND_FACTORY,
-    address: '0x1F98431c8aD98523631AE4a59f267346ea31F984',
-    startingBlock: 12369621
-  },
-  {
-    kind: KIND_NFPM,
-    address: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
-    startingBlock: 12369651
-  }
-];
+import { Contract, KIND_POOL } from './entity/Contract';
 
 const SYNC_DELTA = 5;
 
@@ -641,9 +629,7 @@ export class Indexer implements IndexerInterface {
       let pool = await this._db.getPool(dbTx, { id: poolAddress, blockHash: block.hash });
       assert(pool);
 
-      // TODO: In subgraph factory is fetched by hardcoded factory address.
-      // Currently fetching first factory in database as only one exists.
-      const [factory] = await this._db.getModelEntities(dbTx, Factory, { hash: block.hash }, {}, { limit: 1 });
+      const factory = await loadFactory(this._db, dbTx, block, this._isDemo);
 
       let token0 = await this._db.getToken(dbTx, { id: pool.token0.id, blockHash: block.hash });
       let token1 = await this._db.getToken(dbTx, { id: pool.token1.id, blockHash: block.hash });
@@ -744,7 +730,7 @@ export class Indexer implements IndexerInterface {
       // TODO: Update Tick's volume, fees, and liquidity provider count.
       // Computing these on the tick level requires reimplementing some of the swapping code from v3-core.
 
-      await updateUniswapDayData(this._db, dbTx, { block, contractAddress });
+      await updateUniswapDayData(this._db, dbTx, { block, contractAddress }, this._isDemo);
       await updateTokenDayData(this._db, dbTx, token0, { block });
       await updateTokenDayData(this._db, dbTx, token1, { block });
       await updateTokenHourData(this._db, dbTx, token0, { block });
@@ -801,9 +787,7 @@ export class Indexer implements IndexerInterface {
       let pool = await this._db.getPool(dbTx, { id: poolAddress, blockHash: block.hash });
       assert(pool);
 
-      // TODO: In subgraph factory is fetched by hardcoded factory address.
-      // Currently fetching first factory in database as only one exists.
-      const [factory] = await this._db.getModelEntities(dbTx, Factory, { hash: block.hash }, {}, { limit: 1 });
+      const factory = await loadFactory(this._db, dbTx, block, this._isDemo);
 
       let token0 = await this._db.getToken(dbTx, { id: pool.token0.id, blockHash: block.hash });
       let token1 = await this._db.getToken(dbTx, { id: pool.token1.id, blockHash: block.hash });
@@ -890,7 +874,7 @@ export class Indexer implements IndexerInterface {
       upperTick.liquidityGross = BigInt(upperTick.liquidityGross) - amount;
       upperTick.liquidityNet = BigInt(upperTick.liquidityNet) + amount;
 
-      await updateUniswapDayData(this._db, dbTx, { block, contractAddress });
+      await updateUniswapDayData(this._db, dbTx, { block, contractAddress }, this._isDemo);
       await updateTokenDayData(this._db, dbTx, token0, { block });
       await updateTokenDayData(this._db, dbTx, token1, { block });
       await updateTokenHourData(this._db, dbTx, token0, { block });
@@ -939,9 +923,7 @@ export class Indexer implements IndexerInterface {
       let bundle = await this._db.getBundle(dbTx, { id: '1', blockHash: block.hash });
       assert(bundle);
 
-      // TODO: In subgraph factory is fetched by hardcoded factory address.
-      // Currently fetching first factory in database as only one exists.
-      const [factory] = await this._db.getModelEntities(dbTx, Factory, { hash: block.hash }, {}, { limit: 1 });
+      const factory = await loadFactory(this._db, dbTx, block, this._isDemo);
 
       // Get the contract address in lowercase as pool address.
       const poolAddress = utils.hexlify(contractAddress);
@@ -1084,7 +1066,7 @@ export class Indexer implements IndexerInterface {
       // Skipping update pool fee growth as they are not queried.
 
       // Interval data.
-      const uniswapDayData = await updateUniswapDayData(this._db, dbTx, { block, contractAddress });
+      const uniswapDayData = await updateUniswapDayData(this._db, dbTx, { block, contractAddress }, this._isDemo);
       const poolDayData = await updatePoolDayData(this._db, dbTx, { block, contractAddress });
       const poolHourData = await updatePoolHourData(this._db, dbTx, { block, contractAddress });
       const token0DayData = await updateTokenDayData(this._db, dbTx, token0, { block });
@@ -1426,12 +1408,16 @@ export class Indexer implements IndexerInterface {
       }
 
       if (positionResult) {
-        // TODO: In subgraph factory is fetched by hardcoded factory address.
-        // Currently fetching first factory in database as only one exists.
-        const [factory] = await this._db.getModelEntitiesNoTx(Factory, { hash: blockHash }, {}, { limit: 1 });
+        let factoryAddress = FACTORY_ADDRESS;
+
+        if (this._isDemo) {
+          // Currently fetching address from Factory entity in database as only one exists.
+          const [factory] = await this._db.getModelEntitiesNoTx(Factory, { hash: blockHash }, {}, { limit: 1 });
+          factoryAddress = factory.id;
+        }
 
         console.time('time:indexer#_getPosition-eth_call_for_getPool');
-        let { value: poolAddress } = await this._uniClient.callGetPool(blockHash, factory.id, positionResult.token0, positionResult.token1, positionResult.fee);
+        let { value: poolAddress } = await this._uniClient.callGetPool(blockHash, factoryAddress, positionResult.token0, positionResult.token1, positionResult.fee);
         console.timeEnd('time:indexer#_getPosition-eth_call_for_getPool');
 
         // Get the pool address in lowercase.
