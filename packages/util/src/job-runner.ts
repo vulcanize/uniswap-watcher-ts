@@ -358,6 +358,8 @@ export class JobRunner {
           Math.max(block.lastProcessedEventIndex + 1, dbEvent.index)
         );
       }
+
+      dbEvents = dbEvents.concat(unwatchedContractEvents);
     }
 
     console.timeEnd('time:job-runner#_processEvents-processing_events');

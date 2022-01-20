@@ -2,12 +2,13 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
 
 import { Token } from './Token';
 
 @Entity()
+@Index(['id', 'blockNumber'])
 export class TokenDayData {
   @PrimaryColumn('varchar')
   id!: string;

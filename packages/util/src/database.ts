@@ -345,8 +345,19 @@ export class Database {
     const { tableName } = repo.metadata;
 
     let subQuery = repo.createQueryBuilder('subTable')
-      .select('MAX(subTable.block_number)')
-      .where(`subTable.id = ${tableName}.id`);
+      .select('subTable.id', 'id')
+      .addSelect('MAX(subTable.block_number)', 'block_number')
+      .addFrom('block_progress', 'blockProgress')
+      .where('subTable.block_hash = blockProgress.block_hash')
+      .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
+      .groupBy('subTable.id');
+
+    subQuery = this._buildQuery(repo, subQuery, where, queryOptions);
+
+    const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
+
+    subQuery = subQuery.offset(skip)
+      .limit(limit);
 
     if (block.hash) {
       const { canonicalBlockNumber, blockHashes } = await this.getFrothyRegion(queryRunner, block.hash);
@@ -362,28 +373,22 @@ export class Database {
       subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
     }
 
-    let selectQueryBuilder = repo.createQueryBuilder(tableName)
+    const entities = await repo.createQueryBuilder(tableName)
       .select([
         `${tableName}.id`,
         `${tableName}.blockHash`
       ])
-      .where(`${tableName}.block_number IN (${subQuery.getQuery()})`)
-      .setParameters(subQuery.getParameters());
-
-    selectQueryBuilder = this._buildQuery(repo, selectQueryBuilder, where, queryOptions);
-
-    const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
-
-    selectQueryBuilder = selectQueryBuilder.offset(skip)
-      .limit(limit);
-
-    const entities = await selectQueryBuilder.getMany();
+      .addFrom(`(${subQuery.getQuery()})`, 'latestEntities')
+      .setParameters(subQuery.getParameters())
+      .where(`${tableName}.id = "latestEntities"."id"`)
+      .andWhere(`${tableName}.block_number = "latestEntities"."block_number"`)
+      .getMany();
 
     if (!entities.length) {
       return [];
     }
 
-    selectQueryBuilder = repo.createQueryBuilder(tableName)
+    let selectQueryBuilder = repo.createQueryBuilder(tableName)
       .whereInIds(entities);
 
     if (queryOptions.orderBy) {
@@ -542,15 +547,13 @@ export class Database {
   }
 
   _buildQuery<Entity> (repo: Repository<Entity>, selectQueryBuilder: SelectQueryBuilder<Entity>, where: Where = {}, queryOptions: QueryOptions = {}): SelectQueryBuilder<Entity> {
-    const { tableName } = repo.metadata;
-
     Object.entries(where).forEach(([field, filters]) => {
       filters.forEach((filter, index) => {
         // Form the where clause.
         let { not, operator, value } = filter;
         const columnMetadata = repo.metadata.findColumnWithPropertyName(field);
         assert(columnMetadata);
-        let whereClause = `${tableName}.${columnMetadata.propertyAliasName} `;
+        let whereClause = `${selectQueryBuilder.alias}.${columnMetadata.propertyAliasName} `;
 
         if (not) {
           if (operator === 'equals') {
@@ -604,13 +607,12 @@ export class Database {
   ): SelectQueryBuilder<Entity> {
     const { orderBy, orderDirection } = orderOptions;
     assert(orderBy);
-    const { tableName } = repo.metadata;
 
     const columnMetadata = repo.metadata.findColumnWithPropertyName(orderBy);
     assert(columnMetadata);
 
     return selectQueryBuilder.addOrderBy(
-      `${tableName}.${columnMetadata.propertyAliasName}`,
+      `${selectQueryBuilder.alias}.${columnMetadata.propertyAliasName}`,
       orderDirection === 'desc' ? 'DESC' : 'ASC'
     );
   }

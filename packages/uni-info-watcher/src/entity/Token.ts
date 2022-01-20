@@ -2,12 +2,13 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToMany, JoinTable, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
 import { Pool } from './Pool';
 
 @Entity()
+@Index(['id', 'blockNumber'])
 export class Token {
   @PrimaryColumn('varchar', { length: 42 })
   id!: string;
