@@ -16,7 +16,17 @@
     "export-state": "DEBUG=vulcanize:* ts-node src/cli/export-state.ts",
     "import-state": "DEBUG=vulcanize:* ts-node src/cli/import-state.ts",
     "inspect-cid": "DEBUG=vulcanize:* ts-node src/cli/inspect-cid.ts",
-    "db:reset": "sudo scripts/reset-db-erc721.sh"
+    "db:reset": "sudo scripts/reset-db-erc721.sh",
+    "nft:deploy": "hardhat --network localhost nft-deploy",
+    "nft:deploy:docker": "hardhat --network docker nft-deploy",
+    "nft:approve": "hardhat --network localhost nft-approve",
+    "nft:approve:docker": "hardhat --network docker nft-approve",
+    "nft:mint": "hardhat --network localhost nft-mint",
+    "nft:mint:docker": "hardhat --network docker nft-mint",
+    "nft:transfer-from": "hardhat --network localhost nft-transfer-from",
+    "nft:transfer-from:docker": "hardhat --network docker nft-transfer-from",
+    "block:latest": "hardhat --network localhost block-latest",
+    "block:latest:docker": "hardhat --network docker block-latest"
   },
   "repository": {
     "type": "git",
@@ -53,10 +63,13 @@
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.3.0",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@types/express": "^4.17.11",
     "@types/yargs": "^17.0.0",
     "@typescript-eslint/eslint-plugin": "^4.25.0",
     "@typescript-eslint/parser": "^4.25.0",
+    "@openzeppelin/contracts": "^4.3.2",
     "eslint": "^7.27.0",
     "eslint-config-semistandard": "^15.0.1",
     "eslint-config-standard": "^16.0.3",
@@ -65,6 +78,7 @@
     "eslint-plugin-promise": "^5.1.0",
     "eslint-plugin-standard": "^5.0.0",
     "ts-node": "^10.0.0",
-    "typescript": "^4.3.2"
+    "typescript": "^4.3.2",
+    "hardhat": "^2.3.0"
   }
 }
