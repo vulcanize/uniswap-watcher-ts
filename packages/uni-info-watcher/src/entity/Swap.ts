@@ -22,11 +22,17 @@ export class Swap {
   @Column('integer')
   blockNumber!: number;
 
+  @Column('varchar', { nullable: true })
+  transactionId!: string;
+
   @ManyToOne(() => Transaction, transaction => transaction.swaps, { onDelete: 'CASCADE' })
   transaction!: Transaction
 
   @Column('numeric', { transformer: bigintTransformer })
   timestamp!: bigint;
+
+  @Column('varchar', { length: 42, nullable: true })
+  poolId!: string;
 
   @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
   pool!: Pool

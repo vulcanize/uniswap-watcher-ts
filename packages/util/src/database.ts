@@ -18,6 +18,7 @@ import {
 } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import _ from 'lodash';
+import { RelationType } from 'typeorm/metadata/types/RelationTypes';
 
 import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
 import { MAX_REORG_DEPTH, UNKNOWN_EVENT_NAME } from './constants';
@@ -64,7 +65,7 @@ export interface Where {
   }]
 }
 
-export type Relation = string | { property: string, alias: string }
+export type Relation = string | { entity: any, type: RelationType, property: string, field: string, childRelations?: Relation[] }
 
 export class Database {
   _config: ConnectionOptions
@@ -373,44 +374,106 @@ export class Database {
       subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
     }
 
-    const entities = await repo.createQueryBuilder(tableName)
-      .select([
-        `${tableName}.id`,
-        `${tableName}.blockHash`
-      ])
+    let selectQueryBuilder = repo.createQueryBuilder(tableName)
       .addFrom(`(${subQuery.getQuery()})`, 'latestEntities')
       .setParameters(subQuery.getParameters())
       .where(`${tableName}.id = "latestEntities"."id"`)
-      .andWhere(`${tableName}.block_number = "latestEntities"."block_number"`)
-      .getMany();
-
-    if (!entities.length) {
-      return [];
-    }
-
-    let selectQueryBuilder = repo.createQueryBuilder(tableName)
-      .whereInIds(entities);
+      .andWhere(`${tableName}.block_number = "latestEntities"."block_number"`);
 
     if (queryOptions.orderBy) {
       selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions);
     }
 
-    relations.forEach(relation => {
-      let alias, property;
+    const entities = await selectQueryBuilder.getMany() as any[];
 
-      if (typeof relation === 'string') {
-        [, alias] = relation.split('.');
-        property = relation;
-      } else {
-        alias = relation.alias;
-        property = relation.property;
+    if (!entities.length) {
+      return [];
+    }
+
+    const relationPromises = relations.map(async relation => {
+      assert(typeof relation !== 'string');
+
+      const { entity: relationEntity, type, property, field, childRelations = [] } = relation;
+
+      switch (type) {
+        case 'one-to-many': {
+          const where: Where = {
+            [field]: [{
+              value: entities.map(entity => entity.id),
+              not: false,
+              operator: 'in'
+            }]
+          };
+
+          const relatedEntities = await this.getModelEntities(
+            queryRunner,
+            relationEntity,
+            block,
+            where,
+            { orderBy: 'id' },
+            childRelations
+          );
+
+          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any[]}, entity: any) => {
+            if (!acc[entity[`${field}`]]) {
+              acc[entity[`${field}`]] = [];
+            }
+
+            acc[entity[`${field}`]].push(entity);
+
+            return acc;
+          }, {});
+
+          entities.forEach(entity => {
+            if (relatedEntitiesMap[entity.id]) {
+              entity[property] = relatedEntitiesMap[entity.id];
+            } else {
+              entity[property] = [];
+            }
+          });
+
+          break;
+        }
+
+        default: {
+          // For one-to-one/many-to-one relations.
+          const where: Where = {
+            id: [{
+              value: entities.map(entity => entity[field]),
+              not: false,
+              operator: 'in'
+            }]
+          };
+
+          const relatedEntities = await this.getModelEntities(
+            queryRunner,
+            relationEntity,
+            block,
+            where,
+            {},
+            childRelations
+          );
+
+          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
+            acc[entity.id] = entity;
+
+            return acc;
+          }, {});
+
+          entities.forEach(entity => {
+            if (relatedEntitiesMap[entity[field]]) {
+              entity[property] = relatedEntitiesMap[entity[field]];
+            }
+          });
+
+          break;
+        }
       }
-
-      selectQueryBuilder = selectQueryBuilder.leftJoinAndSelect(property, alias);
-      selectQueryBuilder.addOrderBy(`${alias}.id`);
     });
 
-    return selectQueryBuilder.getMany();
+    await Promise.all(relationPromises);
+
+    return entities;
   }
 
   async getPrevEntityVersion<Entity> (queryRunner: QueryRunner, repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {

@@ -54,20 +54,38 @@ export class Position {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   collectedFeesToken1!: GraphDecimal
 
+  @Column('varchar', { length: 42, nullable: true })
+  poolId!: string;
+
   @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
   pool!: Pool
+
+  @Column('varchar', { length: 42, nullable: true })
+  token0Id!: string;
 
   @ManyToOne(() => Token)
   token0!: Token
 
+  @Column('varchar', { length: 42, nullable: true })
+  token1Id!: string;
+
   @ManyToOne(() => Token)
   token1!: Token
+
+  @Column('varchar', { nullable: true })
+  tickLowerId!: string;
 
   @ManyToOne(() => Tick)
   tickLower!: Tick
 
+  @Column('varchar', { nullable: true })
+  tickUpperId!: string;
+
   @ManyToOne(() => Tick)
   tickUpper!: Tick
+
+  @Column('varchar', { nullable: true })
+  transactionId!: string;
 
   @ManyToOne(() => Transaction)
   transaction!: Transaction

@@ -20,8 +20,14 @@ export class Pool {
   @Column('integer')
   blockNumber!: number;
 
+  @Column('varchar', { length: 42, nullable: true })
+  token0Id!: string;
+
   @ManyToOne(() => Token, { onDelete: 'CASCADE' })
   token0!: Token;
+
+  @Column('varchar', { length: 42, nullable: true })
+  token1Id!: string;
 
   @ManyToOne(() => Token, { onDelete: 'CASCADE' })
   token1!: Token;
