@@ -258,7 +258,7 @@ export class JobRunner {
     const events = this._blockEventsMap.get(block.blockHash);
     assert(events);
 
-    const dbEvents = events.map(event => {
+    let dbEvents = events.map(event => {
       event.block = block;
       return event as EventInterface;
     });
@@ -268,6 +268,24 @@ export class JobRunner {
     }
 
     console.time('time:job-runner#_processEvents-processing_events');
+    const { subgraphEventsOrder = false } = this._jobQueueConfig;
+    const unwatchedContractEvents: EventInterface[] = [];
+
+    if (subgraphEventsOrder) {
+      // Processing events out of order causes issue with restarts/kill at arbitrary times.
+      // Events of contract, added to watch in processing an event, may not be processed at end after restart/kill.
+      const watchedContractEvents: EventInterface[] = [];
+
+      dbEvents.forEach(dbEvent => {
+        if (this._indexer.isWatchedContract(dbEvent.contract)) {
+          watchedContractEvents.push(dbEvent);
+        } else {
+          unwatchedContractEvents.push(dbEvent);
+        }
+      });
+
+      dbEvents = watchedContractEvents;
+    }
 
     for (let dbEvent of dbEvents) {
       if (dbEvent.index <= block.lastProcessedEventIndex) {
@@ -278,24 +296,20 @@ export class JobRunner {
       const eventIndex = dbEvent.index;
       // log(`Processing event ${event.id} index ${eventIndex}`);
 
-      // Check if previous event in block has been processed exactly before this and abort if not.
-      if (eventIndex > 0) { // Skip the first event in the block.
-        const prevIndex = eventIndex - 1;
+      if (!subgraphEventsOrder) {
+        // Check if previous event in block has been processed exactly before this and abort if not.
+        // Skip check incase of subgraphEventsOrder.
+        if (eventIndex > 0) { // Skip the first event in the block.
+          const prevIndex = eventIndex - 1;
 
-        if (prevIndex !== block.lastProcessedEventIndex) {
-          throw new Error(`Events received out of order for block number ${block.blockNumber} hash ${block.blockHash},` +
-          ` prev event index ${prevIndex}, got event index ${dbEvent.index} and lastProcessedEventIndex ${block.lastProcessedEventIndex}, aborting`);
+          if (prevIndex !== block.lastProcessedEventIndex) {
+            throw new Error(`Events received out of order for block number ${block.blockNumber} hash ${block.blockHash},` +
+            ` prev event index ${prevIndex}, got event index ${dbEvent.index} and lastProcessedEventIndex ${block.lastProcessedEventIndex}, aborting`);
+          }
         }
       }
 
-      let watchedContract;
-
-      if (!this._indexer.isWatchedContract) {
-        // uni-info-watcher indexer doesn't have watched contracts implementation.
-        watchedContract = true;
-      } else {
-        watchedContract = await this._indexer.isWatchedContract(dbEvent.contract);
-      }
+      const watchedContract = this._indexer.isWatchedContract(dbEvent.contract);
 
       if (watchedContract) {
         // We might not have parsed this event yet. This can happen if the contract was added
@@ -326,6 +340,26 @@ export class JobRunner {
       } else {
         block = await this._indexer.updateBlockProgress(block, dbEvent.index);
       }
+    }
+
+    if (subgraphEventsOrder) {
+      // Process events from contracts not watched initially.
+      for (const dbEvent of unwatchedContractEvents) {
+        const watchedContract = this._indexer.isWatchedContract(dbEvent.contract);
+
+        if (watchedContract) {
+          // Events of contract added in same block might be processed multiple times.
+          // This is because there is no check for lastProcessedEventIndex against these events.
+          await this._indexer.processEvent(dbEvent);
+        }
+
+        block = await this._indexer.updateBlockProgress(
+          block,
+          Math.max(block.lastProcessedEventIndex + 1, dbEvent.index)
+        );
+      }
+
+      dbEvents = dbEvents.concat(unwatchedContractEvents);
     }
 
     console.timeEnd('time:job-runner#_processEvents-processing_events');

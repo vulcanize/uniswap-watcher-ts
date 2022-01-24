@@ -70,7 +70,7 @@ export interface IndexerInterface {
   saveEvents (dbEvents: EventInterface[]): Promise<void>;
   processEvent (event: EventInterface): Promise<void>;
   parseEventNameAndArgs?: (kind: string, logObj: any) => any;
-  isWatchedContract?: (address: string) => Promise<ContractInterface | undefined>;
+  isWatchedContract: (address: string) => ContractInterface | undefined;
   cacheContract?: (contract: ContractInterface) => void;
 }
 
@@ -101,6 +101,6 @@ export interface DatabaseInterface {
   saveEvents (queryRunner: QueryRunner, events: DeepPartial<EventInterface>[]): Promise<void>;
   saveEventEntity (queryRunner: QueryRunner, entity: EventInterface): Promise<EventInterface>;
   removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void>;
-  getContracts?: () => Promise<ContractInterface[]>
-  saveContract?: (queryRunner: QueryRunner, contractAddress: string, kind: string, startingBlock: number) => Promise<ContractInterface>
+  getContracts: () => Promise<ContractInterface[]>
+  saveContract: (queryRunner: QueryRunner, contractAddress: string, kind: string, startingBlock: number) => Promise<ContractInterface>
 }

@@ -2,13 +2,14 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
 import { bigintTransformer } from '@vulcanize/util';
 
 import { Pool } from './Pool';
 import { Tick } from './Tick';
 
 @Entity()
+@Index(['id', 'blockNumber'])
 export class TickDayData {
   @PrimaryColumn('varchar')
   id!: string;

@@ -11,6 +11,7 @@ import { getConfig, getResetConfig, JobQueue, resetJobs } from '@vulcanize/util'
 import { Database } from '../../database';
 import { Indexer } from '../../indexer';
 import { BlockProgress } from '../../entity/BlockProgress';
+import { Contract } from '../../entity/Contract';
 
 const log = debug('vulcanize:reset-state');
 
@@ -55,6 +56,7 @@ export const handler = async (argv: any): Promise<void> => {
 
   try {
     await db.removeEntities(dbTx, BlockProgress, { blockNumber: MoreThan(blockProgress.blockNumber) });
+    await db.removeEntities(dbTx, Contract, { startingBlock: MoreThan(argv.blockNumber) });
 
     if (syncStatus.latestIndexedBlockNumber > blockProgress.blockNumber) {
       await indexer.updateSyncStatusIndexedBlock(blockProgress.blockHash, blockProgress.blockNumber, true);

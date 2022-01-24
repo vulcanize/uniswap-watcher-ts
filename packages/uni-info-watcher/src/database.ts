@@ -45,6 +45,7 @@ import { BlockProgress } from './entity/BlockProgress';
 import { Block } from './events';
 import { SyncStatus } from './entity/SyncStatus';
 import { TickDayData } from './entity/TickDayData';
+import { Contract } from './entity/Contract';
 
 export class Database implements DatabaseInterface {
   _config: ConnectionOptions
@@ -588,6 +589,18 @@ export class Database implements DatabaseInterface {
     swap.blockNumber = block.number;
     swap.blockHash = block.hash;
     return repo.save(swap);
+  }
+
+  async getContracts (): Promise<Contract[]> {
+    const repo = this._conn.getRepository(Contract);
+
+    return this._baseDatabase.getContracts(repo);
+  }
+
+  async saveContract (queryRunner: QueryRunner, address: string, kind: string, startingBlock: number): Promise<Contract> {
+    const repo = queryRunner.manager.getRepository(Contract);
+
+    return this._baseDatabase.saveContract(repo, address, startingBlock, kind);
   }
 
   async createTransactionRunner (): Promise<QueryRunner> {

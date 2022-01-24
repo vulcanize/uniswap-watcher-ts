@@ -41,3 +41,4 @@
   maxCompletionLagInSecs = 300
   jobDelayInMilliSecs = 1000
   eventsInBatch = 50
+  subgraphEventsOrder = true

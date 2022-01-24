@@ -2,10 +2,11 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
 @Entity()
+@Index(['id', 'blockNumber'])
 export class Factory {
   @PrimaryColumn('varchar', { length: 42 })
   id!: string;

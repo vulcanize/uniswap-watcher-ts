@@ -2,7 +2,7 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
 import { Pool } from './Pool';
@@ -11,6 +11,7 @@ import { ADDRESS_ZERO } from '../utils/constants';
 import { Position } from './Position';
 
 @Entity()
+@Index(['id', 'blockNumber'])
 export class PositionSnapshot {
   @PrimaryColumn('varchar')
   id!: string;

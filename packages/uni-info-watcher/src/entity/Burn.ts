@@ -2,7 +2,7 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
 import { bigintTransformer, graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
 
 import { Transaction } from './Transaction';
@@ -10,6 +10,7 @@ import { Pool } from './Pool';
 import { Token } from './Token';
 
 @Entity()
+@Index(['id', 'blockNumber'])
 export class Burn {
   @PrimaryColumn('varchar')
   id!: string;

@@ -6,8 +6,8 @@ import assert from 'assert';
 import { BigNumber, utils } from 'ethers';
 import { QueryRunner } from 'typeorm';
 
+import { loadFactory } from './index';
 import { Database } from '../database';
-import { Factory } from '../entity/Factory';
 import { PoolDayData } from '../entity/PoolDayData';
 import { PoolHourData } from '../entity/PoolHourData';
 import { Tick } from '../entity/Tick';
@@ -23,12 +23,18 @@ import { Block } from '../events';
  * @param db
  * @param event
  */
-export const updateUniswapDayData = async (db: Database, dbTx: QueryRunner, event: { contractAddress: string, block: Block }): Promise<UniswapDayData> => {
+export const updateUniswapDayData = async (
+  db: Database,
+  dbTx: QueryRunner,
+  event: {
+    contractAddress: string,
+    block: Block
+  },
+  isDemo: boolean
+): Promise<UniswapDayData> => {
   const { block } = event;
 
-  // TODO: In subgraph factory is fetched by hardcoded factory address.
-  // Currently fetching first factory in database as only one exists.
-  const [factory] = await db.getModelEntities(dbTx, Factory, { hash: block.hash }, {}, { limit: 1 });
+  const factory = await loadFactory(db, dbTx, block, isDemo);
 
   const dayID = Math.floor(block.timestamp / 86400); // Rounded.
   const dayStartTimestamp = dayID * 86400;
