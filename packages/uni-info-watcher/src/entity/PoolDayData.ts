@@ -23,6 +23,9 @@ export class PoolDayData {
   @Column('integer')
   date!: number;
 
+  @Column('varchar', { length: 42, nullable: true })
+  poolId!: string;
+
   @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
   pool!: Pool;
 

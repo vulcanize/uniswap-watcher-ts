@@ -20,13 +20,13 @@ export class Pool {
   @Column('integer')
   blockNumber!: number;
 
-  @Column('varchar', { length: 42, nullable: true })
+  @Column('varchar', { length: 42, nullable: true, name: 'token0_id' })
   token0Id!: string;
 
   @ManyToOne(() => Token, { onDelete: 'CASCADE' })
   token0!: Token;
 
-  @Column('varchar', { length: 42, nullable: true })
+  @Column('varchar', { length: 42, nullable: true, name: 'token1_id' })
   token1Id!: string;
 
   @ManyToOne(() => Token, { onDelete: 'CASCADE' })

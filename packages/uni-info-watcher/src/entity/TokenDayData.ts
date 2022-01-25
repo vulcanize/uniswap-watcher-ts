@@ -23,6 +23,9 @@ export class TokenDayData {
   @Column('integer')
   date!: number
 
+  @Column('varchar', { length: 42, nullable: true })
+  tokenId!: string;
+
   @ManyToOne(() => Token, { onDelete: 'CASCADE' })
   token!: Token
 

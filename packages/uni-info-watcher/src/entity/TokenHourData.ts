@@ -23,6 +23,9 @@ export class TokenHourData {
   @Column('integer')
   periodStartUnix!: number
 
+  @Column('varchar', { length: 42, nullable: true })
+  tokenId!: string;
+
   @ManyToOne(() => Token, { onDelete: 'CASCADE' })
   token!: Token
 

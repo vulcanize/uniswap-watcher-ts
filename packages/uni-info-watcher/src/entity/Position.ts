@@ -60,13 +60,13 @@ export class Position {
   @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
   pool!: Pool
 
-  @Column('varchar', { length: 42, nullable: true })
+  @Column('varchar', { length: 42, nullable: true, name: 'token0_id' })
   token0Id!: string;
 
   @ManyToOne(() => Token)
   token0!: Token
 
-  @Column('varchar', { length: 42, nullable: true })
+  @Column('varchar', { length: 42, nullable: true, name: 'token1_id' })
   token1Id!: string;
 
   @ManyToOne(() => Token)

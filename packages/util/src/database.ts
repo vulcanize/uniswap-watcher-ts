@@ -386,21 +386,29 @@ export class Database {
       selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions);
     }
 
+    // Load entity ids for many to many relations.
     relations.filter(relation => relation.type === 'many-to-many')
       .forEach(relation => {
         const { property } = relation;
+
         selectQueryBuilder = selectQueryBuilder.leftJoinAndSelect(`${selectQueryBuilder.alias}.${property}`, property)
           .addOrderBy(`${property}.id`);
 
         // TODO: Get only ids from many to many join table instead of joining with related entity table.
       });
 
-    const entities = await selectQueryBuilder.getMany() as any[];
+    let entities = await selectQueryBuilder.getMany();
 
     if (!entities.length) {
       return [];
     }
 
+    entities = await this.loadRelations(queryRunner, block, relations, entities);
+
+    return entities;
+  }
+
+  async loadRelations<Entity> (queryRunner: QueryRunner, block: BlockHeight, relations: Relation[], entities: Entity[]): Promise<Entity[]> {
     const relationPromises = relations.map(async relation => {
       const { entity: relationEntity, type, property, field, childRelations = [] } = relation;
 
@@ -408,7 +416,7 @@ export class Database {
         case 'one-to-many': {
           const where: Where = {
             [field]: [{
-              value: entities.map(entity => entity.id),
+              value: entities.map((entity: any) => entity.id),
               not: false,
               operator: 'in'
             }]
@@ -433,7 +441,7 @@ export class Database {
             return acc;
           }, {});
 
-          entities.forEach(entity => {
+          entities.forEach((entity: any) => {
             if (relatedEntitiesMap[entity.id]) {
               entity[property] = relatedEntitiesMap[entity.id];
             } else {
@@ -445,7 +453,7 @@ export class Database {
         }
 
         case 'many-to-many': {
-          const relatedIds = entities.reduce((acc, entity) => {
+          const relatedIds = entities.reduce((acc, entity: any) => {
             entity[property].forEach((relatedEntity: any) => acc.add(relatedEntity.id));
 
             return acc;
@@ -474,7 +482,7 @@ export class Database {
             return acc;
           }, {});
 
-          entities.forEach(entity => {
+          entities.forEach((entity: any) => {
             const relatedField = entity[property] as any[];
 
             relatedField.forEach((relatedEntity, index) => {
@@ -489,7 +497,7 @@ export class Database {
           // For one-to-one/many-to-one relations.
           const where: Where = {
             id: [{
-              value: entities.map(entity => entity[field]),
+              value: entities.map((entity: any) => entity[field]),
               not: false,
               operator: 'in'
             }]
@@ -510,7 +518,7 @@ export class Database {
             return acc;
           }, {});
 
-          entities.forEach(entity => {
+          entities.forEach((entity: any) => {
             if (relatedEntitiesMap[entity[field]]) {
               entity[property] = relatedEntitiesMap[entity[field]];
             }

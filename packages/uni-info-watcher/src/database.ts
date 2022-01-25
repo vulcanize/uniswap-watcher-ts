@@ -137,7 +137,6 @@ export class Database implements DatabaseInterface {
 
     const findOptions = {
       where: whereOptions,
-      relations: ['whitelistPools', 'whitelistPools.token0', 'whitelistPools.token1'],
       order: {
         blockNumber: 'DESC'
       }
@@ -147,6 +146,22 @@ export class Database implements DatabaseInterface {
 
     if (!entity && findOptions.where.blockHash) {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
+    }
+
+    if (entity) {
+      [entity] = await this._baseDatabase.loadRelations(
+        queryRunner,
+        { hash: blockHash, number: blockNumber },
+        [
+          {
+            entity: Pool,
+            type: 'many-to-many',
+            property: 'whitelistPools',
+            field: 'pool'
+          }
+        ],
+        [entity]
+      );
     }
 
     return entity;
@@ -180,7 +195,6 @@ export class Database implements DatabaseInterface {
 
     const findOptions = {
       where: whereOptions,
-      relations: ['token0', 'token1'],
       order: {
         blockNumber: 'DESC'
       }
@@ -190,6 +204,28 @@ export class Database implements DatabaseInterface {
 
     if (!entity && findOptions.where.blockHash) {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
+    }
+
+    if (entity) {
+      [entity] = await this._baseDatabase.loadRelations(
+        queryRunner,
+        { hash: blockHash, number: blockNumber },
+        [
+          {
+            entity: Token,
+            type: 'one-to-one',
+            property: 'token0',
+            field: 'token0Id'
+          },
+          {
+            entity: Token,
+            type: 'one-to-one',
+            property: 'token1',
+            field: 'token1Id'
+          }
+        ],
+        [entity]
+      );
     }
 
     return entity;
@@ -224,7 +260,6 @@ export class Database implements DatabaseInterface {
 
       const findOptions = {
         where: whereOptions,
-        relations: ['pool', 'token0', 'token1', 'tickLower', 'tickUpper', 'transaction'],
         order: {
           blockNumber: 'DESC'
         }
@@ -234,6 +269,52 @@ export class Database implements DatabaseInterface {
 
       if (!entity && findOptions.where.blockHash) {
         entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
+      }
+
+      if (entity) {
+        [entity] = await this._baseDatabase.loadRelations(
+          queryRunner,
+          { hash: blockHash },
+          [
+            {
+              entity: Pool,
+              type: 'one-to-one',
+              property: 'pool',
+              field: 'poolId'
+            },
+            {
+              entity: Token,
+              type: 'one-to-one',
+              property: 'token0',
+              field: 'token0Id'
+            },
+            {
+              entity: Token,
+              type: 'one-to-one',
+              property: 'token1',
+              field: 'token1Id'
+            },
+            {
+              entity: Tick,
+              type: 'one-to-one',
+              property: 'tickLower',
+              field: 'tickLowerId'
+            },
+            {
+              entity: Tick,
+              type: 'one-to-one',
+              property: 'tickUpper',
+              field: 'tickUpperId'
+            },
+            {
+              entity: Transaction,
+              type: 'one-to-one',
+              property: 'transaction',
+              field: 'transactionId'
+            }
+          ],
+          [entity]
+        );
       }
     } finally {
       await queryRunner.release();
@@ -252,7 +333,6 @@ export class Database implements DatabaseInterface {
 
     const findOptions = {
       where: whereOptions,
-      relations: ['pool'],
       order: {
         blockNumber: 'DESC'
       }
@@ -262,6 +342,22 @@ export class Database implements DatabaseInterface {
 
     if (!entity && findOptions.where.blockHash) {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
+    }
+
+    if (entity) {
+      [entity] = await this._baseDatabase.loadRelations(
+        queryRunner,
+        { hash: blockHash },
+        [
+          {
+            entity: Pool,
+            type: 'one-to-one',
+            property: 'pool',
+            field: 'poolId'
+          }
+        ],
+        [entity]
+      );
     }
 
     return entity;
@@ -293,14 +389,29 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      },
-      relations: ['pool']
+      }
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<PoolDayData>);
 
     if (!entity && findOptions.where.blockHash) {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
+    }
+
+    if (entity) {
+      [entity] = await this._baseDatabase.loadRelations(
+        queryRunner,
+        { hash: blockHash },
+        [
+          {
+            entity: Pool,
+            type: 'one-to-one',
+            property: 'pool',
+            field: 'poolId'
+          }
+        ],
+        [entity]
+      );
     }
 
     return entity;
@@ -318,14 +429,29 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      },
-      relations: ['pool']
+      }
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<PoolHourData>);
 
     if (!entity && findOptions.where.blockHash) {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
+    }
+
+    if (entity) {
+      [entity] = await this._baseDatabase.loadRelations(
+        queryRunner,
+        { hash: blockHash },
+        [
+          {
+            entity: Pool,
+            type: 'one-to-one',
+            property: 'pool',
+            field: 'poolId'
+          }
+        ],
+        [entity]
+      );
     }
 
     return entity;
@@ -367,14 +493,29 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      },
-      relations: ['token']
+      }
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<TokenDayData>);
 
     if (!entity && findOptions.where.blockHash) {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
+    }
+
+    if (entity) {
+      [entity] = await this._baseDatabase.loadRelations(
+        queryRunner,
+        { hash: blockHash },
+        [
+          {
+            entity: Token,
+            type: 'one-to-one',
+            property: 'token',
+            field: 'tokenId'
+          }
+        ],
+        [entity]
+      );
     }
 
     return entity;
@@ -392,14 +533,29 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      },
-      relations: ['token']
+      }
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<TokenHourData>);
 
     if (!entity && findOptions.where.blockHash) {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
+    }
+
+    if (entity) {
+      [entity] = await this._baseDatabase.loadRelations(
+        queryRunner,
+        { hash: blockHash },
+        [
+          {
+            entity: Token,
+            type: 'one-to-one',
+            property: 'token',
+            field: 'tokenId'
+          }
+        ],
+        [entity]
+      );
     }
 
     return entity;
@@ -417,14 +573,35 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      },
-      relations: ['tick', 'pool']
+      }
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<TickDayData>);
 
     if (!entity && findOptions.where.blockHash) {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
+    }
+
+    if (entity) {
+      [entity] = await this._baseDatabase.loadRelations(
+        queryRunner,
+        { hash: blockHash },
+        [
+          {
+            entity: Tick,
+            type: 'one-to-one',
+            property: 'tick',
+            field: 'tickId'
+          },
+          {
+            entity: Pool,
+            type: 'one-to-one',
+            property: 'pool',
+            field: 'PoolId'
+          }
+        ],
+        [entity]
+      );
     }
 
     return entity;
