@@ -65,7 +65,7 @@ export interface Where {
   }]
 }
 
-export type Relation = string | { entity: any, type: RelationType, property: string, field: string, childRelations?: Relation[] }
+export type Relation = { entity: any, type: RelationType, property: string, field: string, childRelations?: Relation[] }
 
 export class Database {
   _config: ConnectionOptions
@@ -375,14 +375,25 @@ export class Database {
     }
 
     let selectQueryBuilder = repo.createQueryBuilder(tableName)
-      .addFrom(`(${subQuery.getQuery()})`, 'latestEntities')
-      .setParameters(subQuery.getParameters())
-      .where(`${tableName}.id = "latestEntities"."id"`)
-      .andWhere(`${tableName}.block_number = "latestEntities"."block_number"`);
+      .innerJoin(
+        `(${subQuery.getQuery()})`,
+        'latestEntities',
+        `${tableName}.id = "latestEntities"."id" AND ${tableName}.block_number = "latestEntities"."block_number"`
+      )
+      .setParameters(subQuery.getParameters());
 
     if (queryOptions.orderBy) {
       selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions);
     }
+
+    relations.filter(relation => relation.type === 'many-to-many')
+      .forEach(relation => {
+        const { property } = relation;
+        selectQueryBuilder = selectQueryBuilder.leftJoinAndSelect(`${selectQueryBuilder.alias}.${property}`, property)
+          .addOrderBy(`${property}.id`);
+
+        // TODO: Get only ids from many to many join table instead of joining with related entity table.
+      });
 
     const entities = await selectQueryBuilder.getMany() as any[];
 
@@ -391,8 +402,6 @@ export class Database {
     }
 
     const relationPromises = relations.map(async relation => {
-      assert(typeof relation !== 'string');
-
       const { entity: relationEntity, type, property, field, childRelations = [] } = relation;
 
       switch (type) {
@@ -415,11 +424,11 @@ export class Database {
           );
 
           const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any[]}, entity: any) => {
-            if (!acc[entity[`${field}`]]) {
-              acc[entity[`${field}`]] = [];
+            if (!acc[entity[field]]) {
+              acc[entity[field]] = [];
             }
 
-            acc[entity[`${field}`]].push(entity);
+            acc[entity[field]].push(entity);
 
             return acc;
           }, {});
@@ -430,6 +439,47 @@ export class Database {
             } else {
               entity[property] = [];
             }
+          });
+
+          break;
+        }
+
+        case 'many-to-many': {
+          const relatedIds = entities.reduce((acc, entity) => {
+            entity[property].forEach((relatedEntity: any) => acc.add(relatedEntity.id));
+
+            return acc;
+          }, new Set());
+
+          const where: Where = {
+            id: [{
+              value: Array.from(relatedIds),
+              not: false,
+              operator: 'in'
+            }]
+          };
+
+          const relatedEntities = await this.getModelEntities(
+            queryRunner,
+            relationEntity,
+            block,
+            where,
+            {},
+            childRelations
+          );
+
+          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
+            acc[entity.id] = entity;
+
+            return acc;
+          }, {});
+
+          entities.forEach(entity => {
+            const relatedField = entity[property] as any[];
+
+            relatedField.forEach((relatedEntity, index) => {
+              relatedField[index] = relatedEntitiesMap[relatedEntity.id];
+            });
           });
 
           break;
