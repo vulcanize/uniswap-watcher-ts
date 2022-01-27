@@ -722,9 +722,7 @@ export class Database {
 
         whereClause += `${OPERATOR_MAP[operator]} `;
 
-        if (['contains', 'starts'].some(el => el === operator)) {
-          whereClause += '%:';
-        } else if (operator === 'in') {
+        if (operator === 'in') {
           whereClause += '(:...';
         } else {
           // Convert to string type value as bigint type throws error in query.
@@ -736,14 +734,20 @@ export class Database {
         const variableName = `${field}${index}`;
         whereClause += variableName;
 
-        if (['contains', 'ends'].some(el => el === operator)) {
-          whereClause += '%';
-        } else if (operator === 'in') {
+        if (operator === 'in') {
           whereClause += ')';
 
           if (!value.length) {
             whereClause = 'FALSE';
           }
+        }
+
+        if (['contains', 'starts'].some(el => el === operator)) {
+          value = `%${value}`;
+        }
+
+        if (['contains', 'ends'].some(el => el === operator)) {
+          value += '%';
         }
 
         selectQueryBuilder = selectQueryBuilder.andWhere(whereClause, { [variableName]: value });
