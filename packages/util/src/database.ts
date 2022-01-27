@@ -391,21 +391,38 @@ export class Database {
     selectQueryBuilder = selectQueryBuilder.offset(skip)
       .limit(limit);
 
-    // Load entity ids for many to many relations.
-    relations.filter(relation => relation.type === 'many-to-many')
-      .forEach(relation => {
+    let entities = await selectQueryBuilder.getMany();
+
+    if (!entities.length) {
+      return [];
+    }
+
+    const manyToManyRelations = relations.filter(relation => relation.type === 'many-to-many');
+
+    if (manyToManyRelations.length) {
+      // Load entities separately for many to many relations as limit does not work with relation joins.
+      let relationQueryBuilder = repo.createQueryBuilder(tableName)
+        .whereInIds(
+          entities.map(
+            (entity: any) => ({ id: entity.id, blockHash: entity.blockHash })
+          )
+        );
+
+      if (queryOptions.orderBy) {
+        relationQueryBuilder = this._orderQuery(repo, relationQueryBuilder, queryOptions);
+      }
+
+      // Load entity ids for many to many relations.
+      manyToManyRelations.forEach(relation => {
         const { property } = relation;
 
-        selectQueryBuilder = selectQueryBuilder.leftJoinAndSelect(`${selectQueryBuilder.alias}.${property}`, property)
+        relationQueryBuilder = relationQueryBuilder.leftJoinAndSelect(`${relationQueryBuilder.alias}.${property}`, property)
           .addOrderBy(`${property}.id`);
 
         // TODO: Get only ids from many to many join table instead of joining with related entity table.
       });
 
-    let entities = await selectQueryBuilder.getMany();
-
-    if (!entities.length) {
-      return [];
+      entities = await relationQueryBuilder.getMany();
     }
 
     entities = await this.loadRelations(queryRunner, block, queryOptions, relations, entities);
