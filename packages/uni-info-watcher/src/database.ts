@@ -139,7 +139,8 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      }
+      },
+      relations: ['whitelistPools']
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<Token>);
@@ -152,6 +153,7 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash, number: blockNumber },
+        {},
         [
           {
             entity: Pool,
@@ -210,6 +212,7 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash, number: blockNumber },
+        {},
         [
           {
             entity: Token,
@@ -275,6 +278,7 @@ export class Database implements DatabaseInterface {
         [entity] = await this._baseDatabase.loadRelations(
           queryRunner,
           { hash: blockHash },
+          {},
           [
             {
               entity: Pool,
@@ -348,6 +352,7 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
+        {},
         [
           {
             entity: Pool,
@@ -402,6 +407,7 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
+        {},
         [
           {
             entity: Pool,
@@ -442,6 +448,7 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
+        {},
         [
           {
             entity: Pool,
@@ -506,6 +513,7 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
+        {},
         [
           {
             entity: Token,
@@ -546,6 +554,7 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
+        {},
         [
           {
             entity: Token,
@@ -586,6 +595,7 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
+        {},
         [
           {
             entity: Tick,
