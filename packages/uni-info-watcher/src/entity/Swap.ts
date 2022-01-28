@@ -11,6 +11,7 @@ import { Token } from './Token';
 
 @Entity()
 @Index(['id', 'blockNumber'])
+@Index(['transactionId'])
 export class Swap {
   @PrimaryColumn('varchar')
   id!: string;
