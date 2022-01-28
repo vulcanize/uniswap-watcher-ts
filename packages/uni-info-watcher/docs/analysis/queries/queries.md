@@ -15,6 +15,7 @@
         date
         volumeUSD
         tvlUSD
+        feesUSD
       }
     }
     ```

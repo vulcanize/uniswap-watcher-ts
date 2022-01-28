@@ -290,11 +290,6 @@ export class Indexer implements IndexerInterface {
         return acc;
       }, {});
 
-      if (!queryOptions.orderBy) {
-        // Default order by id.
-        queryOptions.orderBy = 'id';
-      }
-
       res = await this._db.getModelEntities(dbTx, entity, block, where, queryOptions, relations);
       dbTx.commitTransaction();
     } catch (error) {

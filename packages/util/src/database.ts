@@ -386,6 +386,8 @@ export class Database {
       selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions);
     }
 
+    selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' });
+
     const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
 
     selectQueryBuilder = selectQueryBuilder.offset(skip)
@@ -411,6 +413,8 @@ export class Database {
       if (queryOptions.orderBy) {
         relationQueryBuilder = this._orderQuery(repo, relationQueryBuilder, queryOptions);
       }
+
+      relationQueryBuilder = this._orderQuery(repo, relationQueryBuilder, { ...queryOptions, orderBy: 'id' });
 
       // Load entity ids for many to many relations.
       manyToManyRelations.forEach(relation => {
@@ -450,7 +454,6 @@ export class Database {
             block,
             where,
             {
-              orderBy: 'id',
               limit: queryOptions.limit
             },
             childRelations
@@ -498,7 +501,7 @@ export class Database {
             block,
             where,
             {
-              limit: queryOptions.limit
+              limit: relatedIds.size
             },
             childRelations
           );

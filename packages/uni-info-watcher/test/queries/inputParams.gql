@@ -1,0 +1,378 @@
+query inputParams($block: Block_height){
+  bundles(
+    block: $block
+    first: 1
+  ) {
+    ethPriceUSD
+  }
+
+  factories(
+    block: $block
+    first: 1
+  ) {
+    txCount
+    totalVolumeUSD
+    totalFeesUSD
+    totalValueLockedUSD
+  }
+
+  pools(
+    block: $block
+    # where: { id_in: $poolString, token0_in: $tokens, token1_in: $tokens, id: $id }
+    orderBy: totalValueLockedUSD
+    orderDirection: desc
+    first: 50
+  ) {
+    id
+    feeTier
+    liquidity
+    sqrtPrice
+    tick
+    token0 {
+      id
+      symbol
+      name
+      decimals
+      derivedETH
+    }
+    token1 {
+      id
+      symbol
+      name
+      decimals
+      derivedETH
+    }
+    token0Price
+    token1Price
+    volumeUSD
+    txCount
+    totalValueLockedToken0
+    totalValueLockedToken1
+    totalValueLockedUSD
+  }
+
+  asPools2: pools(
+    block: $block
+    first: 200
+    orderBy: totalValueLockedUSD
+    orderDirection: desc
+    # where: { token0: $address, token1: $address }
+  ) {
+    id
+  }
+
+  tokens(
+    block: $block
+    # where: { symbol_contains: $value, name_contains: $value, id: $id, id_in: $tokenString }
+    orderBy: totalValueLockedUSD
+    orderDirection: desc
+    first: 50
+  ) {
+    id
+    symbol
+    name
+    totalValueLockedUSD
+    derivedETH
+    volumeUSD
+    volume
+    txCount
+    totalValueLocked
+    feesUSD
+  }
+
+  mints(
+    block: $block
+    first: 100
+    orderBy: timestamp
+    orderDirection: desc
+    # where: { pool: $address }
+  ) {
+    timestamp
+    transaction {
+      id
+    }
+    pool {
+      token0 {
+        id
+        symbol
+      }
+      token1 {
+        id
+        symbol
+      }
+    }
+    owner
+    sender
+    origin
+    amount0
+    amount1
+    amountUSD
+  }
+
+  swaps(
+    block: $block
+    first: 100
+    orderBy: timestamp
+    orderDirection: desc
+    # where: { pool: $address }
+  ) {
+    timestamp
+    transaction {
+      id
+    }
+    pool {
+      token0 {
+        id
+        symbol
+      }
+      token1 {
+        id
+        symbol
+      }
+    }
+    origin
+    amount0
+    amount1
+    amountUSD
+  }
+
+  burns(
+    block: $block
+    first: 100
+    orderBy: timestamp
+    orderDirection: desc
+    # where: { pool: $address }
+  ) {
+    timestamp
+    transaction {
+      id
+    }
+    pool {
+      token0 {
+        id
+        symbol
+      }
+      token1 {
+        id
+        symbol
+      }
+    }
+    owner
+    amount0
+    amount1
+    amountUSD
+  }
+
+  asMints2: mints(
+    block: $block
+    first: 500
+    orderBy: timestamp
+    orderDirection: desc
+    # where: { token0: $address }
+  ) {
+    timestamp
+    transaction {
+      id
+    }
+    pool {
+      token0 {
+        id
+        symbol
+      }
+      token1 {
+        id
+        symbol
+      }
+    }
+    owner
+    sender
+    origin
+    amount0
+    amount1
+    amountUSD
+  }
+
+  asSwaps2: swaps(
+    block: $block
+    first: 500
+    orderBy: timestamp
+    orderDirection: desc
+    # where: { token0: $address }
+  ) {
+    timestamp
+    transaction {
+      id
+    }
+    pool {
+      token0 {
+        id
+        symbol
+      }
+      token1 {
+        id
+        symbol
+      }
+    }
+    origin
+    amount0
+    amount1
+    amountUSD
+  }
+
+  asBurns2: burns(
+    block: $block
+    first: 500
+    orderBy: timestamp
+    orderDirection: desc
+    # where: { token0: $address }
+  ) {
+    timestamp
+    transaction {
+      id
+    }
+    pool {
+      token0 {
+        id
+        symbol
+      }
+      token1 {
+        id
+        symbol
+      }
+    }
+    owner
+    amount0
+    amount1
+    amountUSD
+  }
+
+  transactions(
+    block: $block
+    first: 500
+    orderBy: timestamp
+    orderDirection: desc
+  ) {
+    id
+    timestamp
+    mints {
+      pool {
+        token0 {
+          id
+          symbol
+        }
+        token1 {
+          id
+          symbol
+        }
+      }
+      owner
+      sender
+      origin
+      amount0
+      amount1
+      amountUSD
+    }
+    swaps {
+      pool {
+        token0 {
+          id
+          symbol
+        }
+        token1 {
+          id
+          symbol
+        }
+      }
+      origin
+      amount0
+      amount1
+      amountUSD
+    }
+    burns {
+      pool {
+        token0 {
+          id
+          symbol
+        }
+        token1 {
+          id
+          symbol
+        }
+      }
+      owner
+      origin
+      amount0
+      amount1
+      amountUSD
+    }
+  }
+
+  uniswapDayDatas(
+    block: $block
+    first: 1000
+    # skip: $skip
+    # where: { date_gt: $startTime }
+    orderBy: date
+    orderDirection: asc
+  ) {
+    id
+    date
+    volumeUSD
+    tvlUSD
+  }
+
+  poolDayDatas(
+    block: $block
+    first: 1000
+    # skip: $skip
+    # where: { pool: $address, date_gt: $startTime }
+    orderBy: date
+    orderDirection: asc
+  ) {
+    date
+    volumeUSD
+    tvlUSD
+    feesUSD
+  }
+
+  tokenDayDatas(
+    block: $block
+    first: 1000
+    # skip: $skip
+    # where: { token: $address, date_gt: $startTime }
+    orderBy: date
+    orderDirection: asc
+  ) {
+    date
+    volumeUSD
+    totalValueLockedUSD
+  }
+
+  tokenHourDatas(
+    block: $block
+    first: 100
+    # skip: $skip
+    # where: { token: $address, periodStartUnix_gt: $startTime }
+    orderBy: periodStartUnix
+    orderDirection: asc
+  ) {
+    periodStartUnix
+    high
+    low
+    open
+    close
+  }
+
+  ticks(
+    block: $block
+    first: 1000
+    # skip: $skip
+    # where: { poolAddress: $poolAddress, tickIdx_lte: $tickIdxUpperBound, tickIdx_gte: $tickIdxLowerBound }
+  ) {
+    tickIdx
+    liquidityGross
+    liquidityNet
+    price0
+    price1
+  }
+}
