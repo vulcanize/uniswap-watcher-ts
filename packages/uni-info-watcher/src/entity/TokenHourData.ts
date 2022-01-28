@@ -9,6 +9,7 @@ import { Token } from './Token';
 
 @Entity()
 @Index(['id', 'blockNumber'])
+@Index(['periodStartUnix', 'tokenId'])
 export class TokenHourData {
   @PrimaryColumn('varchar')
   id!: string;

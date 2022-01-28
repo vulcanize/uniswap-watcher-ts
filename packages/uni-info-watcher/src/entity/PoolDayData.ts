@@ -9,6 +9,7 @@ import { Pool } from './Pool';
 
 @Entity()
 @Index(['id', 'blockNumber'])
+@Index(['date', 'poolId'])
 export class PoolDayData {
   @PrimaryColumn('varchar')
   id!: string;

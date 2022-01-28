@@ -9,6 +9,7 @@ import { Token } from './Token';
 
 @Entity()
 @Index(['id', 'blockNumber'])
+@Index(['date', 'tokenId'])
 export class TokenDayData {
   @PrimaryColumn('varchar')
   id!: string;
