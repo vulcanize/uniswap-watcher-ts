@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { DeepPartial, FindConditions, FindManyOptions, QueryRunner } from 'typeorm';
+import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan, MoreThan, QueryRunner } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { providers, utils, BigNumber } from 'ethers';
 
@@ -160,20 +160,28 @@ export class Indexer implements IndexerInterface {
 
   async getBlockEntities (where: { [key: string]: any } = {}, queryOptions: QueryOptions): Promise<any> {
     if (where.timestamp_gt) {
-      where.blockTimestamp_gt = where.timestamp_gt;
+      where.blockTimestamp = MoreThan(where.timestamp_gt);
       delete where.timestamp_gt;
     }
 
     if (where.timestamp_lt) {
-      where.blockTimestamp_lt = where.timestamp_lt;
+      where.blockTimestamp = LessThan(where.timestamp_lt);
       delete where.timestamp_lt;
     }
 
+    const order: FindOneOptions['order'] = {};
+
     if (queryOptions.orderBy === 'timestamp') {
-      queryOptions.orderBy = 'blockTimestamp';
+      order.blockTimestamp = queryOptions.orderDirection === 'desc' ? 'DESC' : 'ASC';
     }
 
-    const blocks = await this.getEntities(BlockProgress, {}, where, queryOptions);
+    const blocks = await this.getBlockProgressEntities(
+      where,
+      {
+        order,
+        take: queryOptions.limit
+      }
+    );
 
     return blocks.map(block => ({
       timestamp: block.blockTimestamp,
@@ -289,11 +297,6 @@ export class Indexer implements IndexerInterface {
 
         return acc;
       }, {});
-
-      if (!queryOptions.orderBy) {
-        // Default order by id.
-        queryOptions.orderBy = 'id';
-      }
 
       res = await this._db.getModelEntities(dbTx, entity, block, where, queryOptions, relations);
       dbTx.commitTransaction();

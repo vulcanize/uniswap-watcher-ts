@@ -11,6 +11,7 @@ import { Token } from './Token';
 
 @Entity()
 @Index(['id', 'blockNumber'])
+@Index(['transactionId'])
 export class Mint {
   @PrimaryColumn('varchar')
   id!: string;
@@ -22,11 +23,17 @@ export class Mint {
   @Column('integer')
   blockNumber!: number;
 
+  @Column('varchar', { nullable: true })
+  transactionId!: string;
+
   @ManyToOne(() => Transaction, transaction => transaction.mints, { onDelete: 'CASCADE' })
   transaction!: Transaction
 
   @Column('numeric', { transformer: bigintTransformer })
   timestamp!: bigint;
+
+  @Column('varchar', { length: 42, nullable: true })
+  poolId!: string;
 
   @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
   pool!: Pool

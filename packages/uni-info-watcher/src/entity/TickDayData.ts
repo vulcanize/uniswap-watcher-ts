@@ -24,8 +24,14 @@ export class TickDayData {
   @Column('integer')
   date!: number
 
+  @Column('varchar', { length: 42, nullable: true })
+  poolId!: string;
+
   @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
   pool!: Pool;
+
+  @Column('varchar', { nullable: true })
+  tickId!: string;
 
   @ManyToOne(() => Tick, { onDelete: 'CASCADE' })
   tick!: Tick

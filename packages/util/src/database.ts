@@ -18,6 +18,7 @@ import {
 } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import _ from 'lodash';
+import { RelationType } from 'typeorm/metadata/types/RelationTypes';
 
 import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
 import { MAX_REORG_DEPTH, UNKNOWN_EVENT_NAME } from './constants';
@@ -64,7 +65,7 @@ export interface Where {
   }]
 }
 
-export type Relation = string | { property: string, alias: string }
+export type Relation = { entity: any, type: RelationType, property: string, field: string, childRelations?: Relation[] }
 
 export class Database {
   _config: ConnectionOptions
@@ -207,7 +208,12 @@ export class Database {
       .innerJoinAndSelect('event.block', 'block')
       .where('block.block_hash = :blockHash AND block.is_pruned = false', { blockHash });
 
-    queryBuilder = this._buildQuery(repo, queryBuilder, where, queryOptions);
+    queryBuilder = this._buildQuery(repo, queryBuilder, where);
+
+    if (queryOptions.orderBy) {
+      queryBuilder = this._orderQuery(repo, queryBuilder, queryOptions);
+    }
+
     queryBuilder.addOrderBy('event.id', 'ASC');
 
     const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
@@ -352,12 +358,7 @@ export class Database {
       .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
       .groupBy('subTable.id');
 
-    subQuery = this._buildQuery(repo, subQuery, where, queryOptions);
-
-    const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
-
-    subQuery = subQuery.offset(skip)
-      .limit(limit);
+    subQuery = this._buildQuery(repo, subQuery, where);
 
     if (block.hash) {
       const { canonicalBlockNumber, blockHashes } = await this.getFrothyRegion(queryRunner, block.hash);
@@ -373,44 +374,196 @@ export class Database {
       subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
     }
 
-    const entities = await repo.createQueryBuilder(tableName)
-      .select([
-        `${tableName}.id`,
-        `${tableName}.blockHash`
-      ])
-      .addFrom(`(${subQuery.getQuery()})`, 'latestEntities')
-      .setParameters(subQuery.getParameters())
-      .where(`${tableName}.id = "latestEntities"."id"`)
-      .andWhere(`${tableName}.block_number = "latestEntities"."block_number"`)
-      .getMany();
-
-    if (!entities.length) {
-      return [];
-    }
-
     let selectQueryBuilder = repo.createQueryBuilder(tableName)
-      .whereInIds(entities);
+      .innerJoin(
+        `(${subQuery.getQuery()})`,
+        'latestEntities',
+        `${tableName}.id = "latestEntities"."id" AND ${tableName}.block_number = "latestEntities"."block_number"`
+      )
+      .setParameters(subQuery.getParameters());
 
     if (queryOptions.orderBy) {
       selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions);
     }
 
-    relations.forEach(relation => {
-      let alias, property;
+    selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' });
 
-      if (typeof relation === 'string') {
-        [, alias] = relation.split('.');
-        property = relation;
-      } else {
-        alias = relation.alias;
-        property = relation.property;
+    const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
+
+    selectQueryBuilder = selectQueryBuilder.offset(skip)
+      .limit(limit);
+
+    let entities = await selectQueryBuilder.getMany();
+
+    if (!entities.length) {
+      return [];
+    }
+
+    const manyToManyRelations = relations.filter(relation => relation.type === 'many-to-many');
+
+    if (manyToManyRelations.length) {
+      // Load entities separately for many to many relations as limit does not work with relation joins.
+      let relationQueryBuilder = repo.createQueryBuilder(tableName)
+        .whereInIds(
+          entities.map(
+            (entity: any) => ({ id: entity.id, blockHash: entity.blockHash })
+          )
+        );
+
+      if (queryOptions.orderBy) {
+        relationQueryBuilder = this._orderQuery(repo, relationQueryBuilder, queryOptions);
       }
 
-      selectQueryBuilder = selectQueryBuilder.leftJoinAndSelect(property, alias);
-      selectQueryBuilder.addOrderBy(`${alias}.id`);
+      relationQueryBuilder = this._orderQuery(repo, relationQueryBuilder, { ...queryOptions, orderBy: 'id' });
+
+      // Load entity ids for many to many relations.
+      manyToManyRelations.forEach(relation => {
+        const { property } = relation;
+
+        relationQueryBuilder = relationQueryBuilder.leftJoinAndSelect(`${relationQueryBuilder.alias}.${property}`, property)
+          .addOrderBy(`${property}.id`);
+
+        // TODO: Get only ids from many to many join table instead of joining with related entity table.
+      });
+
+      entities = await relationQueryBuilder.getMany();
+    }
+
+    entities = await this.loadRelations(queryRunner, block, queryOptions, relations, entities);
+
+    return entities;
+  }
+
+  async loadRelations<Entity> (queryRunner: QueryRunner, block: BlockHeight, queryOptions: QueryOptions = {}, relations: Relation[], entities: Entity[]): Promise<Entity[]> {
+    const relationPromises = relations.map(async relation => {
+      const { entity: relationEntity, type, property, field, childRelations = [] } = relation;
+
+      switch (type) {
+        case 'one-to-many': {
+          const where: Where = {
+            [field]: [{
+              value: entities.map((entity: any) => entity.id),
+              not: false,
+              operator: 'in'
+            }]
+          };
+
+          const relatedEntities = await this.getModelEntities(
+            queryRunner,
+            relationEntity,
+            block,
+            where,
+            {
+              limit: queryOptions.limit
+            },
+            childRelations
+          );
+
+          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any[]}, entity: any) => {
+            if (!acc[entity[field]]) {
+              acc[entity[field]] = [];
+            }
+
+            acc[entity[field]].push(entity);
+
+            return acc;
+          }, {});
+
+          entities.forEach((entity: any) => {
+            if (relatedEntitiesMap[entity.id]) {
+              entity[property] = relatedEntitiesMap[entity.id];
+            } else {
+              entity[property] = [];
+            }
+          });
+
+          break;
+        }
+
+        case 'many-to-many': {
+          const relatedIds = entities.reduce((acc, entity: any) => {
+            entity[property].forEach((relatedEntity: any) => acc.add(relatedEntity.id));
+
+            return acc;
+          }, new Set());
+
+          const where: Where = {
+            id: [{
+              value: Array.from(relatedIds),
+              not: false,
+              operator: 'in'
+            }]
+          };
+
+          const relatedEntities = await this.getModelEntities(
+            queryRunner,
+            relationEntity,
+            block,
+            where,
+            {
+              limit: relatedIds.size
+            },
+            childRelations
+          );
+
+          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
+            acc[entity.id] = entity;
+
+            return acc;
+          }, {});
+
+          entities.forEach((entity: any) => {
+            const relatedField = entity[property] as any[];
+
+            relatedField.forEach((relatedEntity, index) => {
+              relatedField[index] = relatedEntitiesMap[relatedEntity.id];
+            });
+          });
+
+          break;
+        }
+
+        default: {
+          // For one-to-one/many-to-one relations.
+          const where: Where = {
+            id: [{
+              value: entities.map((entity: any) => entity[field]),
+              not: false,
+              operator: 'in'
+            }]
+          };
+
+          const relatedEntities = await this.getModelEntities(
+            queryRunner,
+            relationEntity,
+            block,
+            where,
+            {
+              limit: queryOptions.limit
+            },
+            childRelations
+          );
+
+          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
+            acc[entity.id] = entity;
+
+            return acc;
+          }, {});
+
+          entities.forEach((entity: any) => {
+            if (relatedEntitiesMap[entity[field]]) {
+              entity[property] = relatedEntitiesMap[entity[field]];
+            }
+          });
+
+          break;
+        }
+      }
     });
 
-    return selectQueryBuilder.getMany();
+    await Promise.all(relationPromises);
+
+    return entities;
   }
 
   async getPrevEntityVersion<Entity> (queryRunner: QueryRunner, repo: Repository<Entity>, findOptions: { [key: string]: any }): Promise<Entity | undefined> {
@@ -546,14 +699,21 @@ export class Database {
     return repo.save(entity);
   }
 
-  _buildQuery<Entity> (repo: Repository<Entity>, selectQueryBuilder: SelectQueryBuilder<Entity>, where: Where = {}, queryOptions: QueryOptions = {}): SelectQueryBuilder<Entity> {
+  _buildQuery<Entity> (repo: Repository<Entity>, selectQueryBuilder: SelectQueryBuilder<Entity>, where: Where = {}): SelectQueryBuilder<Entity> {
     Object.entries(where).forEach(([field, filters]) => {
       filters.forEach((filter, index) => {
         // Form the where clause.
         let { not, operator, value } = filter;
         const columnMetadata = repo.metadata.findColumnWithPropertyName(field);
         assert(columnMetadata);
-        let whereClause = `${selectQueryBuilder.alias}.${columnMetadata.propertyAliasName} `;
+        let whereClause = `"${selectQueryBuilder.alias}"."${columnMetadata.databaseName}" `;
+
+        if (columnMetadata.relationMetadata) {
+          // For relation fields, use the id column.
+          const idColumn = columnMetadata.relationMetadata.joinColumns.find(column => column.referencedColumn?.propertyName === 'id');
+          assert(idColumn);
+          whereClause = `"${selectQueryBuilder.alias}"."${idColumn.databaseName}" `;
+        }
 
         if (not) {
           if (operator === 'equals') {
@@ -565,9 +725,7 @@ export class Database {
 
         whereClause += `${OPERATOR_MAP[operator]} `;
 
-        if (['contains', 'starts'].some(el => el === operator)) {
-          whereClause += '%:';
-        } else if (operator === 'in') {
+        if (operator === 'in') {
           whereClause += '(:...';
         } else {
           // Convert to string type value as bigint type throws error in query.
@@ -579,9 +737,7 @@ export class Database {
         const variableName = `${field}${index}`;
         whereClause += variableName;
 
-        if (['contains', 'ends'].some(el => el === operator)) {
-          whereClause += '%';
-        } else if (operator === 'in') {
+        if (operator === 'in') {
           whereClause += ')';
 
           if (!value.length) {
@@ -589,13 +745,17 @@ export class Database {
           }
         }
 
+        if (['contains', 'starts'].some(el => el === operator)) {
+          value = `%${value}`;
+        }
+
+        if (['contains', 'ends'].some(el => el === operator)) {
+          value += '%';
+        }
+
         selectQueryBuilder = selectQueryBuilder.andWhere(whereClause, { [variableName]: value });
       });
     });
-
-    if (queryOptions.orderBy) {
-      selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions);
-    }
 
     return selectQueryBuilder;
   }

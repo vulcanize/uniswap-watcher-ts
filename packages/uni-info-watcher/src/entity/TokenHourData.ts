@@ -9,6 +9,7 @@ import { Token } from './Token';
 
 @Entity()
 @Index(['id', 'blockNumber'])
+@Index(['periodStartUnix', 'tokenId'])
 export class TokenHourData {
   @PrimaryColumn('varchar')
   id!: string;
@@ -22,6 +23,9 @@ export class TokenHourData {
 
   @Column('integer')
   periodStartUnix!: number
+
+  @Column('varchar', { length: 42, nullable: true })
+  tokenId!: string;
 
   @ManyToOne(() => Token, { onDelete: 'CASCADE' })
   token!: Token

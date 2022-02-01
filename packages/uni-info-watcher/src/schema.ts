@@ -11,6 +11,17 @@ scalar BigInt
 
 scalar Bytes
 
+# https://thegraph.com/docs/en/developer/create-subgraph-hosted/#non-fatal-errors
+enum _SubgraphErrorPolicy_ {
+  """Data will be returned even if the subgraph has indexing errors"""
+  allow
+
+  """
+  If the subgraph has indexing errors, data will be omitted. The default.
+  """
+  deny
+}
+
 input Block_height {
   hash: Bytes
   number: Int
@@ -38,6 +49,7 @@ type PoolDayData {
   id: ID!
   tvlUSD: BigDecimal!
   volumeUSD: BigDecimal!
+  feesUSD: BigDecimal!
 }
 
 type Tick {
@@ -335,6 +347,11 @@ type Query {
     block hash. Defaults to the latest block when omitted.
     """
     block: Block_height
+
+    """
+    Set to 'allow' to receive data even if the subgraph has skipped over errors while syncing.
+    """
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): Bundle
 
   bundles(
@@ -346,6 +363,8 @@ type Query {
     block hash. Defaults to the latest block when omitted.
     """
     block: Block_height
+
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Bundle!]!
 
   burns(
@@ -354,6 +373,7 @@ type Query {
     orderDirection: OrderDirection
     where: Burn_filter
     block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Burn!]!
 
   factories(
@@ -365,6 +385,8 @@ type Query {
     block hash. Defaults to the latest block when omitted.
     """
     block: Block_height
+
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Factory!]!
 
   mints(
@@ -373,6 +395,7 @@ type Query {
     orderDirection: OrderDirection
     where: Mint_filter
     block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Mint!]!
 
   pool(
@@ -387,6 +410,7 @@ type Query {
     orderDirection: OrderDirection
     where: PoolDayData_filter
     block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [PoolDayData!]!
 
   pools(
@@ -401,6 +425,8 @@ type Query {
     block hash. Defaults to the latest block when omitted.
     """
     block: Block_height
+
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Pool!]!
 
   swaps(
@@ -409,6 +435,7 @@ type Query {
     orderDirection: OrderDirection
     where: Swap_filter
     block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Swap!]!
 
   ticks(
@@ -422,6 +449,8 @@ type Query {
     block hash. Defaults to the latest block when omitted.
     """
     block: Block_height
+
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Tick!]!
 
   token(
@@ -433,6 +462,8 @@ type Query {
     block hash. Defaults to the latest block when omitted.
     """
     block: Block_height
+
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): Token
 
   tokenDayDatas(
@@ -442,6 +473,7 @@ type Query {
     orderDirection: OrderDirection
     where: TokenDayData_filter
     block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [TokenDayData!]!
 
   tokenHourDatas(
@@ -451,6 +483,7 @@ type Query {
     orderDirection: OrderDirection
     where: TokenHourData_filter
     block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [TokenHourData!]!
 
   tokens(
@@ -459,6 +492,7 @@ type Query {
     orderDirection: OrderDirection
     where: Token_filter
     block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Token!]!
 
   transactions(
@@ -467,6 +501,7 @@ type Query {
     orderDirection: OrderDirection
     where: Transaction_filter
     block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Transaction!]!
 
   uniswapDayDatas(
@@ -476,12 +511,14 @@ type Query {
     orderDirection: OrderDirection
     where: UniswapDayData_filter
     block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [UniswapDayData!]!
 
   positions(
     first: Int = 100
     where: Position_filter
     block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Position!]!
 
   blocks(
@@ -489,10 +526,11 @@ type Query {
     orderBy: Block_orderBy
     orderDirection: OrderDirection
     where: Block_filter
+    subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Block!]!
 
   indexingStatusForCurrentVersion(
-    subgraphName: String
+    subgraphName: String!
   ): SubgraphIndexingStatus
 }
 

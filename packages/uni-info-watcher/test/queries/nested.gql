@@ -1,0 +1,210 @@
+query nested($block: Block_height){
+  bundles(block: $block) {
+    ethPriceUSD
+  }
+
+  factories(block: $block) {
+    txCount
+    totalVolumeUSD
+    totalFeesUSD
+    totalValueLockedUSD
+  }
+
+  pools(block: $block) {
+    id
+    feeTier
+    liquidity
+    sqrtPrice
+    tick
+    token0 {
+      id
+      symbol
+      name
+      decimals
+      derivedETH
+    }
+    token1 {
+      id
+      symbol
+      name
+      decimals
+      derivedETH
+    }
+    token0Price
+    token1Price
+    volumeUSD
+    txCount
+    totalValueLockedToken0
+    totalValueLockedToken1
+    totalValueLockedUSD
+  }
+
+  tokens(block: $block) {
+    id
+    symbol
+    name
+    totalValueLockedUSD
+    derivedETH
+    volumeUSD
+    volume
+    txCount
+    totalValueLocked
+    feesUSD
+  }
+
+  mints(block: $block) {
+    timestamp
+    transaction {
+      id
+    }
+    pool {
+      token0 {
+        id
+        symbol
+      }
+      token1 {
+        id
+        symbol
+      }
+    }
+    owner
+    sender
+    origin
+    amount0
+    amount1
+    amountUSD
+  }
+
+  swaps(block: $block) {
+    timestamp
+    transaction {
+      id
+    }
+    pool {
+      token0 {
+        id
+        symbol
+      }
+      token1 {
+        id
+        symbol
+      }
+    }
+    origin
+    amount0
+    amount1
+    amountUSD
+  }
+
+  burns(block: $block) {
+    timestamp
+    transaction {
+      id
+    }
+    pool {
+      token0 {
+        id
+        symbol
+      }
+      token1 {
+        id
+        symbol
+      }
+    }
+    owner
+    amount0
+    amount1
+    amountUSD
+  }
+
+  transactions(block: $block) {
+    id
+    timestamp
+    mints {
+      pool {
+        token0 {
+          id
+          symbol
+        }
+        token1 {
+          id
+          symbol
+        }
+      }
+      owner
+      sender
+      origin
+      amount0
+      amount1
+      amountUSD
+    }
+    swaps {
+      pool {
+        token0 {
+          id
+          symbol
+        }
+        token1 {
+          id
+          symbol
+        }
+      }
+      origin
+      amount0
+      amount1
+      amountUSD
+    }
+    burns {
+      pool {
+        token0 {
+          id
+          symbol
+        }
+        token1 {
+          id
+          symbol
+        }
+      }
+      owner
+      origin
+      amount0
+      amount1
+      amountUSD
+    }
+  }
+
+  uniswapDayDatas(block: $block) {
+    id
+    date
+    volumeUSD
+    tvlUSD
+  }
+
+  poolDayDatas(block: $block) {
+    date
+    volumeUSD
+    tvlUSD
+  }
+
+  tokenDayDatas(block: $block) {
+    date
+    volumeUSD
+    totalValueLockedUSD
+  }
+
+  tokenHourDatas(block: $block) {
+    periodStartUnix
+    high
+    low
+    open
+    close
+  }
+
+  ticks(block: $block) {
+    tickIdx
+    liquidityGross
+    liquidityNet
+    price0
+    price1
+  }
+}
