@@ -23,6 +23,8 @@
     "nft:approve:docker": "hardhat --network docker nft-approve",
     "nft:mint": "hardhat --network localhost nft-mint",
     "nft:mint:docker": "hardhat --network docker nft-mint",
+    "nft:transfer": "hardhat --network localhost nft-transfer",
+    "nft:transfer:docker": "hardhat --network docker nft-transfer",
     "nft:transfer-from": "hardhat --network localhost nft-transfer-from",
     "nft:transfer-from:docker": "hardhat --network docker nft-transfer-from",
     "block:latest": "hardhat --network localhost block-latest",

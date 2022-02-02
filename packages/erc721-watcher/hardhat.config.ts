@@ -7,6 +7,7 @@ import '@nomiclabs/hardhat-waffle';
 import './test/tasks/nft-deploy';
 import './test/tasks/nft-mint';
 import './test/tasks/nft-approve';
+import './test/tasks/nft-transfer';
 import './test/tasks/nft-transfer-from';
 import './test/tasks/block-latest';
 
