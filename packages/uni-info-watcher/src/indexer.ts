@@ -36,6 +36,7 @@ import { Tick } from './entity/Tick';
 import { Contract, KIND_POOL } from './entity/Contract';
 
 const SYNC_DELTA = 5;
+const DEFAULT_LIMIT = 100;
 
 const log = debug('vulcanize:indexer');
 
@@ -179,7 +180,7 @@ export class Indexer implements IndexerInterface {
       where,
       {
         order,
-        take: queryOptions.limit
+        take: queryOptions.limit ?? DEFAULT_LIMIT
       }
     );
 
@@ -297,6 +298,10 @@ export class Indexer implements IndexerInterface {
 
         return acc;
       }, {});
+
+      if (!queryOptions.limit) {
+        queryOptions.limit = DEFAULT_LIMIT;
+      }
 
       res = await this._db.getModelEntities(dbTx, entity, block, where, queryOptions, relations);
       dbTx.commitTransaction();
