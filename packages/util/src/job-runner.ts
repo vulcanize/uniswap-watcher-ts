@@ -287,7 +287,7 @@ export class JobRunner {
       dbEvents = watchedContractEvents;
     }
 
-    for (let dbEvent of dbEvents) {
+    for (const dbEvent of dbEvents) {
       if (dbEvent.index <= block.lastProcessedEventIndex) {
         continue;
       }
@@ -323,7 +323,6 @@ export class JobRunner {
 
           dbEvent.eventName = eventName;
           dbEvent.eventInfo = JSON.stringify(eventInfo);
-          dbEvent = await this._indexer.saveEventEntity(dbEvent);
         }
 
         await this._indexer.processEvent(dbEvent);
