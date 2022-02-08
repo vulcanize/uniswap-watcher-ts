@@ -20,13 +20,15 @@ export const lastBlockNumEvents = new promClient.Gauge({
 // Export metrics on a server
 const app: Application = express();
 
-export async function startMetricsServer (port: number): Promise<void> {
+export async function startMetricsServer (host: string, port: number): Promise<void> {
   app.get('/metrics', async (req, res) => {
-    res.setHeader('Content-type', register.contentType);
-    res.send(await register.metrics());
+    res.setHeader('Content-Type', register.contentType);
+
+    const metrics = await register.metrics();
+    res.send(metrics);
   });
 
   app.listen(port, () => {
-    console.log(`Metrics exposed at http://localhost:${port}/metrics`);
+    console.log(`Metrics exposed at http://${host}:${port}/metrics`);
   });
 }

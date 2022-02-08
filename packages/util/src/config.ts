@@ -34,6 +34,7 @@ interface ServerConfig {
 }
 
 interface MetricsConfig {
+  host: string;
   port: number;
 }
 
