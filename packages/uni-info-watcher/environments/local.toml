@@ -5,6 +5,9 @@
   # Mode demo whitelists all tokens so that entity values get updated.
   mode = "prod"
 
+[metrics]
+  port = 8083
+
 [database]
   type = "postgres"
   host = "localhost"

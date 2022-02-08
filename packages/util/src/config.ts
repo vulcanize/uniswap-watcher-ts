@@ -33,6 +33,10 @@ interface ServerConfig {
   kind: string;
 }
 
+interface MetricsConfig {
+  port: number;
+}
+
 export interface UpstreamConfig {
   cache: CacheConfig,
   ethServer: {
@@ -55,8 +59,9 @@ export interface UpstreamConfig {
 export interface Config {
   server: ServerConfig;
   database: ConnectionOptions;
-  upstream: UpstreamConfig,
-  jobQueue: JobQueueConfig
+  upstream: UpstreamConfig;
+  jobQueue: JobQueueConfig;
+  metrics: MetricsConfig;
 }
 
 export const getConfig = async (configFile: string): Promise<Config> => {
