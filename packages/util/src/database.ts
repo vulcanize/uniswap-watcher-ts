@@ -23,9 +23,6 @@ import { RelationType } from 'typeorm/metadata/types/RelationTypes';
 import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
 import { MAX_REORG_DEPTH, UNKNOWN_EVENT_NAME } from './constants';
 
-export const DEFAULT_LIMIT = 100;
-export const DEFAULT_SKIP = 0;
-
 const OPERATOR_MAP = {
   equals: '=',
   gt: '>',
@@ -216,10 +213,13 @@ export class Database {
 
     queryBuilder.addOrderBy('event.id', 'ASC');
 
-    const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
+    if (queryOptions.skip) {
+      queryBuilder = queryBuilder.offset(queryOptions.skip);
+    }
 
-    queryBuilder = queryBuilder.offset(skip)
-      .limit(limit);
+    if (queryOptions.limit) {
+      queryBuilder = queryBuilder.limit(queryOptions.limit);
+    }
 
     return queryBuilder.getMany();
   }
@@ -388,10 +388,13 @@ export class Database {
 
     selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' });
 
-    const { limit = DEFAULT_LIMIT, skip = DEFAULT_SKIP } = queryOptions;
+    if (queryOptions.skip) {
+      selectQueryBuilder = selectQueryBuilder.offset(queryOptions.skip);
+    }
 
-    selectQueryBuilder = selectQueryBuilder.offset(skip)
-      .limit(limit);
+    if (queryOptions.limit) {
+      selectQueryBuilder = selectQueryBuilder.limit(queryOptions.limit);
+    }
 
     let entities = await selectQueryBuilder.getMany();
 
@@ -429,12 +432,12 @@ export class Database {
       entities = await relationQueryBuilder.getMany();
     }
 
-    entities = await this.loadRelations(queryRunner, block, queryOptions, relations, entities);
+    entities = await this.loadRelations(queryRunner, block, relations, entities);
 
     return entities;
   }
 
-  async loadRelations<Entity> (queryRunner: QueryRunner, block: BlockHeight, queryOptions: QueryOptions = {}, relations: Relation[], entities: Entity[]): Promise<Entity[]> {
+  async loadRelations<Entity> (queryRunner: QueryRunner, block: BlockHeight, relations: Relation[], entities: Entity[]): Promise<Entity[]> {
     const relationPromises = relations.map(async relation => {
       const { entity: relationEntity, type, property, field, childRelations = [] } = relation;
 
@@ -453,9 +456,7 @@ export class Database {
             relationEntity,
             block,
             where,
-            {
-              limit: queryOptions.limit
-            },
+            {},
             childRelations
           );
 
@@ -500,9 +501,7 @@ export class Database {
             relationEntity,
             block,
             where,
-            {
-              limit: relatedIds.size
-            },
+            {},
             childRelations
           );
 
@@ -538,9 +537,7 @@ export class Database {
             relationEntity,
             block,
             where,
-            {
-              limit: queryOptions.limit
-            },
+            {},
             childRelations
           );
 
