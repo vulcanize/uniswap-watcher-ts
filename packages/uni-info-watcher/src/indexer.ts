@@ -236,7 +236,7 @@ export class Indexer implements IndexerInterface {
     let res;
 
     try {
-      res = await this._db.getPool(dbTx, { id, blockHash: block.hash, blockNumber: block.number });
+      res = await this._db.getPool(dbTx, { id, blockHash: block.hash, blockNumber: block.number }, true);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
@@ -253,7 +253,7 @@ export class Indexer implements IndexerInterface {
     let res;
 
     try {
-      res = await this._db.getToken(dbTx, { id, blockHash: block.hash, blockNumber: block.number });
+      res = await this._db.getToken(dbTx, { id, blockHash: block.hash, blockNumber: block.number }, true);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
@@ -592,8 +592,8 @@ export class Indexer implements IndexerInterface {
 
       // Update token prices.
       const [token0, token1] = await Promise.all([
-        this._db.getToken(dbTx, { id: pool.token0.id, blockHash: block.hash }),
-        this._db.getToken(dbTx, { id: pool.token1.id, blockHash: block.hash })
+        this._db.getToken(dbTx, { id: pool.token0Id, blockHash: block.hash }),
+        this._db.getToken(dbTx, { id: pool.token1Id, blockHash: block.hash })
       ]);
 
       assert(token0 && token1, 'Pool tokens not found.');
@@ -639,8 +639,11 @@ export class Indexer implements IndexerInterface {
 
       const factory = await loadFactory(this._db, dbTx, block, this._isDemo);
 
-      let token0 = await this._db.getToken(dbTx, { id: pool.token0.id, blockHash: block.hash });
-      let token1 = await this._db.getToken(dbTx, { id: pool.token1.id, blockHash: block.hash });
+      let [token0, token1] = await Promise.all([
+        this._db.getToken(dbTx, { id: pool.token0Id, blockHash: block.hash }),
+        this._db.getToken(dbTx, { id: pool.token1Id, blockHash: block.hash })
+      ]);
+
       assert(token0);
       assert(token1);
       const amount0 = convertTokenToDecimal(BigInt(mintEvent.amount0), BigInt(token0.decimals));
@@ -797,8 +800,11 @@ export class Indexer implements IndexerInterface {
 
       const factory = await loadFactory(this._db, dbTx, block, this._isDemo);
 
-      let token0 = await this._db.getToken(dbTx, { id: pool.token0.id, blockHash: block.hash });
-      let token1 = await this._db.getToken(dbTx, { id: pool.token1.id, blockHash: block.hash });
+      let [token0, token1] = await Promise.all([
+        this._db.getToken(dbTx, { id: pool.token0Id, blockHash: block.hash }),
+        this._db.getToken(dbTx, { id: pool.token1Id, blockHash: block.hash })
+      ]);
+
       assert(token0);
       assert(token1);
       const amount0 = convertTokenToDecimal(BigInt(burnEvent.amount0), BigInt(token0.decimals));
@@ -873,8 +879,8 @@ export class Indexer implements IndexerInterface {
       // Tick entities.
       const lowerTickId = poolAddress + '#' + (burnEvent.tickLower).toString();
       const upperTickId = poolAddress + '#' + (burnEvent.tickUpper).toString();
-      const lowerTick = await this._db.getTick(dbTx, { id: lowerTickId, blockHash: block.hash });
-      const upperTick = await this._db.getTick(dbTx, { id: upperTickId, blockHash: block.hash });
+      const lowerTick = await this._db.getTick(dbTx, { id: lowerTickId, blockHash: block.hash }, true);
+      const upperTick = await this._db.getTick(dbTx, { id: upperTickId, blockHash: block.hash }, true);
       assert(lowerTick && upperTick);
       const amount = BigInt(burnEvent.amount);
       lowerTick.liquidityGross = BigInt(lowerTick.liquidityGross) - amount;
@@ -944,8 +950,8 @@ export class Indexer implements IndexerInterface {
       }
 
       let [token0, token1] = await Promise.all([
-        this._db.getToken(dbTx, { id: pool.token0.id, blockHash: block.hash }),
-        this._db.getToken(dbTx, { id: pool.token1.id, blockHash: block.hash })
+        this._db.getToken(dbTx, { id: pool.token0Id, blockHash: block.hash }),
+        this._db.getToken(dbTx, { id: pool.token1Id, blockHash: block.hash })
       ]);
 
       assert(token0 && token1, 'Pool tokens not found.');
@@ -1385,7 +1391,8 @@ export class Indexer implements IndexerInterface {
       {
         id: poolAddress.concat('#').concat(tickId.toString()),
         blockHash: block.hash
-      }
+      },
+      true
     );
 
     if (tick) {

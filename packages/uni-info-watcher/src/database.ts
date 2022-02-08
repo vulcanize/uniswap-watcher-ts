@@ -123,7 +123,7 @@ export class Database implements DatabaseInterface {
     return entity;
   }
 
-  async getToken (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Token>): Promise<Token | undefined> {
+  async getToken (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Token>, loadRelations = false): Promise<Token | undefined> {
     const repo = queryRunner.manager.getRepository(Token);
     const whereOptions: FindConditions<Token> = { id };
 
@@ -149,7 +149,7 @@ export class Database implements DatabaseInterface {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
-    if (entity) {
+    if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash, number: blockNumber },
@@ -182,7 +182,7 @@ export class Database implements DatabaseInterface {
     return res;
   }
 
-  async getPool (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Pool>): Promise<Pool | undefined> {
+  async getPool (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Pool>, loadRelations = false): Promise<Pool | undefined> {
     const repo = queryRunner.manager.getRepository(Pool);
     const whereOptions: FindConditions<Pool> = { id };
 
@@ -207,7 +207,7 @@ export class Database implements DatabaseInterface {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
-    if (entity) {
+    if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash, number: blockNumber },
@@ -324,7 +324,7 @@ export class Database implements DatabaseInterface {
     return entity;
   }
 
-  async getTick (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Tick>): Promise<Tick | undefined> {
+  async getTick (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Tick>, loadRelations = false): Promise<Tick | undefined> {
     const repo = queryRunner.manager.getRepository(Tick);
     const whereOptions: FindConditions<Tick> = { id };
 
@@ -345,7 +345,7 @@ export class Database implements DatabaseInterface {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
-    if (entity) {
+    if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
@@ -378,7 +378,7 @@ export class Database implements DatabaseInterface {
     return res;
   }
 
-  async getPoolDayData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<PoolDayData>): Promise<PoolDayData | undefined> {
+  async getPoolDayData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<PoolDayData>, loadRelations = false): Promise<PoolDayData | undefined> {
     const repo = queryRunner.manager.getRepository(PoolDayData);
     const whereOptions: FindConditions<PoolDayData> = { id };
 
@@ -399,7 +399,7 @@ export class Database implements DatabaseInterface {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
-    if (entity) {
+    if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
@@ -418,7 +418,7 @@ export class Database implements DatabaseInterface {
     return entity;
   }
 
-  async getPoolHourData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<PoolHourData>): Promise<PoolHourData | undefined> {
+  async getPoolHourData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<PoolHourData>, loadRelations = false): Promise<PoolHourData | undefined> {
     const repo = queryRunner.manager.getRepository(PoolHourData);
     const whereOptions: FindConditions<PoolHourData> = { id };
 
@@ -439,7 +439,7 @@ export class Database implements DatabaseInterface {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
-    if (entity) {
+    if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
@@ -482,7 +482,7 @@ export class Database implements DatabaseInterface {
     return entity;
   }
 
-  async getTokenDayData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<TokenDayData>): Promise<TokenDayData | undefined> {
+  async getTokenDayData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<TokenDayData>, loadRelations = false): Promise<TokenDayData | undefined> {
     const repo = queryRunner.manager.getRepository(TokenDayData);
     const whereOptions: FindConditions<TokenDayData> = { id };
 
@@ -503,7 +503,7 @@ export class Database implements DatabaseInterface {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
-    if (entity) {
+    if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
@@ -522,7 +522,7 @@ export class Database implements DatabaseInterface {
     return entity;
   }
 
-  async getTokenHourData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<TokenHourData>): Promise<TokenHourData | undefined> {
+  async getTokenHourData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<TokenHourData>, loadRelations = false): Promise<TokenHourData | undefined> {
     const repo = queryRunner.manager.getRepository(TokenHourData);
     const whereOptions: FindConditions<TokenHourData> = { id };
 
@@ -543,7 +543,7 @@ export class Database implements DatabaseInterface {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
-    if (entity) {
+    if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
@@ -562,7 +562,7 @@ export class Database implements DatabaseInterface {
     return entity;
   }
 
-  async getTickDayData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<TickDayData>): Promise<TickDayData | undefined> {
+  async getTickDayData (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<TickDayData>, loadRelations = false): Promise<TickDayData | undefined> {
     const repo = queryRunner.manager.getRepository(TickDayData);
     const whereOptions: FindConditions<TickDayData> = { id };
 
@@ -583,7 +583,7 @@ export class Database implements DatabaseInterface {
       entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
     }
 
-    if (entity) {
+    if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
