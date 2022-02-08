@@ -21,6 +21,9 @@ export const lastBlockNumEvents = new promClient.Gauge({
 const app: Application = express();
 
 export async function startMetricsServer (host: string, port: number): Promise<void> {
+  // Add default metrics
+  promClient.collectDefaultMetrics();
+
   app.get('/metrics', async (req, res) => {
     res.setHeader('Content-Type', register.contentType);
 
