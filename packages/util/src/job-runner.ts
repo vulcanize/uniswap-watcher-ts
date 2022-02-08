@@ -12,6 +12,7 @@ import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
 import { wait } from './misc';
 import { createPruningJob } from './common';
+import { lastProcessedBlock, lastBlockProcessDuration, lastBlockNumEvents } from './metrics';
 
 const log = debug('vulcanize:job-runner');
 
@@ -20,6 +21,7 @@ export class JobRunner {
   _jobQueue: JobQueue
   _jobQueueConfig: JobQueueConfig
   _blockProcessStartTime?: Date
+  _blockNumEvents = 0
   _blockEventsMap: Map<string, DeepPartial<EventInterface>[]> = new Map()
 
   constructor (jobQueueConfig: JobQueueConfig, indexer: IndexerInterface, jobQueue: JobQueue) {
@@ -126,6 +128,11 @@ export class JobRunner {
       const blockProcessDuration = indexBlockStartTime.getTime() - this._blockProcessStartTime.getTime();
       log(`time:job-runner#_indexBlock-process-block-${blockNumber - 1}: ${blockProcessDuration}ms`);
       log(`Total block process time (${blockNumber - 1}): ${blockProcessDuration}ms`);
+
+      // Update metrics
+      lastProcessedBlock.set(blockNumber - 1);
+      lastBlockProcessDuration.set(blockProcessDuration);
+      lastBlockNumEvents.set(this._blockNumEvents);
     }
 
     this._blockProcessStartTime = indexBlockStartTime;
@@ -230,6 +237,8 @@ export class JobRunner {
         isComplete: events.length === 0
       });
     }
+
+    this._blockNumEvents = blockProgress.numEvents;
 
     // Check if block has unprocessed events.
     if (blockProgress.numProcessedEvents < blockProgress.numEvents) {

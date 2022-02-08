@@ -20,7 +20,8 @@ import {
   JobRunner as BaseJobRunner,
   JobQueueConfig,
   DEFAULT_CONFIG_PATH,
-  getCustomProvider
+  getCustomProvider,
+  startMetricsServer
 } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
@@ -74,7 +75,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode } } = config;
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode }, metrics } = config;
 
   assert(dbConfig, 'Missing database config');
 
@@ -137,6 +138,8 @@ export const main = async (): Promise<any> => {
 
   const jobRunner = new JobRunner(jobQueueConfig, indexer, jobQueue);
   await jobRunner.start();
+
+  await startMetricsServer(metrics.host, metrics.port);
 };
 
 main().then(() => {
