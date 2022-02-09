@@ -1204,7 +1204,7 @@ export class Indexer implements IndexerInterface {
   }
 
   async _handleIncreaseLiquidity (block: Block, contractAddress: string, tx: Transaction, event: IncreaseLiquidityEvent): Promise<void> {
-    let position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
+    const position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
 
     // position was not able to be fetched.
     if (position === null) {
@@ -1224,12 +1224,6 @@ export class Indexer implements IndexerInterface {
     const dbTx = await this._db.createTransactionRunner();
 
     try {
-      if (!position.transaction) {
-        const transaction = await loadTransaction(this._db, dbTx, { block, tx });
-        position.transaction = transaction;
-        position = await this._db.savePosition(dbTx, position, block);
-      }
-
       const token0 = position.token0;
       const token1 = position.token1;
 
@@ -1273,12 +1267,6 @@ export class Indexer implements IndexerInterface {
     const dbTx = await this._db.createTransactionRunner();
 
     try {
-      if (!position.transaction) {
-        const transaction = await loadTransaction(this._db, dbTx, { block, tx });
-        position.transaction = transaction;
-        position = await this._db.savePosition(dbTx, position, block);
-      }
-
       const token0 = position.token0;
       const token1 = position.token1;
       const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
@@ -1321,12 +1309,6 @@ export class Indexer implements IndexerInterface {
     const dbTx = await this._db.createTransactionRunner();
 
     try {
-      if (!position.transaction) {
-        const transaction = await loadTransaction(this._db, dbTx, { block, tx });
-        position.transaction = transaction;
-        position = await this._db.savePosition(dbTx, position, block);
-      }
-
       const token0 = position.token0;
       const token1 = position.token1;
       const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
@@ -1348,7 +1330,7 @@ export class Indexer implements IndexerInterface {
   }
 
   async _handleTransfer (block: Block, contractAddress: string, tx: Transaction, event: TransferEvent): Promise<void> {
-    let position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
+    const position = await this._getPosition(block, contractAddress, tx, BigInt(event.tokenId));
     // Position was not able to be fetched.
     if (position === null) {
       return;
@@ -1357,12 +1339,6 @@ export class Indexer implements IndexerInterface {
     const dbTx = await this._db.createTransactionRunner();
 
     try {
-      if (!position.transaction) {
-        const transaction = await loadTransaction(this._db, dbTx, { block, tx });
-        position.transaction = transaction;
-        position = await this._db.savePosition(dbTx, position, block);
-      }
-
       position.owner = utils.hexlify(event.to);
       await this._db.savePosition(dbTx, position, block);
 
@@ -1470,6 +1446,8 @@ export class Indexer implements IndexerInterface {
           const dbTx = await this._db.createTransactionRunner();
 
           try {
+            position.transaction = await loadTransaction(this._db, dbTx, { block, tx });
+
             // Tick entities not present when Transfer event is processed before Pool Mint event.
             // TODO: Save entity ids similar to subgraph mapping code.
             if (!tickLower) {
@@ -1495,6 +1473,11 @@ export class Indexer implements IndexerInterface {
         position.feeGrowthInside0LastX128 = BigInt(positionResult.feeGrowthInside0LastX128.toString());
         position.feeGrowthInside1LastX128 = BigInt(positionResult.feeGrowthInside1LastX128.toString());
       }
+    } else {
+      // Load required relations of Position entity separately.
+      position.pool = await this._db.getPoolNoTx({ id: position.poolId, blockHash: block.hash }) as Pool;
+      position.token0 = await this._db.getTokenNoTx({ id: position.token0Id, blockHash: block.hash }) as Token;
+      position.token1 = await this._db.getTokenNoTx({ id: position.token1Id, blockHash: block.hash }) as Token;
     }
 
     return position || null;

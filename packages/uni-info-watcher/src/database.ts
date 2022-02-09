@@ -246,7 +246,7 @@ export class Database implements DatabaseInterface {
     return res;
   }
 
-  async getPosition ({ id, blockHash }: DeepPartial<Position>): Promise<Position | undefined> {
+  async getPosition ({ id, blockHash }: DeepPartial<Position>, loadRelations = false): Promise<Position | undefined> {
     const queryRunner = this._conn.createQueryRunner();
     let entity;
 
@@ -272,7 +272,7 @@ export class Database implements DatabaseInterface {
         entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
       }
 
-      if (entity) {
+      if (loadRelations && entity) {
         [entity] = await this._baseDatabase.loadRelations(
           queryRunner,
           { hash: blockHash },
