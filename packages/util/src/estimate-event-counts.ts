@@ -7,6 +7,9 @@ import { createObjectCsvWriter } from 'csv-writer';
 
 import { wait } from './misc';
 
+const CACHE_DIR = 'out/cached-data';
+const RESULTS_DIR = 'out/estimation-results';
+
 const factoryAddress = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 const nfpmAddress = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 
@@ -86,56 +89,32 @@ async function main () {
 
   // Continue till endBlock
   while (toBlock <= argv.endBlock) {
-    let data: any[] = [];
+    // Event counts for the current sample
+    let sampleEventCounts = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-    // Fetch factory events
-    const factoryResponsePromise = fetch(`https://api.etherscan.io/api?module=logs&action=getLogs&fromBlock=${fromBlock}&toBlock=${toBlock}&address=${factoryAddress}&topic0=${factoryEventSignatureMap.PoolCreated}&apikey=${argv.apiKey}`);
+    // Check cache for event counts
+    const cachedData = checkCachedData(fromBlock, toBlock);
 
-    // Fetch NFPM events
-    const nfpmResponsePromises = Object.values(nfpmEventSignatureMap).map(signature => {
-      return fetch(`https://api.etherscan.io/api?module=logs&action=getLogs&fromBlock=${fromBlock}&toBlock=${toBlock}&address=${nfpmAddress}&topic0=${signature}&apikey=${argv.apiKey}`);
-    });
+    if (cachedData) {
+      assert(cachedData.counts, `Found invalid cached data (from: ${fromBlock}, to: ${toBlock})`);
 
-    let responses = await Promise.all([...[factoryResponsePromise], ...nfpmResponsePromises]);
-    let dataPromises = responses.map(response => {
-      return response.json();
-    });
+      sampleEventCounts = cachedData.counts;
+    } else {
+      sampleEventCounts = await fetchSampleCounts(fromBlock, toBlock, argv.apiKey);
 
-    let responseData = await Promise.all(dataPromises);
-    data = data.concat(responseData);
+      cacheData(fromBlock, toBlock, sampleEventCounts);
+    }
 
-    // Wait for 1 sec according to API restrictions
-    await wait(1000);
-
-    const poolResponsePromises = Object.values(poolEventSignatureMap).map(signature => {
-      return fetch(`https://api.etherscan.io/api?module=logs&action=getLogs&fromBlock=${fromBlock}&toBlock=${toBlock}&topic0=${signature}&apikey=${argv.apiKey}`);
-    });
-
-    responses = await Promise.all([...poolResponsePromises]);
-    dataPromises = responses.map(response => {
-      return response.json();
-    });
-
-    responseData = await Promise.all(dataPromises);
-    data = data.concat(responseData);
-
-    // TODO: cache API response data
     // Increment event counts
-    data.forEach((obj: any, index: number) => {
-      assert(Array.isArray(obj.result), `Result "${obj.result}" is not an array`);
-
-      if (obj.result.length === resultSizeLimit) {
-        console.log(`WARNING: Result size reached limit (${resultSizeLimit}). Estimates might not be correct. Please reduce sample size.`);
-      }
-
+    sampleEventCounts.forEach((count: number, index: number) => {
       if (prevCounts[index] === undefined) {
-        counts[index] = obj.result.length;
+        counts[index] = count;
       } else {
-        const meanCount = (prevCounts[index] + obj.result.length) / 2;
+        const meanCount = (prevCounts[index] + count) / 2;
         counts[index] = counts[index] + Math.round((meanCount / argv.sampleSize) * argv.interval);
       }
 
-      prevCounts[index] = obj.result.length;
+      prevCounts[index] = count;
     });
 
     // Calculate total number of events
@@ -146,9 +125,6 @@ async function main () {
     console.log(`Event counts till block ${fromBlock}:`, ...counts);
     console.log('Total:', totalEvents);
 
-    // Wait for 1 sec according to API restrictions
-    await wait(1000);
-
     const blocksProcessed = fromBlock - argv.startBlock + 1;
     const completePercentage = Math.round((blocksProcessed / numberOfBlocks) * 100);
     console.log(`Processed ${blocksProcessed} of ${numberOfBlocks} blocks (${completePercentage}%)`);
@@ -157,18 +133,93 @@ async function main () {
     toBlock = fromBlock + argv.sampleSize;
   }
 
-  // Export estimation results in a CSV
-  const csvPath = `out/estimation_results/${argv.startBlock}-${argv.endBlock}-${argv.sampleSize}-${argv.interval}.csv`;
+  // Export estimation results to a CSV
+  const csvPath = `${argv.startBlock}-${argv.endBlock}-${argv.sampleSize}-${argv.interval}.csv`;
   await exportResult(csvPath, counts, totalEvents);
 }
 
-async function exportResult (csvPath: string, counts: number[], totalEvents: number): Promise<void> {
-  const filePath = path.resolve(csvPath);
-  const fileDir = path.dirname(filePath);
+async function fetchSampleCounts (fromBlock: number, toBlock: number, apiKey: string): Promise<number[]> {
+  let data: any[] = [];
 
-  if (!fs.existsSync(fileDir)) {
-    fs.mkdirSync(fileDir, { recursive: true });
+  // Fetch factory events
+  const factoryResponsePromise = fetch(`https://api.etherscan.io/api?module=logs&action=getLogs&fromBlock=${fromBlock}&toBlock=${toBlock}&address=${factoryAddress}&topic0=${factoryEventSignatureMap.PoolCreated}&apikey=${apiKey}`);
+
+  // Fetch NFPM events
+  const nfpmResponsePromises = Object.values(nfpmEventSignatureMap).map(signature => {
+    return fetch(`https://api.etherscan.io/api?module=logs&action=getLogs&fromBlock=${fromBlock}&toBlock=${toBlock}&address=${nfpmAddress}&topic0=${signature}&apikey=${apiKey}`);
+  });
+
+  let responses = await Promise.all([...[factoryResponsePromise], ...nfpmResponsePromises]);
+  let dataPromises = responses.map(response => {
+    return response.json();
+  });
+
+  let responseData = await Promise.all(dataPromises);
+  data = data.concat(responseData);
+
+  // Wait for 1 sec according to API restrictions
+  await wait(1000);
+
+  // Fetch pool events
+  const poolResponsePromises = Object.values(poolEventSignatureMap).map(signature => {
+    return fetch(`https://api.etherscan.io/api?module=logs&action=getLogs&fromBlock=${fromBlock}&toBlock=${toBlock}&topic0=${signature}&apikey=${apiKey}`);
+  });
+
+  responses = await Promise.all([...poolResponsePromises]);
+  dataPromises = responses.map(response => {
+    return response.json();
+  });
+
+  responseData = await Promise.all(dataPromises);
+  data = data.concat(responseData);
+
+  // Wait for 1 sec according to API restrictions
+  await wait(1000);
+
+  // Calculate event counts
+  const sampleEventCounts: number[] = [];
+
+  data.forEach((obj: any) => {
+    assert(Array.isArray(obj.result), `Result "${obj.result}" is not an array`);
+
+    if (obj.result.length === resultSizeLimit) {
+      console.log(`WARNING: Result size reached limit (${resultSizeLimit}). Estimates might not be correct. Please reduce sample size.`);
+    }
+
+    sampleEventCounts.push(obj.result.length);
+  });
+
+  return sampleEventCounts;
+}
+
+function cacheData (fromBlock: number, toBlock: number, sampleEventCounts: number[]): void {
+  const jsonPath = `${fromBlock}-${toBlock}.json`;
+  const cacheFilePath = path.resolve(CACHE_DIR, jsonPath);
+  resolveDir(path.dirname(cacheFilePath));
+
+  const data = {
+    counts: sampleEventCounts
+  };
+
+  fs.writeFileSync(cacheFilePath, JSON.stringify(data));
+}
+
+function checkCachedData (fromBlock: number, toBlock: number): any {
+  const jsonPath = `${fromBlock}-${toBlock}.json`;
+  const cacheFilePath = path.resolve(CACHE_DIR, jsonPath);
+
+  if (!fs.existsSync(cacheFilePath)) {
+    return;
   }
+
+  const cachedResponse = JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
+
+  return cachedResponse;
+}
+
+async function exportResult (csvPath: string, counts: number[], totalEvents: number): Promise<void> {
+  const filePath = path.resolve(RESULTS_DIR, csvPath);
+  resolveDir(path.dirname(filePath));
 
   const csvWriter = createObjectCsvWriter({
     path: filePath,
@@ -187,6 +238,12 @@ async function exportResult (csvPath: string, counts: number[], totalEvents: num
   records.push({ event: 'Total', count: totalEvents });
 
   await csvWriter.writeRecords(records);
+}
+
+function resolveDir (dir: string): void {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 }
 
 main().then(() => {
