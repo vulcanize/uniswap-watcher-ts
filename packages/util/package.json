@@ -5,6 +5,7 @@
   "license": "AGPL-3.0",
   "dependencies": {
     "@vulcanize/solidity-mapper": "^0.1.0",
+    "csv-writer": "^1.6.0",
     "debug": "^4.3.1",
     "decimal.js": "^10.3.1",
     "ethers": "^5.2.0",
@@ -39,6 +40,6 @@
     "lint": "eslint .",
     "build": "tsc",
     "build:contracts": "hardhat compile",
-    "event-counts": "ts-node src/event-counts.ts"
+    "estimate-event-counts": "ts-node src/estimate-event-counts.ts"
   }
 }

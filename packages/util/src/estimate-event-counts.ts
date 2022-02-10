@@ -1,7 +1,9 @@
 import fetch from 'node-fetch';
-
 import yargs from 'yargs';
 import assert from 'assert';
+import path from 'path';
+import fs from 'fs';
+import { createObjectCsvWriter } from 'csv-writer';
 
 import { wait } from './misc';
 
@@ -26,10 +28,12 @@ const poolEventSignatureMap = {
   Swap: '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67'
 };
 
+const events = ['PoolCreated', 'IncreaseLiquidity', 'DecreaseLiquidity', 'Collect', 'Transfer', 'Initialize', 'Mint', 'Burn', 'Swap'];
+
 // Etherscan API limitation
 const resultSizeLimit = 1000;
 
-// Run: yarn event-counts --api-key <API-key>
+// Run: yarn estimate-event-counts --api-key <API-key>
 async function main () {
   const argv = await yargs.parserConfiguration({
     'parse-numbers': false
@@ -71,6 +75,7 @@ async function main () {
   // PoolCreated, IncreaseLiquidity, DecreaseLiquidity, Collect, Transfer, Initialize, Mint, Burn, Swap
   const counts = [0, 0, 0, 0, 0, 0, 0, 0, 0];
   const prevCounts:number[] = new Array(7);
+  let totalEvents = 0;
 
   // Total number of blocks to be processed
   const numberOfBlocks = argv.endBlock - argv.startBlock + 1;
@@ -127,14 +132,14 @@ async function main () {
         counts[index] = obj.result.length;
       } else {
         const meanCount = (prevCounts[index] + obj.result.length) / 2;
-        counts[index] = counts[index] + Math.round(meanCount / argv.sampleSize * argv.interval);
+        counts[index] = counts[index] + Math.round((meanCount / argv.sampleSize) * argv.interval);
       }
 
       prevCounts[index] = obj.result.length;
     });
 
-    // TODO: save event counts in a CSV file
-    const totalEvents = counts.reduce((a, b) => {
+    // Calculate total number of events
+    totalEvents = counts.reduce((a, b) => {
       return a + b;
     }, 0);
 
@@ -145,12 +150,43 @@ async function main () {
     await wait(1000);
 
     const blocksProcessed = fromBlock - argv.startBlock + 1;
-    const completePercentage = Math.round(blocksProcessed / numberOfBlocks * 100);
+    const completePercentage = Math.round((blocksProcessed / numberOfBlocks) * 100);
     console.log(`Processed ${blocksProcessed} of ${numberOfBlocks} blocks (${completePercentage}%)`);
 
     fromBlock = fromBlock + argv.interval;
     toBlock = fromBlock + argv.sampleSize;
   }
+
+  // Export estimation results in a CSV
+  const csvPath = `out/estimation_results/${argv.startBlock}-${argv.endBlock}-${argv.sampleSize}-${argv.interval}.csv`;
+  await exportResult(csvPath, counts, totalEvents);
+}
+
+async function exportResult (csvPath: string, counts: number[], totalEvents: number): Promise<void> {
+  const filePath = path.resolve(csvPath);
+  const fileDir = path.dirname(filePath);
+
+  if (!fs.existsSync(fileDir)) {
+    fs.mkdirSync(fileDir, { recursive: true });
+  }
+
+  const csvWriter = createObjectCsvWriter({
+    path: filePath,
+    header: [
+      { id: 'event', title: 'Event' },
+      { id: 'count', title: 'Count' }
+    ]
+  });
+
+  const records = counts.map((count, index) => {
+    return {
+      event: events[index],
+      count
+    };
+  });
+  records.push({ event: 'Total', count: totalEvents });
+
+  await csvWriter.writeRecords(records);
 }
 
 main().then(() => {
