@@ -46,7 +46,7 @@ async function main () {
     },
     sampleSize: {
       type: 'number',
-      default: 100,
+      default: 50,
       describe: 'Sample size'
     },
     interval: {
@@ -134,16 +134,21 @@ async function main () {
     });
 
     // TODO: save event counts in a CSV file
-    console.log(`Event counts till block ${toBlock}:`, ...counts);
+    const totalEvents = counts.reduce((a, b) => {
+      return a + b;
+    }, 0);
+
+    console.log(`Event counts till block ${fromBlock}:`, ...counts);
+    console.log('Total:', totalEvents);
 
     // Wait for 1 sec according to API restrictions
     await wait(1000);
 
-    const blocksProcessed = toBlock - argv.startBlock + 1;
+    const blocksProcessed = fromBlock - argv.startBlock + 1;
     const completePercentage = Math.round(blocksProcessed / numberOfBlocks * 100);
     console.log(`Processed ${blocksProcessed} of ${numberOfBlocks} blocks (${completePercentage}%)`);
 
-    fromBlock = toBlock + argv.interval;
+    fromBlock = fromBlock + argv.interval;
     toBlock = fromBlock + argv.sampleSize;
   }
 }
