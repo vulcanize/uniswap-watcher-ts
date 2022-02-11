@@ -97,7 +97,7 @@ export const findEthPerToken = async (db: Database, dbTx: QueryRunner, token: To
   let priceSoFar = new GraphDecimal(0);
 
   for (let i = 0; i < whiteList.length; ++i) {
-    const poolAddress = whiteList[i].id;
+    const poolAddress = whiteList[i];
     const pool = await db.getPool(dbTx, { id: poolAddress, blockHash: block.hash });
     assert(pool);
 

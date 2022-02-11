@@ -483,7 +483,7 @@ export class Database {
 
         case 'many-to-many': {
           const relatedIds = entities.reduce((acc, entity: any) => {
-            entity[property].forEach((relatedEntity: any) => acc.add(relatedEntity.id));
+            entity[property].forEach((relatedEntityId: any) => acc.add(relatedEntityId));
 
             return acc;
           }, new Set());
@@ -514,8 +514,8 @@ export class Database {
           entities.forEach((entity: any) => {
             const relatedField = entity[property] as any[];
 
-            relatedField.forEach((relatedEntity, index) => {
-              relatedField[index] = relatedEntitiesMap[relatedEntity.id];
+            relatedField.forEach((relatedEntityId, index) => {
+              relatedField[index] = relatedEntitiesMap[relatedEntityId];
             });
           });
 

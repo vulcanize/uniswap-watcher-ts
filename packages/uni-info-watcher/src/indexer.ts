@@ -521,11 +521,11 @@ export class Indexer implements IndexerInterface {
 
       // Update white listed pools.
       if (WHITELIST_TOKENS.includes(token0.id) || this._isDemo) {
-        token1.whitelistPools.push(pool);
+        token1.whitelistPools.push(pool.id);
       }
 
       if (WHITELIST_TOKENS.includes(token1.id) || this._isDemo) {
-        token0.whitelistPools.push(pool);
+        token0.whitelistPools.push(pool.id);
       }
 
       token0 = await this._db.saveToken(dbTx, token0, block);

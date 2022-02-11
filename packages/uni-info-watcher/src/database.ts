@@ -139,8 +139,7 @@ export class Database implements DatabaseInterface {
       where: whereOptions,
       order: {
         blockNumber: 'DESC'
-      },
-      relations: ['whitelistPools']
+      }
     };
 
     let entity = await repo.findOne(findOptions as FindOneOptions<Token>);
