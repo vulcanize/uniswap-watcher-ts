@@ -54,7 +54,7 @@ export class Token {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal;
 
-  @Column('varchar', { length: 42, array: true })
+  @Column('varchar', { length: 42, array: true, default: [] })
   whitelistPools!: string[];
 
   // TODO: Add remaining fields when they are used.
