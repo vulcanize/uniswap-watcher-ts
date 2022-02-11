@@ -10,6 +10,9 @@ import { Database as BaseDatabase, QueryOptions, Where } from '@vulcanize/util';
 
 import { Allowance } from './entity/Allowance';
 import { Balance } from './entity/Balance';
+import { Name } from './entity/Name';
+import { Symbol } from './entity/Symbol';
+import { Decimals } from './entity/Decimals';
 import { Contract } from './entity/Contract';
 import { Event } from './entity/Event';
 import { SyncStatus } from './entity/SyncStatus';
@@ -62,6 +65,31 @@ export class Database {
       .getOne();
   }
 
+  async getName ({ blockHash, token }: { blockHash: string, token: string }): Promise<Name | undefined> {
+    return this._conn.getRepository(Name)
+      .findOne({
+        blockHash,
+        token
+      });
+  }
+
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  async getSymbol ({ blockHash, token }: { blockHash: string, token: string }): Promise<Symbol | undefined> {
+    return this._conn.getRepository(Symbol)
+      .findOne({
+        blockHash,
+        token
+      });
+  }
+
+  async getDecimals ({ blockHash, token }: { blockHash: string, token: string }): Promise<Decimals | undefined> {
+    return this._conn.getRepository(Decimals)
+      .findOne({
+        blockHash,
+        token
+      });
+  }
+
   async saveBalance ({ blockHash, blockNumber, token, owner, value, proof }: DeepPartial<Balance>): Promise<Balance> {
     const repo = this._conn.getRepository(Balance);
     const entity = repo.create({ blockHash, blockNumber, token, owner, value, proof });
@@ -71,6 +99,25 @@ export class Database {
   async saveAllowance ({ blockHash, blockNumber, token, owner, spender, value, proof }: DeepPartial<Allowance>): Promise<Allowance> {
     const repo = this._conn.getRepository(Allowance);
     const entity = repo.create({ blockHash, blockNumber, token, owner, spender, value, proof });
+    return repo.save(entity);
+  }
+
+  async saveName ({ blockHash, blockNumber, token, value, proof }: DeepPartial<Name>): Promise<Name> {
+    const repo = this._conn.getRepository(Name);
+    const entity = repo.create({ blockHash, blockNumber, token, value, proof });
+    return repo.save(entity);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  async saveSymbol ({ blockHash, blockNumber, token, value, proof }: DeepPartial<Symbol>): Promise<Symbol> {
+    const repo = this._conn.getRepository(Symbol);
+    const entity = repo.create({ blockHash, blockNumber, token, value, proof });
+    return repo.save(entity);
+  }
+
+  async saveDecimals ({ blockHash, blockNumber, token, value, proof }: DeepPartial<Decimals>): Promise<Decimals> {
+    const repo = this._conn.getRepository(Decimals);
+    const entity = repo.create({ blockHash, blockNumber, token, value, proof });
     return repo.save(entity);
   }
 

@@ -1,13 +1,12 @@
 //
-// Copyright 2021 Vulcanize, Inc.
+// Copyright 2022 Vulcanize, Inc.
 //
 
 import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
-import { bigintTransformer } from '@vulcanize/util';
 
 @Entity()
-@Index(['blockHash', 'token', 'owner'], { unique: true })
-export class Balance {
+@Index(['blockHash', 'token'], { unique: true })
+export class Decimals {
   @PrimaryGeneratedColumn()
   id!: number;
 
@@ -20,11 +19,8 @@ export class Balance {
   @Column('varchar', { length: 42 })
   token!: string;
 
-  @Column('varchar', { length: 42 })
-  owner!: string;
-
-  @Column('numeric', { transformer: bigintTransformer })
-  value!: bigint;
+  @Column('integer')
+  value!: number;
 
   @Column('text', { nullable: true })
   proof!: string;

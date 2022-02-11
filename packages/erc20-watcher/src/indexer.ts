@@ -180,7 +180,20 @@ export class Indexer {
   }
 
   async name (blockHash: string, token: string): Promise<ValueResult> {
+    const entity = await this._db.getName({ blockHash, token });
+    if (entity) {
+      log('name: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('name: db miss, fetching from upstream server');
     let result: ValueResult;
+
+    const { block: { number: blockNumber } } = await this._ethClient.getBlockByHash(blockHash);
 
     if (this._serverMode === ETH_CALL_MODE) {
       const value = await fetchTokenName(this._ethProvider, blockHash, token);
@@ -190,13 +203,26 @@ export class Indexer {
       result = await this._baseIndexer.getStorageValue(this._storageLayout, blockHash, token, '_name');
     }
 
-    // log(JSONbig.stringify(result, null, 2));
+    await this._db.saveName({ blockHash, blockNumber, token, value: result.value, proof: JSONbig.stringify(result.proof) });
 
     return result;
   }
 
   async symbol (blockHash: string, token: string): Promise<ValueResult> {
+    const entity = await this._db.getSymbol({ blockHash, token });
+    if (entity) {
+      log('symbol: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('symbol: db miss, fetching from upstream server');
     let result: ValueResult;
+
+    const { block: { number: blockNumber } } = await this._ethClient.getBlockByHash(blockHash);
 
     if (this._serverMode === ETH_CALL_MODE) {
       const value = await fetchTokenSymbol(this._ethProvider, blockHash, token);
@@ -206,13 +232,26 @@ export class Indexer {
       result = await this._baseIndexer.getStorageValue(this._storageLayout, blockHash, token, '_symbol');
     }
 
-    // log(JSONbig.stringify(result, null, 2));
+    await this._db.saveSymbol({ blockHash, blockNumber, token, value: result.value, proof: JSONbig.stringify(result.proof) });
 
     return result;
   }
 
   async decimals (blockHash: string, token: string): Promise<ValueResult> {
+    const entity = await this._db.getDecimals({ blockHash, token });
+    if (entity) {
+      log('decimals: db hit.');
+
+      return {
+        value: entity.value,
+        proof: JSON.parse(entity.proof)
+      };
+    }
+
+    log('decimals: db miss, fetching from upstream server');
     let result: ValueResult;
+
+    const { block: { number: blockNumber } } = await this._ethClient.getBlockByHash(blockHash);
 
     if (this._serverMode === ETH_CALL_MODE) {
       const value = await fetchTokenDecimals(this._ethProvider, blockHash, token);
@@ -223,6 +262,8 @@ export class Indexer {
       // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol#L86
       throw new Error('Not implemented.');
     }
+
+    await this._db.saveDecimals({ blockHash, blockNumber, token, value: result.value, proof: JSONbig.stringify(result.proof) });
 
     return result;
   }

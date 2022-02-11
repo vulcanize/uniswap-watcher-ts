@@ -53,6 +53,7 @@ describe('uni-info-watcher', () => {
   let token1Address: string;
   let nfpm: Contract;
 
+  let nfpmTokenId: number;
   let tickLower: number;
   let tickUpper: number;
   let signer: Signer;
@@ -85,35 +86,29 @@ describe('uni-info-watcher', () => {
     signer = provider.getSigner();
     recipient = await signer.getAddress();
 
+    // Get the factory contract address.
+    const factoryContract = await uniClient.getContract('factory');
+    expect(factoryContract).to.not.be.empty;
+
+    // Initialize the factory contract.
+    factory = new Contract(factoryContract.address, FACTORY_ABI, signer);
+
+    // Get the NFPM contract address.
+    const nfpmContract = await uniClient.getContract('nfpm');
+    expect(nfpmContract).to.not.be.empty;
+
+    // Initialize the NFPM contract.
+    nfpm = new Contract(nfpmContract.address, NFPM_ABI, signer);
+
     // Deadline set to 2 days from current date.
     const deadlineDate = new Date();
     deadlineDate.setDate(deadlineDate.getDate() + 2);
     deadline = Math.floor(deadlineDate.getTime() / 1000);
   });
 
-  it('should have a Factory entity', async () => {
-    // Getting the Factory from uni-info-watcher graphQL endpoint.
-    const factories = await client.getFactories(1);
-    expect(factories).to.not.be.empty;
-
-    // Initializing the factory variable.
-    const factoryAddress = factories[0].id;
-    factory = new ethers.Contract(factoryAddress, FACTORY_ABI, signer);
-    expect(factory.address).to.not.be.empty;
-  });
-
-  it('should have a Bundle entity', async () => {
-    // Getting the Bundle from uni-info-watcher graphQL endpoint.
-    const bundles = await client.getBundles(1);
-    expect(bundles).to.not.be.empty;
-
-    const bundleId = '1';
-    expect(bundles[0].id).to.equal(bundleId);
-  });
-
   describe('PoolCreatedEvent', () => {
     // NOTE: Skipping checking entity updates that cannot be gotten/derived using queries.
-    // Checked entities: Token, Pool.
+    // Checked entities: Token, Factory, Bundle, Pool.
 
     const fee = 500;
 
@@ -156,6 +151,21 @@ describe('uni-info-watcher', () => {
 
       const token1 = await client.getToken(token1Address);
       expect(token1).to.not.be.null;
+    });
+
+    it('should create a Factory entity', async () => {
+      // Check that a Factory entity is present.
+      const factories = await client.getFactories(1);
+      expect(factories).to.not.be.empty;
+    });
+
+    it('should create a Bundle entity', async () => {
+      // Check that a Bundle entity is present.
+      const bundles = await client.getBundles(1);
+      expect(bundles).to.not.be.empty;
+
+      const bundleId = '1';
+      expect(bundles[0].id).to.equal(bundleId);
     });
 
     it('should create a Pool entity', async () => {
@@ -783,6 +793,9 @@ describe('uni-info-watcher', () => {
         transaction
       ]);
 
+      // Store tokenId for further usage.
+      nfpmTokenId = Number(eventValue.event.tokenId);
+
       // Sleeping for 15 sec for the events to be processed.
       await wait(15000);
     });
@@ -833,7 +846,6 @@ describe('uni-info-watcher', () => {
     let oldPosition: any;
     let eventValue: any;
 
-    const tokenId = 1;
     const amount0Desired = 15;
     const amount1Desired = 15;
     const amount0Min = 0;
@@ -841,14 +853,15 @@ describe('uni-info-watcher', () => {
 
     before(async () => {
       // Get initial entity values.
-      const positions = await client.getPositions({ id: Number(tokenId) }, 1);
+      const positions = await client.getPositions({ id: nfpmTokenId }, 1);
+      expect(positions).to.not.be.empty;
       oldPosition = positions[0];
     });
 
     it('should trigger IncreaseLiquidityEvent', async () => {
       // Position manger increase liquidity and wait for MintEvent.
       const transaction = nfpm.increaseLiquidity({
-        tokenId,
+        tokenId: nfpmTokenId,
         amount0Desired,
         amount1Desired,
         amount0Min,
@@ -905,21 +918,20 @@ describe('uni-info-watcher', () => {
     let oldPosition: any;
     let eventValue: any;
 
-    const tokenId = 1;
     const liquidity = 5;
     const amount0Min = 0;
     const amount1Min = 0;
 
     before(async () => {
       // Get initial entity values.
-      const positions = await client.getPositions({ id: Number(tokenId) }, 1);
+      const positions = await client.getPositions({ id: nfpmTokenId }, 1);
       oldPosition = positions[0];
     });
 
     it('should trigger DecreaseLiquidityEvent', async () => {
       // Position manger decrease liquidity and wait for BurnEvent.
       const transaction = nfpm.decreaseLiquidity({
-        tokenId,
+        tokenId: nfpmTokenId,
         liquidity,
         amount0Min,
         amount1Min,
@@ -973,14 +985,13 @@ describe('uni-info-watcher', () => {
     // Checked entities: Transaction.
     // Unchecked entities: Position.
 
-    const tokenId = 1;
     const amount0Max = 15;
     const amount1Max = 15;
 
     it('should trigger CollectEvent', async () => {
       // Position manger collect and wait for BurnEvent.
       const transaction = nfpm.collect({
-        tokenId,
+        tokenId: nfpmTokenId,
         recipient,
         amount0Max,
         amount1Max
