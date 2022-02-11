@@ -102,9 +102,9 @@ export const findEthPerToken = async (db: Database, dbTx: QueryRunner, token: To
     assert(pool);
 
     if (BigNumber.from(pool.liquidity).gt(0)) {
-      if (pool.token0Id === token.id) {
+      if (pool.token0 === token.id) {
         // whitelist token is token1
-        const token1 = await db.getToken(dbTx, { id: pool.token1Id, blockHash: block.hash });
+        const token1 = await db.getToken(dbTx, { id: pool.token1, blockHash: block.hash });
         assert(token1);
 
         // get the derived ETH in pool
@@ -116,8 +116,8 @@ export const findEthPerToken = async (db: Database, dbTx: QueryRunner, token: To
           priceSoFar = pool.token1Price.times(token1.derivedETH);
         }
       }
-      if (pool.token1Id === token.id) {
-        const token0 = await db.getToken(dbTx, { id: pool.token0Id, blockHash: block.hash });
+      if (pool.token1 === token.id) {
+        const token0 = await db.getToken(dbTx, { id: pool.token0, blockHash: block.hash });
         assert(token0);
 
         // get the derived ETH in pool

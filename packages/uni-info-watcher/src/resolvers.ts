@@ -86,28 +86,24 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
             {
               entity: Pool,
               type: 'one-to-one',
-              property: 'pool',
-              field: 'poolId',
+              field: 'pool',
               childRelations: [
                 {
                   entity: Token,
                   type: 'one-to-one',
-                  property: 'token0',
-                  field: 'token0Id'
+                  field: 'token0'
                 },
                 {
                   entity: Token,
                   type: 'one-to-one',
-                  property: 'token1',
-                  field: 'token1Id'
+                  field: 'token1'
                 }
               ]
             },
             {
               entity: Transaction,
               type: 'one-to-one',
-              property: 'transaction',
-              field: 'transactionId'
+              field: 'transaction'
             }
           ]
         );
@@ -131,28 +127,24 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
             {
               entity: Pool,
               type: 'one-to-one',
-              property: 'pool',
-              field: 'poolId',
+              field: 'pool',
               childRelations: [
                 {
                   entity: Token,
                   type: 'one-to-one',
-                  property: 'token0',
-                  field: 'token0Id'
+                  field: 'token0'
                 },
                 {
                   entity: Token,
                   type: 'one-to-one',
-                  property: 'token1',
-                  field: 'token1Id'
+                  field: 'token1'
                 }
               ]
             },
             {
               entity: Transaction,
               type: 'one-to-one',
-              property: 'transaction',
-              field: 'transactionId'
+              field: 'transaction'
             }
           ]
         );
@@ -182,14 +174,12 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
             {
               entity: Token,
               type: 'one-to-one',
-              property: 'token0',
-              field: 'token0Id'
+              field: 'token0'
             },
             {
               entity: Token,
               type: 'one-to-one',
-              property: 'token1',
-              field: 'token1Id'
+              field: 'token1'
             }
           ]
         );
@@ -207,28 +197,24 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
             {
               entity: Pool,
               type: 'one-to-one',
-              property: 'pool',
-              field: 'poolId',
+              field: 'pool',
               childRelations: [
                 {
                   entity: Token,
                   type: 'one-to-one',
-                  property: 'token0',
-                  field: 'token0Id'
+                  field: 'token0'
                 },
                 {
                   entity: Token,
                   type: 'one-to-one',
-                  property: 'token1',
-                  field: 'token1Id'
+                  field: 'token1'
                 }
               ]
             },
             {
               entity: Transaction,
               type: 'one-to-one',
-              property: 'transaction',
-              field: 'transactionId'
+              field: 'transaction'
             }
           ]
         );
@@ -258,8 +244,7 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
             {
               entity: Pool,
               type: 'many-to-many',
-              property: 'whitelistPools',
-              field: 'pool'
+              field: 'whitelistPools'
             }
           ]
         );
@@ -289,32 +274,28 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
             {
               entity: Mint,
               type: 'one-to-many',
-              property: 'mints',
-              field: 'transactionId',
+              field: 'mints',
+              foreignKey: 'transaction',
               childRelations: [
                 {
                   entity: Transaction,
                   type: 'one-to-one',
-                  property: 'transaction',
-                  field: 'transactionId'
+                  field: 'transaction'
                 },
                 {
                   entity: Pool,
                   type: 'one-to-one',
-                  property: 'pool',
-                  field: 'poolId',
+                  field: 'pool',
                   childRelations: [
                     {
                       entity: Token,
                       type: 'one-to-one',
-                      property: 'token0',
-                      field: 'token0Id'
+                      field: 'token0'
                     },
                     {
                       entity: Token,
                       type: 'one-to-one',
-                      property: 'token1',
-                      field: 'token1Id'
+                      field: 'token1'
                     }
                   ]
                 }
@@ -323,32 +304,28 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
             {
               entity: Burn,
               type: 'one-to-many',
-              property: 'burns',
-              field: 'transactionId',
+              field: 'burns',
+              foreignKey: 'transaction',
               childRelations: [
                 {
                   entity: Transaction,
                   type: 'one-to-one',
-                  property: 'transaction',
-                  field: 'transactionId'
+                  field: 'transaction'
                 },
                 {
                   entity: Pool,
                   type: 'one-to-one',
-                  property: 'pool',
-                  field: 'poolId',
+                  field: 'pool',
                   childRelations: [
                     {
                       entity: Token,
                       type: 'one-to-one',
-                      property: 'token0',
-                      field: 'token0Id'
+                      field: 'token0'
                     },
                     {
                       entity: Token,
                       type: 'one-to-one',
-                      property: 'token1',
-                      field: 'token1Id'
+                      field: 'token1'
                     }
                   ]
                 }
@@ -357,32 +334,28 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
             {
               entity: Swap,
               type: 'one-to-many',
-              property: 'swaps',
-              field: 'transactionId',
+              field: 'swaps',
+              foreignKey: 'transaction',
               childRelations: [
                 {
                   entity: Transaction,
                   type: 'one-to-one',
-                  property: 'transaction',
-                  field: 'transactionId'
+                  field: 'transaction'
                 },
                 {
                   entity: Pool,
                   type: 'one-to-one',
-                  property: 'pool',
-                  field: 'poolId',
+                  field: 'pool',
                   childRelations: [
                     {
                       entity: Token,
                       type: 'one-to-one',
-                      property: 'token0',
-                      field: 'token0Id'
+                      field: 'token0'
                     },
                     {
                       entity: Token,
                       type: 'one-to-one',
-                      property: 'token1',
-                      field: 'token1Id'
+                      field: 'token1'
                     }
                   ]
                 }
@@ -410,38 +383,32 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
             {
               entity: Pool,
               type: 'one-to-one',
-              property: 'pool',
-              field: 'poolId'
+              field: 'pool'
             },
             {
               entity: Token,
               type: 'one-to-one',
-              property: 'token0',
-              field: 'token0Id'
+              field: 'token0'
             },
             {
               entity: Token,
               type: 'one-to-one',
-              property: 'token1',
-              field: 'token1Id'
+              field: 'token1'
             },
             {
               entity: Tick,
               type: 'one-to-one',
-              property: 'tickLower',
-              field: 'tickLowerId'
+              field: 'tickLower'
             },
             {
               entity: Tick,
               type: 'one-to-one',
-              property: 'tickUpper',
-              field: 'tickUpperId'
+              field: 'tickUpper'
             },
             {
               entity: Transaction,
               type: 'one-to-one',
-              property: 'transaction',
-              field: 'transactionId'
+              field: 'transaction'
             }
           ]
         );

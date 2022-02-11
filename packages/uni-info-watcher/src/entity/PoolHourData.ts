@@ -2,10 +2,8 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
-
-import { Pool } from './Pool';
 
 @Entity()
 @Index(['id', 'blockNumber'])
@@ -23,11 +21,8 @@ export class PoolHourData {
   @Column('integer')
   periodStartUnix!: number;
 
-  @Column('varchar', { length: 42, nullable: true })
-  poolId!: string;
-
-  @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
-  pool!: Pool;
+  @Column('varchar', { length: 42 })
+  pool!: string;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
   high!: GraphDecimal;

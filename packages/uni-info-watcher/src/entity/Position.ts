@@ -2,13 +2,9 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
-import { Pool } from './Pool';
-import { Token } from './Token';
-import { Tick } from './Tick';
-import { Transaction } from './Transaction';
 import { ADDRESS_ZERO } from '../utils/constants';
 
 @Entity()
@@ -54,39 +50,21 @@ export class Position {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   collectedFeesToken1!: GraphDecimal
 
-  @Column('varchar', { length: 42, nullable: true })
-  poolId!: string;
+  @Column('varchar', { length: 42 })
+  pool!: string;
 
-  @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
-  pool!: Pool
+  @Column('varchar', { length: 42 })
+  token0!: string;
 
-  @Column('varchar', { length: 42, nullable: true, name: 'token0_id' })
-  token0Id!: string;
+  @Column('varchar', { length: 42 })
+  token1!: string;
 
-  @ManyToOne(() => Token)
-  token0!: Token
+  @Column('varchar')
+  tickLower!: string;
 
-  @Column('varchar', { length: 42, nullable: true, name: 'token1_id' })
-  token1Id!: string;
+  @Column('varchar')
+  tickUpper!: string;
 
-  @ManyToOne(() => Token)
-  token1!: Token
-
-  @Column('varchar', { nullable: true })
-  tickLowerId!: string;
-
-  @ManyToOne(() => Tick)
-  tickLower!: Tick
-
-  @Column('varchar', { nullable: true })
-  tickUpperId!: string;
-
-  @ManyToOne(() => Tick)
-  tickUpper!: Tick
-
-  @Column('varchar', { nullable: true })
-  transactionId!: string;
-
-  @ManyToOne(() => Transaction)
-  transaction!: Transaction
+  @Column('varchar')
+  transaction!: string;
 }

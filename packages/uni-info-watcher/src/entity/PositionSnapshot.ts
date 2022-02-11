@@ -2,13 +2,10 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
 
-import { Pool } from './Pool';
-import { Transaction } from './Transaction';
 import { ADDRESS_ZERO } from '../utils/constants';
-import { Position } from './Position';
 
 @Entity()
 @Index(['id', 'blockNumber'])
@@ -56,12 +53,12 @@ export class PositionSnapshot {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   collectedFeesToken1!: GraphDecimal
 
-  @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
-  pool!: Pool
+  @Column('varchar', { length: 42 })
+  pool!: string
 
-  @ManyToOne(() => Position, { onDelete: 'CASCADE' })
-  position!: Position
+  @Column('varchar')
+  position!: string
 
-  @ManyToOne(() => Transaction, { onDelete: 'CASCADE' })
-  transaction!: Transaction
+  @Column('varchar')
+  transaction!: string
 }

@@ -156,8 +156,7 @@ export class Database implements DatabaseInterface {
           {
             entity: Pool,
             type: 'many-to-many',
-            property: 'whitelistPools',
-            field: 'pool'
+            field: 'whitelistPools'
           }
         ],
         [entity]
@@ -214,14 +213,12 @@ export class Database implements DatabaseInterface {
           {
             entity: Token,
             type: 'one-to-one',
-            property: 'token0',
-            field: 'token0Id'
+            field: 'token0'
           },
           {
             entity: Token,
             type: 'one-to-one',
-            property: 'token1',
-            field: 'token1Id'
+            field: 'token1'
           }
         ],
         [entity]
@@ -279,38 +276,32 @@ export class Database implements DatabaseInterface {
             {
               entity: Pool,
               type: 'one-to-one',
-              property: 'pool',
-              field: 'poolId'
+              field: 'pool'
             },
             {
               entity: Token,
               type: 'one-to-one',
-              property: 'token0',
-              field: 'token0Id'
+              field: 'token0'
             },
             {
               entity: Token,
               type: 'one-to-one',
-              property: 'token1',
-              field: 'token1Id'
+              field: 'token1'
             },
             {
               entity: Tick,
               type: 'one-to-one',
-              property: 'tickLower',
-              field: 'tickLowerId'
+              field: 'tickLower'
             },
             {
               entity: Tick,
               type: 'one-to-one',
-              property: 'tickUpper',
-              field: 'tickUpperId'
+              field: 'tickUpper'
             },
             {
               entity: Transaction,
               type: 'one-to-one',
-              property: 'transaction',
-              field: 'transactionId'
+              field: 'transaction'
             }
           ],
           [entity]
@@ -352,8 +343,7 @@ export class Database implements DatabaseInterface {
           {
             entity: Pool,
             type: 'one-to-one',
-            property: 'pool',
-            field: 'poolId'
+            field: 'pool'
           }
         ],
         [entity]
@@ -406,8 +396,7 @@ export class Database implements DatabaseInterface {
           {
             entity: Pool,
             type: 'one-to-one',
-            property: 'pool',
-            field: 'poolId'
+            field: 'pool'
           }
         ],
         [entity]
@@ -446,8 +435,7 @@ export class Database implements DatabaseInterface {
           {
             entity: Pool,
             type: 'one-to-one',
-            property: 'pool',
-            field: 'poolId'
+            field: 'pool'
           }
         ],
         [entity]
@@ -510,8 +498,7 @@ export class Database implements DatabaseInterface {
           {
             entity: Token,
             type: 'one-to-one',
-            property: 'token',
-            field: 'tokenId'
+            field: 'token'
           }
         ],
         [entity]
@@ -550,8 +537,7 @@ export class Database implements DatabaseInterface {
           {
             entity: Token,
             type: 'one-to-one',
-            property: 'token',
-            field: 'tokenId'
+            field: 'token'
           }
         ],
         [entity]
@@ -590,14 +576,12 @@ export class Database implements DatabaseInterface {
           {
             entity: Tick,
             type: 'one-to-one',
-            property: 'tick',
-            field: 'tickId'
+            field: 'tick'
           },
           {
             entity: Pool,
             type: 'one-to-one',
-            property: 'pool',
-            field: 'PoolId'
+            field: 'pool'
           }
         ],
         [entity]

@@ -2,14 +2,12 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
-
-import { Token } from './Token';
 
 @Entity()
 @Index(['id', 'blockNumber'])
-@Index(['date', 'tokenId'])
+@Index(['date', 'token'])
 export class TokenDayData {
   @PrimaryColumn('varchar')
   id!: string;
@@ -24,11 +22,8 @@ export class TokenDayData {
   @Column('integer')
   date!: number
 
-  @Column('varchar', { length: 42, nullable: true })
-  tokenId!: string;
-
-  @ManyToOne(() => Token, { onDelete: 'CASCADE' })
-  token!: Token
+  @Column('varchar', { length: 42 })
+  token!: string;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
   high!: GraphDecimal;
