@@ -263,16 +263,10 @@ export class Database {
     }
   }
 
-  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void> {
+  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions: FindConditions<Entity> = {}): Promise<void> {
     const repo = queryRunner.manager.getRepository(entity);
 
-    if (findConditions) {
-      await repo.delete(findConditions);
-
-      return;
-    }
-
-    await repo.clear();
+    await repo.delete(findConditions);
   }
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
