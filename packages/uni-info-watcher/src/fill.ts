@@ -76,7 +76,6 @@ export const main = async (): Promise<any> => {
 
   const ethClient = new EthClient({
     gqlEndpoint: gqlApiEndpoint,
-    gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
     cache
   });
 

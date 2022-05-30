@@ -101,7 +101,6 @@ export const getResetConfig = async (config: Config): Promise<{
 
   const ethClient = new EthClient({
     gqlEndpoint: gqlApiEndpoint,
-    gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
     cache
   });
 
