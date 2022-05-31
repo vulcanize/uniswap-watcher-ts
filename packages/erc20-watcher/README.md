@@ -34,7 +34,7 @@ createdb erc20-watcher
 
 Update `environments/local.toml` with database connection settings for both the databases.
 
-Update the `upstream` config in `environments/local.toml` and provide the `ipld-eth-server` GQL API and the `indexer-db` postgraphile endpoints.
+Update the `upstream` config in `environments/local.toml` and provide the `ipld-eth-server` GQL API endpoint.
 
 ## Run
 

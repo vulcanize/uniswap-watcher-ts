@@ -46,7 +46,7 @@ const main = async () => {
 
   const erc20Client = new ERC20Client(tokenWatcher);
 
-  const { ethClient, postgraphileClient, ethProvider } = await getResetConfig(config);
+  const { ethClient, ethProvider } = await getResetConfig(config);
 
   assert(jobQueueConfig, 'Missing job queue config');
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
@@ -55,7 +55,7 @@ const main = async () => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, ethProvider, jobQueue, mode);
   await indexer.init();
 
   // Get the factory contract address.

@@ -80,18 +80,12 @@ export const main = async (): Promise<any> => {
   await db.init();
 
   assert(upstream, 'Missing upstream config');
-  const { ethServer: { gqlApiEndpoint, gqlPostgraphileEndpoint, rpcProviderEndpoint }, cache: cacheConfig } = upstream;
+  const { ethServer: { gqlApiEndpoint, rpcProviderEndpoint }, cache: cacheConfig } = upstream;
   assert(gqlApiEndpoint, 'Missing upstream ethServer.gqlApiEndpoint');
-  assert(gqlPostgraphileEndpoint, 'Missing upstream ethServer.gqlPostgraphileEndpoint');
 
   const cache = await getCache(cacheConfig);
   const ethClient = new EthClient({
     gqlEndpoint: gqlApiEndpoint,
-    cache
-  });
-
-  const postgraphileClient = new EthClient({
-    gqlEndpoint: gqlPostgraphileEndpoint,
     cache
   });
 
@@ -105,7 +99,7 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue, mode);
 
   const jobRunner = new JobRunner(jobQueueConfig, indexer, jobQueue);
   await jobRunner.start();

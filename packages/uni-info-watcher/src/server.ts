@@ -56,7 +56,6 @@ export const main = async (): Promise<any> => {
   const {
     ethServer: {
       gqlApiEndpoint,
-      gqlPostgraphileEndpoint,
       rpcProviderEndpoint
     },
     uniWatcher,
@@ -65,16 +64,10 @@ export const main = async (): Promise<any> => {
   } = upstream;
 
   assert(gqlApiEndpoint, 'Missing upstream ethServer.gqlApiEndpoint');
-  assert(gqlPostgraphileEndpoint, 'Missing upstream ethServer.gqlPostgraphileEndpoint');
 
   const cache = await getCache(cacheConfig);
   const ethClient = new EthClient({
     gqlEndpoint: gqlApiEndpoint,
-    cache
-  });
-
-  const postgraphileClient = new EthClient({
-    gqlEndpoint: gqlPostgraphileEndpoint,
     cache
   });
 
@@ -90,10 +83,10 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, ethProvider, jobQueue, mode);
 
   const pubSub = new PubSub();
-  const eventWatcher = new EventWatcher(upstream, ethClient, postgraphileClient, indexer, pubSub, jobQueue);
+  const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubSub, jobQueue);
   await eventWatcher.start();
 
   const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, eventWatcher);

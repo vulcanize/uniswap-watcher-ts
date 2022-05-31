@@ -29,7 +29,7 @@ export const handler = async (argv: any): Promise<void> => {
   const config = await getConfig(argv.configFile);
   await resetJobs(config);
   const { jobQueue: jobQueueConfig } = config;
-  const { dbConfig, ethClient, postgraphileClient, ethProvider } = await getResetConfig(config);
+  const { dbConfig, ethClient, ethProvider } = await getResetConfig(config);
 
   // Initialize database.
   const db = new Database(dbConfig);
@@ -42,7 +42,7 @@ export const handler = async (argv: any): Promise<void> => {
 
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
 
-  const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider, jobQueue);
+  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue);
 
   const syncStatus = await indexer.getSyncStatus();
   assert(syncStatus, 'Missing syncStatus');

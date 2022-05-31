@@ -46,7 +46,6 @@ interface EventResult {
 export class Indexer {
   _db: Database
   _ethClient: EthClient
-  _postgraphileClient: EthClient
   _ethProvider: BaseProvider
   _baseIndexer: BaseIndexer
 
@@ -55,16 +54,15 @@ export class Indexer {
   _contract: ethers.utils.Interface
   _serverMode: string
 
-  constructor (db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider, jobQueue: JobQueue, serverMode: string) {
+  constructor (db: Database, ethClient: EthClient, ethProvider: BaseProvider, jobQueue: JobQueue, serverMode: string) {
     assert(db);
     assert(ethClient);
 
     this._db = db;
     this._ethClient = ethClient;
-    this._postgraphileClient = postgraphileClient;
     this._ethProvider = ethProvider;
     this._serverMode = serverMode;
-    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient, this._ethProvider, jobQueue);
+    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._ethProvider, jobQueue);
 
     const { abi, storageLayout } = artifacts;
 

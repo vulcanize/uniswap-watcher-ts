@@ -54,19 +54,12 @@ export const main = async (): Promise<any> => {
   await db.init();
 
   assert(upstream, 'Missing upstream config');
-  const { ethServer: { gqlApiEndpoint, gqlPostgraphileEndpoint, rpcProviderEndpoint, blockDelayInMilliSecs }, cache: cacheConfig } = upstream;
-  assert(gqlPostgraphileEndpoint, 'Missing upstream ethServer.gqlPostgraphileEndpoint');
+  const { ethServer: { gqlApiEndpoint, rpcProviderEndpoint, blockDelayInMilliSecs }, cache: cacheConfig } = upstream;
 
   const cache = await getCache(cacheConfig);
 
   const ethClient = new EthClient({
     gqlEndpoint: gqlApiEndpoint,
-    gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
-
-  const postgraphileClient = new EthClient({
-    gqlEndpoint: gqlPostgraphileEndpoint,
     cache
   });
 
@@ -75,7 +68,7 @@ export const main = async (): Promise<any> => {
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
   // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
   const pubsub = new PubSub();
-  const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider);
+  const indexer = new Indexer(db, ethClient, ethProvider);
 
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
   assert(dbConnectionString, 'Missing job queue db connection string');
@@ -83,11 +76,11 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const eventWatcher = new EventWatcher(upstream, ethClient, postgraphileClient, indexer, pubsub, jobQueue);
+  const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);
 
   assert(jobQueueConfig, 'Missing job queue config');
 
-  await fillBlocks(jobQueue, indexer, postgraphileClient, eventWatcher, blockDelayInMilliSecs, argv);
+  await fillBlocks(jobQueue, indexer, eventWatcher, blockDelayInMilliSecs, argv);
 };
 
 main().catch(err => {
