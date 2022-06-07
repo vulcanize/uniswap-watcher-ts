@@ -2,10 +2,8 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
-
-import { Token } from './Token';
 
 @Entity()
 @Index(['id', 'blockNumber'])
@@ -20,17 +18,11 @@ export class Pool {
   @Column('integer')
   blockNumber!: number;
 
-  @Column('varchar', { length: 42, nullable: true, name: 'token0_id' })
-  token0Id!: string;
+  @Column('varchar', { length: 42 })
+  token0!: string;
 
-  @ManyToOne(() => Token, { onDelete: 'CASCADE' })
-  token0!: Token;
-
-  @Column('varchar', { length: 42, nullable: true, name: 'token1_id' })
-  token1Id!: string;
-
-  @ManyToOne(() => Token, { onDelete: 'CASCADE' })
-  token1!: Token;
+  @Column('varchar', { length: 42 })
+  token1!: string;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   token0Price!: GraphDecimal

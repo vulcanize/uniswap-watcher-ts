@@ -2,10 +2,8 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToMany, JoinTable, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
-
-import { Pool } from './Pool';
 
 @Entity()
 @Index(['id', 'blockNumber'])
@@ -56,9 +54,8 @@ export class Token {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal;
 
-  @ManyToMany(() => Pool)
-  @JoinTable()
-  whitelistPools!: Pool[];
+  @Column('varchar', { length: 42, array: true, default: [] })
+  whitelistPools!: string[];
 
   // TODO: Add remaining fields when they are used.
 }

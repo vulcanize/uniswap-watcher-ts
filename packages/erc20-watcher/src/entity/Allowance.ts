@@ -6,7 +6,7 @@ import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 import { bigintTransformer } from '@vulcanize/util';
 
 @Entity()
-@Index(['blockHash', 'blockNumber', 'token', 'owner', 'spender'], { unique: true })
+@Index(['blockHash', 'token', 'owner', 'spender'], { unique: true })
 export class Allowance {
   @PrimaryGeneratedColumn()
   id!: number;

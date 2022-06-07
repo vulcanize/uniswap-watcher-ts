@@ -16,7 +16,7 @@ export const createTick = async (db: Database, dbTx: QueryRunner, tickId: string
   const tick = new Tick();
   tick.id = tickId;
   tick.tickIdx = tickIdx;
-  tick.pool = pool;
+  tick.pool = pool.id;
   tick.poolAddress = pool.id;
 
   // 1.0001^tick is token1/token0.

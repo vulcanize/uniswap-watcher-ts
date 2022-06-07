@@ -2,16 +2,12 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
-
-import { Transaction } from './Transaction';
-import { Pool } from './Pool';
-import { Token } from './Token';
 
 @Entity()
 @Index(['id', 'blockNumber'])
-@Index(['transactionId'])
+@Index(['transaction'])
 export class Swap {
   @PrimaryColumn('varchar')
   id!: string;
@@ -23,26 +19,20 @@ export class Swap {
   @Column('integer')
   blockNumber!: number;
 
-  @Column('varchar', { nullable: true })
-  transactionId!: string;
-
-  @ManyToOne(() => Transaction, transaction => transaction.swaps, { onDelete: 'CASCADE' })
-  transaction!: Transaction
+  @Column('varchar')
+  transaction!: string;
 
   @Column('numeric', { transformer: bigintTransformer })
   timestamp!: bigint;
 
-  @Column('varchar', { length: 42, nullable: true })
-  poolId!: string;
+  @Column('varchar', { length: 42 })
+  pool!: string;
 
-  @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
-  pool!: Pool
+  @Column('varchar', { length: 42 })
+  token0!: string
 
-  @ManyToOne(() => Token, { onDelete: 'CASCADE' })
-  token0!: Token
-
-  @ManyToOne(() => Token, { onDelete: 'CASCADE' })
-  token1!: Token
+  @Column('varchar', { length: 42 })
+  token1!: string
 
   @Column('varchar', { length: 42 })
   sender!: string

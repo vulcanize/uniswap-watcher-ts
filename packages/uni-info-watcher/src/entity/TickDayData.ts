@@ -2,11 +2,8 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 import { bigintTransformer } from '@vulcanize/util';
-
-import { Pool } from './Pool';
-import { Tick } from './Tick';
 
 @Entity()
 @Index(['id', 'blockNumber'])
@@ -24,17 +21,11 @@ export class TickDayData {
   @Column('integer')
   date!: number
 
-  @Column('varchar', { length: 42, nullable: true })
-  poolId!: string;
+  @Column('varchar', { length: 42 })
+  pool!: string;
 
-  @ManyToOne(() => Pool, { onDelete: 'CASCADE' })
-  pool!: Pool;
-
-  @Column('varchar', { nullable: true })
-  tickId!: string;
-
-  @ManyToOne(() => Tick, { onDelete: 'CASCADE' })
-  tick!: Tick
+  @Column('varchar')
+  tick!: string;
 
   @Column('numeric', { transformer: bigintTransformer })
   liquidityGross!: bigint;

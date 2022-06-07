@@ -40,6 +40,8 @@
     "lint": "eslint .",
     "build": "tsc",
     "build:contracts": "hardhat compile",
-    "estimate-event-counts": "ts-node src/estimate-event-counts.ts"
+    "estimate-event-counts": "ts-node src/estimate-event-counts.ts",
+    "check-config": "DEBUG=vulcanize:* node --enable-source-maps dist/src/cli/check-config.js",
+    "check-config:dev": "DEBUG=vulcanize:* ts-node src/cli/check-config.ts"
   }
 }

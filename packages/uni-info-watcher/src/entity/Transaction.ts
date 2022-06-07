@@ -2,12 +2,8 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Entity, PrimaryColumn, Column, OneToMany, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
-
-import { Mint } from './Mint';
-import { Burn } from './Burn';
-import { Swap } from './Swap';
 
 @Entity()
 @Index(['id', 'blockNumber'])
@@ -27,13 +23,4 @@ export class Transaction {
 
   @Column('numeric', { transformer: bigintTransformer })
   timestamp!: bigint;
-
-  @OneToMany(() => Mint, mint => mint.transaction)
-  mints!: Mint[];
-
-  @OneToMany(() => Burn, burn => burn.transaction)
-  burns!: Burn[];
-
-  @OneToMany(() => Swap, swap => swap.transaction)
-  swaps!: Swap[];
 }

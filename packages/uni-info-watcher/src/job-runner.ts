@@ -134,7 +134,9 @@ export const main = async (): Promise<any> => {
   const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, ethProvider, jobQueue, mode);
   await indexer.init();
 
-  await indexer.addContracts();
+  if (mode !== 'demo') {
+    await indexer.addContracts();
+  }
 
   const jobRunner = new JobRunner(jobQueueConfig, indexer, jobQueue);
   await jobRunner.start();

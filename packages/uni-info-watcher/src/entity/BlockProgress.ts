@@ -10,6 +10,7 @@ import { BlockProgressInterface } from '@vulcanize/util';
 @Index(['blockHash'], { unique: true })
 @Index(['blockNumber'])
 @Index(['parentHash'])
+@Index(['blockHash', 'isPruned'])
 export class BlockProgress implements BlockProgressInterface {
   @PrimaryGeneratedColumn()
   id!: number;
