@@ -93,7 +93,6 @@ export const main = async (): Promise<any> => {
     cache: cacheConfig,
     ethServer: {
       gqlApiEndpoint,
-      gqlPostgraphileEndpoint,
       rpcProviderEndpoint
     }
   } = upstream;
@@ -106,12 +105,6 @@ export const main = async (): Promise<any> => {
 
   const ethClient = new EthClient({
     gqlEndpoint: gqlApiEndpoint,
-    gqlSubscriptionEndpoint: gqlPostgraphileEndpoint,
-    cache
-  });
-
-  const postgraphileClient = new EthClient({
-    gqlEndpoint: gqlPostgraphileEndpoint,
     cache
   });
 
@@ -131,7 +124,7 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, postgraphileClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, ethProvider, jobQueue, mode);
   await indexer.init();
 
   if (mode !== 'demo') {

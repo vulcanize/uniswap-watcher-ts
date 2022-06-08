@@ -23,7 +23,7 @@ const main = async () => {
     }
   }).argv;
 
-  const { upstream: { ethServer: { gqlApiEndpoint, gqlPostgraphileEndpoint, rpcProviderEndpoint } } } = await getConfig(argv.configFile);
+  const { upstream: { ethServer: { gqlApiEndpoint, rpcProviderEndpoint } } } = await getConfig(argv.configFile);
 
   // Get latest block in chain using ipld-eth-server GQL.
   log(`Checking ipld-eth-server GQL endpoint ${gqlApiEndpoint}`);
@@ -32,19 +32,10 @@ const main = async () => {
   assert(currentBlock && currentBlock.number);
   log('ipld-eth-server GQL endpoint working');
 
-  // Get block by number using postgraphile.
-  log(`Checking postgraphile GQL endpoint ${gqlPostgraphileEndpoint}`);
-  const postgraphileClient = new EthClient({ gqlEndpoint: gqlPostgraphileEndpoint, cache: undefined });
-  const { allEthHeaderCids: { nodes } } = await postgraphileClient.getBlocks({ blockNumber: currentBlock.number });
-  assert(nodes.length);
-  const [{ blockHash }] = nodes;
-  assert(blockHash === currentBlock.hash);
-  log('postgraphile GQL endpoint working');
-
   // Get block by hash using RPC endpoint.
   log(`Checking RPC endpoint ${rpcProviderEndpoint}`);
   const ethProvider = getCustomProvider(rpcProviderEndpoint);
-  const ethBlock = await ethProvider.getBlock(blockHash);
+  const ethBlock = await ethProvider.getBlock(currentBlock.hash);
   assert(ethBlock.number === currentBlock.number);
   log('RPC endpoint working');
 };

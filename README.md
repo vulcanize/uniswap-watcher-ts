@@ -18,7 +18,6 @@ The default config files used by the watchers assume the following services are 
 
 * `vulcanize/go-ethereum` on port 8545
 * `vulcanize/ipld-eth-server` with native GQL API enabled on port 8082 and RPC API on port 8081
-* `postgraphile` on the `vulcanize/ipld-eth-server` database, on port 5000
 
 To check whether the endpoints in watcher config are working, run:
 
@@ -31,8 +30,6 @@ yarn check-config --config-file ../erc20-watcher/environments/local.toml
 yarn check-config --config-file ../uni-watcher/environments/local.toml
 # vulcanize:check-config Checking ipld-eth-server GQL endpoint http://127.0.0.1:8082/graphql +0ms
 # vulcanize:check-config ipld-eth-server GQL endpoint working +33ms
-# vulcanize:check-config Checking postgraphile GQL endpoint http://127.0.0.1:5000/graphql +1ms
-# vulcanize:check-config postgraphile GQL endpoint working +12ms
 # vulcanize:check-config Checking RPC endpoint http://127.0.0.1:8081 +1ms
 # vulcanize:check-config RPC endpoint working +25ms
 ```

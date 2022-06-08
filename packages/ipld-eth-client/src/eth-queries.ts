@@ -95,44 +95,10 @@ query block($blockHash: Bytes32) {
 }
 `;
 
-export const subscribeBlocks = gql`
-subscription {
-  listen(topic: "header_cids") {
-    relatedNode {
-      ... on EthHeaderCid {
-        blockHash
-        blockNumber
-        parentHash
-        timestamp
-      }
-    }
-  }
-}
-`;
-
-export const subscribeTransactions = gql`
-subscription SubscriptionHeader {
-  listen(topic: "transaction_cids") {
-    relatedNode {
-      ... on EthTransactionCid {
-        txHash
-        ethHeaderCidByHeaderId {
-          blockHash
-          blockNumber
-          parentHash
-        }
-      }
-    }
-  }
-}
-`;
-
 export default {
   getStorageAt,
   getLogs,
   getBlockWithTransactions,
   getBlocks,
-  getBlockByHash,
-  subscribeBlocks,
-  subscribeTransactions
+  getBlockByHash
 };

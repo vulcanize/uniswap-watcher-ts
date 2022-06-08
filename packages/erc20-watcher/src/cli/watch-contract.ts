@@ -38,7 +38,7 @@ import { Indexer } from '../indexer';
 
   const config: Config = await getConfig(argv.configFile);
   const { database: dbConfig, server: { mode }, jobQueue: jobQueueConfig } = config;
-  const { ethClient, postgraphileClient, ethProvider } = await getResetConfig(config);
+  const { ethClient, ethProvider } = await getResetConfig(config);
 
   assert(dbConfig);
 
@@ -53,7 +53,7 @@ import { Indexer } from '../indexer';
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, ethClient, postgraphileClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue, mode);
 
   await indexer.watchContract(argv.address, argv.startingBlock);
 

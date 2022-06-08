@@ -54,22 +54,20 @@ export class Indexer {
   _db: Database
   _ethClient: EthClient
   _ethProvider: BaseProvider
-  _postgraphileClient: EthClient;
   _baseIndexer: BaseIndexer
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
 
-  constructor (db: Database, ethClient: EthClient, postgraphileClient: EthClient, ethProvider: BaseProvider) {
+  constructor (db: Database, ethClient: EthClient, ethProvider: BaseProvider) {
     assert(db);
     assert(ethClient);
 
     this._db = db;
     this._ethClient = ethClient;
-    this._postgraphileClient = postgraphileClient;
     this._ethProvider = ethProvider;
-    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._postgraphileClient, this._ethProvider);
+    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._ethProvider);
 
     const { abi, storageLayout } = artifacts;
 
@@ -306,7 +304,7 @@ export class Indexer {
           }
         ]
       }
-    } = await this._postgraphileClient.getBlockWithTransactions({ blockHash });
+    } = await this._ethClient.getBlockWithTransactions({ blockHash });
 
     const transactionMap = transactions.reduce((acc: {[key: string]: any}, transaction: {[key: string]: any}) => {
       acc[transaction.txHash] = transaction;
