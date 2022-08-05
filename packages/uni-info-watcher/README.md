@@ -287,12 +287,39 @@ Queries with ID param
 To run a smoke test:
 
 * Start the server in `packages/erc-20-watcher`.
-* Start the server and the job-runner in `packages/uni-watcher`.
-* Start the server and the job-runner in `packages/uni-info-watcher`.
+  
+  ```bash
+  yarn server
+  ```
+
+* Start the server and the job-runner in `packages/uni-watcher` with test config.
+  
+  ```bash
+  yarn job-runner -f environments/test.toml
+  ```
+
+  ```bash
+  yarn server -f environments/test.toml
+  ```
+
+* Start the server and the job-runner in `packages/uni-info-watcher` with test config.
+
+  ```bash
+  yarn job-runner -f environments/test.toml
+  ```
+
+  ```bash
+  yarn server -f environments/test.toml
+  ```
+
 * Run the smoke test in `packages/uni-watcher` atleast once.
-* Run:
 
   ```bash
   $ yarn smoke-test
   ```
-  
+
+* Run smoke-test in `packages/uni-info-watcher`:
+
+  ```bash
+  $ yarn smoke-test
+  ```

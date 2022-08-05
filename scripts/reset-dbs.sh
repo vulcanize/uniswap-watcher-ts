@@ -8,17 +8,14 @@ then
   export PGPASSWORD=postgres
 
   dropdb erc20-watcher
-  dropdb address-watcher
   dropdb uni-watcher
   dropdb uni-info-watcher
 
   createdb erc20-watcher
-  createdb address-watcher
   createdb uni-watcher
   createdb uni-info-watcher
 
   psql -d erc20-watcher-job-queue -c "delete from pgboss.job;"
-  psql -d address-watcher-job-queue -c "delete from pgboss.job;"
   psql -d uni-watcher-job-queue -c "delete from pgboss.job;"
   psql -d uni-info-watcher-job-queue -c "delete from pgboss.job;"
 EOF
