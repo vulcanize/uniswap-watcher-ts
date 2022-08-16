@@ -1,5 +1,11 @@
 import promClient, { register } from 'prom-client';
 import express, { Application } from 'express';
+import debug from 'debug';
+import assert from 'assert';
+
+import { MetricsConfig } from './config';
+
+const log = debug('vulcanize:metrics');
 
 // Create custom metrics
 export const lastProcessedBlock = new promClient.Gauge({
@@ -20,7 +26,15 @@ export const lastBlockNumEvents = new promClient.Gauge({
 // Export metrics on a server
 const app: Application = express();
 
-export async function startMetricsServer (host: string, port: number): Promise<void> {
+export async function startMetricsServer (metrics: MetricsConfig): Promise<void> {
+  if (!metrics) {
+    log('Metrics is disabled. To enable add metrics host and port.');
+    return;
+  }
+
+  assert(metrics.host, 'Missing config for metrics host');
+  assert(metrics.port, 'Missing config for metrics port');
+
   // Add default metrics
   promClient.collectDefaultMetrics();
 
@@ -31,7 +45,7 @@ export async function startMetricsServer (host: string, port: number): Promise<v
     res.send(metrics);
   });
 
-  app.listen(port, () => {
-    console.log(`Metrics exposed at http://${host}:${port}/metrics`);
+  app.listen(metrics.port, metrics.host, () => {
+    log(`Metrics exposed at http://${metrics.host}:${metrics.port}/metrics`);
   });
 }

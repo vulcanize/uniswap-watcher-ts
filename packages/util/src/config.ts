@@ -33,7 +33,7 @@ interface ServerConfig {
   kind: string;
 }
 
-interface MetricsConfig {
+export interface MetricsConfig {
   host: string;
   port: number;
 }

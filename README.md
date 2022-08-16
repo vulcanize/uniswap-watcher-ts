@@ -54,7 +54,6 @@ Create the databases for the watchers:
 
 ```
 createdb erc20-watcher
-createdb address-watcher
 createdb uni-watcher
 createdb uni-info-watcher
 ```
@@ -63,7 +62,6 @@ Create the databases for the job queues and enable the `pgcrypto` extension on t
 
 ```
 createdb erc20-watcher-job-queue
-createdb address-watcher-job-queue
 createdb uni-watcher-job-queue
 createdb uni-info-watcher-job-queue
 ```
@@ -78,18 +76,6 @@ Type "help" for help.
 erc20-watcher-job-queue=# CREATE EXTENSION pgcrypto;
 CREATE EXTENSION
 erc20-watcher-job-queue=# exit
-```
-
-```
-postgres@tesla:~$ psql -U postgres -h localhost address-watcher-job-queue
-Password for user postgres:
-psql (12.7 (Ubuntu 12.7-1.pgdg18.04+1))
-SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
-Type "help" for help.
-
-address-watcher-job-queue=# CREATE EXTENSION pgcrypto;
-CREATE EXTENSION
-address-watcher-job-queue=# exit
 ```
 
 ```

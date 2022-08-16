@@ -106,7 +106,7 @@ export const main = async (): Promise<any> => {
   const jobRunner = new JobRunner(jobQueueConfig, indexer, jobQueue);
   await jobRunner.start();
 
-  startMetricsServer(metrics.host, metrics.port);
+  startMetricsServer(metrics);
 };
 
 main().then(() => {
