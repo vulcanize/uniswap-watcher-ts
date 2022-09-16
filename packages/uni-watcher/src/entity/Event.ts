@@ -9,7 +9,7 @@ export const UNKNOWN_EVENT_NAME = '__unknown__';
 
 @Entity()
 // Index to query events by block and event index.
-@Index(['block', 'index'])
+@Index(['block', 'index'], { unique: true })
 export class Event {
   @PrimaryGeneratedColumn()
   id!: number;

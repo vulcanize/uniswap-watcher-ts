@@ -7,7 +7,7 @@ import { BlockProgress } from './BlockProgress';
 
 @Entity()
 // Index to query events by block and event index.
-@Index(['block', 'index'])
+@Index(['block', 'index'], { unique: true })
 export class Event {
   @PrimaryGeneratedColumn()
   id!: number;
