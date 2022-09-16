@@ -876,8 +876,8 @@ export class Indexer implements IndexerInterface {
       // Tick entities.
       const lowerTickId = poolAddress + '#' + (burnEvent.tickLower).toString();
       const upperTickId = poolAddress + '#' + (burnEvent.tickUpper).toString();
-      const lowerTick = await this._db.getTick(dbTx, { id: lowerTickId, blockHash: block.hash }, true);
-      const upperTick = await this._db.getTick(dbTx, { id: upperTickId, blockHash: block.hash }, true);
+      const lowerTick = await this._db.getTick(dbTx, { id: lowerTickId, blockHash: block.hash }, false);
+      const upperTick = await this._db.getTick(dbTx, { id: upperTickId, blockHash: block.hash }, false);
       assert(lowerTick && upperTick);
       const amount = BigInt(burnEvent.amount);
       lowerTick.liquidityGross = BigInt(lowerTick.liquidityGross) - amount;
