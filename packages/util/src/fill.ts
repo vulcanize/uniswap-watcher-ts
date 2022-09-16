@@ -24,6 +24,7 @@ export const fillBlocks = async (
   }
 ): Promise<any> => {
   let { startBlock, endBlock, prefetch, batchBlocks } = argv;
+
   if (startBlock > endBlock) {
     throw new Error(`endBlock ${endBlock} should be greater than or equal to startBlock ${startBlock}`);
   }

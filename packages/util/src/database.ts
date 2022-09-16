@@ -36,6 +36,7 @@ const OPERATOR_MAP = {
 };
 
 const INSERT_EVENTS_BATCH = 100;
+export const DEFAULT_LIMIT = 100;
 
 export interface BlockHeight {
   number?: number;
@@ -352,8 +353,6 @@ export class Database {
       .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
       .groupBy('subTable.id');
 
-    subQuery = this._buildQuery(repo, subQuery, where);
-
     if (block.hash) {
       const { canonicalBlockNumber, blockHashes } = await this.getFrothyRegion(queryRunner, block.hash);
 
@@ -375,6 +374,8 @@ export class Database {
         `${tableName}.id = "latestEntities"."id" AND ${tableName}.block_number = "latestEntities"."block_number"`
       )
       .setParameters(subQuery.getParameters());
+
+    selectQueryBuilder = this._buildQuery(repo, selectQueryBuilder, where);
 
     if (queryOptions.orderBy) {
       selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions);
@@ -434,7 +435,9 @@ export class Database {
               acc[parentEntityId] = [];
             }
 
-            acc[parentEntityId].push(entity);
+            if (acc[parentEntityId].length < DEFAULT_LIMIT) {
+              acc[parentEntityId].push(entity);
+            }
 
             return acc;
           }, {});
@@ -481,10 +484,18 @@ export class Database {
           }, {});
 
           entities.forEach((entity: any) => {
-            const relatedField = entity[field] as any[];
+            const relatedEntityIds: Set<string> = entity[field].reduce((acc: Set<string>, id: string) => {
+              acc.add(id);
 
-            relatedField.forEach((relatedEntityId, index) => {
-              relatedField[index] = relatedEntitiesMap[relatedEntityId];
+              return acc;
+            }, new Set());
+
+            entity[field] = [];
+
+            relatedEntities.forEach((relatedEntity: any) => {
+              if (relatedEntityIds.has(relatedEntity.id) && entity[field].length < DEFAULT_LIMIT) {
+                entity[field].push(relatedEntity);
+              }
             });
           });
 
