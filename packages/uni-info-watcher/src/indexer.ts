@@ -1366,7 +1366,7 @@ export class Indexer implements IndexerInterface {
         id: poolAddress.concat('#').concat(tickId.toString()),
         blockHash: block.hash
       },
-      true
+      false
     );
 
     if (tick) {
