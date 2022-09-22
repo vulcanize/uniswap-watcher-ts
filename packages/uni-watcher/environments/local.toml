@@ -4,7 +4,9 @@
 
 [metrics]
   host = "127.0.0.1"
-  port = 8083
+  port = 9001
+    [metrics.gql]
+    port = 9002
 
 [database]
   type = "postgres"

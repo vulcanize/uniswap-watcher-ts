@@ -4,6 +4,11 @@
   mode = "eth_call"
   kind = "lazy"
 
+[metrics]
+  host = "127.0.0.1"
+    [metrics.gql]
+    port = 9000
+
 [database]
   type = "postgres"
   host = "localhost"
