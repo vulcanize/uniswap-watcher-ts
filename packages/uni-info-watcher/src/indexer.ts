@@ -11,7 +11,7 @@ import { providers, utils, BigNumber } from 'ethers';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight, Relation, GraphDecimal, JobQueue, Where } from '@vulcanize/util';
+import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight, Relation, GraphDecimal, JobQueue, Where, DEFAULT_LIMIT } from '@vulcanize/util';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
@@ -36,7 +36,6 @@ import { Tick } from './entity/Tick';
 import { Contract, KIND_POOL } from './entity/Contract';
 
 const SYNC_DELTA = 5;
-const DEFAULT_LIMIT = 100;
 
 const log = debug('vulcanize:indexer');
 
@@ -876,8 +875,8 @@ export class Indexer implements IndexerInterface {
       // Tick entities.
       const lowerTickId = poolAddress + '#' + (burnEvent.tickLower).toString();
       const upperTickId = poolAddress + '#' + (burnEvent.tickUpper).toString();
-      const lowerTick = await this._db.getTick(dbTx, { id: lowerTickId, blockHash: block.hash }, true);
-      const upperTick = await this._db.getTick(dbTx, { id: upperTickId, blockHash: block.hash }, true);
+      const lowerTick = await this._db.getTick(dbTx, { id: lowerTickId, blockHash: block.hash }, false);
+      const upperTick = await this._db.getTick(dbTx, { id: upperTickId, blockHash: block.hash }, false);
       assert(lowerTick && upperTick);
       const amount = BigInt(burnEvent.amount);
       lowerTick.liquidityGross = BigInt(lowerTick.liquidityGross) - amount;
@@ -1367,7 +1366,7 @@ export class Indexer implements IndexerInterface {
         id: poolAddress.concat('#').concat(tickId.toString()),
         blockHash: block.hash
       },
-      true
+      false
     );
 
     if (tick) {
