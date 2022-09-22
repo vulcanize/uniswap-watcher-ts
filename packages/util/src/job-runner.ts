@@ -12,7 +12,7 @@ import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
 import { wait } from './misc';
 import { createPruningJob } from './common';
-import { lastProcessedBlock, lastBlockProcessDuration, lastBlockNumEvents } from './metrics';
+import { lastBlockNumEvents, lastBlockProcessDuration, lastProcessedBlockNumber } from './metrics';
 
 const log = debug('vulcanize:job-runner');
 
@@ -130,7 +130,7 @@ export class JobRunner {
       log(`Total block process time (${blockNumber - 1}): ${blockProcessDuration}ms`);
 
       // Update metrics
-      lastProcessedBlock.set(blockNumber - 1);
+      lastProcessedBlockNumber.set(blockNumber - 1);
       lastBlockProcessDuration.set(blockProcessDuration);
       lastBlockNumEvents.set(this._blockNumEvents);
     }
