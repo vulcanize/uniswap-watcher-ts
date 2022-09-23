@@ -112,7 +112,7 @@ const registerDBSizeMetrics = async ({ database, jobQueue }: Config): Promise<vo
   // eslint-disable-next-line no-new
   new promClient.Gauge({
     name: 'database_size_bytes',
-    help: 'Total entries in event table',
+    help: 'Watcher database sizes in bytes',
     labelNames: ['type'] as const,
     async collect () {
       const [
