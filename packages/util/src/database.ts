@@ -384,6 +384,22 @@ export class Database {
       subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
     }
 
+    if (Object.entries(where).length === 0) {
+      const hashStatus = await queryRunner.manager.query('select current_setting(\'enable_hashjoin\')');
+      if (hashStatus[0].current_setting === 'on') {
+        await queryRunner.manager.query('SET enable_hashjoin = off');
+        await queryRunner.manager.query('SET enable_mergejoin = off');
+        await queryRunner.manager.query('SET enable_nestloop = off');
+      }
+    } else {
+      const hashStatus = await queryRunner.manager.query('select current_setting(\'enable_hashjoin\')');
+      if (hashStatus[0].current_setting === 'off') {
+        await queryRunner.manager.query('SET enable_hashjoin = on');
+        await queryRunner.manager.query('SET enable_mergejoin = on');
+        await queryRunner.manager.query('SET enable_nestloop = on');
+      }
+    }
+
     let selectQueryBuilder = repo.createQueryBuilder(tableName)
       .innerJoin(
         `(${subQuery.getQuery()})`,
