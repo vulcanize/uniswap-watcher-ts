@@ -18,7 +18,7 @@ import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDa
 import { Token } from './entity/Token';
 import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv } from './utils';
 import { createTick, feeTierToTickSpacing } from './utils/tick';
-import { WATCHED_CONTRACTS } from './utils/constants';
+import { FACTORY_ADDRESS, WATCHED_CONTRACTS } from './utils/constants';
 import { Position } from './entity/Position';
 import { Database } from './database';
 import { Event } from './entity/Event';
@@ -1379,22 +1379,22 @@ export class Indexer implements IndexerInterface {
     let position = await this._db.getPosition({ id: tokenId.toString(), blockHash });
 
     if (!position) {
-      console.time('time:indexer#_getPosition-storage_call_for_getPosition');
-      const nfpmPosition = await this._uniClient.getPosition(blockHash, tokenId);
-      console.timeEnd('time:indexer#_getPosition-storage_call_for_getPosition');
+      try {
+        console.time('time:indexer#_getPosition-eth_call_for_positions');
+        const { value: positionResult } = await this._uniClient.positions(blockHash, contractAddress, tokenId);
+        console.timeEnd('time:indexer#_getPosition-eth_call_for_positions');
 
-      // The contract call reverts in situations where the position is minted and deleted in the same block.
-      // From my investigation this happens in calls from BancorSwap.
-      // (e.g. 0xf7867fa19aa65298fadb8d4f72d0daed5e836f3ba01f0b9b9631cdc6c36bed40)
+        let factoryAddress = FACTORY_ADDRESS;
 
-      if (nfpmPosition) {
-        console.time('time:indexer#_getPosition-storage_call_for_poolIdToPoolKey');
-        const { token0: token0Address, token1: token1Address, fee } = await this._uniClient.poolIdToPoolKey(blockHash, nfpmPosition.poolId);
-        console.timeEnd('time:indexer#_getPosition-storage_call_for_poolIdToPoolKey');
+        if (this._isDemo) {
+          // Currently fetching address from Factory entity in database as only one exists.
+          const [factory] = await this._db.getModelEntitiesNoTx(Factory, { hash: blockHash }, {}, { limit: 1 });
+          factoryAddress = factory.id;
+        }
 
-        console.time('time:indexer#_getPosition-storage_call_for_getPool');
-        let { pool: poolAddress } = await this._uniClient.getPool(blockHash, token0Address, token1Address, fee);
-        console.timeEnd('time:indexer#_getPosition-storage_call_for_getPool');
+        console.time('time:indexer#_getPosition-eth_call_for_getPool');
+        let { value: poolAddress } = await this._uniClient.callGetPool(blockHash, factoryAddress, positionResult.token0, positionResult.token1, positionResult.fee);
+        console.timeEnd('time:indexer#_getPosition-eth_call_for_getPool');
 
         // Get the pool address in lowercase.
         poolAddress = utils.hexlify(poolAddress);
@@ -1402,10 +1402,10 @@ export class Indexer implements IndexerInterface {
         position = new Position();
         position.id = tokenId.toString();
         position.pool = poolAddress;
-        position.token0 = utils.hexlify(token0Address);
-        position.token1 = utils.hexlify(token1Address);
-        position.tickLower = poolAddress.concat('#').concat(nfpmPosition.tickLower.toString());
-        position.tickUpper = poolAddress.concat('#').concat(nfpmPosition.tickUpper.toString());
+        position.token0 = utils.hexlify(positionResult.token0);
+        position.token1 = utils.hexlify(positionResult.token1);
+        position.tickLower = poolAddress.concat('#').concat(positionResult.tickLower.toString());
+        position.tickUpper = poolAddress.concat('#').concat(positionResult.tickUpper.toString());
 
         const dbTx = await this._db.createTransactionRunner();
 
@@ -1421,8 +1421,17 @@ export class Indexer implements IndexerInterface {
           await dbTx.release();
         }
 
-        position.feeGrowthInside0LastX128 = BigInt(nfpmPosition.feeGrowthInside0LastX128.toString());
-        position.feeGrowthInside1LastX128 = BigInt(nfpmPosition.feeGrowthInside1LastX128.toString());
+        position.feeGrowthInside0LastX128 = BigInt(positionResult.feeGrowthInside0LastX128.toString());
+        position.feeGrowthInside1LastX128 = BigInt(positionResult.feeGrowthInside1LastX128.toString());
+      } catch (error: any) {
+        // The contract call reverts in situations where the position is minted and deleted in the same block.
+        // From my investigation this happens in calls from BancorSwap.
+        // (e.g. 0xf7867fa19aa65298fadb8d4f72d0daed5e836f3ba01f0b9b9631cdc6c36bed40)
+
+        if (error.message !== utils.Logger.errors.CALL_EXCEPTION) {
+          log('nfpm positions eth_call failed');
+          throw error;
+        }
       }
     }
 
