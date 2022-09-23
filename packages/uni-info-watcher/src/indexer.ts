@@ -1439,13 +1439,18 @@ export class Indexer implements IndexerInterface {
   }
 
   async _updateFeeVars (position: Position, block: Block, contractAddress: string, tokenId: bigint): Promise<Position> {
-    console.time('time:indexer#_updateFeeVars-storage_call_for_getPosition');
-    const nfpmPosition = await this._uniClient.getPosition(block.hash, tokenId);
-    console.timeEnd('time:indexer#_updateFeeVars-storage_call_for_getPosition');
+    try {
+      console.time('time:indexer#_updateFeeVars-eth_call_for_positions');
+      const { value: positionResult } = await this._uniClient.positions(block.hash, contractAddress, tokenId);
+      console.timeEnd('time:indexer#_updateFeeVars-eth_call_for_positions');
 
-    if (nfpmPosition) {
-      position.feeGrowthInside0LastX128 = BigInt(nfpmPosition.feeGrowthInside0LastX128.toString());
-      position.feeGrowthInside1LastX128 = BigInt(nfpmPosition.feeGrowthInside1LastX128.toString());
+      if (positionResult) {
+        position.feeGrowthInside0LastX128 = BigInt(positionResult.feeGrowthInside0LastX128.toString());
+        position.feeGrowthInside1LastX128 = BigInt(positionResult.feeGrowthInside1LastX128.toString());
+      }
+    } catch (error) {
+      log('nfpm positions eth_call failed');
+      log(error);
     }
 
     return position;
