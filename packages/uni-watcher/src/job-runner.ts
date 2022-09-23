@@ -73,7 +73,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, metrics } = config;
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
   assert(dbConfig, 'Missing database config');
 
@@ -106,7 +106,7 @@ export const main = async (): Promise<any> => {
   const jobRunner = new JobRunner(jobQueueConfig, indexer, jobQueue);
   await jobRunner.start();
 
-  startMetricsServer(metrics);
+  await startMetricsServer(config, indexer);
 };
 
 main().then(() => {

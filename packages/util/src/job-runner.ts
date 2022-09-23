@@ -12,7 +12,7 @@ import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
 import { wait } from './misc';
 import { createPruningJob } from './common';
-import { lastProcessedBlock, lastBlockProcessDuration, lastBlockNumEvents } from './metrics';
+import { lastBlockNumEvents, lastBlockProcessDuration, lastProcessedBlockNumber } from './metrics';
 
 const log = debug('vulcanize:job-runner');
 
@@ -130,7 +130,7 @@ export class JobRunner {
       log(`Total block process time (${blockNumber - 1}): ${blockProcessDuration}ms`);
 
       // Update metrics
-      lastProcessedBlock.set(blockNumber - 1);
+      lastProcessedBlockNumber.set(blockNumber - 1);
       lastBlockProcessDuration.set(blockProcessDuration);
       lastBlockNumEvents.set(this._blockNumEvents);
     }
@@ -280,6 +280,8 @@ export class JobRunner {
     const { subgraphEventsOrder = false } = this._jobQueueConfig;
     const unwatchedContractEvents: EventInterface[] = [];
 
+    // In subgraph, events from contract created in the same block are processed after all other events.
+    // Divide the events into watched | unwatched contract events.
     if (subgraphEventsOrder) {
       // Processing events out of order causes issue with restarts/kill at arbitrary times.
       // Events of contract, added to watch in processing an event, may not be processed at end after restart/kill.
@@ -352,6 +354,8 @@ export class JobRunner {
 
     if (subgraphEventsOrder) {
       // Process events from contracts not watched initially.
+      // Note: events not "unknown" even if for unwatched contracts.
+      // (uni-watcher has already parsed the events for unwatched contracts)
       for (const dbEvent of unwatchedContractEvents) {
         const watchedContract = this._indexer.isWatchedContract(dbEvent.contract);
 

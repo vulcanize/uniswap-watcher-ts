@@ -33,9 +33,14 @@ interface ServerConfig {
   kind: string;
 }
 
+export interface GQLMetricsConfig {
+  port: number;
+}
+
 export interface MetricsConfig {
   host: string;
   port: number;
+  gql: GQLMetricsConfig;
 }
 
 export interface UpstreamConfig {

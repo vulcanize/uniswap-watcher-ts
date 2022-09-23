@@ -6,7 +6,7 @@ import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 
-import { ValueResult } from '@vulcanize/util';
+import { ValueResult, gqlTotalQueryCount, gqlQueryCount } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { EventWatcher } from './events';
@@ -46,36 +46,56 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
 
       totalSupply: (_: any, { blockHash, token }: { blockHash: string, token: string }): Promise<ValueResult> => {
         log('totalSupply', blockHash, token);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('totalSupply').inc(1);
+
         return indexer.totalSupply(blockHash, token);
       },
 
       balanceOf: async (_: any, { blockHash, token, owner }: { blockHash: string, token: string, owner: string }) => {
         log('balanceOf', blockHash, token, owner);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('balanceOf').inc(1);
+
         return indexer.balanceOf(blockHash, token, owner);
       },
 
       allowance: async (_: any, { blockHash, token, owner, spender }: { blockHash: string, token: string, owner: string, spender: string }) => {
         log('allowance', blockHash, token, owner, spender);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('allowance').inc(1);
+
         return indexer.allowance(blockHash, token, owner, spender);
       },
 
       name: (_: any, { blockHash, token }: { blockHash: string, token: string }) => {
         log('name', blockHash, token);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('name').inc(1);
+
         return indexer.name(blockHash, token);
       },
 
       symbol: (_: any, { blockHash, token }: { blockHash: string, token: string }) => {
         log('symbol', blockHash, token);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('symbol').inc(1);
+
         return indexer.symbol(blockHash, token);
       },
 
       decimals: (_: any, { blockHash, token }: { blockHash: string, token: string }) => {
         log('decimals', blockHash, token);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('decimals').inc(1);
+
         return indexer.decimals(blockHash, token);
       },
 
       events: async (_: any, { blockHash, token, name }: { blockHash: string, token: string, name: string }) => {
         log('events', blockHash, token, name || '');
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('events').inc(1);
 
         const block = await indexer.getBlockProgress(blockHash);
         if (!block || !block.isComplete) {
@@ -88,6 +108,8 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
 
       eventsInRange: async (_: any, { fromBlockNumber, toBlockNumber }: { fromBlockNumber: number, toBlockNumber: number }) => {
         log('eventsInRange', fromBlockNumber, toBlockNumber);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('eventsInRange').inc(1);
 
         const { expected, actual } = await indexer.getProcessedBlockCountForRange(fromBlockNumber, toBlockNumber);
         if (expected !== actual) {

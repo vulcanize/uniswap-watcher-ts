@@ -15,7 +15,7 @@ import { createServer } from 'http';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { DEFAULT_CONFIG_PATH, getConfig, getCustomProvider, JobQueue } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH, getConfig, getCustomProvider, JobQueue, startGQLMetricsServer } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
 
 import typeDefs from './schema';
@@ -106,6 +106,8 @@ export const main = async (): Promise<any> => {
   httpServer.listen(port, host, () => {
     log(`Server is listening on host ${host} port ${port}`);
   });
+
+  await startGQLMetricsServer(config);
 
   return { app, server };
 };
