@@ -62,6 +62,10 @@ export class Indexer implements IndexerInterface {
     this._isDemo = mode === 'demo';
   }
 
+  get cachedEntities () {
+    return this._db.cachedEntities;
+  }
+
   async init (): Promise<void> {
     await this._baseIndexer.fetchContracts();
   }

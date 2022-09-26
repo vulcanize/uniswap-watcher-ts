@@ -65,6 +65,19 @@ export interface Where {
   }]
 }
 
+// Cache for updated entities used in job-runner event processing.
+export interface CachedEntities {
+  frothyBlocks: Map<
+    string,
+    {
+      blockNumber: number;
+      parentHash: string;
+      entities: Map<string, Map<string, { [key: string]: any }>>;
+    }
+  >;
+  latestPrunedEntities: Map<string, Map<string, { [key: string]: any }>>;
+}
+
 export type Relation = { entity: any, type: RelationType, field: string, foreignKey?: string, childRelations?: Relation[] }
 
 export class Database {
@@ -72,10 +85,18 @@ export class Database {
   _conn!: Connection
   _blockCount = 0
   _eventCount = 0
+  _cachedEntities: CachedEntities = {
+    frothyBlocks: new Map(),
+    latestPrunedEntities: new Map()
+  }
 
   constructor (config: ConnectionOptions) {
     assert(config);
     this._config = config;
+  }
+
+  get cachedEntities () {
+    return this._cachedEntities;
   }
 
   async init (): Promise<Connection> {
@@ -419,6 +440,32 @@ export class Database {
     return entities;
   }
 
+  async getModelEntity<Entity> (repo: Repository<Entity>, whereOptions: any): Promise<Entity | undefined> {
+    const findOptions = {
+      where: whereOptions,
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    if (findOptions.where.blockHash) {
+      // Check if entity is updated and cached at blockHash.
+      const entity = this._cachedEntities.frothyBlocks
+        .get(findOptions.where.blockHash)
+        ?.entities
+        .get(repo.metadata.tableName)
+        ?.get(findOptions.where.id);
+
+      if (entity) {
+        const data = _.cloneDeep(entity) as Entity;
+      }
+
+      return this.getPrevEntityVersion(repo.queryRunner!, repo, findOptions);
+    }
+
+    return repo.findOne(findOptions);
+  }
+
   async loadRelations<Entity> (queryRunner: QueryRunner, block: BlockHeight, relations: Relation[], entities: Entity[]): Promise<Entity[]> {
     const relationPromises = relations.map(async relation => {
       const { entity: relationEntity, type, field, foreignKey, childRelations = [] } = relation;
@@ -613,8 +660,18 @@ export class Database {
       findOptions.where.blockHash = blockHash;
     } else {
       // If entity not found in frothy region get latest entity in the pruned region.
-      // Filter out entities from pruned blocks.
+      // Check if latest entity is cached in pruned region.
+      const entity = this._cachedEntities.latestPrunedEntities
+        .get(repo.metadata.tableName)
+        ?.get(id);
+
+      if (entity) {
+        return _.cloneDeep(entity) as Entity;
+      }
+
       const canonicalBlockNumber = blockNumber + 1;
+
+      // Filter out latest entity from pruned blocks.
       const entityInPrunedRegion:any = await repo.createQueryBuilder('entity')
         .innerJoinAndSelect('block_progress', 'block', 'block.block_hash = entity.block_hash')
         .where('block.is_pruned = false')
@@ -691,6 +748,23 @@ export class Database {
     }
 
     return repo.save(entity);
+  }
+
+  cacheUpdatedEntity<Entity> (repo: Repository<Entity>, entity: any): void {
+    const frothyBlock = this._cachedEntities.frothyBlocks.get(entity.blockHash);
+
+    // Update frothyBlock only if already present in cache.
+    // Might not be present when event processing starts without block processing on job retry.
+    if (frothyBlock) {
+      let entityIdMap = frothyBlock.entities.get(repo.metadata.tableName);
+
+      if (!entityIdMap) {
+        entityIdMap = new Map();
+      }
+
+      entityIdMap.set(entity.id, _.cloneDeep(entity));
+      frothyBlock.entities.set(repo.metadata.tableName, entityIdMap);
+    }
   }
 
   async _fetchBlockCount (): Promise<void> {

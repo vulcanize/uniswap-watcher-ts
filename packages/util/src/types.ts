@@ -4,7 +4,7 @@
 
 import { Connection, DeepPartial, FindConditions, FindManyOptions, QueryRunner } from 'typeorm';
 
-import { Where, QueryOptions } from './database';
+import { Where, QueryOptions, CachedEntities } from './database';
 
 export interface BlockProgressInterface {
   id: number;
@@ -50,6 +50,7 @@ export interface ContractInterface {
 }
 
 export interface IndexerInterface {
+  readonly cachedEntities?: CachedEntities
   getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>
   getBlockProgressEntities (where: FindConditions<BlockProgressInterface>, options: FindManyOptions<BlockProgressInterface>): Promise<BlockProgressInterface[]>
   getEvent (id: string): Promise<EventInterface | undefined>

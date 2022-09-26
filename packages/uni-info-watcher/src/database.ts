@@ -63,6 +63,10 @@ export class Database implements DatabaseInterface {
     this._baseDatabase = new BaseDatabase(this._config);
   }
 
+  get cachedEntities () {
+    return this._baseDatabase.cachedEntities;
+  }
+
   async init (): Promise<void> {
     this._conn = await this._baseDatabase.init();
   }
@@ -107,20 +111,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockNumber = LessThanOrEqual(blockNumber);
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<Bundle>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
-
-    return entity;
+    return this._baseDatabase.getModelEntity(repo, whereOptions);
   }
 
   async getToken (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Token>, loadRelations = false): Promise<Token | undefined> {
@@ -135,18 +126,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockNumber = LessThanOrEqual(blockNumber);
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<Token>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
+    let entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
     if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
@@ -192,18 +172,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockNumber = LessThanOrEqual(blockNumber);
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<Pool>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
+    let entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
     if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
@@ -255,18 +224,7 @@ export class Database implements DatabaseInterface {
         whereOptions.blockHash = blockHash;
       }
 
-      const findOptions = {
-        where: whereOptions,
-        order: {
-          blockNumber: 'DESC'
-        }
-      };
-
-      entity = await repo.findOne(findOptions as FindOneOptions<Position>);
-
-      if (!entity && findOptions.where.blockHash) {
-        entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-      }
+      entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
       if (loadRelations && entity) {
         [entity] = await this._baseDatabase.loadRelations(
@@ -322,18 +280,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockHash = blockHash;
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<Tick>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
+    let entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
     if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
@@ -375,18 +322,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockHash = blockHash;
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<PoolDayData>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
+    let entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
     if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
@@ -414,18 +350,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockHash = blockHash;
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<PoolHourData>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
+    let entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
     if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
@@ -453,18 +378,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockHash = blockHash;
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<UniswapDayData>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
+    const entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
     return entity;
   }
@@ -477,18 +391,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockHash = blockHash;
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<TokenDayData>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
+    let entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
     if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
@@ -516,18 +419,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockHash = blockHash;
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<TokenHourData>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
+    let entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
     if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
@@ -555,18 +447,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockHash = blockHash;
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<TickDayData>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
+    let entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
     if (loadRelations && entity) {
       [entity] = await this._baseDatabase.loadRelations(
@@ -599,18 +480,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockHash = blockHash;
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<Transaction>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
+    const entity = await this._baseDatabase.getModelEntity(repo, whereOptions);
 
     return entity;
   }
@@ -637,119 +507,170 @@ export class Database implements DatabaseInterface {
     const repo = queryRunner.manager.getRepository(Factory);
     factory.blockNumber = block.number;
     factory.blockHash = block.hash;
-    return repo.save(factory);
+    const data = await repo.save(factory);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveBundle (queryRunner: QueryRunner, bundle: Bundle, block: Block): Promise<Bundle> {
     const repo = queryRunner.manager.getRepository(Bundle);
     bundle.blockNumber = block.number;
     bundle.blockHash = block.hash;
-    return repo.save(bundle);
+    const data = await repo.save(bundle);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async savePool (queryRunner: QueryRunner, pool: Pool, block: Block): Promise<Pool> {
     const repo = queryRunner.manager.getRepository(Pool);
     pool.blockNumber = block.number;
     pool.blockHash = block.hash;
-    return repo.save(pool);
+    const data = await repo.save(pool);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async savePoolDayData (queryRunner: QueryRunner, poolDayData: PoolDayData, block: Block): Promise<PoolDayData> {
     const repo = queryRunner.manager.getRepository(PoolDayData);
     poolDayData.blockNumber = block.number;
     poolDayData.blockHash = block.hash;
-    return repo.save(poolDayData);
+    const data = await repo.save(poolDayData);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async savePoolHourData (queryRunner: QueryRunner, poolHourData: PoolHourData, block: Block): Promise<PoolHourData> {
     const repo = queryRunner.manager.getRepository(PoolHourData);
     poolHourData.blockNumber = block.number;
     poolHourData.blockHash = block.hash;
-    return repo.save(poolHourData);
+    const data = await repo.save(poolHourData);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveToken (queryRunner: QueryRunner, token: Token, block: Block): Promise<Token> {
     const repo = queryRunner.manager.getRepository(Token);
     token.blockNumber = block.number;
     token.blockHash = block.hash;
-    return repo.save(token);
+    const data = await repo.save(token);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveTransaction (queryRunner: QueryRunner, transaction: Transaction, block: Block): Promise<Transaction> {
     const repo = queryRunner.manager.getRepository(Transaction);
     transaction.blockNumber = block.number;
     transaction.blockHash = block.hash;
-    return repo.save(transaction);
+    const data = await repo.save(transaction);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveUniswapDayData (queryRunner: QueryRunner, uniswapDayData: UniswapDayData, block: Block): Promise<UniswapDayData> {
     const repo = queryRunner.manager.getRepository(UniswapDayData);
     uniswapDayData.blockNumber = block.number;
     uniswapDayData.blockHash = block.hash;
-    return repo.save(uniswapDayData);
+    const data = await repo.save(uniswapDayData);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveTokenDayData (queryRunner: QueryRunner, tokenDayData: TokenDayData, block: Block): Promise<TokenDayData> {
     const repo = queryRunner.manager.getRepository(TokenDayData);
     tokenDayData.blockNumber = block.number;
     tokenDayData.blockHash = block.hash;
-    return repo.save(tokenDayData);
+    const data = await repo.save(tokenDayData);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveTokenHourData (queryRunner: QueryRunner, tokenHourData: TokenHourData, block: Block): Promise<TokenHourData> {
     const repo = queryRunner.manager.getRepository(TokenHourData);
     tokenHourData.blockNumber = block.number;
     tokenHourData.blockHash = block.hash;
-    return repo.save(tokenHourData);
+    const data = await repo.save(tokenHourData);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveTick (queryRunner: QueryRunner, tick: Tick, block: Block): Promise<Tick> {
     const repo = queryRunner.manager.getRepository(Tick);
     tick.blockNumber = block.number;
     tick.blockHash = block.hash;
-    return repo.save(tick);
+    const data = await repo.save(tick);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveTickDayData (queryRunner: QueryRunner, tickDayData: TickDayData, block: Block): Promise<TickDayData> {
     const repo = queryRunner.manager.getRepository(TickDayData);
     tickDayData.blockNumber = block.number;
     tickDayData.blockHash = block.hash;
-    return repo.save(tickDayData);
+    const data = await repo.save(tickDayData);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async savePosition (queryRunner: QueryRunner, position: Position, block: Block): Promise<Position> {
     const repo = queryRunner.manager.getRepository(Position);
     position.blockNumber = block.number;
     position.blockHash = block.hash;
-    return repo.save(position);
+    const data = await repo.save(position);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async savePositionSnapshot (queryRunner: QueryRunner, positionSnapshot: PositionSnapshot, block: Block): Promise<PositionSnapshot> {
     const repo = queryRunner.manager.getRepository(PositionSnapshot);
     positionSnapshot.blockNumber = block.number;
     positionSnapshot.blockHash = block.hash;
-    return repo.save(positionSnapshot);
+    const data = await repo.save(positionSnapshot);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveMint (queryRunner: QueryRunner, mint: Mint, block: Block): Promise<Mint> {
     const repo = queryRunner.manager.getRepository(Mint);
     mint.blockNumber = block.number;
     mint.blockHash = block.hash;
-    return repo.save(mint);
+    const data = await repo.save(mint);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveBurn (queryRunner: QueryRunner, burn: Burn, block: Block): Promise<Burn> {
     const repo = queryRunner.manager.getRepository(Burn);
     burn.blockNumber = block.number;
     burn.blockHash = block.hash;
-    return repo.save(burn);
+    const data = await repo.save(burn);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async saveSwap (queryRunner: QueryRunner, swap: Swap, block: Block): Promise<Swap> {
     const repo = queryRunner.manager.getRepository(Swap);
     swap.blockNumber = block.number;
     swap.blockHash = block.hash;
-    return repo.save(swap);
+    const data = await repo.save(swap);
+    this._baseDatabase.cacheUpdatedEntity(repo, data);
+
+    return data;
   }
 
   async getContracts (): Promise<Contract[]> {
