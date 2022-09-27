@@ -113,8 +113,6 @@ export class JobRunner {
         newCanonicalBlockHash = blocksAtHeight[0].blockHash;
       }
 
-      this._updateCachedEntitiesFrothyBlocks(newCanonicalBlockHash, pruneBlockHeight);
-
       // Update the canonical block in the SyncStatus.
       await this._indexer.updateSyncStatusCanonicalBlock(newCanonicalBlockHash, pruneBlockHeight);
     }
@@ -240,18 +238,7 @@ export class JobRunner {
       });
     }
 
-    // Set latest block in frothy region to cachedEntities.frothyBlocks map.
-    if (this._indexer.cachedEntities) {
-      this._indexer.cachedEntities.frothyBlocks.set(
-        blockProgress.blockHash,
-        {
-          blockNumber: blockProgress.blockNumber,
-          parentHash: blockProgress.parentHash,
-          entities: new Map()
-        }
-      );
-    }
-
+    await this._indexer.processBlock(blockProgress);
     this._blockNumEvents = blockProgress.numEvents;
 
     // Check if block has unprocessed events.
@@ -408,38 +395,5 @@ export class JobRunner {
 
     assert(this._indexer.cacheContract);
     this._indexer.cacheContract(contract);
-  }
-
-  _updateCachedEntitiesFrothyBlocks (canonicalBlockHash: string, prunedBlockNumber: number) {
-    if (this._indexer.cachedEntities) {
-      const canonicalBlock = this._indexer.cachedEntities.frothyBlocks.get(canonicalBlockHash);
-
-      if (canonicalBlock) {
-        // Update latestPrunedEntities map with entities from latest canonical block.
-        canonicalBlock.entities.forEach((entityIdMap, entityTableName) => {
-          entityIdMap.forEach((data, id) => {
-            assert(this._indexer.cachedEntities);
-            let entityIdMap = this._indexer.cachedEntities.latestPrunedEntities.get(entityTableName);
-
-            if (!entityIdMap) {
-              entityIdMap = new Map();
-            }
-
-            entityIdMap.set(id, data);
-            this._indexer.cachedEntities.latestPrunedEntities.set(entityTableName, entityIdMap);
-          });
-        });
-      }
-
-      // Remove pruned blocks from frothyBlocks.
-      const prunedBlockHashes = Array.from(this._indexer.cachedEntities.frothyBlocks.entries())
-        .filter(([, value]) => value.blockNumber <= prunedBlockNumber)
-        .map(([blockHash]) => blockHash);
-
-      prunedBlockHashes.forEach(blockHash => {
-        assert(this._indexer.cachedEntities);
-        return this._indexer.cachedEntities.frothyBlocks.delete(blockHash);
-      });
-    }
   }
 }

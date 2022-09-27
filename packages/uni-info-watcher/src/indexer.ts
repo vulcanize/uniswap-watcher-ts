@@ -62,10 +62,6 @@ export class Indexer implements IndexerInterface {
     this._isDemo = mode === 'demo';
   }
 
-  get cachedEntities () {
-    return this._db.cachedEntities;
-  }
-
   async init (): Promise<void> {
     await this._baseIndexer.fetchContracts();
   }
@@ -157,6 +153,22 @@ export class Indexer implements IndexerInterface {
 
     log('Event processing completed for', eventName);
     console.timeEnd('time:indexer#processEvent-mapping_code');
+  }
+
+  async processBlock (blockProgress: BlockProgress): Promise<void> {
+    // Set latest block in frothy region to cachedEntities.frothyBlocks map.
+    if (!this._db.cachedEntities.frothyBlocks.has(blockProgress.blockHash)) {
+      this._db.cachedEntities.frothyBlocks.set(
+        blockProgress.blockHash,
+        {
+          blockNumber: blockProgress.blockNumber,
+          parentHash: blockProgress.parentHash,
+          entities: new Map()
+        }
+      );
+
+      log(`Size of cachedEntities.frothyBlocks map: ${this._db.cachedEntities.frothyBlocks.size}`);
+    }
   }
 
   async getBlockEntities (where: { [key: string]: any } = {}, queryOptions: QueryOptions): Promise<any> {
@@ -383,7 +395,10 @@ export class Indexer implements IndexerInterface {
   }
 
   async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force = false): Promise<SyncStatus> {
-    return this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, force);
+    const syncStatus = await this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, force);
+    this._updateCachedEntitiesFrothyBlocks(syncStatus.latestCanonicalBlockHash, syncStatus.latestCanonicalBlockNumber);
+
+    return syncStatus;
   }
 
   async getSyncStatus (): Promise<SyncStatus | undefined> {
@@ -412,6 +427,33 @@ export class Indexer implements IndexerInterface {
 
   async updateBlockProgress (block: BlockProgress, lastProcessedEventIndex: number): Promise<BlockProgress> {
     return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
+  }
+
+  _updateCachedEntitiesFrothyBlocks (canonicalBlockHash: string, canonicalBlockNumber: number) {
+    const canonicalBlock = this._db.cachedEntities.frothyBlocks.get(canonicalBlockHash);
+
+    if (canonicalBlock) {
+      // Update latestPrunedEntities map with entities from latest canonical block.
+      canonicalBlock.entities.forEach((entityIdMap, entityTableName) => {
+        entityIdMap.forEach((data, id) => {
+          let entityIdMap = this._db.cachedEntities.latestPrunedEntities.get(entityTableName);
+
+          if (!entityIdMap) {
+            entityIdMap = new Map();
+          }
+
+          entityIdMap.set(id, data);
+          this._db.cachedEntities.latestPrunedEntities.set(entityTableName, entityIdMap);
+        });
+      });
+    }
+
+    // Remove pruned blocks from frothyBlocks.
+    const prunedBlockHashes = Array.from(this._db.cachedEntities.frothyBlocks.entries())
+      .filter(([, value]) => value.blockNumber <= canonicalBlockNumber)
+      .map(([blockHash]) => blockHash);
+
+    prunedBlockHashes.forEach(blockHash => this._db.cachedEntities.frothyBlocks.delete(blockHash));
   }
 
   async _fetchEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {

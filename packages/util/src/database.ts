@@ -449,15 +449,50 @@ export class Database {
     };
 
     if (findOptions.where.blockHash) {
-      // Check if entity is updated and cached at blockHash.
-      const entity = this._cachedEntities.frothyBlocks
-        .get(findOptions.where.blockHash)
-        ?.entities
-        .get(repo.metadata.tableName)
-        ?.get(findOptions.where.id);
+      // Check cache only if latestPrunedEntities is updated.
+      // latestPrunedEntities is updated when frothyBlocks is filled till canonical block height.
+      if (this._cachedEntities.latestPrunedEntities.size > 0) {
+        let frothyBlock = this._cachedEntities.frothyBlocks.get(findOptions.where.blockHash);
+        let canonicalBlockNumber = -1;
 
-      if (entity) {
-        const data = _.cloneDeep(entity) as Entity;
+        // Loop through frothy region until latest entity is found.
+        while (frothyBlock) {
+          const entity = frothyBlock.entities
+            .get(repo.metadata.tableName)
+            ?.get(findOptions.where.id);
+
+          if (entity) {
+            return _.cloneDeep(entity) as Entity;
+          }
+
+          canonicalBlockNumber = frothyBlock.blockNumber + 1;
+          frothyBlock = this._cachedEntities.frothyBlocks.get(frothyBlock.parentHash);
+        }
+
+        // Canonical block number is not assigned if blockHash does not exist in frothy region.
+        // Get latest pruned entity from cache only if blockHash exists in frothy region.
+        // i.e. Latest entity in cache is the version before frothy region.
+        if (canonicalBlockNumber > -1) {
+          // If entity not found in frothy region get latest entity in the pruned region.
+          // Check if latest entity is cached in pruned region.
+          const entity = this._cachedEntities.latestPrunedEntities
+            .get(repo.metadata.tableName)
+            ?.get(findOptions.where.id);
+
+          if (entity) {
+            return _.cloneDeep(entity) as Entity;
+          }
+
+          // Get latest pruned entity from DB if not found in cache.
+          const dbEntity = await this._getLatestPrunedEntity(repo, findOptions.where.id, canonicalBlockNumber);
+
+          if (dbEntity) {
+            // Update latest pruned entity in cache.
+            this.cacheUpdatedEntity(repo, dbEntity);
+          }
+
+          return dbEntity;
+        }
       }
 
       return this.getPrevEntityVersion(repo.queryRunner!, repo, findOptions);
@@ -658,33 +693,25 @@ export class Database {
     if (id) {
       // Entity found in frothy region.
       findOptions.where.blockHash = blockHash;
-    } else {
-      // If entity not found in frothy region get latest entity in the pruned region.
-      // Check if latest entity is cached in pruned region.
-      const entity = this._cachedEntities.latestPrunedEntities
-        .get(repo.metadata.tableName)
-        ?.get(id);
 
-      if (entity) {
-        return _.cloneDeep(entity) as Entity;
-      }
-
-      const canonicalBlockNumber = blockNumber + 1;
-
-      // Filter out latest entity from pruned blocks.
-      const entityInPrunedRegion:any = await repo.createQueryBuilder('entity')
-        .innerJoinAndSelect('block_progress', 'block', 'block.block_hash = entity.block_hash')
-        .where('block.is_pruned = false')
-        .andWhere('entity.id = :id', { id: findOptions.where.id })
-        .andWhere('entity.block_number <= :canonicalBlockNumber', { canonicalBlockNumber })
-        .orderBy('entity.block_number', 'DESC')
-        .limit(1)
-        .getOne();
-
-      findOptions.where.blockHash = entityInPrunedRegion?.blockHash;
+      return repo.findOne(findOptions);
     }
 
-    return repo.findOne(findOptions);
+    return this._getLatestPrunedEntity(repo, findOptions.where.id, blockNumber + 1);
+  }
+
+  async _getLatestPrunedEntity<Entity> (repo: Repository<Entity>, id: string, canonicalBlockNumber: number): Promise<Entity | undefined> {
+    // Filter out latest entity from pruned blocks.
+    const entityInPrunedRegion = await repo.createQueryBuilder('entity')
+      .innerJoinAndSelect('block_progress', 'block', 'block.block_hash = entity.block_hash')
+      .where('block.is_pruned = false')
+      .andWhere('entity.id = :id', { id })
+      .andWhere('entity.block_number <= :canonicalBlockNumber', { canonicalBlockNumber })
+      .orderBy('entity.block_number', 'DESC')
+      .limit(1)
+      .getOne();
+
+    return entityInPrunedRegion;
   }
 
   async getFrothyRegion (queryRunner: QueryRunner, blockHash: string): Promise<{ canonicalBlockNumber: number, blockHashes: string[] }> {

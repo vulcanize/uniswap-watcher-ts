@@ -50,7 +50,6 @@ export interface ContractInterface {
 }
 
 export interface IndexerInterface {
-  readonly cachedEntities?: CachedEntities
   getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>
   getBlockProgressEntities (where: FindConditions<BlockProgressInterface>, options: FindManyOptions<BlockProgressInterface>): Promise<BlockProgressInterface[]>
   getEvent (id: string): Promise<EventInterface | undefined>
@@ -70,6 +69,7 @@ export interface IndexerInterface {
   saveEventEntity (dbEvent: EventInterface): Promise<EventInterface>;
   saveEvents (dbEvents: EventInterface[]): Promise<void>;
   processEvent (event: EventInterface): Promise<void>;
+  processBlock (blockProgress: BlockProgressInterface): Promise<void>;
   parseEventNameAndArgs?: (kind: string, logObj: any) => any;
   isWatchedContract: (address: string) => ContractInterface | undefined;
   cacheContract?: (contract: ContractInterface) => void;
