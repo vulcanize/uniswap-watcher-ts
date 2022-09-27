@@ -63,9 +63,7 @@ export const processBlockByNumber = async (
     });
 
     if (!blocks.length) {
-      console.time('time:common#processBlockByNumber-ipld-eth-server');
       blocks = await indexer.getBlocks({ blockNumber });
-      console.timeEnd('time:common#processBlockByNumber-ipld-eth-server');
     }
 
     if (blocks.length) {
