@@ -17,9 +17,10 @@ import {
   Repository,
   SelectQueryBuilder
 } from 'typeorm';
-import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import _ from 'lodash';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { RelationType } from 'typeorm/metadata/types/RelationTypes';
+import { RawSqlResultsToEntityTransformer } from 'typeorm/query-builder/transformer/RawSqlResultsToEntityTransformer';
 
 import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
 import { MAX_REORG_DEPTH, UNKNOWN_EVENT_NAME } from './constants';
@@ -360,15 +361,14 @@ export class Database {
 
   async getModelEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: Relation[] = []): Promise<Entity[]> {
     const repo = queryRunner.manager.getRepository(entity);
-    const { tableName } = repo.metadata;
 
     let subQuery = repo.createQueryBuilder('subTable')
-      .select('subTable.id', 'id')
-      .addSelect('MAX(subTable.block_number)', 'block_number')
+      .distinctOn(['subTable.id'])
       .addFrom('block_progress', 'blockProgress')
       .where('subTable.block_hash = blockProgress.block_hash')
       .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
-      .groupBy('subTable.id');
+      .addOrderBy('subTable.id', 'ASC')
+      .addOrderBy('subTable.block_number', 'DESC');
 
     if (block.hash) {
       const { canonicalBlockNumber, blockHashes } = await this.getFrothyRegion(queryRunner, block.hash);
@@ -384,37 +384,22 @@ export class Database {
       subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
     }
 
-    if (Object.entries(where).length === 0) {
-      const hashStatus = await queryRunner.manager.query('select current_setting(\'enable_hashjoin\')');
-      if (hashStatus[0].current_setting === 'on') {
-        await queryRunner.manager.query('SET enable_hashjoin = off');
-        await queryRunner.manager.query('SET enable_mergejoin = off');
-        await queryRunner.manager.query('SET enable_nestloop = off');
-      }
-    } else {
-      const hashStatus = await queryRunner.manager.query('select current_setting(\'enable_hashjoin\')');
-      if (hashStatus[0].current_setting === 'off') {
-        await queryRunner.manager.query('SET enable_hashjoin = on');
-        await queryRunner.manager.query('SET enable_mergejoin = on');
-        await queryRunner.manager.query('SET enable_nestloop = on');
-      }
-    }
+    subQuery = this._buildQuery(repo, subQuery, where);
 
-    let selectQueryBuilder = repo.createQueryBuilder(tableName)
-      .innerJoin(
+    let selectQueryBuilder = queryRunner.manager.createQueryBuilder()
+      .select('*')
+      .from(
         `(${subQuery.getQuery()})`,
-        'latestEntities',
-        `${tableName}.id = "latestEntities"."id" AND ${tableName}.block_number = "latestEntities"."block_number"`
+        'latestEntities'
       )
       .setParameters(subQuery.getParameters());
 
-    selectQueryBuilder = this._buildQuery(repo, selectQueryBuilder, where);
-
     if (queryOptions.orderBy) {
       selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions);
+      if (queryOptions.orderBy !== 'id') {
+        selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' });
+      }
     }
-
-    selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' });
 
     if (queryOptions.skip) {
       selectQueryBuilder = selectQueryBuilder.offset(queryOptions.skip);
@@ -424,7 +409,9 @@ export class Database {
       selectQueryBuilder = selectQueryBuilder.limit(queryOptions.limit);
     }
 
-    let entities = await selectQueryBuilder.getMany();
+    let entities = await selectQueryBuilder.getRawMany();
+
+    entities = await this._transformResults(queryRunner, repo.createQueryBuilder('subTable'), entities);
 
     if (!entities.length) {
       return [];
@@ -432,7 +419,7 @@ export class Database {
 
     entities = await this.loadRelations(queryRunner, block, relations, entities);
 
-    return entities;
+    return entities as Entity[];
   }
 
   async loadRelations<Entity> (queryRunner: QueryRunner, block: BlockHeight, relations: Relation[], entities: Entity[]): Promise<Entity[]> {
@@ -800,8 +787,21 @@ export class Database {
     assert(columnMetadata);
 
     return selectQueryBuilder.addOrderBy(
-      `${selectQueryBuilder.alias}.${columnMetadata.propertyAliasName}`,
+      `"${selectQueryBuilder.alias}"."subTable_${columnMetadata.propertyAliasName}"`,
       orderDirection === 'desc' ? 'DESC' : 'ASC'
     );
+  }
+
+  async _transformResults<Entity> (queryRunner: QueryRunner, qb: SelectQueryBuilder<Entity>, rawResults: any[]): Promise<any[]> {
+    const transformer = new RawSqlResultsToEntityTransformer(
+      qb.expressionMap,
+      queryRunner.manager.connection.driver,
+      [],
+      [],
+      queryRunner
+    );
+
+    assert(qb.expressionMap.mainAlias);
+    return transformer.transform(rawResults, qb.expressionMap.mainAlias);
   }
 }
