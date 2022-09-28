@@ -14,6 +14,7 @@ import {
   QueryRunner
 } from 'typeorm';
 import path from 'path';
+import { SelectionNode } from 'graphql';
 
 import {
   Database as BaseDatabase,
@@ -51,6 +52,7 @@ export class Database implements DatabaseInterface {
   _config: ConnectionOptions
   _conn!: Connection
   _baseDatabase: BaseDatabase
+  _relationsMap: Map<any, { [key: string]: any }>
 
   constructor (config: ConnectionOptions) {
     assert(config);
@@ -61,6 +63,8 @@ export class Database implements DatabaseInterface {
     };
 
     this._baseDatabase = new BaseDatabase(this._config);
+    this._relationsMap = new Map();
+    this._populateRelationsMap();
   }
 
   get cachedEntities () {
@@ -114,7 +118,12 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getModelEntity(repo, whereOptions);
   }
 
-  async getToken (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Token>, loadRelations = false): Promise<Token | undefined> {
+  async getToken (
+    queryRunner: QueryRunner,
+    { id, blockHash, blockNumber }: DeepPartial<Token>,
+    loadRelations = false,
+    selections: ReadonlyArray<SelectionNode> = []
+  ): Promise<Token | undefined> {
     const repo = queryRunner.manager.getRepository(Token);
     const whereOptions: FindConditions<Token> = { id };
 
@@ -132,14 +141,10 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash, number: blockNumber },
-        [
-          {
-            entity: Pool,
-            type: 'many-to-many',
-            field: 'whitelistPools'
-          }
-        ],
-        [entity]
+        this._relationsMap,
+        Token,
+        [entity],
+        selections
       );
     }
 
@@ -160,7 +165,12 @@ export class Database implements DatabaseInterface {
     return res;
   }
 
-  async getPool (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Pool>, loadRelations = false): Promise<Pool | undefined> {
+  async getPool (
+    queryRunner: QueryRunner,
+    { id, blockHash, blockNumber }: DeepPartial<Pool>,
+    loadRelations = false,
+    selections: ReadonlyArray<SelectionNode> = []
+  ): Promise<Pool | undefined> {
     const repo = queryRunner.manager.getRepository(Pool);
     const whereOptions: FindConditions<Pool> = { id };
 
@@ -178,19 +188,10 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash, number: blockNumber },
-        [
-          {
-            entity: Token,
-            type: 'one-to-one',
-            field: 'token0'
-          },
-          {
-            entity: Token,
-            type: 'one-to-one',
-            field: 'token1'
-          }
-        ],
-        [entity]
+        this._relationsMap,
+        Pool,
+        [entity],
+        selections
       );
     }
 
@@ -230,38 +231,8 @@ export class Database implements DatabaseInterface {
         [entity] = await this._baseDatabase.loadRelations(
           queryRunner,
           { hash: blockHash },
-          [
-            {
-              entity: Pool,
-              type: 'one-to-one',
-              field: 'pool'
-            },
-            {
-              entity: Token,
-              type: 'one-to-one',
-              field: 'token0'
-            },
-            {
-              entity: Token,
-              type: 'one-to-one',
-              field: 'token1'
-            },
-            {
-              entity: Tick,
-              type: 'one-to-one',
-              field: 'tickLower'
-            },
-            {
-              entity: Tick,
-              type: 'one-to-one',
-              field: 'tickUpper'
-            },
-            {
-              entity: Transaction,
-              type: 'one-to-one',
-              field: 'transaction'
-            }
-          ],
+          this._relationsMap,
+          Position,
           [entity]
         );
       }
@@ -286,13 +257,8 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
-        [
-          {
-            entity: Pool,
-            type: 'one-to-one',
-            field: 'pool'
-          }
-        ],
+        this._relationsMap,
+        Tick,
         [entity]
       );
     }
@@ -328,13 +294,8 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
-        [
-          {
-            entity: Pool,
-            type: 'one-to-one',
-            field: 'pool'
-          }
-        ],
+        this._relationsMap,
+        PoolDayData,
         [entity]
       );
     }
@@ -356,13 +317,8 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
-        [
-          {
-            entity: Pool,
-            type: 'one-to-one',
-            field: 'pool'
-          }
-        ],
+        this._relationsMap,
+        PoolHourData,
         [entity]
       );
     }
@@ -397,13 +353,8 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
-        [
-          {
-            entity: Token,
-            type: 'one-to-one',
-            field: 'token'
-          }
-        ],
+        this._relationsMap,
+        TokenDayData,
         [entity]
       );
     }
@@ -425,13 +376,8 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
-        [
-          {
-            entity: Token,
-            type: 'one-to-one',
-            field: 'token'
-          }
-        ],
+        this._relationsMap,
+        TokenHourData,
         [entity]
       );
     }
@@ -453,18 +399,8 @@ export class Database implements DatabaseInterface {
       [entity] = await this._baseDatabase.loadRelations(
         queryRunner,
         { hash: blockHash },
-        [
-          {
-            entity: Tick,
-            type: 'one-to-one',
-            field: 'tick'
-          },
-          {
-            entity: Pool,
-            type: 'one-to-one',
-            field: 'pool'
-          }
-        ],
+        this._relationsMap,
+        TickDayData,
         [entity]
       );
     }
@@ -485,17 +421,17 @@ export class Database implements DatabaseInterface {
     return entity;
   }
 
-  async getModelEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: Relation[] = []): Promise<Entity[]> {
-    return this._baseDatabase.getModelEntities(queryRunner, entity, block, where, queryOptions, relations);
+  async getModelEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, selections: ReadonlyArray<SelectionNode> = []): Promise<Entity[]> {
+    return this._baseDatabase.getModelEntities(queryRunner, this._relationsMap, entity, block, where, queryOptions, selections);
   }
 
-  async getModelEntitiesNoTx<Entity> (entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: Relation[] = []): Promise<Entity[]> {
+  async getModelEntitiesNoTx<Entity> (entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, selections: ReadonlyArray<SelectionNode> = []): Promise<Entity[]> {
     const queryRunner = this._conn.createQueryRunner();
     let res;
 
     try {
       await queryRunner.connect();
-      res = await this.getModelEntities(queryRunner, entity, block, where, queryOptions, relations);
+      res = await this.getModelEntities(queryRunner, entity, block, where, queryOptions, selections);
     } finally {
       await queryRunner.release();
     }
@@ -797,5 +733,104 @@ export class Database implements DatabaseInterface {
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
     return this._baseDatabase.getAncestorAtDepth(blockHash, depth);
+  }
+
+  _populateRelationsMap (): void {
+    // Needs to be generated by codegen.
+    this._relationsMap.set(Pool, {
+      token0: {
+        entity: Token,
+        type: 'one-to-one'
+      },
+      token1: {
+        entity: Token,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(Burn, {
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      },
+      transaction: {
+        entity: Transaction,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(Mint, {
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      },
+      transaction: {
+        entity: Transaction,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(Swap, {
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      },
+      transaction: {
+        entity: Transaction,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(Token, {
+      whitelistPools: {
+        entity: Pool,
+        type: 'many-to-many'
+      }
+    });
+
+    this._relationsMap.set(Transaction, {
+      mints: {
+        entity: Mint,
+        type: 'one-to-many',
+        foreignKey: 'transaction'
+      },
+      burns: {
+        entity: Burn,
+        type: 'one-to-many',
+        foreignKey: 'transaction'
+      },
+      swaps: {
+        entity: Swap,
+        type: 'one-to-many',
+        foreignKey: 'transaction'
+      }
+    });
+
+    this._relationsMap.set(Position, {
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      },
+      token0: {
+        entity: Token,
+        type: 'one-to-one'
+      },
+      token1: {
+        entity: Token,
+        type: 'one-to-one'
+      },
+      tickLower: {
+        entity: Tick,
+        type: 'one-to-one'
+      },
+      tickUpper: {
+        entity: Tick,
+        type: 'one-to-one'
+      },
+      transaction: {
+        entity: Transaction,
+        type: 'one-to-one'
+      }
+    });
   }
 }

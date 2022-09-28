@@ -20,6 +20,7 @@ import {
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import _ from 'lodash';
 import { RelationType } from 'typeorm/metadata/types/RelationTypes';
+import { SelectionNode } from 'graphql';
 
 import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
 import { MAX_REORG_DEPTH, UNKNOWN_EVENT_NAME } from './constants';
@@ -379,7 +380,15 @@ export class Database {
     return event;
   }
 
-  async getModelEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: Relation[] = []): Promise<Entity[]> {
+  async getModelEntities<Entity> (
+    queryRunner: QueryRunner,
+    relationsMap: Map<any, { [key: string]: any }>,
+    entity: new () => Entity,
+    block: BlockHeight,
+    where: Where = {},
+    queryOptions: QueryOptions = {},
+    selections: ReadonlyArray<SelectionNode> = []
+  ): Promise<Entity[]> {
     const repo = queryRunner.manager.getRepository(entity);
     const { tableName } = repo.metadata;
 
@@ -435,7 +444,7 @@ export class Database {
       return [];
     }
 
-    entities = await this.loadRelations(queryRunner, block, relations, entities);
+    entities = await this.loadRelations(queryRunner, block, relationsMap, entity, entities, selections);
 
     return entities;
   }
@@ -501,141 +510,168 @@ export class Database {
     return repo.findOne(findOptions);
   }
 
-  async loadRelations<Entity> (queryRunner: QueryRunner, block: BlockHeight, relations: Relation[], entities: Entity[]): Promise<Entity[]> {
-    const relationPromises = relations.map(async relation => {
-      const { entity: relationEntity, type, field, foreignKey, childRelations = [] } = relation;
+  async loadRelations<Entity> (
+    queryRunner: QueryRunner,
+    block: BlockHeight,
+    relationsMap: Map<any, { [key: string]: any }>,
+    entity: new () => Entity,
+    entities: Entity[],
+    selections: ReadonlyArray<SelectionNode> = []
+  ): Promise<Entity[]> {
+    const relations = relationsMap.get(entity);
 
-      switch (type) {
-        case 'one-to-many': {
-          assert(foreignKey);
+    if (!relations) {
+      return entities;
+    }
 
-          const where: Where = {
-            [foreignKey]: [{
-              value: entities.map((entity: any) => entity.id),
-              not: false,
-              operator: 'in'
-            }]
-          };
+    // Filter selections from GQL query which are relations.
+    const relationPromises = selections.filter((selection) => selection.kind === 'Field' && Boolean(relations[selection.name.value]))
+      .map(async (selection) => {
+        assert(selection.kind === 'Field');
+        const field = selection.name.value;
+        const { entity: relationEntity, type, foreignKey } = relations[field];
+        let childSelections = selection.selectionSet?.selections || [];
 
-          const relatedEntities = await this.getModelEntities(
-            queryRunner,
-            relationEntity,
-            block,
-            where,
-            {},
-            childRelations
-          );
+        // Filter out __typename field in GQL for loading relations.
+        childSelections = childSelections.filter(selection => !(selection.kind === 'Field' && selection.name.value === '__typename'));
 
-          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any[]}, entity: any) => {
-            // Related entity might be loaded with data.
-            const parentEntityId = entity[foreignKey].id ?? entity[foreignKey];
+        switch (type) {
+          case 'one-to-many': {
+            assert(foreignKey);
 
-            if (!acc[parentEntityId]) {
-              acc[parentEntityId] = [];
-            }
+            const where: Where = {
+              [foreignKey]: [{
+                value: entities.map((entity: any) => entity.id),
+                not: false,
+                operator: 'in'
+              }]
+            };
 
-            if (acc[parentEntityId].length < DEFAULT_LIMIT) {
-              acc[parentEntityId].push(entity);
-            }
+            const relatedEntities = await this.getModelEntities(
+              queryRunner,
+              relationsMap,
+              relationEntity,
+              block,
+              where,
+              {},
+              childSelections
+            );
 
-            return acc;
-          }, {});
+            const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any[]}, entity: any) => {
+              // Related entity might be loaded with data.
+              const parentEntityId = entity[foreignKey].id ?? entity[foreignKey];
 
-          entities.forEach((entity: any) => {
-            if (relatedEntitiesMap[entity.id]) {
-              entity[field] = relatedEntitiesMap[entity.id];
-            } else {
-              entity[field] = [];
-            }
-          });
+              if (!acc[parentEntityId]) {
+                acc[parentEntityId] = [];
+              }
 
-          break;
-        }
+              if (acc[parentEntityId].length < DEFAULT_LIMIT) {
+                acc[parentEntityId].push(entity);
+              }
 
-        case 'many-to-many': {
-          const relatedIds = entities.reduce((acc, entity: any) => {
-            entity[field].forEach((relatedEntityId: any) => acc.add(relatedEntityId));
+              return acc;
+            }, {});
 
-            return acc;
-          }, new Set());
+            entities.forEach((entity: any) => {
+              if (relatedEntitiesMap[entity.id]) {
+                entity[field] = relatedEntitiesMap[entity.id];
+              } else {
+                entity[field] = [];
+              }
+            });
 
-          const where: Where = {
-            id: [{
-              value: Array.from(relatedIds),
-              not: false,
-              operator: 'in'
-            }]
-          };
+            break;
+          }
 
-          const relatedEntities = await this.getModelEntities(
-            queryRunner,
-            relationEntity,
-            block,
-            where,
-            {},
-            childRelations
-          );
-
-          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
-            acc[entity.id] = entity;
-
-            return acc;
-          }, {});
-
-          entities.forEach((entity: any) => {
-            const relatedEntityIds: Set<string> = entity[field].reduce((acc: Set<string>, id: string) => {
-              acc.add(id);
+          case 'many-to-many': {
+            const relatedIds = entities.reduce((acc, entity: any) => {
+              entity[field].forEach((relatedEntityId: any) => acc.add(relatedEntityId));
 
               return acc;
             }, new Set());
 
-            entity[field] = [];
+            const where: Where = {
+              id: [{
+                value: Array.from(relatedIds),
+                not: false,
+                operator: 'in'
+              }]
+            };
 
-            relatedEntities.forEach((relatedEntity: any) => {
-              if (relatedEntityIds.has(relatedEntity.id) && entity[field].length < DEFAULT_LIMIT) {
-                entity[field].push(relatedEntity);
+            const relatedEntities = await this.getModelEntities(
+              queryRunner,
+              relationsMap,
+              relationEntity,
+              block,
+              where,
+              {},
+              childSelections
+            );
+
+            entities.forEach((entity: any) => {
+              const relatedEntityIds: Set<string> = entity[field].reduce((acc: Set<string>, id: string) => {
+                acc.add(id);
+
+                return acc;
+              }, new Set());
+
+              entity[field] = [];
+
+              relatedEntities.forEach((relatedEntity: any) => {
+                if (relatedEntityIds.has(relatedEntity.id) && entity[field].length < DEFAULT_LIMIT) {
+                  entity[field].push(relatedEntity);
+                }
+              });
+            });
+
+            break;
+          }
+
+          default: {
+            // For one-to-one/many-to-one relations.
+            if (childSelections.length === 1 && childSelections[0].kind === 'Field' && childSelections[0].name.value === 'id') {
+              // Avoid loading relation if selections only has id field.
+              entities.forEach((entity: any) => {
+                entity[field] = { id: entity[field] };
+              });
+
+              break;
+            }
+
+            const where: Where = {
+              id: [{
+                value: entities.map((entity: any) => entity[field]),
+                not: false,
+                operator: 'in'
+              }]
+            };
+
+            const relatedEntities = await this.getModelEntities(
+              queryRunner,
+              relationsMap,
+              relationEntity,
+              block,
+              where,
+              {},
+              childSelections
+            );
+
+            const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
+              acc[entity.id] = entity;
+
+              return acc;
+            }, {});
+
+            entities.forEach((entity: any) => {
+              if (relatedEntitiesMap[entity[field]]) {
+                entity[field] = relatedEntitiesMap[entity[field]];
               }
             });
-          });
 
-          break;
+            break;
+          }
         }
-
-        default: {
-          // For one-to-one/many-to-one relations.
-          const where: Where = {
-            id: [{
-              value: entities.map((entity: any) => entity[field]),
-              not: false,
-              operator: 'in'
-            }]
-          };
-
-          const relatedEntities = await this.getModelEntities(
-            queryRunner,
-            relationEntity,
-            block,
-            where,
-            {},
-            childRelations
-          );
-
-          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
-            acc[entity.id] = entity;
-
-            return acc;
-          }, {});
-
-          entities.forEach((entity: any) => {
-            if (relatedEntitiesMap[entity[field]]) {
-              entity[field] = relatedEntitiesMap[entity[field]];
-            }
-          });
-
-          break;
-        }
-      }
-    });
+      });
 
     await Promise.all(relationPromises);
 

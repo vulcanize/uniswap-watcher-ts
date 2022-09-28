@@ -12,6 +12,7 @@ import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight, Relation, GraphDecimal, JobQueue, Where, DEFAULT_LIMIT } from '@vulcanize/util';
+import { SelectionNode } from 'graphql';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
@@ -243,12 +244,12 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
-  async getPool (id: string, block: BlockHeight): Promise<Pool | undefined> {
+  async getPool (id: string, block: BlockHeight, selections: ReadonlyArray<SelectionNode> = []): Promise<Pool | undefined> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
     try {
-      res = await this._db.getPool(dbTx, { id, blockHash: block.hash, blockNumber: block.number }, true);
+      res = await this._db.getPool(dbTx, { id, blockHash: block.hash, blockNumber: block.number }, true, selections);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
@@ -260,12 +261,12 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
-  async getToken (id: string, block: BlockHeight): Promise<Token | undefined> {
+  async getToken (id: string, block: BlockHeight, selections: ReadonlyArray<SelectionNode> = []): Promise<Token | undefined> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
     try {
-      res = await this._db.getToken(dbTx, { id, blockHash: block.hash, blockNumber: block.number }, true);
+      res = await this._db.getToken(dbTx, { id, blockHash: block.hash, blockNumber: block.number }, true, selections);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
@@ -277,7 +278,7 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
-  async getEntities<Entity> (entity: new () => Entity, block: BlockHeight, where: { [key: string]: any } = {}, queryOptions: QueryOptions, relations?: Relation[]): Promise<Entity[]> {
+  async getEntities<Entity> (entity: new () => Entity, block: BlockHeight, where: { [key: string]: any } = {}, queryOptions: QueryOptions, selections: ReadonlyArray<SelectionNode> = []): Promise<Entity[]> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
@@ -315,7 +316,7 @@ export class Indexer implements IndexerInterface {
         queryOptions.limit = DEFAULT_LIMIT;
       }
 
-      res = await this._db.getModelEntities(dbTx, entity, block, where, queryOptions, relations);
+      res = await this._db.getModelEntities(dbTx, entity, block, where, queryOptions, selections);
       dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();

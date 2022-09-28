@@ -5,7 +5,7 @@
 import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
-import { GraphQLScalarType } from 'graphql';
+import { GraphQLResolveInfo, GraphQLScalarType } from 'graphql';
 
 import { BlockHeight, gqlQueryCount, gqlTotalQueryCount, GraphDecimal, OrderDirection } from '@vulcanize/util';
 
@@ -62,7 +62,10 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
     },
 
     Query: {
-      bundle: async (_: any, { id, block = {} }: { id: string, block: BlockHeight }) => {
+      bundle: async (
+        _: any,
+        { id, block = {} }: { id: string, block: BlockHeight }
+      ) => {
         log('bundle', id, block);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('bundle').inc(1);
@@ -78,44 +81,30 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(Bundle, block, {}, { limit: first });
       },
 
-      burns: async (_: any, { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      burns: async (
+        _: any,
+        { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('burns', first, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('burns').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
         return indexer.getEntities(
           Burn,
           block,
           where,
           { limit: first, orderBy, orderDirection },
-          [
-            {
-              entity: Pool,
-              type: 'one-to-one',
-              field: 'pool',
-              childRelations: [
-                {
-                  entity: Token,
-                  type: 'one-to-one',
-                  field: 'token0'
-                },
-                {
-                  entity: Token,
-                  type: 'one-to-one',
-                  field: 'token1'
-                }
-              ]
-            },
-            {
-              entity: Transaction,
-              type: 'one-to-one',
-              field: 'transaction'
-            }
-          ]
+          info.fieldNodes[0].selectionSet.selections
         );
       },
 
-      factories: async (_: any, { block = {}, first }: { first: number, block: BlockHeight }) => {
+      factories: async (
+        _: any,
+        { block = {}, first }: { first: number, block: BlockHeight }
+      ) => {
         log('factories', block, first);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('factories').inc(1);
@@ -123,49 +112,38 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(Factory, block, {}, { limit: first });
       },
 
-      mints: async (_: any, { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      mints: async (
+        _: any,
+        { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('mints', first, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('mints').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
         return indexer.getEntities(
           Mint,
           block,
           where,
           { limit: first, orderBy, orderDirection },
-          [
-            {
-              entity: Pool,
-              type: 'one-to-one',
-              field: 'pool',
-              childRelations: [
-                {
-                  entity: Token,
-                  type: 'one-to-one',
-                  field: 'token0'
-                },
-                {
-                  entity: Token,
-                  type: 'one-to-one',
-                  field: 'token1'
-                }
-              ]
-            },
-            {
-              entity: Transaction,
-              type: 'one-to-one',
-              field: 'transaction'
-            }
-          ]
+          info.fieldNodes[0].selectionSet.selections
         );
       },
 
-      pool: async (_: any, { id, block = {} }: { id: string, block: BlockHeight }) => {
+      pool: async (
+        _: any,
+        { id, block = {} }: { id: string, block: BlockHeight },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('pool', id, block);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('pool').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getPool(id, block);
+        return indexer.getPool(id, block, info.fieldNodes[0].selectionSet.selections);
       },
 
       poolDayDatas: async (_: any, { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
@@ -176,69 +154,50 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(PoolDayData, block, where, { limit: first, skip, orderBy, orderDirection });
       },
 
-      pools: async (_: any, { block = {}, first, orderBy, orderDirection, where = {} }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      pools: async (
+        _: any,
+        { block = {}, first, orderBy, orderDirection, where = {} }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('pools', block, first, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('pools').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
         return indexer.getEntities(
           Pool,
           block,
           where,
           { limit: first, orderBy, orderDirection },
-          [
-            {
-              entity: Token,
-              type: 'one-to-one',
-              field: 'token0'
-            },
-            {
-              entity: Token,
-              type: 'one-to-one',
-              field: 'token1'
-            }
-          ]
+          info.fieldNodes[0].selectionSet.selections
         );
       },
 
-      swaps: async (_: any, { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      swaps: async (
+        _: any,
+        { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('swaps', first, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('swaps').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
         return indexer.getEntities(
           Swap,
           block,
           where,
           { limit: first, orderBy, orderDirection },
-          [
-            {
-              entity: Pool,
-              type: 'one-to-one',
-              field: 'pool',
-              childRelations: [
-                {
-                  entity: Token,
-                  type: 'one-to-one',
-                  field: 'token0'
-                },
-                {
-                  entity: Token,
-                  type: 'one-to-one',
-                  field: 'token1'
-                }
-              ]
-            },
-            {
-              entity: Transaction,
-              type: 'one-to-one',
-              field: 'transaction'
-            }
-          ]
+          info.fieldNodes[0].selectionSet.selections
         );
       },
 
-      ticks: async (_: any, { block = {}, first, skip, where = {} }: { block: BlockHeight, first: number, skip: number, where: { [key: string]: any } }) => {
+      ticks: async (
+        _: any,
+        { block = {}, first, skip, where = {} }: { block: BlockHeight, first: number, skip: number, where: { [key: string]: any } }
+      ) => {
         log('ticks', block, first, skip, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('ticks').inc(1);
@@ -246,35 +205,44 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(Tick, block, where, { limit: first, skip });
       },
 
-      token: async (_: any, { id, block = {} }: { id: string, block: BlockHeight }) => {
+      token: async (
+        _: any,
+        { id, block = {} }: { id: string, block: BlockHeight },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('token', id, block);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('token').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getToken(id, block);
+        return indexer.getToken(id, block, info.fieldNodes[0].selectionSet.selections);
       },
 
-      tokens: async (_: any, { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      tokens: async (
+        _: any,
+        { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('tokens', orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokens').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
         return indexer.getEntities(
           Token,
           block,
           where,
           { limit: first, orderBy, orderDirection },
-          [
-            {
-              entity: Pool,
-              type: 'many-to-many',
-              field: 'whitelistPools'
-            }
-          ]
+          info.fieldNodes[0].selectionSet.selections
         );
       },
 
-      tokenDayDatas: async (_: any, { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      tokenDayDatas: async (
+        _: any,
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }
+      ) => {
         log('tokenDayDatas', first, skip, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokenDayDatas').inc(1);
@@ -282,7 +250,10 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(TokenDayData, block, where, { limit: first, skip, orderBy, orderDirection });
       },
 
-      tokenHourDatas: async (_: any, { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      tokenHourDatas: async (
+        _: any,
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }
+      ) => {
         log('tokenHourDatas', first, skip, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokenHourDatas').inc(1);
@@ -290,112 +261,30 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(TokenHourData, block, where, { limit: first, skip, orderBy, orderDirection });
       },
 
-      transactions: async (_: any, { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      transactions: async (
+        _: any,
+        { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('transactions', first, orderBy, orderDirection);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('transactions').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
         return indexer.getEntities(
           Transaction,
           block,
           where,
           { limit: first, orderBy, orderDirection },
-          [
-            {
-              entity: Mint,
-              type: 'one-to-many',
-              field: 'mints',
-              foreignKey: 'transaction',
-              childRelations: [
-                {
-                  entity: Transaction,
-                  type: 'one-to-one',
-                  field: 'transaction'
-                },
-                {
-                  entity: Pool,
-                  type: 'one-to-one',
-                  field: 'pool',
-                  childRelations: [
-                    {
-                      entity: Token,
-                      type: 'one-to-one',
-                      field: 'token0'
-                    },
-                    {
-                      entity: Token,
-                      type: 'one-to-one',
-                      field: 'token1'
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              entity: Burn,
-              type: 'one-to-many',
-              field: 'burns',
-              foreignKey: 'transaction',
-              childRelations: [
-                {
-                  entity: Transaction,
-                  type: 'one-to-one',
-                  field: 'transaction'
-                },
-                {
-                  entity: Pool,
-                  type: 'one-to-one',
-                  field: 'pool',
-                  childRelations: [
-                    {
-                      entity: Token,
-                      type: 'one-to-one',
-                      field: 'token0'
-                    },
-                    {
-                      entity: Token,
-                      type: 'one-to-one',
-                      field: 'token1'
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              entity: Swap,
-              type: 'one-to-many',
-              field: 'swaps',
-              foreignKey: 'transaction',
-              childRelations: [
-                {
-                  entity: Transaction,
-                  type: 'one-to-one',
-                  field: 'transaction'
-                },
-                {
-                  entity: Pool,
-                  type: 'one-to-one',
-                  field: 'pool',
-                  childRelations: [
-                    {
-                      entity: Token,
-                      type: 'one-to-one',
-                      field: 'token0'
-                    },
-                    {
-                      entity: Token,
-                      type: 'one-to-one',
-                      field: 'token1'
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
+          info.fieldNodes[0].selectionSet.selections
         );
       },
 
-      uniswapDayDatas: async (_: any, { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      uniswapDayDatas: async (
+        _: any,
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }
+      ) => {
         log('uniswapDayDatas', first, skip, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('uniswapDayDatas').inc(1);
@@ -403,48 +292,23 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getEntities(UniswapDayData, block, where, { limit: first, skip, orderBy, orderDirection });
       },
 
-      positions: async (_: any, { block = {}, first, where }: { block: BlockHeight, first: number, where: { [key: string]: any } }) => {
+      positions: async (
+        _: any,
+        { block = {}, first, where }: { block: BlockHeight, first: number, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('positions', first, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('positions').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
         return indexer.getEntities(
           Position,
           block,
           where,
           { limit: first },
-          [
-            {
-              entity: Pool,
-              type: 'one-to-one',
-              field: 'pool'
-            },
-            {
-              entity: Token,
-              type: 'one-to-one',
-              field: 'token0'
-            },
-            {
-              entity: Token,
-              type: 'one-to-one',
-              field: 'token1'
-            },
-            {
-              entity: Tick,
-              type: 'one-to-one',
-              field: 'tickLower'
-            },
-            {
-              entity: Tick,
-              type: 'one-to-one',
-              field: 'tickUpper'
-            },
-            {
-              entity: Transaction,
-              type: 'one-to-one',
-              field: 'transaction'
-            }
-          ]
+          info.fieldNodes[0].selectionSet.selections
         );
       },
 
