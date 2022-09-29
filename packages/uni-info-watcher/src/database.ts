@@ -21,8 +21,7 @@ import {
   DatabaseInterface,
   BlockHeight,
   QueryOptions,
-  Where,
-  Relation
+  Where
 } from '@vulcanize/util';
 
 import { Factory } from './entity/Factory';
@@ -47,6 +46,22 @@ import { Block } from './events';
 import { SyncStatus } from './entity/SyncStatus';
 import { TickDayData } from './entity/TickDayData';
 import { Contract } from './entity/Contract';
+
+// Entities which are suitable for DISTINCT ON database query compared to GROUP BY.
+const DISTINCT_ON_QUERY_ENTITIES: Set<new () => any> = new Set([
+  Burn,
+  Mint,
+  Swap,
+  Transaction,
+  TokenDayData,
+  TokenHourData,
+  PoolDayData,
+  PoolHourData,
+  Position,
+  PositionSnapshot,
+  Tick,
+  TickDayData
+]);
 
 export class Database implements DatabaseInterface {
   _config: ConnectionOptions
@@ -142,6 +157,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash, number: blockNumber },
         this._relationsMap,
+        DISTINCT_ON_QUERY_ENTITIES,
         Token,
         [entity],
         selections
@@ -189,6 +205,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash, number: blockNumber },
         this._relationsMap,
+        DISTINCT_ON_QUERY_ENTITIES,
         Pool,
         [entity],
         selections
@@ -232,6 +249,7 @@ export class Database implements DatabaseInterface {
           queryRunner,
           { hash: blockHash },
           this._relationsMap,
+          DISTINCT_ON_QUERY_ENTITIES,
           Position,
           [entity]
         );
@@ -258,6 +276,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
+        DISTINCT_ON_QUERY_ENTITIES,
         Tick,
         [entity]
       );
@@ -295,6 +314,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
+        DISTINCT_ON_QUERY_ENTITIES,
         PoolDayData,
         [entity]
       );
@@ -318,6 +338,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
+        DISTINCT_ON_QUERY_ENTITIES,
         PoolHourData,
         [entity]
       );
@@ -354,6 +375,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
+        DISTINCT_ON_QUERY_ENTITIES,
         TokenDayData,
         [entity]
       );
@@ -377,6 +399,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
+        DISTINCT_ON_QUERY_ENTITIES,
         TokenHourData,
         [entity]
       );
@@ -400,6 +423,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
+        DISTINCT_ON_QUERY_ENTITIES,
         TickDayData,
         [entity]
       );
@@ -422,7 +446,7 @@ export class Database implements DatabaseInterface {
   }
 
   async getModelEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, selections: ReadonlyArray<SelectionNode> = []): Promise<Entity[]> {
-    return this._baseDatabase.getModelEntities(queryRunner, this._relationsMap, entity, block, where, queryOptions, selections);
+    return this._baseDatabase.getModelEntities(queryRunner, this._relationsMap, DISTINCT_ON_QUERY_ENTITIES, entity, block, where, queryOptions, selections);
   }
 
   async getModelEntitiesNoTx<Entity> (entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, selections: ReadonlyArray<SelectionNode> = []): Promise<Entity[]> {

@@ -18,8 +18,8 @@ import {
   SelectQueryBuilder
 } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { RawSqlResultsToEntityTransformer } from 'typeorm/query-builder/transformer/RawSqlResultsToEntityTransformer';
 import _ from 'lodash';
-import { RelationType } from 'typeorm/metadata/types/RelationTypes';
 import { SelectionNode } from 'graphql';
 
 import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
@@ -78,8 +78,6 @@ export interface CachedEntities {
   >;
   latestPrunedEntities: Map<string, Map<string, { [key: string]: any }>>;
 }
-
-export type Relation = { entity: any, type: RelationType, field: string, foreignKey?: string, childRelations?: Relation[] }
 
 export class Database {
   _config: ConnectionOptions
@@ -383,11 +381,37 @@ export class Database {
   async getModelEntities<Entity> (
     queryRunner: QueryRunner,
     relationsMap: Map<any, { [key: string]: any }>,
+    distinctOnEntities: Set<new () => Entity>,
     entity: new () => Entity,
     block: BlockHeight,
     where: Where = {},
     queryOptions: QueryOptions = {},
     selections: ReadonlyArray<SelectionNode> = []
+  ): Promise<Entity[]> {
+    let entities: Entity[];
+
+    // Use different suitable query patterns based on entities.
+    if (distinctOnEntities.has(entity)) {
+      entities = await this.getModelEntitiesDistinctOn(queryRunner, entity, block, where, queryOptions);
+    } else {
+      entities = await this.getModelEntitiesGroupBy(queryRunner, entity, block, where, queryOptions);
+    }
+
+    if (!entities.length) {
+      return [];
+    }
+
+    entities = await this.loadRelations(queryRunner, block, relationsMap, distinctOnEntities, entity, entities, selections);
+
+    return entities;
+  }
+
+  async getModelEntitiesGroupBy<Entity> (
+    queryRunner: QueryRunner,
+    entity: new () => Entity,
+    block: BlockHeight,
+    where: Where = {},
+    queryOptions: QueryOptions = {}
   ): Promise<Entity[]> {
     const repo = queryRunner.manager.getRepository(entity);
     const { tableName } = repo.metadata;
@@ -438,15 +462,70 @@ export class Database {
       selectQueryBuilder = selectQueryBuilder.limit(queryOptions.limit);
     }
 
-    let entities = await selectQueryBuilder.getMany();
-
-    if (!entities.length) {
-      return [];
-    }
-
-    entities = await this.loadRelations(queryRunner, block, relationsMap, entity, entities, selections);
+    const entities = await selectQueryBuilder.getMany();
 
     return entities;
+  }
+
+  async getModelEntitiesDistinctOn<Entity> (
+    queryRunner: QueryRunner,
+    entity: new () => Entity,
+    block: BlockHeight,
+    where: Where = {},
+    queryOptions: QueryOptions = {}
+  ): Promise<Entity[]> {
+    const repo = queryRunner.manager.getRepository(entity);
+
+    let subQuery = repo.createQueryBuilder('subTable')
+      .distinctOn(['subTable.id'])
+      .addFrom('block_progress', 'blockProgress')
+      .where('subTable.block_hash = blockProgress.block_hash')
+      .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
+      .addOrderBy('subTable.id', 'ASC')
+      .addOrderBy('subTable.block_number', 'DESC');
+
+    if (block.hash) {
+      const { canonicalBlockNumber, blockHashes } = await this.getFrothyRegion(queryRunner, block.hash);
+
+      subQuery = subQuery
+        .andWhere(new Brackets(qb => {
+          qb.where('subTable.block_hash IN (:...blockHashes)', { blockHashes })
+            .orWhere('subTable.block_number <= :canonicalBlockNumber', { canonicalBlockNumber });
+        }));
+    }
+
+    if (block.number) {
+      subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
+    }
+
+    subQuery = this._buildQuery(repo, subQuery, where);
+
+    let selectQueryBuilder = queryRunner.manager.createQueryBuilder()
+      .from(
+        `(${subQuery.getQuery()})`,
+        'latestEntities'
+      )
+      .setParameters(subQuery.getParameters());
+
+    if (queryOptions.orderBy) {
+      selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions, 'subTable_');
+      if (queryOptions.orderBy !== 'id') {
+        selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' }, 'subTable_');
+      }
+    }
+
+    if (queryOptions.skip) {
+      selectQueryBuilder = selectQueryBuilder.offset(queryOptions.skip);
+    }
+
+    if (queryOptions.limit) {
+      selectQueryBuilder = selectQueryBuilder.limit(queryOptions.limit);
+    }
+
+    let entities = await selectQueryBuilder.getRawMany();
+    entities = await this._transformResults(queryRunner, repo.createQueryBuilder('subTable'), entities);
+
+    return entities as Entity[];
   }
 
   async getModelEntity<Entity> (repo: Repository<Entity>, whereOptions: any): Promise<Entity | undefined> {
@@ -514,6 +593,7 @@ export class Database {
     queryRunner: QueryRunner,
     block: BlockHeight,
     relationsMap: Map<any, { [key: string]: any }>,
+    distinctOnEntities: Set<new () => Entity>,
     entity: new () => Entity,
     entities: Entity[],
     selections: ReadonlyArray<SelectionNode> = []
@@ -550,6 +630,7 @@ export class Database {
             const relatedEntities = await this.getModelEntities(
               queryRunner,
               relationsMap,
+              distinctOnEntities,
               relationEntity,
               block,
               where,
@@ -601,6 +682,7 @@ export class Database {
             const relatedEntities = await this.getModelEntities(
               queryRunner,
               relationsMap,
+              distinctOnEntities,
               relationEntity,
               block,
               where,
@@ -649,6 +731,7 @@ export class Database {
             const relatedEntities = await this.getModelEntities(
               queryRunner,
               relationsMap,
+              distinctOnEntities,
               relationEntity,
               block,
               where,
@@ -912,7 +995,8 @@ export class Database {
   _orderQuery<Entity> (
     repo: Repository<Entity>,
     selectQueryBuilder: SelectQueryBuilder<Entity>,
-    orderOptions: { orderBy?: string, orderDirection?: string }
+    orderOptions: { orderBy?: string, orderDirection?: string },
+    columnPrefix = ''
   ): SelectQueryBuilder<Entity> {
     const { orderBy, orderDirection } = orderOptions;
     assert(orderBy);
@@ -921,8 +1005,21 @@ export class Database {
     assert(columnMetadata);
 
     return selectQueryBuilder.addOrderBy(
-      `${selectQueryBuilder.alias}.${columnMetadata.propertyAliasName}`,
+      `"${selectQueryBuilder.alias}"."${columnPrefix}${columnMetadata.databaseName}"`,
       orderDirection === 'desc' ? 'DESC' : 'ASC'
     );
+  }
+
+  async _transformResults<Entity> (queryRunner: QueryRunner, qb: SelectQueryBuilder<Entity>, rawResults: any[]): Promise<any[]> {
+    const transformer = new RawSqlResultsToEntityTransformer(
+      qb.expressionMap,
+      queryRunner.manager.connection.driver,
+      [],
+      [],
+      queryRunner
+    );
+
+    assert(qb.expressionMap.mainAlias);
+    return transformer.transform(rawResults, qb.expressionMap.mainAlias);
   }
 }
