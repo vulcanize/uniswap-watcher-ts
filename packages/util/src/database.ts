@@ -24,7 +24,7 @@ import { SelectionNode } from 'graphql';
 
 import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
 import { MAX_REORG_DEPTH, UNKNOWN_EVENT_NAME } from './constants';
-import { blockProgressCount, eventCount } from './metrics';
+import { blockProgressCount, eventCount, eventProcessingLoadEntityDBQueryDuration, eventProcessingLoadEntityCacheHitCount, eventProcessingLoadEntityCount } from './metrics';
 
 const OPERATOR_MAP = {
   equals: '=',
@@ -529,6 +529,8 @@ export class Database {
   }
 
   async getModelEntity<Entity> (repo: Repository<Entity>, whereOptions: any): Promise<Entity | undefined> {
+    eventProcessingLoadEntityCount.inc();
+
     const findOptions = {
       where: whereOptions,
       order: {
@@ -550,6 +552,7 @@ export class Database {
             ?.get(findOptions.where.id);
 
           if (entity) {
+            eventProcessingLoadEntityCacheHitCount.inc();
             return _.cloneDeep(entity) as Entity;
           }
 
@@ -568,11 +571,14 @@ export class Database {
             ?.get(findOptions.where.id);
 
           if (entity) {
+            eventProcessingLoadEntityCacheHitCount.inc();
             return _.cloneDeep(entity) as Entity;
           }
 
           // Get latest pruned entity from DB if not found in cache.
+          const endTimer = eventProcessingLoadEntityDBQueryDuration.startTimer();
           const dbEntity = await this._getLatestPrunedEntity(repo, findOptions.where.id, canonicalBlockNumber);
+          endTimer();
 
           if (dbEntity) {
             // Update latest pruned entity in cache.
@@ -583,7 +589,11 @@ export class Database {
         }
       }
 
-      return this.getPrevEntityVersion(repo.queryRunner!, repo, findOptions);
+      const endTimer = eventProcessingLoadEntityDBQueryDuration.startTimer();
+      const dbEntity = await this.getPrevEntityVersion(repo.queryRunner!, repo, findOptions);
+      endTimer();
+
+      return dbEntity;
     }
 
     return repo.findOne(findOptions);
