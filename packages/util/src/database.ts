@@ -582,7 +582,7 @@ export class Database {
 
           if (dbEntity) {
             // Update latest pruned entity in cache.
-            this.cacheUpdatedEntity(repo, dbEntity);
+            this.cacheUpdatedEntity(repo, dbEntity, true);
           }
 
           return dbEntity;
@@ -906,20 +906,34 @@ export class Database {
     return repo.save(entity);
   }
 
-  cacheUpdatedEntity<Entity> (repo: Repository<Entity>, entity: any): void {
-    const frothyBlock = this._cachedEntities.frothyBlocks.get(entity.blockHash);
+  cacheUpdatedEntity<Entity> (repo: Repository<Entity>, entity: any, pruned = false): void {
+    const tableName = repo.metadata.tableName;
 
-    // Update frothyBlock only if already present in cache.
-    // Might not be present when event processing starts without block processing on job retry.
-    if (frothyBlock) {
-      let entityIdMap = frothyBlock.entities.get(repo.metadata.tableName);
+    if (pruned) {
+      let entityIdMap = this._cachedEntities.latestPrunedEntities.get(tableName);
 
       if (!entityIdMap) {
         entityIdMap = new Map();
       }
 
       entityIdMap.set(entity.id, _.cloneDeep(entity));
-      frothyBlock.entities.set(repo.metadata.tableName, entityIdMap);
+      this._cachedEntities.latestPrunedEntities.set(tableName, entityIdMap);
+      return;
+    }
+
+    const frothyBlock = this._cachedEntities.frothyBlocks.get(entity.blockHash);
+
+    // Update frothyBlock only if already present in cache.
+    // Might not be present when event processing starts without block processing on job retry.
+    if (frothyBlock) {
+      let entityIdMap = frothyBlock.entities.get(tableName);
+
+      if (!entityIdMap) {
+        entityIdMap = new Map();
+      }
+
+      entityIdMap.set(entity.id, _.cloneDeep(entity));
+      frothyBlock.entities.set(tableName, entityIdMap);
     }
   }
 
