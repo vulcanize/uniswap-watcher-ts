@@ -102,20 +102,7 @@ export class Database implements DatabaseInterface {
       whereOptions.blockHash = blockHash;
     }
 
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    let entity = await repo.findOne(findOptions as FindOneOptions<Factory>);
-
-    if (!entity && findOptions.where.blockHash) {
-      entity = await this._baseDatabase.getPrevEntityVersion(queryRunner, repo, findOptions);
-    }
-
-    return entity;
+    return this._baseDatabase.getModelEntity(repo, whereOptions);
   }
 
   async getBundle (queryRunner: QueryRunner, { id, blockHash, blockNumber }: DeepPartial<Bundle>): Promise<Bundle | undefined> {
