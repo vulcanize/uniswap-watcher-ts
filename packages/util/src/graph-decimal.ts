@@ -91,6 +91,13 @@ export class GraphDecimal {
     return new GraphDecimal(this.value.div(param));
   }
 
+  pow (n: Decimal.Value | GraphDecimal): GraphDecimal {
+    this._checkOutOfRange(this);
+    const param = this._checkOutOfRange(n);
+
+    return new GraphDecimal(this.value.pow(param));
+  }
+
   isZero (): boolean {
     this._checkOutOfRange(this);
 

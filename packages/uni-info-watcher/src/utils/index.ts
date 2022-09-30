@@ -63,19 +63,7 @@ export const bigDecimalExponated = (value: GraphDecimal, power: bigint): GraphDe
     return new GraphDecimal(1);
   }
 
-  const negativePower = power < BigInt(0);
-  let result = (new GraphDecimal(0)).plus(value);
-  const powerAbs = BigNumber.from(power).abs();
-
-  for (let i = BigNumber.from(1); i.lt(powerAbs); i = i.add(1)) {
-    result = result.times(value);
-  }
-
-  if (negativePower) {
-    result = safeDiv(new GraphDecimal(1), result);
-  }
-
-  return result;
+  return value.pow(power.toString());
 };
 
 export const loadFactory = async (db: Database, dbTx: QueryRunner, block: Block, isDemo: boolean): Promise<Factory> => {
