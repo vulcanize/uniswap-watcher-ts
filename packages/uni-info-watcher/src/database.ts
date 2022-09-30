@@ -49,6 +49,8 @@ import { Contract } from './entity/Contract';
 
 // Entities which are suitable for DISTINCT ON database query compared to GROUP BY.
 const DISTINCT_ON_QUERY_ENTITIES: Set<new () => any> = new Set([
+  Pool,
+  Token,
   Burn,
   Mint,
   Swap,
