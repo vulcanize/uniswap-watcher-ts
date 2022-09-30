@@ -9,7 +9,6 @@ import {
   DeepPartial,
   FindConditions,
   FindManyOptions,
-  FindOneOptions,
   LessThanOrEqual,
   QueryRunner
 } from 'typeorm';
@@ -21,7 +20,8 @@ import {
   DatabaseInterface,
   BlockHeight,
   QueryOptions,
-  Where
+  Where,
+  ENTITY_QUERY_TYPE
 } from '@vulcanize/util';
 
 import { Factory } from './entity/Factory';
@@ -47,22 +47,25 @@ import { SyncStatus } from './entity/SyncStatus';
 import { TickDayData } from './entity/TickDayData';
 import { Contract } from './entity/Contract';
 
-// Entities which are suitable for DISTINCT ON database query compared to GROUP BY.
-const DISTINCT_ON_QUERY_ENTITIES: Set<new () => any> = new Set([
-  Pool,
-  Token,
-  Burn,
-  Mint,
-  Swap,
-  Transaction,
-  TokenDayData,
-  TokenHourData,
-  PoolDayData,
-  PoolHourData,
-  Position,
-  PositionSnapshot,
-  Tick,
-  TickDayData
+// Map: Entity to suitable query type.
+const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, number>([
+  [Bundle, ENTITY_QUERY_TYPE.SINGULAR],
+  [Factory, ENTITY_QUERY_TYPE.SINGULAR],
+  [Pool, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [Token, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [Burn, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [Mint, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [Swap, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [Transaction, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [TokenDayData, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [TokenHourData, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [PoolDayData, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [PoolHourData, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [Position, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [PositionSnapshot, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [Tick, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [TickDayData, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [UniswapDayData, ENTITY_QUERY_TYPE.GROUP_BY]
 ]);
 
 export class Database implements DatabaseInterface {
@@ -146,7 +149,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash, number: blockNumber },
         this._relationsMap,
-        DISTINCT_ON_QUERY_ENTITIES,
+        ENTITY_QUERY_TYPE_MAP,
         Token,
         [entity],
         selections
@@ -194,7 +197,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash, number: blockNumber },
         this._relationsMap,
-        DISTINCT_ON_QUERY_ENTITIES,
+        ENTITY_QUERY_TYPE_MAP,
         Pool,
         [entity],
         selections
@@ -238,7 +241,7 @@ export class Database implements DatabaseInterface {
           queryRunner,
           { hash: blockHash },
           this._relationsMap,
-          DISTINCT_ON_QUERY_ENTITIES,
+          ENTITY_QUERY_TYPE_MAP,
           Position,
           [entity]
         );
@@ -265,7 +268,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
-        DISTINCT_ON_QUERY_ENTITIES,
+        ENTITY_QUERY_TYPE_MAP,
         Tick,
         [entity]
       );
@@ -303,7 +306,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
-        DISTINCT_ON_QUERY_ENTITIES,
+        ENTITY_QUERY_TYPE_MAP,
         PoolDayData,
         [entity]
       );
@@ -327,7 +330,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
-        DISTINCT_ON_QUERY_ENTITIES,
+        ENTITY_QUERY_TYPE_MAP,
         PoolHourData,
         [entity]
       );
@@ -364,7 +367,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
-        DISTINCT_ON_QUERY_ENTITIES,
+        ENTITY_QUERY_TYPE_MAP,
         TokenDayData,
         [entity]
       );
@@ -388,7 +391,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
-        DISTINCT_ON_QUERY_ENTITIES,
+        ENTITY_QUERY_TYPE_MAP,
         TokenHourData,
         [entity]
       );
@@ -412,7 +415,7 @@ export class Database implements DatabaseInterface {
         queryRunner,
         { hash: blockHash },
         this._relationsMap,
-        DISTINCT_ON_QUERY_ENTITIES,
+        ENTITY_QUERY_TYPE_MAP,
         TickDayData,
         [entity]
       );
@@ -435,7 +438,7 @@ export class Database implements DatabaseInterface {
   }
 
   async getModelEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, selections: ReadonlyArray<SelectionNode> = []): Promise<Entity[]> {
-    return this._baseDatabase.getModelEntities(queryRunner, this._relationsMap, DISTINCT_ON_QUERY_ENTITIES, entity, block, where, queryOptions, selections);
+    return this._baseDatabase.getModelEntities(queryRunner, this._relationsMap, ENTITY_QUERY_TYPE_MAP, entity, block, where, queryOptions, selections);
   }
 
   async getModelEntitiesNoTx<Entity> (entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, selections: ReadonlyArray<SelectionNode> = []): Promise<Entity[]> {

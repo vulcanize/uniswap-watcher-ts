@@ -25,6 +25,7 @@ import { UniswapDayData } from './entity/UniswapDayData';
 import { Position } from './entity/Position';
 import { EventWatcher } from './events';
 import { Transaction } from './entity/Transaction';
+import { FACTORY_ADDRESS, BUNDLE_ID } from './utils/constants';
 
 const log = debug('vulcanize:resolver');
 
@@ -78,7 +79,7 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('bundles').inc(1);
 
-        return indexer.getEntities(Bundle, block, {}, { limit: first });
+        return indexer.getEntities(Bundle, block, { id: BUNDLE_ID }, { limit: first });
       },
 
       burns: async (
@@ -109,7 +110,7 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('factories').inc(1);
 
-        return indexer.getEntities(Factory, block, {}, { limit: first });
+        return indexer.getEntities(Factory, block, { id: FACTORY_ADDRESS }, { limit: first });
       },
 
       mints: async (

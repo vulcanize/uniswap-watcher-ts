@@ -3,6 +3,7 @@
 //
 
 import assert from 'assert';
+import debug from 'debug';
 import {
   Brackets,
   Connection,
@@ -40,6 +41,14 @@ const OPERATOR_MAP = {
 
 const INSERT_EVENTS_BATCH = 100;
 export const DEFAULT_LIMIT = 100;
+
+const log = debug('vulcanize:database');
+
+export enum ENTITY_QUERY_TYPE {
+  SINGULAR,
+  DISTINCT_ON,
+  GROUP_BY
+}
 
 export interface BlockHeight {
   number?: number;
@@ -381,7 +390,7 @@ export class Database {
   async getModelEntities<Entity> (
     queryRunner: QueryRunner,
     relationsMap: Map<any, { [key: string]: any }>,
-    distinctOnEntities: Set<new () => Entity>,
+    entityQueryMap: Map<new () => Entity, ENTITY_QUERY_TYPE>,
     entity: new () => Entity,
     block: BlockHeight,
     where: Where = {},
@@ -391,17 +400,30 @@ export class Database {
     let entities: Entity[];
 
     // Use different suitable query patterns based on entities.
-    if (distinctOnEntities.has(entity)) {
-      entities = await this.getModelEntitiesDistinctOn(queryRunner, entity, block, where, queryOptions);
-    } else {
-      entities = await this.getModelEntitiesGroupBy(queryRunner, entity, block, where, queryOptions);
+    switch (entityQueryMap.get(entity)) {
+      case ENTITY_QUERY_TYPE.SINGULAR:
+        entities = await this.getModelEntitiesSingular(queryRunner, entity, block, where);
+        break;
+
+      case ENTITY_QUERY_TYPE.DISTINCT_ON:
+        entities = await this.getModelEntitiesDistinctOn(queryRunner, entity, block, where, queryOptions);
+        break;
+
+      case ENTITY_QUERY_TYPE.GROUP_BY:
+        entities = await this.getModelEntitiesGroupBy(queryRunner, entity, block, where, queryOptions);
+        break;
+
+      default:
+        log(`Invalid entity query type for entity ${entity}`);
+        entities = [];
+        break;
     }
 
     if (!entities.length) {
       return [];
     }
 
-    entities = await this.loadRelations(queryRunner, block, relationsMap, distinctOnEntities, entity, entities, selections);
+    entities = await this.loadRelations(queryRunner, block, relationsMap, entityQueryMap, entity, entities, selections);
 
     return entities;
   }
@@ -528,6 +550,43 @@ export class Database {
     return entities as Entity[];
   }
 
+  async getModelEntitiesSingular<Entity> (
+    queryRunner: QueryRunner,
+    entity: new () => Entity,
+    block: BlockHeight,
+    where: Where = {}
+  ): Promise<Entity[]> {
+    const repo = queryRunner.manager.getRepository(entity);
+    const { tableName } = repo.metadata;
+
+    let selectQueryBuilder = repo.createQueryBuilder(tableName)
+      .addFrom('block_progress', 'blockProgress')
+      .where(`${tableName}.block_hash = blockProgress.block_hash`)
+      .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
+      .addOrderBy(`${tableName}.block_number`, 'DESC')
+      .limit(1);
+
+    if (block.hash) {
+      const { canonicalBlockNumber, blockHashes } = await this.getFrothyRegion(queryRunner, block.hash);
+
+      selectQueryBuilder = selectQueryBuilder
+        .andWhere(new Brackets(qb => {
+          qb.where(`${tableName}.block_hash IN (:...blockHashes)`, { blockHashes })
+            .orWhere(`${tableName}.block_number <= :canonicalBlockNumber`, { canonicalBlockNumber });
+        }));
+    }
+
+    if (block.number) {
+      selectQueryBuilder = selectQueryBuilder.andWhere(`${tableName}.block_number <= :blockNumber`, { blockNumber: block.number });
+    }
+
+    selectQueryBuilder = this._buildQuery(repo, selectQueryBuilder, where);
+
+    const entities = await selectQueryBuilder.getMany();
+
+    return entities as Entity[];
+  }
+
   async getModelEntity<Entity> (repo: Repository<Entity>, whereOptions: any): Promise<Entity | undefined> {
     eventProcessingLoadEntityCount.inc();
 
@@ -603,7 +662,7 @@ export class Database {
     queryRunner: QueryRunner,
     block: BlockHeight,
     relationsMap: Map<any, { [key: string]: any }>,
-    distinctOnEntities: Set<new () => Entity>,
+    entityQueryMap: Map<new () => Entity, ENTITY_QUERY_TYPE>,
     entity: new () => Entity,
     entities: Entity[],
     selections: ReadonlyArray<SelectionNode> = []
@@ -640,7 +699,7 @@ export class Database {
             const relatedEntities = await this.getModelEntities(
               queryRunner,
               relationsMap,
-              distinctOnEntities,
+              entityQueryMap,
               relationEntity,
               block,
               where,
@@ -692,7 +751,7 @@ export class Database {
             const relatedEntities = await this.getModelEntities(
               queryRunner,
               relationsMap,
-              distinctOnEntities,
+              entityQueryMap,
               relationEntity,
               block,
               where,
@@ -741,7 +800,7 @@ export class Database {
             const relatedEntities = await this.getModelEntities(
               queryRunner,
               relationsMap,
-              distinctOnEntities,
+              entityQueryMap,
               relationEntity,
               block,
               where,
