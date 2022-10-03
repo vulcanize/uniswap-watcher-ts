@@ -11,7 +11,7 @@ import { providers, utils, BigNumber } from 'ethers';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight, GraphDecimal, JobQueue, Where, DEFAULT_LIMIT } from '@vulcanize/util';
+import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight, GraphDecimal, JobQueue, Where, DEFAULT_LIMIT, eventProcessingEthCallDuration } from '@vulcanize/util';
 import { SelectionNode } from 'graphql';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
@@ -599,6 +599,8 @@ export class Indexer implements IndexerInterface {
     token.id = tokenAddress;
 
     console.time('time:indexer#_initToken-eth_call_for_token');
+    const endTimer = eventProcessingEthCallDuration.startTimer();
+
     const symbolPromise = this._erc20Client.getSymbol(block.hash, tokenAddress);
     const namePromise = this._erc20Client.getName(block.hash, tokenAddress);
     const totalSupplyPromise = this._erc20Client.getTotalSupply(block.hash, tokenAddress);
@@ -611,6 +613,7 @@ export class Indexer implements IndexerInterface {
       { value: decimals }
     ] = await Promise.all([symbolPromise, namePromise, totalSupplyPromise, decimalsPromise]);
 
+    endTimer();
     console.timeEnd('time:indexer#_initToken-eth_call_for_token');
 
     token.symbol = symbol;
@@ -1430,7 +1433,11 @@ export class Indexer implements IndexerInterface {
     if (!position) {
       try {
         console.time('time:indexer#_getPosition-eth_call_for_positions');
+        let endTimer = eventProcessingEthCallDuration.startTimer();
+
         const { value: positionResult } = await this._uniClient.positions(blockHash, contractAddress, tokenId);
+
+        endTimer();
         console.timeEnd('time:indexer#_getPosition-eth_call_for_positions');
 
         let factoryAddress = FACTORY_ADDRESS;
@@ -1442,7 +1449,11 @@ export class Indexer implements IndexerInterface {
         }
 
         console.time('time:indexer#_getPosition-eth_call_for_getPool');
+        endTimer = eventProcessingEthCallDuration.startTimer();
+
         let { value: poolAddress } = await this._uniClient.callGetPool(blockHash, factoryAddress, positionResult.token0, positionResult.token1, positionResult.fee);
+
+        endTimer();
         console.timeEnd('time:indexer#_getPosition-eth_call_for_getPool');
 
         // Get the pool address in lowercase.
@@ -1490,7 +1501,11 @@ export class Indexer implements IndexerInterface {
   async _updateFeeVars (position: Position, block: Block, contractAddress: string, tokenId: bigint): Promise<Position> {
     try {
       console.time('time:indexer#_updateFeeVars-eth_call_for_positions');
+      const endTimer = eventProcessingEthCallDuration.startTimer();
+
       const { value: positionResult } = await this._uniClient.positions(block.hash, contractAddress, tokenId);
+
+      endTimer();
       console.timeEnd('time:indexer#_updateFeeVars-eth_call_for_positions');
 
       if (positionResult) {

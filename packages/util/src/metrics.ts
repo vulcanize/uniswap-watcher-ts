@@ -64,6 +64,11 @@ export const eventProcessingLoadEntityDBQueryDuration = new promClient.Histogram
   help: 'Duration of DB query made in event processing'
 });
 
+export const eventProcessingEthCallDuration = new promClient.Histogram({
+  name: 'event_processing_eth_call_duration_seconds',
+  help: 'Duration of eth_calls made in event processing'
+});
+
 // Export metrics on a server
 const app: Application = express();
 

@@ -2,7 +2,7 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { BigNumber, utils } from 'ethers';
+import { utils } from 'ethers';
 import { QueryRunner } from 'typeorm';
 import assert from 'assert';
 
