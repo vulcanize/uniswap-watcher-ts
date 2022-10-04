@@ -11,7 +11,8 @@ import { providers, utils, BigNumber } from 'ethers';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight, Relation, GraphDecimal, JobQueue, Where, DEFAULT_LIMIT } from '@vulcanize/util';
+import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight, GraphDecimal, JobQueue, Where, DEFAULT_LIMIT, eventProcessingEthCallDuration } from '@vulcanize/util';
+import { SelectionNode } from 'graphql';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
@@ -155,6 +156,22 @@ export class Indexer implements IndexerInterface {
     console.timeEnd('time:indexer#processEvent-mapping_code');
   }
 
+  async processBlock (blockProgress: BlockProgress): Promise<void> {
+    // Set latest block in frothy region to cachedEntities.frothyBlocks map.
+    if (!this._db.cachedEntities.frothyBlocks.has(blockProgress.blockHash)) {
+      this._db.cachedEntities.frothyBlocks.set(
+        blockProgress.blockHash,
+        {
+          blockNumber: blockProgress.blockNumber,
+          parentHash: blockProgress.parentHash,
+          entities: new Map()
+        }
+      );
+
+      log(`Size of cachedEntities.frothyBlocks map: ${this._db.cachedEntities.frothyBlocks.size}`);
+    }
+  }
+
   async getBlockEntities (where: { [key: string]: any } = {}, queryOptions: QueryOptions): Promise<any> {
     if (where.timestamp_gt) {
       where.blockTimestamp = MoreThan(where.timestamp_gt);
@@ -227,12 +244,12 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
-  async getPool (id: string, block: BlockHeight): Promise<Pool | undefined> {
+  async getPool (id: string, block: BlockHeight, selections: ReadonlyArray<SelectionNode> = []): Promise<Pool | undefined> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
     try {
-      res = await this._db.getPool(dbTx, { id, blockHash: block.hash, blockNumber: block.number }, true);
+      res = await this._db.getPool(dbTx, { id, blockHash: block.hash, blockNumber: block.number }, true, selections);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
@@ -244,12 +261,12 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
-  async getToken (id: string, block: BlockHeight): Promise<Token | undefined> {
+  async getToken (id: string, block: BlockHeight, selections: ReadonlyArray<SelectionNode> = []): Promise<Token | undefined> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
     try {
-      res = await this._db.getToken(dbTx, { id, blockHash: block.hash, blockNumber: block.number }, true);
+      res = await this._db.getToken(dbTx, { id, blockHash: block.hash, blockNumber: block.number }, true, selections);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
@@ -261,7 +278,7 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
-  async getEntities<Entity> (entity: new () => Entity, block: BlockHeight, where: { [key: string]: any } = {}, queryOptions: QueryOptions, relations?: Relation[]): Promise<Entity[]> {
+  async getEntities<Entity> (entity: new () => Entity, block: BlockHeight, where: { [key: string]: any } = {}, queryOptions: QueryOptions, selections: ReadonlyArray<SelectionNode> = []): Promise<Entity[]> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
@@ -299,7 +316,7 @@ export class Indexer implements IndexerInterface {
         queryOptions.limit = DEFAULT_LIMIT;
       }
 
-      res = await this._db.getModelEntities(dbTx, entity, block, where, queryOptions, relations);
+      res = await this._db.getModelEntities(dbTx, entity, block, where, queryOptions, selections);
       dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();
@@ -379,7 +396,10 @@ export class Indexer implements IndexerInterface {
   }
 
   async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force = false): Promise<SyncStatus> {
-    return this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, force);
+    const syncStatus = await this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, force);
+    this._updateCachedEntitiesFrothyBlocks(syncStatus.latestCanonicalBlockHash, syncStatus.latestCanonicalBlockNumber);
+
+    return syncStatus;
   }
 
   async getSyncStatus (): Promise<SyncStatus | undefined> {
@@ -410,10 +430,39 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
   }
 
+  _updateCachedEntitiesFrothyBlocks (canonicalBlockHash: string, canonicalBlockNumber: number) {
+    const canonicalBlock = this._db.cachedEntities.frothyBlocks.get(canonicalBlockHash);
+
+    if (canonicalBlock) {
+      // Update latestPrunedEntities map with entities from latest canonical block.
+      canonicalBlock.entities.forEach((entityIdMap, entityTableName) => {
+        entityIdMap.forEach((data, id) => {
+          let entityIdMap = this._db.cachedEntities.latestPrunedEntities.get(entityTableName);
+
+          if (!entityIdMap) {
+            entityIdMap = new Map();
+          }
+
+          entityIdMap.set(id, data);
+          this._db.cachedEntities.latestPrunedEntities.set(entityTableName, entityIdMap);
+        });
+      });
+    }
+
+    // Remove pruned blocks from frothyBlocks.
+    const prunedBlockHashes = Array.from(this._db.cachedEntities.frothyBlocks.entries())
+      .filter(([, value]) => value.blockNumber <= canonicalBlockNumber)
+      .map(([blockHash]) => blockHash);
+
+    prunedBlockHashes.forEach(blockHash => this._db.cachedEntities.frothyBlocks.delete(blockHash));
+  }
+
   async _fetchEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
     assert(block.blockHash);
 
+    console.time('time:indexer#_fetchEvents-uni-get-events');
     const events = await this._uniClient.getEvents(block.blockHash);
+    console.timeEnd('time:indexer#_fetchEvents-uni-get-events');
 
     const dbEvents: Array<DeepPartial<Event>> = [];
 
@@ -550,6 +599,8 @@ export class Indexer implements IndexerInterface {
     token.id = tokenAddress;
 
     console.time('time:indexer#_initToken-eth_call_for_token');
+    const endTimer = eventProcessingEthCallDuration.startTimer();
+
     const symbolPromise = this._erc20Client.getSymbol(block.hash, tokenAddress);
     const namePromise = this._erc20Client.getName(block.hash, tokenAddress);
     const totalSupplyPromise = this._erc20Client.getTotalSupply(block.hash, tokenAddress);
@@ -562,6 +613,7 @@ export class Indexer implements IndexerInterface {
       { value: decimals }
     ] = await Promise.all([symbolPromise, namePromise, totalSupplyPromise, decimalsPromise]);
 
+    endTimer();
     console.timeEnd('time:indexer#_initToken-eth_call_for_token');
 
     token.symbol = symbol;
@@ -1381,7 +1433,11 @@ export class Indexer implements IndexerInterface {
     if (!position) {
       try {
         console.time('time:indexer#_getPosition-eth_call_for_positions');
+        let endTimer = eventProcessingEthCallDuration.startTimer();
+
         const { value: positionResult } = await this._uniClient.positions(blockHash, contractAddress, tokenId);
+
+        endTimer();
         console.timeEnd('time:indexer#_getPosition-eth_call_for_positions');
 
         let factoryAddress = FACTORY_ADDRESS;
@@ -1393,7 +1449,11 @@ export class Indexer implements IndexerInterface {
         }
 
         console.time('time:indexer#_getPosition-eth_call_for_getPool');
+        endTimer = eventProcessingEthCallDuration.startTimer();
+
         let { value: poolAddress } = await this._uniClient.callGetPool(blockHash, factoryAddress, positionResult.token0, positionResult.token1, positionResult.fee);
+
+        endTimer();
         console.timeEnd('time:indexer#_getPosition-eth_call_for_getPool');
 
         // Get the pool address in lowercase.
@@ -1441,7 +1501,11 @@ export class Indexer implements IndexerInterface {
   async _updateFeeVars (position: Position, block: Block, contractAddress: string, tokenId: bigint): Promise<Position> {
     try {
       console.time('time:indexer#_updateFeeVars-eth_call_for_positions');
+      const endTimer = eventProcessingEthCallDuration.startTimer();
+
       const { value: positionResult } = await this._uniClient.positions(block.hash, contractAddress, tokenId);
+
+      endTimer();
       console.timeEnd('time:indexer#_updateFeeVars-eth_call_for_positions');
 
       if (positionResult) {

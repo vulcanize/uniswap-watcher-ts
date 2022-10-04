@@ -3,6 +3,7 @@
 //
 
 import assert from 'assert';
+import debug from 'debug';
 import {
   Brackets,
   Connection,
@@ -18,12 +19,13 @@ import {
   SelectQueryBuilder
 } from 'typeorm';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+import { RawSqlResultsToEntityTransformer } from 'typeorm/query-builder/transformer/RawSqlResultsToEntityTransformer';
 import _ from 'lodash';
-import { RelationType } from 'typeorm/metadata/types/RelationTypes';
+import { SelectionNode } from 'graphql';
 
 import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
 import { MAX_REORG_DEPTH, UNKNOWN_EVENT_NAME } from './constants';
-import { blockProgressCount, eventCount } from './metrics';
+import { blockProgressCount, eventCount, eventProcessingLoadEntityDBQueryDuration, eventProcessingLoadEntityCacheHitCount, eventProcessingLoadEntityCount } from './metrics';
 
 const OPERATOR_MAP = {
   equals: '=',
@@ -39,6 +41,14 @@ const OPERATOR_MAP = {
 
 const INSERT_EVENTS_BATCH = 100;
 export const DEFAULT_LIMIT = 100;
+
+const log = debug('vulcanize:database');
+
+export enum ENTITY_QUERY_TYPE {
+  SINGULAR,
+  DISTINCT_ON,
+  GROUP_BY
+}
 
 export interface BlockHeight {
   number?: number;
@@ -65,17 +75,36 @@ export interface Where {
   }]
 }
 
-export type Relation = { entity: any, type: RelationType, field: string, foreignKey?: string, childRelations?: Relation[] }
+// Cache for updated entities used in job-runner event processing.
+export interface CachedEntities {
+  frothyBlocks: Map<
+    string,
+    {
+      blockNumber: number;
+      parentHash: string;
+      entities: Map<string, Map<string, { [key: string]: any }>>;
+    }
+  >;
+  latestPrunedEntities: Map<string, Map<string, { [key: string]: any }>>;
+}
 
 export class Database {
   _config: ConnectionOptions
   _conn!: Connection
   _blockCount = 0
   _eventCount = 0
+  _cachedEntities: CachedEntities = {
+    frothyBlocks: new Map(),
+    latestPrunedEntities: new Map()
+  }
 
   constructor (config: ConnectionOptions) {
     assert(config);
     this._config = config;
+  }
+
+  get cachedEntities () {
+    return this._cachedEntities;
   }
 
   async init (): Promise<Connection> {
@@ -358,7 +387,54 @@ export class Database {
     return event;
   }
 
-  async getModelEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, relations: Relation[] = []): Promise<Entity[]> {
+  async getModelEntities<Entity> (
+    queryRunner: QueryRunner,
+    relationsMap: Map<any, { [key: string]: any }>,
+    entityQueryMap: Map<new () => Entity, ENTITY_QUERY_TYPE>,
+    entity: new () => Entity,
+    block: BlockHeight,
+    where: Where = {},
+    queryOptions: QueryOptions = {},
+    selections: ReadonlyArray<SelectionNode> = []
+  ): Promise<Entity[]> {
+    let entities: Entity[];
+
+    // Use different suitable query patterns based on entities.
+    switch (entityQueryMap.get(entity)) {
+      case ENTITY_QUERY_TYPE.SINGULAR:
+        entities = await this.getModelEntitiesSingular(queryRunner, entity, block, where);
+        break;
+
+      case ENTITY_QUERY_TYPE.DISTINCT_ON:
+        entities = await this.getModelEntitiesDistinctOn(queryRunner, entity, block, where, queryOptions);
+        break;
+
+      case ENTITY_QUERY_TYPE.GROUP_BY:
+        entities = await this.getModelEntitiesGroupBy(queryRunner, entity, block, where, queryOptions);
+        break;
+
+      default:
+        log(`Invalid entity query type for entity ${entity}`);
+        entities = [];
+        break;
+    }
+
+    if (!entities.length) {
+      return [];
+    }
+
+    entities = await this.loadRelations(queryRunner, block, relationsMap, entityQueryMap, entity, entities, selections);
+
+    return entities;
+  }
+
+  async getModelEntitiesGroupBy<Entity> (
+    queryRunner: QueryRunner,
+    entity: new () => Entity,
+    block: BlockHeight,
+    where: Where = {},
+    queryOptions: QueryOptions = {}
+  ): Promise<Entity[]> {
     const repo = queryRunner.manager.getRepository(entity);
     const { tableName } = repo.metadata;
 
@@ -408,152 +484,346 @@ export class Database {
       selectQueryBuilder = selectQueryBuilder.limit(queryOptions.limit);
     }
 
-    let entities = await selectQueryBuilder.getMany();
-
-    if (!entities.length) {
-      return [];
-    }
-
-    entities = await this.loadRelations(queryRunner, block, relations, entities);
+    const entities = await selectQueryBuilder.getMany();
 
     return entities;
   }
 
-  async loadRelations<Entity> (queryRunner: QueryRunner, block: BlockHeight, relations: Relation[], entities: Entity[]): Promise<Entity[]> {
-    const relationPromises = relations.map(async relation => {
-      const { entity: relationEntity, type, field, foreignKey, childRelations = [] } = relation;
+  async getModelEntitiesDistinctOn<Entity> (
+    queryRunner: QueryRunner,
+    entity: new () => Entity,
+    block: BlockHeight,
+    where: Where = {},
+    queryOptions: QueryOptions = {}
+  ): Promise<Entity[]> {
+    const repo = queryRunner.manager.getRepository(entity);
 
-      switch (type) {
-        case 'one-to-many': {
-          assert(foreignKey);
+    let subQuery = repo.createQueryBuilder('subTable')
+      .distinctOn(['subTable.id'])
+      .addFrom('block_progress', 'blockProgress')
+      .where('subTable.block_hash = blockProgress.block_hash')
+      .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
+      .addOrderBy('subTable.id', 'ASC')
+      .addOrderBy('subTable.block_number', 'DESC');
 
-          const where: Where = {
-            [foreignKey]: [{
-              value: entities.map((entity: any) => entity.id),
-              not: false,
-              operator: 'in'
-            }]
-          };
+    if (block.hash) {
+      const { canonicalBlockNumber, blockHashes } = await this.getFrothyRegion(queryRunner, block.hash);
 
-          const relatedEntities = await this.getModelEntities(
-            queryRunner,
-            relationEntity,
-            block,
-            where,
-            {},
-            childRelations
-          );
+      subQuery = subQuery
+        .andWhere(new Brackets(qb => {
+          qb.where('subTable.block_hash IN (:...blockHashes)', { blockHashes })
+            .orWhere('subTable.block_number <= :canonicalBlockNumber', { canonicalBlockNumber });
+        }));
+    }
 
-          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any[]}, entity: any) => {
-            // Related entity might be loaded with data.
-            const parentEntityId = entity[foreignKey].id ?? entity[foreignKey];
+    if (block.number) {
+      subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
+    }
 
-            if (!acc[parentEntityId]) {
-              acc[parentEntityId] = [];
-            }
+    subQuery = this._buildQuery(repo, subQuery, where);
 
-            if (acc[parentEntityId].length < DEFAULT_LIMIT) {
-              acc[parentEntityId].push(entity);
-            }
+    let selectQueryBuilder = queryRunner.manager.createQueryBuilder()
+      .from(
+        `(${subQuery.getQuery()})`,
+        'latestEntities'
+      )
+      .setParameters(subQuery.getParameters());
 
-            return acc;
-          }, {});
+    if (queryOptions.orderBy) {
+      selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, queryOptions, 'subTable_');
+      if (queryOptions.orderBy !== 'id') {
+        selectQueryBuilder = this._orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' }, 'subTable_');
+      }
+    }
 
-          entities.forEach((entity: any) => {
-            if (relatedEntitiesMap[entity.id]) {
-              entity[field] = relatedEntitiesMap[entity.id];
-            } else {
-              entity[field] = [];
-            }
-          });
+    if (queryOptions.skip) {
+      selectQueryBuilder = selectQueryBuilder.offset(queryOptions.skip);
+    }
 
-          break;
+    if (queryOptions.limit) {
+      selectQueryBuilder = selectQueryBuilder.limit(queryOptions.limit);
+    }
+
+    let entities = await selectQueryBuilder.getRawMany();
+    entities = await this._transformResults(queryRunner, repo.createQueryBuilder('subTable'), entities);
+
+    return entities as Entity[];
+  }
+
+  async getModelEntitiesSingular<Entity> (
+    queryRunner: QueryRunner,
+    entity: new () => Entity,
+    block: BlockHeight,
+    where: Where = {}
+  ): Promise<Entity[]> {
+    const repo = queryRunner.manager.getRepository(entity);
+    const { tableName } = repo.metadata;
+
+    let selectQueryBuilder = repo.createQueryBuilder(tableName)
+      .addFrom('block_progress', 'blockProgress')
+      .where(`${tableName}.block_hash = blockProgress.block_hash`)
+      .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
+      .addOrderBy(`${tableName}.block_number`, 'DESC')
+      .limit(1);
+
+    if (block.hash) {
+      const { canonicalBlockNumber, blockHashes } = await this.getFrothyRegion(queryRunner, block.hash);
+
+      selectQueryBuilder = selectQueryBuilder
+        .andWhere(new Brackets(qb => {
+          qb.where(`${tableName}.block_hash IN (:...blockHashes)`, { blockHashes })
+            .orWhere(`${tableName}.block_number <= :canonicalBlockNumber`, { canonicalBlockNumber });
+        }));
+    }
+
+    if (block.number) {
+      selectQueryBuilder = selectQueryBuilder.andWhere(`${tableName}.block_number <= :blockNumber`, { blockNumber: block.number });
+    }
+
+    selectQueryBuilder = this._buildQuery(repo, selectQueryBuilder, where);
+
+    const entities = await selectQueryBuilder.getMany();
+
+    return entities as Entity[];
+  }
+
+  async getModelEntity<Entity> (repo: Repository<Entity>, whereOptions: any): Promise<Entity | undefined> {
+    eventProcessingLoadEntityCount.inc();
+
+    const findOptions = {
+      where: whereOptions,
+      order: {
+        blockNumber: 'DESC'
+      }
+    };
+
+    if (findOptions.where.blockHash) {
+      // Check cache only if latestPrunedEntities is updated.
+      // latestPrunedEntities is updated when frothyBlocks is filled till canonical block height.
+      if (this._cachedEntities.latestPrunedEntities.size > 0) {
+        let frothyBlock = this._cachedEntities.frothyBlocks.get(findOptions.where.blockHash);
+        let canonicalBlockNumber = -1;
+
+        // Loop through frothy region until latest entity is found.
+        while (frothyBlock) {
+          const entity = frothyBlock.entities
+            .get(repo.metadata.tableName)
+            ?.get(findOptions.where.id);
+
+          if (entity) {
+            eventProcessingLoadEntityCacheHitCount.inc();
+            return _.cloneDeep(entity) as Entity;
+          }
+
+          canonicalBlockNumber = frothyBlock.blockNumber + 1;
+          frothyBlock = this._cachedEntities.frothyBlocks.get(frothyBlock.parentHash);
         }
 
-        case 'many-to-many': {
-          const relatedIds = entities.reduce((acc, entity: any) => {
-            entity[field].forEach((relatedEntityId: any) => acc.add(relatedEntityId));
+        // Canonical block number is not assigned if blockHash does not exist in frothy region.
+        // Get latest pruned entity from cache only if blockHash exists in frothy region.
+        // i.e. Latest entity in cache is the version before frothy region.
+        if (canonicalBlockNumber > -1) {
+          // If entity not found in frothy region get latest entity in the pruned region.
+          // Check if latest entity is cached in pruned region.
+          const entity = this._cachedEntities.latestPrunedEntities
+            .get(repo.metadata.tableName)
+            ?.get(findOptions.where.id);
 
-            return acc;
-          }, new Set());
+          if (entity) {
+            eventProcessingLoadEntityCacheHitCount.inc();
+            return _.cloneDeep(entity) as Entity;
+          }
 
-          const where: Where = {
-            id: [{
-              value: Array.from(relatedIds),
-              not: false,
-              operator: 'in'
-            }]
-          };
+          // Get latest pruned entity from DB if not found in cache.
+          const endTimer = eventProcessingLoadEntityDBQueryDuration.startTimer();
+          const dbEntity = await this._getLatestPrunedEntity(repo, findOptions.where.id, canonicalBlockNumber);
+          endTimer();
 
-          const relatedEntities = await this.getModelEntities(
-            queryRunner,
-            relationEntity,
-            block,
-            where,
-            {},
-            childRelations
-          );
+          if (dbEntity) {
+            // Update latest pruned entity in cache.
+            this.cacheUpdatedEntity(repo, dbEntity, true);
+          }
 
-          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
-            acc[entity.id] = entity;
+          return dbEntity;
+        }
+      }
 
-            return acc;
-          }, {});
+      const endTimer = eventProcessingLoadEntityDBQueryDuration.startTimer();
+      const dbEntity = await this.getPrevEntityVersion(repo.queryRunner!, repo, findOptions);
+      endTimer();
 
-          entities.forEach((entity: any) => {
-            const relatedEntityIds: Set<string> = entity[field].reduce((acc: Set<string>, id: string) => {
-              acc.add(id);
+      return dbEntity;
+    }
+
+    return repo.findOne(findOptions);
+  }
+
+  async loadRelations<Entity> (
+    queryRunner: QueryRunner,
+    block: BlockHeight,
+    relationsMap: Map<any, { [key: string]: any }>,
+    entityQueryMap: Map<new () => Entity, ENTITY_QUERY_TYPE>,
+    entity: new () => Entity,
+    entities: Entity[],
+    selections: ReadonlyArray<SelectionNode> = []
+  ): Promise<Entity[]> {
+    const relations = relationsMap.get(entity);
+
+    if (!relations) {
+      return entities;
+    }
+
+    // Filter selections from GQL query which are relations.
+    const relationPromises = selections.filter((selection) => selection.kind === 'Field' && Boolean(relations[selection.name.value]))
+      .map(async (selection) => {
+        assert(selection.kind === 'Field');
+        const field = selection.name.value;
+        const { entity: relationEntity, type, foreignKey } = relations[field];
+        let childSelections = selection.selectionSet?.selections || [];
+
+        // Filter out __typename field in GQL for loading relations.
+        childSelections = childSelections.filter(selection => !(selection.kind === 'Field' && selection.name.value === '__typename'));
+
+        switch (type) {
+          case 'one-to-many': {
+            assert(foreignKey);
+
+            const where: Where = {
+              [foreignKey]: [{
+                value: entities.map((entity: any) => entity.id),
+                not: false,
+                operator: 'in'
+              }]
+            };
+
+            const relatedEntities = await this.getModelEntities(
+              queryRunner,
+              relationsMap,
+              entityQueryMap,
+              relationEntity,
+              block,
+              where,
+              {},
+              childSelections
+            );
+
+            const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any[]}, entity: any) => {
+              // Related entity might be loaded with data.
+              const parentEntityId = entity[foreignKey].id ?? entity[foreignKey];
+
+              if (!acc[parentEntityId]) {
+                acc[parentEntityId] = [];
+              }
+
+              if (acc[parentEntityId].length < DEFAULT_LIMIT) {
+                acc[parentEntityId].push(entity);
+              }
+
+              return acc;
+            }, {});
+
+            entities.forEach((entity: any) => {
+              if (relatedEntitiesMap[entity.id]) {
+                entity[field] = relatedEntitiesMap[entity.id];
+              } else {
+                entity[field] = [];
+              }
+            });
+
+            break;
+          }
+
+          case 'many-to-many': {
+            const relatedIds = entities.reduce((acc, entity: any) => {
+              entity[field].forEach((relatedEntityId: any) => acc.add(relatedEntityId));
 
               return acc;
             }, new Set());
 
-            entity[field] = [];
+            const where: Where = {
+              id: [{
+                value: Array.from(relatedIds),
+                not: false,
+                operator: 'in'
+              }]
+            };
 
-            relatedEntities.forEach((relatedEntity: any) => {
-              if (relatedEntityIds.has(relatedEntity.id) && entity[field].length < DEFAULT_LIMIT) {
-                entity[field].push(relatedEntity);
+            const relatedEntities = await this.getModelEntities(
+              queryRunner,
+              relationsMap,
+              entityQueryMap,
+              relationEntity,
+              block,
+              where,
+              {},
+              childSelections
+            );
+
+            entities.forEach((entity: any) => {
+              const relatedEntityIds: Set<string> = entity[field].reduce((acc: Set<string>, id: string) => {
+                acc.add(id);
+
+                return acc;
+              }, new Set());
+
+              entity[field] = [];
+
+              relatedEntities.forEach((relatedEntity: any) => {
+                if (relatedEntityIds.has(relatedEntity.id) && entity[field].length < DEFAULT_LIMIT) {
+                  entity[field].push(relatedEntity);
+                }
+              });
+            });
+
+            break;
+          }
+
+          default: {
+            // For one-to-one/many-to-one relations.
+            if (childSelections.length === 1 && childSelections[0].kind === 'Field' && childSelections[0].name.value === 'id') {
+              // Avoid loading relation if selections only has id field.
+              entities.forEach((entity: any) => {
+                entity[field] = { id: entity[field] };
+              });
+
+              break;
+            }
+
+            const where: Where = {
+              id: [{
+                value: entities.map((entity: any) => entity[field]),
+                not: false,
+                operator: 'in'
+              }]
+            };
+
+            const relatedEntities = await this.getModelEntities(
+              queryRunner,
+              relationsMap,
+              entityQueryMap,
+              relationEntity,
+              block,
+              where,
+              {},
+              childSelections
+            );
+
+            const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
+              acc[entity.id] = entity;
+
+              return acc;
+            }, {});
+
+            entities.forEach((entity: any) => {
+              if (relatedEntitiesMap[entity[field]]) {
+                entity[field] = relatedEntitiesMap[entity[field]];
               }
             });
-          });
 
-          break;
+            break;
+          }
         }
-
-        default: {
-          // For one-to-one/many-to-one relations.
-          const where: Where = {
-            id: [{
-              value: entities.map((entity: any) => entity[field]),
-              not: false,
-              operator: 'in'
-            }]
-          };
-
-          const relatedEntities = await this.getModelEntities(
-            queryRunner,
-            relationEntity,
-            block,
-            where,
-            {},
-            childRelations
-          );
-
-          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
-            acc[entity.id] = entity;
-
-            return acc;
-          }, {});
-
-          entities.forEach((entity: any) => {
-            if (relatedEntitiesMap[entity[field]]) {
-              entity[field] = relatedEntitiesMap[entity[field]];
-            }
-          });
-
-          break;
-        }
-      }
-    });
+      });
 
     await Promise.all(relationPromises);
 
@@ -611,23 +881,25 @@ export class Database {
     if (id) {
       // Entity found in frothy region.
       findOptions.where.blockHash = blockHash;
-    } else {
-      // If entity not found in frothy region get latest entity in the pruned region.
-      // Filter out entities from pruned blocks.
-      const canonicalBlockNumber = blockNumber + 1;
-      const entityInPrunedRegion:any = await repo.createQueryBuilder('entity')
-        .innerJoinAndSelect('block_progress', 'block', 'block.block_hash = entity.block_hash')
-        .where('block.is_pruned = false')
-        .andWhere('entity.id = :id', { id: findOptions.where.id })
-        .andWhere('entity.block_number <= :canonicalBlockNumber', { canonicalBlockNumber })
-        .orderBy('entity.block_number', 'DESC')
-        .limit(1)
-        .getOne();
 
-      findOptions.where.blockHash = entityInPrunedRegion?.blockHash;
+      return repo.findOne(findOptions);
     }
 
-    return repo.findOne(findOptions);
+    return this._getLatestPrunedEntity(repo, findOptions.where.id, blockNumber + 1);
+  }
+
+  async _getLatestPrunedEntity<Entity> (repo: Repository<Entity>, id: string, canonicalBlockNumber: number): Promise<Entity | undefined> {
+    // Filter out latest entity from pruned blocks.
+    const entityInPrunedRegion = await repo.createQueryBuilder('entity')
+      .innerJoinAndSelect('block_progress', 'block', 'block.block_hash = entity.block_hash')
+      .where('block.is_pruned = false')
+      .andWhere('entity.id = :id', { id })
+      .andWhere('entity.block_number <= :canonicalBlockNumber', { canonicalBlockNumber })
+      .orderBy('entity.block_number', 'DESC')
+      .limit(1)
+      .getOne();
+
+    return entityInPrunedRegion;
   }
 
   async getFrothyRegion (queryRunner: QueryRunner, blockHash: string): Promise<{ canonicalBlockNumber: number, blockHashes: string[] }> {
@@ -691,6 +963,37 @@ export class Database {
     }
 
     return repo.save(entity);
+  }
+
+  cacheUpdatedEntity<Entity> (repo: Repository<Entity>, entity: any, pruned = false): void {
+    const tableName = repo.metadata.tableName;
+
+    if (pruned) {
+      let entityIdMap = this._cachedEntities.latestPrunedEntities.get(tableName);
+
+      if (!entityIdMap) {
+        entityIdMap = new Map();
+      }
+
+      entityIdMap.set(entity.id, _.cloneDeep(entity));
+      this._cachedEntities.latestPrunedEntities.set(tableName, entityIdMap);
+      return;
+    }
+
+    const frothyBlock = this._cachedEntities.frothyBlocks.get(entity.blockHash);
+
+    // Update frothyBlock only if already present in cache.
+    // Might not be present when event processing starts without block processing on job retry.
+    if (frothyBlock) {
+      let entityIdMap = frothyBlock.entities.get(tableName);
+
+      if (!entityIdMap) {
+        entityIdMap = new Map();
+      }
+
+      entityIdMap.set(entity.id, _.cloneDeep(entity));
+      frothyBlock.entities.set(tableName, entityIdMap);
+    }
   }
 
   async _fetchBlockCount (): Promise<void> {
@@ -775,7 +1078,8 @@ export class Database {
   _orderQuery<Entity> (
     repo: Repository<Entity>,
     selectQueryBuilder: SelectQueryBuilder<Entity>,
-    orderOptions: { orderBy?: string, orderDirection?: string }
+    orderOptions: { orderBy?: string, orderDirection?: string },
+    columnPrefix = ''
   ): SelectQueryBuilder<Entity> {
     const { orderBy, orderDirection } = orderOptions;
     assert(orderBy);
@@ -784,8 +1088,21 @@ export class Database {
     assert(columnMetadata);
 
     return selectQueryBuilder.addOrderBy(
-      `${selectQueryBuilder.alias}.${columnMetadata.propertyAliasName}`,
+      `"${selectQueryBuilder.alias}"."${columnPrefix}${columnMetadata.databaseName}"`,
       orderDirection === 'desc' ? 'DESC' : 'ASC'
     );
+  }
+
+  async _transformResults<Entity> (queryRunner: QueryRunner, qb: SelectQueryBuilder<Entity>, rawResults: any[]): Promise<any[]> {
+    const transformer = new RawSqlResultsToEntityTransformer(
+      qb.expressionMap,
+      queryRunner.manager.connection.driver,
+      [],
+      [],
+      queryRunner
+    );
+
+    assert(qb.expressionMap.mainAlias);
+    return transformer.transform(rawResults, qb.expressionMap.mainAlias);
   }
 }

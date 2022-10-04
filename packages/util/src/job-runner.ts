@@ -12,7 +12,7 @@ import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
 import { wait } from './misc';
 import { createPruningJob } from './common';
-import { lastBlockNumEvents, lastBlockProcessDuration, lastProcessedBlockNumber } from './metrics';
+import { eventProcessingLoadEntityCacheHitCount, eventProcessingLoadEntityCount, lastBlockNumEvents, lastBlockProcessDuration, lastProcessedBlockNumber } from './metrics';
 
 const log = debug('vulcanize:job-runner');
 
@@ -76,6 +76,7 @@ export class JobRunner {
   }
 
   async _pruneChain (job: any, syncStatus: SyncStatusInterface): Promise<void> {
+    console.time('time:job-runner#_pruneChain');
     const { pruneBlockHeight } = job.data;
 
     log(`Processing chain pruning at ${pruneBlockHeight}`);
@@ -116,6 +117,7 @@ export class JobRunner {
       // Update the canonical block in the SyncStatus.
       await this._indexer.updateSyncStatusCanonicalBlock(newCanonicalBlockHash, pruneBlockHeight);
     }
+    console.timeEnd('time:job-runner#_pruneChain');
   }
 
   async _indexBlock (job: any, syncStatus: SyncStatusInterface): Promise<void> {
@@ -228,6 +230,7 @@ export class JobRunner {
         this._blockEventsMap.set(blockHash, events);
       }
 
+      console.time('time:job-runner#_indexBlock-saveBlockProgress');
       blockProgress = await this._indexer.saveBlockProgress({
         blockHash,
         blockNumber,
@@ -236,8 +239,10 @@ export class JobRunner {
         numEvents: events.length,
         isComplete: events.length === 0
       });
+      console.timeEnd('time:job-runner#_indexBlock-saveBlockProgress');
     }
 
+    await this._indexer.processBlock(blockProgress);
     this._blockNumEvents = blockProgress.numEvents;
 
     // Check if block has unprocessed events.
@@ -336,6 +341,8 @@ export class JobRunner {
           dbEvent.eventInfo = JSON.stringify(eventInfo);
         }
 
+        eventProcessingLoadEntityCount.set(0);
+        eventProcessingLoadEntityCacheHitCount.set(0);
         await this._indexer.processEvent(dbEvent);
       }
 
@@ -360,6 +367,9 @@ export class JobRunner {
         const watchedContract = this._indexer.isWatchedContract(dbEvent.contract);
 
         if (watchedContract) {
+          eventProcessingLoadEntityCount.set(0);
+          eventProcessingLoadEntityCacheHitCount.set(0);
+
           // Events of contract added in same block might be processed multiple times.
           // This is because there is no check for lastProcessedEventIndex against these events.
           await this._indexer.processEvent(dbEvent);
@@ -383,7 +393,9 @@ export class JobRunner {
 
     if (this._jobQueueConfig.lazyUpdateBlockProgress) {
       // Update in database at end of all events processing.
+      console.time('time:job-runner#_processEvents-updateBlockProgress');
       await this._indexer.updateBlockProgress(block, block.lastProcessedEventIndex);
+      console.timeEnd('time:job-runner#_processEvents-updateBlockProgress');
     }
 
     console.timeEnd('time:job-runner#_processEvents-events');

@@ -4,7 +4,7 @@
 
 import { Connection, DeepPartial, FindConditions, FindManyOptions, QueryRunner } from 'typeorm';
 
-import { Where, QueryOptions } from './database';
+import { Where, QueryOptions, CachedEntities } from './database';
 
 export interface BlockProgressInterface {
   id: number;
@@ -69,6 +69,7 @@ export interface IndexerInterface {
   saveEventEntity (dbEvent: EventInterface): Promise<EventInterface>;
   saveEvents (dbEvents: EventInterface[]): Promise<void>;
   processEvent (event: EventInterface): Promise<void>;
+  processBlock (blockProgress: BlockProgressInterface): Promise<void>;
   parseEventNameAndArgs?: (kind: string, logObj: any) => any;
   isWatchedContract: (address: string) => ContractInterface | undefined;
   cacheContract?: (contract: ContractInterface) => void;

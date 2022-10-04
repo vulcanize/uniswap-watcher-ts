@@ -119,6 +119,10 @@ export class Indexer implements IndexerInterface {
     }
   }
 
+  async processBlock (blockProgress: BlockProgress): Promise<void> {
+    // Method for processing on indexing new block.
+  }
+
   parseEventNameAndArgs (kind: string, logObj: any): any {
     let eventName = UNKNOWN_EVENT_NAME;
     let eventInfo = {};

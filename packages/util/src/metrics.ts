@@ -49,6 +49,26 @@ export const eventCount = new promClient.Gauge({
   help: 'Total entries in event table'
 });
 
+export const eventProcessingLoadEntityCount = new promClient.Gauge({
+  name: 'event_processing_load_entity_total',
+  help: 'Total load entities in a single event processing'
+});
+
+export const eventProcessingLoadEntityCacheHitCount = new promClient.Gauge({
+  name: 'event_processing_load_entity_cache_hit_total',
+  help: 'Total load entities hitting cache in a single event processing'
+});
+
+export const eventProcessingLoadEntityDBQueryDuration = new promClient.Histogram({
+  name: 'event_processing_load_entity_db_query_seconds',
+  help: 'Duration of DB query made in event processing'
+});
+
+export const eventProcessingEthCallDuration = new promClient.Histogram({
+  name: 'event_processing_eth_call_duration_seconds',
+  help: 'Duration of eth_calls made in event processing'
+});
+
 // Export metrics on a server
 const app: Application = express();
 

@@ -296,6 +296,10 @@ export class Indexer {
     await this.triggerIndexingOnEvent(event);
   }
 
+  async processBlock (blockProgress: BlockProgress): Promise<void> {
+    // Method for processing on indexing new block.
+  }
+
   parseEventNameAndArgs (kind: string, logObj: any): any {
     let eventName = UNKNOWN_EVENT_NAME;
     let eventInfo = {};
