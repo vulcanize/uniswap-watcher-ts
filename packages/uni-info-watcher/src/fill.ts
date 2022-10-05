@@ -102,6 +102,7 @@ export const main = async (): Promise<any> => {
   await jobQueue.start();
 
   const indexer = new Indexer(config.server, db, uniClient, erc20Client, ethClient, ethProvider, jobQueue);
+  await indexer.init();
 
   if (argv.state) {
     await fillState(indexer, db, argv);

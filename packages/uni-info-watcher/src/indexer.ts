@@ -40,6 +40,7 @@ import { Tick } from './entity/Tick';
 import { Contract, KIND_POOL } from './entity/Contract';
 import { IPLDBlock } from './entity/IPLDBlock';
 import { IpldStatus } from './entity/IpldStatus';
+import { createInitialState, createStateCheckpoint } from './hooks';
 
 const SYNC_DELTA = 5;
 
@@ -83,6 +84,7 @@ export class Indexer implements IndexerInterface {
 
   async init (): Promise<void> {
     await this._baseIndexer.fetchContracts();
+    await this._baseIndexer.fetchIPLDStatus();
   }
 
   getResultEvent (event: Event): ResultEvent {
@@ -125,6 +127,16 @@ export class Indexer implements IndexerInterface {
     await this._baseIndexer.pushToIPFS(data);
   }
 
+  async processInitialState (contractAddress: string, blockHash: string): Promise<any> {
+    // Call initial state hook.
+    return createInitialState(this, contractAddress, blockHash);
+  }
+
+  async processStateCheckpoint (contractAddress: string, blockHash: string): Promise<boolean> {
+    // Call checkpoint hook.
+    return createStateCheckpoint(this, contractAddress, blockHash);
+  }
+
   async processCheckpoint (blockHash: string): Promise<void> {
     // Return if checkpointInterval is <= 0.
     const checkpointInterval = this._serverConfig.checkpointInterval;
@@ -143,6 +155,10 @@ export class Indexer implements IndexerInterface {
 
   async getIPLDBlocks (where: FindConditions<IPLDBlock>): Promise<IPLDBlock[]> {
     return this._db.getIPLDBlocks(where);
+  }
+
+  async getIPLDBlockByCid (cid: string): Promise<IPLDBlock | undefined> {
+    return this._baseIndexer.getIPLDBlockByCid(cid);
   }
 
   getIPLDData (ipldBlock: IPLDBlock): any {
