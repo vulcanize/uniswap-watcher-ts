@@ -79,7 +79,13 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('bundles').inc(1);
 
-        return indexer.getEntities(Bundle, block, { id: BUNDLE_ID }, { limit: first });
+        let where = {};
+        if (!indexer._isDemo) {
+          // Filter using address deployed on mainnet if not in demo mode
+          where = { id: BUNDLE_ID };
+        }
+
+        return indexer.getEntities(Bundle, block, where, { limit: first });
       },
 
       burns: async (
@@ -110,7 +116,13 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('factories').inc(1);
 
-        return indexer.getEntities(Factory, block, { id: FACTORY_ADDRESS }, { limit: first });
+        let where = {};
+        if (!indexer._isDemo) {
+          // Filter using address deployed on mainnet if not in demo mode
+          where = { id: FACTORY_ADDRESS };
+        }
+
+        return indexer.getEntities(Factory, block, where, { limit: first });
       },
 
       mints: async (
