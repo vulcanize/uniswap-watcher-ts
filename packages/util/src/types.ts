@@ -2,12 +2,14 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
+import { IPLDDatabaseInterface, IPLDIndexerInterface } from '@cerc-io/util';
 import { Connection, DeepPartial, FindConditions, FindManyOptions, QueryRunner } from 'typeorm';
 
-import { Where, QueryOptions, CachedEntities } from './database';
+import { Where, QueryOptions } from './database';
 
 export interface BlockProgressInterface {
   id: number;
+  cid: string;
   blockHash: string;
   parentHash: string;
   blockNumber: number;
@@ -28,6 +30,8 @@ export interface SyncStatusInterface {
   latestIndexedBlockNumber: number;
   latestCanonicalBlockHash: string;
   latestCanonicalBlockNumber: number;
+  initialIndexedBlockHash: string;
+  initialIndexedBlockNumber: number;
 }
 
 export interface EventInterface {
@@ -47,9 +51,10 @@ export interface ContractInterface {
   address: string;
   startingBlock: number;
   kind: string;
+  checkpoint: boolean;
 }
 
-export interface IndexerInterface {
+export interface IndexerInterface extends IPLDIndexerInterface {
   getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>
   getBlockProgressEntities (where: FindConditions<BlockProgressInterface>, options: FindManyOptions<BlockProgressInterface>): Promise<BlockProgressInterface[]>
   getEvent (id: string): Promise<EventInterface | undefined>
@@ -81,7 +86,7 @@ export interface EventWatcherInterface {
   initEventProcessingOnCompleteHandler (): Promise<void>
 }
 
-export interface DatabaseInterface {
+export interface DatabaseInterface extends IPLDDatabaseInterface {
   _conn: Connection;
   createTransactionRunner(): Promise<QueryRunner>;
   getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
@@ -103,5 +108,4 @@ export interface DatabaseInterface {
   saveEventEntity (queryRunner: QueryRunner, entity: EventInterface): Promise<EventInterface>;
   removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void>;
   getContracts: () => Promise<ContractInterface[]>
-  saveContract: (queryRunner: QueryRunner, contractAddress: string, kind: string, startingBlock: number) => Promise<ContractInterface>
 }

@@ -46,6 +46,9 @@ import { Block } from './events';
 import { SyncStatus } from './entity/SyncStatus';
 import { TickDayData } from './entity/TickDayData';
 import { Contract } from './entity/Contract';
+import { IPLDBlock } from './entity/IPLDBlock';
+import { StateKind } from '@cerc-io/util';
+import { IpldStatus } from './entity/IpldStatus';
 
 // Map: Entity to suitable query type.
 const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, number>([
@@ -87,6 +90,10 @@ export class Database implements DatabaseInterface {
     this._populateRelationsMap();
   }
 
+  get relationsMap () {
+    return this._relationsMap;
+  }
+
   get cachedEntities () {
     return this._baseDatabase.cachedEntities;
   }
@@ -97,6 +104,71 @@ export class Database implements DatabaseInterface {
 
   async close (): Promise<void> {
     return this._baseDatabase.close();
+  }
+
+  getNewIPLDBlock (): IPLDBlock {
+    return new IPLDBlock();
+  }
+
+  async getIPLDBlocks (where: FindConditions<IPLDBlock>): Promise<IPLDBlock[]> {
+    const repo = this._conn.getRepository(IPLDBlock);
+
+    return this._baseDatabase.getIPLDBlocks(repo, where);
+  }
+
+  async getLatestIPLDBlock (contractAddress: string, kind: StateKind | null, blockNumber?: number): Promise<IPLDBlock | undefined> {
+    const repo = this._conn.getRepository(IPLDBlock);
+
+    return this._baseDatabase.getLatestIPLDBlock(repo, contractAddress, kind, blockNumber);
+  }
+
+  // Fetch all diff IPLDBlocks after the specified block number.
+  async getDiffIPLDBlocksInRange (contractAddress: string, startblock: number, endBlock: number): Promise<IPLDBlock[]> {
+    const repo = this._conn.getRepository(IPLDBlock);
+
+    return this._baseDatabase.getDiffIPLDBlocksInRange(repo, contractAddress, startblock, endBlock);
+  }
+
+  async saveOrUpdateIPLDBlock (dbTx: QueryRunner, ipldBlock: IPLDBlock): Promise<IPLDBlock> {
+    const repo = dbTx.manager.getRepository(IPLDBlock);
+
+    return this._baseDatabase.saveOrUpdateIPLDBlock(repo, ipldBlock);
+  }
+
+  async removeIPLDBlocks (dbTx: QueryRunner, blockNumber: number, kind: string): Promise<void> {
+    const repo = dbTx.manager.getRepository(IPLDBlock);
+
+    await this._baseDatabase.removeIPLDBlocks(repo, blockNumber, kind);
+  }
+
+  async removeStateAfterBlock (dbTx: QueryRunner, blockNumber: number): Promise<void> {
+    const repo = dbTx.manager.getRepository(IPLDBlock);
+
+    await this._baseDatabase.removeIPLDBlocksAfterBlock(repo, blockNumber);
+  }
+
+  async getIPLDStatus (): Promise<IpldStatus | undefined> {
+    const repo = this._conn.getRepository(IpldStatus);
+
+    return this._baseDatabase.getIPLDStatus(repo);
+  }
+
+  async updateIPLDStatusHooksBlock (queryRunner: QueryRunner, blockNumber: number, force?: boolean): Promise<IpldStatus> {
+    const repo = queryRunner.manager.getRepository(IpldStatus);
+
+    return this._baseDatabase.updateIPLDStatusHooksBlock(repo, blockNumber, force);
+  }
+
+  async updateIPLDStatusCheckpointBlock (queryRunner: QueryRunner, blockNumber: number, force?: boolean): Promise<IpldStatus> {
+    const repo = queryRunner.manager.getRepository(IpldStatus);
+
+    return this._baseDatabase.updateIPLDStatusCheckpointBlock(repo, blockNumber, force);
+  }
+
+  async updateIPLDStatusIPFSBlock (queryRunner: QueryRunner, blockNumber: number, force?: boolean): Promise<IpldStatus> {
+    const repo = queryRunner.manager.getRepository(IpldStatus);
+
+    return this._baseDatabase.updateIPLDStatusIPFSBlock(repo, blockNumber, force);
   }
 
   async getFactory (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Factory>): Promise<Factory | undefined> {
@@ -437,6 +509,18 @@ export class Database implements DatabaseInterface {
     return entity;
   }
 
+  async getEntitiesForBlock (blockHash: string, tableName: string): Promise<any[]> {
+    const repo = this._conn.getRepository(tableName);
+
+    const entities = await repo.find({
+      where: {
+        blockHash
+      }
+    });
+
+    return entities;
+  }
+
   async getModelEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, block: BlockHeight, where: Where = {}, queryOptions: QueryOptions = {}, selections: ReadonlyArray<SelectionNode> = []): Promise<Entity[]> {
     return this._baseDatabase.getModelEntities(queryRunner, this._relationsMap, ENTITY_QUERY_TYPE_MAP, entity, block, where, queryOptions, selections);
   }
@@ -631,10 +715,10 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getContracts(repo);
   }
 
-  async saveContract (queryRunner: QueryRunner, address: string, kind: string, startingBlock: number): Promise<Contract> {
+  async saveContract (queryRunner: QueryRunner, address: string, kind: string, checkpoint: boolean, startingBlock: number): Promise<Contract> {
     const repo = queryRunner.manager.getRepository(Contract);
 
-    return this._baseDatabase.saveContract(repo, address, startingBlock, kind);
+    return this._baseDatabase.saveContract(repo, address, kind, checkpoint, startingBlock);
   }
 
   async createTransactionRunner (): Promise<QueryRunner> {
@@ -662,6 +746,13 @@ export class Database implements DatabaseInterface {
     const repo = this._conn.getRepository(Event);
 
     return this._baseDatabase.getBlockEvents(repo, blockHash, where, queryOptions);
+  }
+
+  async saveBlockWithEvents (queryRunner: QueryRunner, block: DeepPartial<BlockProgress>, events: DeepPartial<Event>[]): Promise<BlockProgress> {
+    const blockRepo = queryRunner.manager.getRepository(BlockProgress);
+    const eventRepo = queryRunner.manager.getRepository(Event);
+
+    return this._baseDatabase.saveBlockWithEvents(blockRepo, eventRepo, block, events);
   }
 
   async saveEvents (queryRunner: QueryRunner, events: Event[]): Promise<void> {

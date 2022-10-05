@@ -12,7 +12,7 @@ import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
 import { wait } from './misc';
 import { createPruningJob } from './common';
-import { eventProcessingLoadEntityCacheHitCount, eventProcessingLoadEntityCount, lastBlockNumEvents, lastBlockProcessDuration, lastProcessedBlockNumber } from './metrics';
+import { lastBlockNumEvents, lastBlockProcessDuration, lastProcessedBlockNumber } from './metrics';
 
 const log = debug('vulcanize:job-runner');
 
@@ -341,8 +341,6 @@ export class JobRunner {
           dbEvent.eventInfo = JSON.stringify(eventInfo);
         }
 
-        eventProcessingLoadEntityCount.set(0);
-        eventProcessingLoadEntityCacheHitCount.set(0);
         await this._indexer.processEvent(dbEvent);
       }
 
@@ -367,9 +365,6 @@ export class JobRunner {
         const watchedContract = this._indexer.isWatchedContract(dbEvent.contract);
 
         if (watchedContract) {
-          eventProcessingLoadEntityCount.set(0);
-          eventProcessingLoadEntityCacheHitCount.set(0);
-
           // Events of contract added in same block might be processed multiple times.
           // This is because there is no check for lastProcessedEventIndex against these events.
           await this._indexer.processEvent(dbEvent);

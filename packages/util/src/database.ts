@@ -26,6 +26,7 @@ import { SelectionNode } from 'graphql';
 import { BlockProgressInterface, ContractInterface, EventInterface, SyncStatusInterface } from './types';
 import { MAX_REORG_DEPTH, UNKNOWN_EVENT_NAME } from './constants';
 import { blockProgressCount, eventCount, eventProcessingLoadEntityDBQueryDuration, eventProcessingLoadEntityCacheHitCount, eventProcessingLoadEntityCount } from './metrics';
+import { IPLDDatabase } from '@cerc-io/util';
 
 const OPERATOR_MAP = {
   equals: '=',
@@ -88,7 +89,7 @@ export interface CachedEntities {
   latestPrunedEntities: Map<string, Map<string, { [key: string]: any }>>;
 }
 
-export class Database {
+export class Database extends IPLDDatabase {
   _config: ConnectionOptions
   _conn!: Connection
   _blockCount = 0
@@ -99,11 +100,12 @@ export class Database {
   }
 
   constructor (config: ConnectionOptions) {
+    super(config);
     assert(config);
     this._config = config;
   }
 
-  get cachedEntities () {
+  get cachedEntities (): CachedEntities {
     return this._cachedEntities;
   }
 
@@ -949,13 +951,13 @@ export class Database {
       .getMany();
   }
 
-  async saveContract (repo: Repository<ContractInterface>, address: string, startingBlock: number, kind?: string): Promise<ContractInterface> {
+  async saveContract (repo: Repository<ContractInterface>, address: string, kind: string, checkpoint: boolean, startingBlock: number): Promise<ContractInterface> {
     const contract = await repo
       .createQueryBuilder()
       .where('address = :address', { address })
       .getOne();
 
-    const entity = repo.create({ address, kind, startingBlock });
+    const entity = repo.create({ address, kind, checkpoint, startingBlock });
 
     // If contract already present, overwrite fields.
     if (contract) {

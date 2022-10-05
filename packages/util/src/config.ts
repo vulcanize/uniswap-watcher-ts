@@ -8,29 +8,19 @@ import path from 'path';
 import toml from 'toml';
 import debug from 'debug';
 import { ConnectionOptions } from 'typeorm';
+import { providers } from 'ethers';
 
-import { BaseProvider } from '@ethersproject/providers';
 import { Config as CacheConfig, getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
+import { EthClient } from '@cerc-io/ipld-eth-client';
+import { JobQueueConfig as WatcherJobQueueConfig, ServerConfig } from '@cerc-io/util';
 
 import { getCustomProvider } from './misc';
 
 const log = debug('vulcanize:config');
 
-export interface JobQueueConfig {
-  dbConnectionString: string;
-  maxCompletionLagInSecs: number;
-  jobDelayInMilliSecs?: number;
-  eventsInBatch: number;
+export interface JobQueueConfig extends WatcherJobQueueConfig {
   lazyUpdateBlockProgress?: boolean;
   subgraphEventsOrder: boolean;
-}
-
-interface ServerConfig {
-  host: string;
-  port: number;
-  mode: string;
-  kind: string;
 }
 
 export interface GQLMetricsConfig {
@@ -87,7 +77,7 @@ export const getResetConfig = async (config: Config): Promise<{
   serverConfig: ServerConfig,
   upstreamConfig: UpstreamConfig,
   ethClient: EthClient,
-  ethProvider: BaseProvider
+  ethProvider: providers.BaseProvider
 }> => {
   const { database: dbConfig, upstream: upstreamConfig, server: serverConfig } = config;
 

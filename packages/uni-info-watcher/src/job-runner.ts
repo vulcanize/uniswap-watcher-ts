@@ -11,7 +11,6 @@ import debug from 'debug';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
 import {
   getConfig,
   JobQueue,
@@ -23,6 +22,7 @@ import {
   getCustomProvider,
   startMetricsServer
 } from '@vulcanize/util';
+import { EthClient } from '@cerc-io/ipld-eth-client';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
@@ -124,7 +124,7 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(config.server, db, uniClient, erc20Client, ethClient, ethProvider, jobQueue);
   await indexer.init();
 
   if (mode !== 'demo') {

@@ -7,8 +7,9 @@ import { DeepPartial, FindConditions, FindManyOptions } from 'typeorm';
 import debug from 'debug';
 import { ethers } from 'ethers';
 
-import { EthClient } from '@vulcanize/ipld-eth-client';
+import { EthClient } from '@cerc-io/ipld-eth-client';
 import { GetStorageAt, getStorageValue, StorageLayout } from '@vulcanize/solidity-mapper';
+import { IPFSClient, IPLDIndexer, ServerConfig } from '@cerc-io/util';
 
 import { BlockProgressInterface, DatabaseInterface, EventInterface, SyncStatusInterface, ContractInterface } from './types';
 import { UNKNOWN_EVENT_NAME, JOB_KIND_CONTRACT, QUEUE_EVENT_PROCESSING } from './constants';
@@ -26,33 +27,27 @@ export interface ValueResult {
   }
 }
 
-export class Indexer {
+export class Indexer extends IPLDIndexer {
   _db: DatabaseInterface;
   _ethClient: EthClient;
   _getStorageAt: GetStorageAt;
   _ethProvider: ethers.providers.BaseProvider;
   _jobQueue: JobQueue;
 
-  _watchedContracts: { [key: string]: ContractInterface } = {};
-
-  constructor (db: DatabaseInterface, ethClient: EthClient, ethProvider: ethers.providers.BaseProvider, jobQueue: JobQueue) {
+  constructor (
+    serverConfig: ServerConfig,
+    db: DatabaseInterface,
+    ethClient: EthClient,
+    ethProvider: ethers.providers.BaseProvider,
+    jobQueue: JobQueue,
+    ipfsClient: IPFSClient
+  ) {
+    super(serverConfig, db, ethClient, ethProvider, jobQueue, ipfsClient);
     this._db = db;
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
     this._jobQueue = jobQueue;
     this._getStorageAt = this._ethClient.getStorageAt.bind(this._ethClient);
-  }
-
-  async fetchContracts (): Promise<void> {
-    assert(this._db.getContracts);
-
-    const contracts = await this._db.getContracts();
-
-    this._watchedContracts = contracts.reduce((acc: { [key: string]: ContractInterface }, contract) => {
-      acc[contract.address] = contract;
-
-      return acc;
-    }, {});
   }
 
   async getSyncStatus (): Promise<SyncStatusInterface | undefined> {
@@ -225,7 +220,7 @@ export class Indexer {
     return this._db.getBlockEvents(blockHash, where, queryOptions);
   }
 
-  async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<EventInterface>> {
+  async getEventsByFilter (blockHash: string, contract: string, name?: string): Promise<Array<EventInterface>> {
     if (contract) {
       const watchedContract = await this.isWatchedContract(contract);
       if (!watchedContract) {
@@ -336,7 +331,7 @@ export class Indexer {
     return this._watchedContracts[address];
   }
 
-  async watchContract (address: string, kind: string, startingBlock: number): Promise<void> {
+  async watchContract (address: string, kind: string, checkpoint: boolean, startingBlock: number): Promise<void> {
     assert(this._db.saveContract);
     const dbTx = await this._db.createTransactionRunner();
 
@@ -344,7 +339,7 @@ export class Indexer {
     const contractAddress = ethers.utils.getAddress(address);
 
     try {
-      const contract = await this._db.saveContract(dbTx, contractAddress, kind, startingBlock);
+      const contract = await this._db.saveContract(dbTx, contractAddress, kind, checkpoint, startingBlock);
       this.cacheContract(contract);
       await dbTx.commitTransaction();
 

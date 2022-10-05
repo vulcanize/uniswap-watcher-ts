@@ -15,6 +15,10 @@ export class BlockProgress implements BlockProgressInterface {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  // TODO: Remove nullable after cid for all blocks updated.
+  @Column('varchar', { nullable: true })
+  cid!: string;
+
   @Column('varchar', { length: 66 })
   blockHash!: string;
 
