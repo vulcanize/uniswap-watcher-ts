@@ -7,7 +7,8 @@ import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 import { GraphQLResolveInfo, GraphQLScalarType } from 'graphql';
 
-import { BlockHeight, gqlQueryCount, gqlTotalQueryCount, GraphDecimal, OrderDirection } from '@vulcanize/util';
+import { gqlQueryCount, gqlTotalQueryCount, GraphDecimal } from '@vulcanize/util';
+import { BlockHeight, OrderDirection } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
 import { Burn } from './entity/Burn';

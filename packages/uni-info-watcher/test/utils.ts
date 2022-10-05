@@ -6,7 +6,8 @@ import { expect } from 'chai';
 import { ethers } from 'ethers';
 import _ from 'lodash';
 
-import { OrderDirection, GraphDecimal } from '@vulcanize/util';
+import { OrderDirection } from '@cerc-io/util';
+import { GraphDecimal } from '@vulcanize/util';
 import { insertNDummyBlocks } from '@vulcanize/util/test';
 
 import { Database } from '../src/database';

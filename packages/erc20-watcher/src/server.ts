@@ -13,8 +13,8 @@ import 'graphql-import-node';
 import { createServer } from 'http';
 
 import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
 import { DEFAULT_CONFIG_PATH, getConfig, getCustomProvider, JobQueue, KIND_ACTIVE, startGQLMetricsServer } from '@vulcanize/util';
+import { EthClient } from '@cerc-io/ipld-eth-client';
 
 import typeDefs from './schema';
 
@@ -41,7 +41,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { host, port, mode, kind: watcherKind } = config.server;
+  const { host, port, kind: watcherKind } = config.server;
 
   const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
@@ -73,7 +73,7 @@ export const main = async (): Promise<any> => {
 
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
 
-  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
 
   const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);
 

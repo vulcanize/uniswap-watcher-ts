@@ -103,11 +103,11 @@ export const handler = async (argv: any): Promise<void> => {
       Transaction,
       UniswapDayData
     ].map(async entityClass => {
-      return db.removeEntities<any>(dbTx, entityClass, { blockNumber: MoreThan(argv.blockNumber) });
+      return db.deleteEntitiesByConditions<any>(dbTx, entityClass, { blockNumber: MoreThan(argv.blockNumber) });
     });
 
     await Promise.all(removeEntitiesPromise);
-    await db.removeEntities(dbTx, Contract, { startingBlock: MoreThan(argv.blockNumber) });
+    await db.deleteEntitiesByConditions(dbTx, Contract, { startingBlock: MoreThan(argv.blockNumber) });
 
     if (syncStatus.latestIndexedBlockNumber > blockProgress.blockNumber) {
       await indexer.updateSyncStatusIndexedBlock(blockProgress.blockHash, blockProgress.blockNumber, true);

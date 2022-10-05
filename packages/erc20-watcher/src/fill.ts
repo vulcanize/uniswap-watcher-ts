@@ -10,8 +10,8 @@ import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
 
 import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
 import { getConfig, fillBlocks, JobQueue, DEFAULT_CONFIG_PATH, getCustomProvider } from '@vulcanize/util';
+import { EthClient } from '@cerc-io/ipld-eth-client';
 
 import { Database } from './database';
 import { Indexer } from './indexer';
@@ -61,7 +61,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode } } = config;
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
   assert(dbConfig, 'Missing database config');
 
@@ -89,7 +89,7 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
 
   const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);
 

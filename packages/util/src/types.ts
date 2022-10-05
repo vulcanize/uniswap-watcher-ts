@@ -2,10 +2,9 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { IPLDDatabaseInterface, IPLDIndexerInterface } from '@cerc-io/util';
-import { Connection, DeepPartial, FindConditions, FindManyOptions, QueryRunner } from 'typeorm';
+import { DeepPartial } from 'typeorm';
 
-import { Where, QueryOptions } from './database';
+import { IndexerInterface as BaseIndexerInterface } from '@cerc-io/util';
 
 export interface BlockProgressInterface {
   id: number;
@@ -54,58 +53,14 @@ export interface ContractInterface {
   checkpoint: boolean;
 }
 
-export interface IndexerInterface extends IPLDIndexerInterface {
-  getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>
-  getBlockProgressEntities (where: FindConditions<BlockProgressInterface>, options: FindManyOptions<BlockProgressInterface>): Promise<BlockProgressInterface[]>
-  getEvent (id: string): Promise<EventInterface | undefined>
-  getSyncStatus (): Promise<SyncStatusInterface | undefined>;
-  getBlocks (blockFilter: { blockHash?: string, blockNumber?: number }): Promise<any>
-  getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
-  getBlockEvents (blockHash: string, where: Where, queryOptions: QueryOptions): Promise<Array<EventInterface>>
-  getAncestorAtDepth (blockHash: string, depth: number): Promise<string>
+export interface IndexerInterface extends BaseIndexerInterface {
   fetchBlockEvents (block: DeepPartial<BlockProgressInterface>): Promise<DeepPartial<EventInterface>[]>
   saveBlockProgress (block: DeepPartial<BlockProgressInterface>): Promise<BlockProgressInterface>
-  removeUnknownEvents (block: BlockProgressInterface): Promise<void>
-  updateBlockProgress (block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<BlockProgressInterface>
-  updateSyncStatusChainHead (blockHash: string, blockNumber: number, force?: boolean): Promise<SyncStatusInterface>
-  updateSyncStatusIndexedBlock (blockHash: string, blockNumber: number, force?: boolean): Promise<SyncStatusInterface>
-  updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force?: boolean): Promise<SyncStatusInterface>
-  markBlocksAsPruned (blocks: BlockProgressInterface[]): Promise<void>;
-  saveEventEntity (dbEvent: EventInterface): Promise<EventInterface>;
   saveEvents (dbEvents: EventInterface[]): Promise<void>;
-  processEvent (event: EventInterface): Promise<void>;
-  processBlock (blockProgress: BlockProgressInterface): Promise<void>;
-  parseEventNameAndArgs?: (kind: string, logObj: any) => any;
-  isWatchedContract: (address: string) => ContractInterface | undefined;
-  cacheContract?: (contract: ContractInterface) => void;
 }
 
 export interface EventWatcherInterface {
   getBlockProgressEventIterator (): AsyncIterator<any>
   initBlockProcessingOnCompleteHandler (): Promise<void>
   initEventProcessingOnCompleteHandler (): Promise<void>
-}
-
-export interface DatabaseInterface extends IPLDDatabaseInterface {
-  _conn: Connection;
-  createTransactionRunner(): Promise<QueryRunner>;
-  getBlocksAtHeight (height: number, isPruned: boolean): Promise<BlockProgressInterface[]>;
-  getBlockProgress (blockHash: string): Promise<BlockProgressInterface | undefined>;
-  getBlockProgressEntities (where: FindConditions<BlockProgressInterface>, options: FindManyOptions<BlockProgressInterface>): Promise<BlockProgressInterface[]>
-  getBlockEvents (blockHash: string, where?: Where, queryOptions?: QueryOptions): Promise<EventInterface[]>;
-  getEvent (id: string): Promise<EventInterface | undefined>
-  getSyncStatus (queryRunner: QueryRunner): Promise<SyncStatusInterface | undefined>
-  getAncestorAtDepth (blockHash: string, depth: number): Promise<string>
-  getProcessedBlockCountForRange (fromBlockNumber: number, toBlockNumber: number): Promise<{ expected: number, actual: number }>;
-  getEventsInRange (fromBlockNumber: number, toBlockNumber: number): Promise<Array<EventInterface>>;
-  markBlocksAsPruned (queryRunner: QueryRunner, blocks: BlockProgressInterface[]): Promise<void>;
-  saveBlockProgress (queryRunner: QueryRunner, block: DeepPartial<BlockProgressInterface>): Promise<BlockProgressInterface>
-  updateBlockProgress (queryRunner: QueryRunner, block: BlockProgressInterface, lastProcessedEventIndex: number): Promise<BlockProgressInterface>
-  updateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, force?: boolean): Promise<SyncStatusInterface>;
-  updateSyncStatusChainHead (queryRunner: QueryRunner, blockHash: string, blockNumber: number, force?: boolean): Promise<SyncStatusInterface>;
-  updateSyncStatusCanonicalBlock (queryRunner: QueryRunner, blockHash: string, blockNumber: number, force?: boolean): Promise<SyncStatusInterface>;
-  saveEvents (queryRunner: QueryRunner, events: DeepPartial<EventInterface>[]): Promise<void>;
-  saveEventEntity (queryRunner: QueryRunner, entity: EventInterface): Promise<EventInterface>;
-  removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void>;
-  getContracts: () => Promise<ContractInterface[]>
 }

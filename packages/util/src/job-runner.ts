@@ -348,10 +348,6 @@ export class JobRunner {
       if (this._jobQueueConfig.lazyUpdateBlockProgress) {
         block.lastProcessedEventIndex = dbEvent.index;
         block.numProcessedEvents++;
-
-        if (block.numProcessedEvents >= block.numEvents) {
-          block.isComplete = true;
-        }
       } else {
         block = await this._indexer.updateBlockProgress(block, dbEvent.index);
       }
@@ -380,18 +376,17 @@ export class JobRunner {
     }
 
     console.timeEnd('time:job-runner#_processEvents-processing_events');
+    block.isComplete = true;
 
-    // Save events after block processing complete.
-    await this._indexer.saveEvents(dbEvents.filter(event => event.eventName !== UNKNOWN_EVENT_NAME));
+    // Save events and update block after block processing complete.
+    console.time('time:job-runner#_processEvents-updateBlockProgress-saveEvents');
+    await Promise.all([
+      this._indexer.updateBlockProgress(block, block.lastProcessedEventIndex),
+      this._indexer.saveEvents(dbEvents.filter(event => event.eventName !== UNKNOWN_EVENT_NAME))
+    ]);
+    console.timeEnd('time:job-runner#_processEvents-updateBlockProgress-saveEvents');
     this._blockEventsMap.delete(block.blockHash);
     log('size:job-runner#_processEvents-_blockEventsMap:', this._blockEventsMap.size);
-
-    if (this._jobQueueConfig.lazyUpdateBlockProgress) {
-      // Update in database at end of all events processing.
-      console.time('time:job-runner#_processEvents-updateBlockProgress');
-      await this._indexer.updateBlockProgress(block, block.lastProcessedEventIndex);
-      console.timeEnd('time:job-runner#_processEvents-updateBlockProgress');
-    }
 
     console.timeEnd('time:job-runner#_processEvents-events');
   }

@@ -9,7 +9,7 @@ import 'reflect-metadata';
 import { Config, DEFAULT_CONFIG_PATH, getConfig, getResetConfig, JobQueue } from '@vulcanize/util';
 
 import { Database } from '../database';
-import { Indexer } from '../indexer';
+import { CONTRACT_KIND, Indexer } from '../indexer';
 
 (async () => {
   const argv = await yargs.parserConfiguration({
@@ -29,6 +29,12 @@ import { Indexer } from '../indexer';
       demandOption: true,
       describe: 'Address of the deployed contract'
     },
+    checkpoint: {
+      type: 'boolean',
+      require: true,
+      demandOption: true,
+      describe: 'Turn checkpointing on'
+    },
     startingBlock: {
       type: 'number',
       default: 1,
@@ -37,7 +43,7 @@ import { Indexer } from '../indexer';
   }).argv;
 
   const config: Config = await getConfig(argv.configFile);
-  const { database: dbConfig, server: { mode }, jobQueue: jobQueueConfig } = config;
+  const { database: dbConfig, jobQueue: jobQueueConfig } = config;
   const { ethClient, ethProvider } = await getResetConfig(config);
 
   assert(dbConfig);
@@ -53,9 +59,9 @@ import { Indexer } from '../indexer';
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
 
-  await indexer.watchContract(argv.address, argv.startingBlock);
+  await indexer.watchContract(argv.address, CONTRACT_KIND, argv.checkpoint, argv.startingBlock);
 
   await db.close();
   await jobQueue.stop();

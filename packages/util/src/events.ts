@@ -7,13 +7,13 @@ import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
+import { OrderDirection } from '@cerc-io/util';
 
 import { JobQueue } from './job-queue';
 import { BlockProgressInterface, EventInterface, IndexerInterface } from './types';
 import { MAX_REORG_DEPTH, JOB_KIND_PRUNE, JOB_KIND_INDEX, UNKNOWN_EVENT_NAME } from './constants';
 import { createPruningJob, processBlockByNumber } from './common';
 import { UpstreamConfig } from './config';
-import { OrderDirection } from './database';
 
 const log = debug('vulcanize:events');
 

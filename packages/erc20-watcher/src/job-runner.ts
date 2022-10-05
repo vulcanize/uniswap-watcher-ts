@@ -8,8 +8,8 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 
+import { EthClient } from '@cerc-io/ipld-eth-client';
 import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
 import {
   getConfig,
   JobQueue,
@@ -100,7 +100,7 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
 
   const jobRunner = new JobRunner(jobQueueConfig, indexer, jobQueue);
   await jobRunner.start();

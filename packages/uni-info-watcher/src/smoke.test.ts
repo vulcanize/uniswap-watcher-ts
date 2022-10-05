@@ -7,11 +7,11 @@ import { ethers, Contract, Signer, constants, utils } from 'ethers';
 import 'mocha';
 import _ from 'lodash';
 
+import { OrderDirection } from '@cerc-io/util';
 import {
   Config,
   getConfig,
-  wait,
-  OrderDirection
+  wait
 } from '@vulcanize/util';
 import {
   deployTokens,

@@ -6,9 +6,10 @@ import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 
-import { ValueResult, gqlTotalQueryCount, gqlQueryCount } from '@vulcanize/util';
+import { gqlTotalQueryCount, gqlQueryCount } from '@vulcanize/util';
+import { ValueResult } from '@cerc-io/util';
 
-import { Indexer } from './indexer';
+import { CONTRACT_KIND, Indexer } from './indexer';
 import { EventWatcher } from './events';
 
 const log = debug('vulcanize:resolver');
@@ -34,9 +35,9 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
     },
 
     Mutation: {
-      watchToken: async (_: any, { token, startingBlock = 1 }: { token: string, startingBlock: number }): Promise<boolean> => {
-        log('watchToken', token, startingBlock);
-        await indexer.watchContract(token, startingBlock);
+      watchToken: async (_: any, { token, checkpoint = false, startingBlock = 1 }: { token: string, checkpoint: boolean, startingBlock: number }): Promise<boolean> => {
+        log('watchToken', token, checkpoint, startingBlock);
+        await indexer.watchContract(token, CONTRACT_KIND, checkpoint, startingBlock);
 
         return true;
       }

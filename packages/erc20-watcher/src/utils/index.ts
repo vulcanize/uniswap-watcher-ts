@@ -2,15 +2,14 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { Contract, utils } from 'ethers';
-import { BaseProvider } from '@ethersproject/providers';
+import { Contract, utils, providers } from 'ethers';
 
 import { abi } from '../artifacts/ERC20.json';
 import ERC20SymbolBytesABI from '../artifacts/ERC20SymbolBytes.json';
 import ERC20NameBytesABI from '../artifacts/ERC20NameBytes.json';
 import { StaticTokenDefinition } from './static-token-definition';
 
-export const fetchTokenSymbol = async (ethProvider: BaseProvider, blockHash: string, tokenAddress: string): Promise<string> => {
+export const fetchTokenSymbol = async (ethProvider: providers.BaseProvider, blockHash: string, tokenAddress: string): Promise<string> => {
   const contract = new Contract(tokenAddress, abi, ethProvider);
   const contractSymbolBytes = new Contract(tokenAddress, ERC20SymbolBytesABI, ethProvider);
   let symbolValue = 'unknown';
@@ -42,7 +41,7 @@ export const fetchTokenSymbol = async (ethProvider: BaseProvider, blockHash: str
   return symbolValue;
 };
 
-export const fetchTokenName = async (ethProvider: BaseProvider, blockHash: string, tokenAddress: string): Promise<string> => {
+export const fetchTokenName = async (ethProvider: providers.BaseProvider, blockHash: string, tokenAddress: string): Promise<string> => {
   const contract = new Contract(tokenAddress, abi, ethProvider);
   const contractNameBytes = new Contract(tokenAddress, ERC20NameBytesABI, ethProvider);
   let nameValue = 'unknown';
@@ -74,7 +73,7 @@ export const fetchTokenName = async (ethProvider: BaseProvider, blockHash: strin
   return nameValue;
 };
 
-export const fetchTokenTotalSupply = async (ethProvider: BaseProvider, blockHash: string, tokenAddress: string): Promise<bigint> => {
+export const fetchTokenTotalSupply = async (ethProvider: providers.BaseProvider, blockHash: string, tokenAddress: string): Promise<bigint> => {
   const contract = new Contract(tokenAddress, abi, ethProvider);
   let totalSupplyValue = null;
 
@@ -88,7 +87,7 @@ export const fetchTokenTotalSupply = async (ethProvider: BaseProvider, blockHash
   return BigInt(totalSupplyValue);
 };
 
-export const fetchTokenDecimals = async (ethProvider: BaseProvider, blockHash: string, tokenAddress: string): Promise<bigint> => {
+export const fetchTokenDecimals = async (ethProvider: providers.BaseProvider, blockHash: string, tokenAddress: string): Promise<bigint> => {
   const contract = new Contract(tokenAddress, abi, ethProvider);
 
   // Try types uint8 for decimals.

@@ -8,11 +8,11 @@ import { JsonFragment } from '@ethersproject/abi';
 import { DeepPartial, FindConditions, FindManyOptions } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
-import { BaseProvider } from '@ethersproject/providers';
 
-import { EthClient } from '@vulcanize/ipld-eth-client';
-import { StorageLayout } from '@vulcanize/solidity-mapper';
-import { Indexer as BaseIndexer, ValueResult, UNKNOWN_EVENT_NAME, JobQueue, Where, QueryOptions } from '@vulcanize/util';
+import { UNKNOWN_EVENT_NAME, JobQueue, IndexerInterface } from '@vulcanize/util';
+import { EthClient } from '@cerc-io/ipld-eth-client';
+import { Indexer as BaseIndexer, IPFSClient, ServerConfig, IpldStatus as IpldStatusInterface, ValueResult, Where, QueryOptions } from '@cerc-io/util';
+import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { Database } from './database';
 import { Event } from './entity/Event';
@@ -21,6 +21,7 @@ import { SyncStatus } from './entity/SyncStatus';
 import artifacts from './artifacts/ERC20.json';
 import { BlockProgress } from './entity/BlockProgress';
 import { Contract } from './entity/Contract';
+import { IPLDBlock } from './entity/IPLDBlock';
 
 const log = debug('vulcanize:indexer');
 
@@ -29,7 +30,7 @@ const ETH_CALL_MODE = 'eth_call';
 const TRANSFER_EVENT = 'Transfer';
 const APPROVAL_EVENT = 'Approval';
 
-const CONTRACT_KIND = 'token';
+export const CONTRACT_KIND = 'token';
 
 interface EventResult {
   event: {
@@ -43,26 +44,30 @@ interface EventResult {
   proof?: string;
 }
 
-export class Indexer {
+export class Indexer implements IndexerInterface {
   _db: Database
   _ethClient: EthClient
-  _ethProvider: BaseProvider
+  _ethProvider: ethers.providers.BaseProvider
   _baseIndexer: BaseIndexer
+  _serverConfig: ServerConfig
+  _storageLayoutMap: Map<string, StorageLayout> = new Map()
 
   _abi: JsonFragment[]
   _storageLayout: StorageLayout
   _contract: ethers.utils.Interface
   _serverMode: string
 
-  constructor (db: Database, ethClient: EthClient, ethProvider: BaseProvider, jobQueue: JobQueue, serverMode: string) {
+  constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, ethProvider: ethers.providers.BaseProvider, jobQueue: JobQueue) {
     assert(db);
     assert(ethClient);
 
     this._db = db;
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
-    this._serverMode = serverMode;
-    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._ethProvider, jobQueue);
+    this._serverConfig = serverConfig;
+    this._serverMode = this._serverConfig.mode;
+    const ipfsClient = new IPFSClient(serverConfig.ipfsApiAddr);
+    this._baseIndexer = new BaseIndexer(serverConfig, this._db, this._ethClient, this._ethProvider, jobQueue, ipfsClient);
 
     const { abi, storageLayout } = artifacts;
 
@@ -73,6 +78,14 @@ export class Indexer {
     this._storageLayout = storageLayout;
 
     this._contract = new ethers.utils.Interface(this._abi);
+  }
+
+  get serverConfig (): ServerConfig {
+    return this._serverConfig;
+  }
+
+  get storageLayoutMap (): Map<string, StorageLayout> {
+    return this._storageLayoutMap;
   }
 
   getResultEvent (event: Event): EventResult {
@@ -86,6 +99,20 @@ export class Indexer {
       // TODO: Return proof only if requested.
       proof: JSON.parse(event.proof)
     };
+  }
+
+  async getStorageValue (storageLayout: StorageLayout, blockHash: string, contractAddress: string, variable: string, ...mappingKeys: MappingKey[]): Promise<ValueResult> {
+    return this._baseIndexer.getStorageValue(
+      storageLayout,
+      blockHash,
+      contractAddress,
+      variable,
+      ...mappingKeys
+    );
+  }
+
+  getIPLDData (ipldBlock: IPLDBlock): any {
+    return this._baseIndexer.getIPLDData(ipldBlock);
   }
 
   async totalSupply (blockHash: string, token: string): Promise<ValueResult> {
@@ -335,7 +362,7 @@ export class Indexer {
     return { eventName, eventInfo };
   }
 
-  async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<Event>> {
+  async getEventsByFilter (blockHash: string, contract: string, name?: string): Promise<Array<Event>> {
     return this._baseIndexer.getEventsByFilter(blockHash, contract, name);
   }
 
@@ -343,8 +370,12 @@ export class Indexer {
     return this._baseIndexer.isWatchedContract(address);
   }
 
-  async watchContract (address: string, startingBlock: number): Promise<void> {
-    return this._baseIndexer.watchContract(address, CONTRACT_KIND, startingBlock);
+  async watchContract (address: string, kind: string, checkpoint: boolean, startingBlock: number): Promise<void> {
+    return this._baseIndexer.watchContract(address, CONTRACT_KIND, checkpoint, startingBlock);
+  }
+
+  async updateIPLDStatusMap (address: string, ipldStatus: IpldStatusInterface): Promise<void> {
+    await this._baseIndexer.updateIPLDStatusMap(address, ipldStatus);
   }
 
   async saveEventEntity (dbEvent: Event): Promise<Event> {
@@ -404,6 +435,11 @@ export class Indexer {
       block,
       this._fetchEvents.bind(this)
     );
+  }
+
+  async fetchBlockWithEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+    // Method not used in uni-info-watcher but required for indexer interface.
+    return new BlockProgress();
   }
 
   async saveBlockProgress (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {

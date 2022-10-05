@@ -12,8 +12,8 @@ import _ from 'lodash';
 
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
-import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight, GraphDecimal, JobQueue, Where, DEFAULT_LIMIT, eventProcessingEthCallDuration } from '@vulcanize/util';
-import { ServerConfig, IPFSClient, IpldStatus as IpldStatusInterface, ValueResult } from '@cerc-io/util';
+import { GraphDecimal, JobQueue, eventProcessingEthCallDuration } from '@vulcanize/util';
+import { ServerConfig, IPFSClient, IpldStatus as IpldStatusInterface, ValueResult, Indexer as BaseIndexer, IndexerInterface, QueryOptions, OrderDirection, BlockHeight, Where } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
@@ -24,7 +24,7 @@ import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv } from './
 import { createTick, feeTierToTickSpacing } from './utils/tick';
 import { FACTORY_ADDRESS, WATCHED_CONTRACTS } from './utils/constants';
 import { Position } from './entity/Position';
-import { Database } from './database';
+import { Database, DEFAULT_LIMIT } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Block, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent } from './events';
 import { Factory } from './entity/Factory';
@@ -54,7 +54,7 @@ export class Indexer implements IndexerInterface {
   _erc20Client: ERC20Client
   _ethClient: EthClient
   _baseIndexer: BaseIndexer
-  _serverConfig: ServerConfig;
+  _serverConfig: ServerConfig
   _isDemo: boolean
   _storageLayoutMap: Map<string, StorageLayout> = new Map()
   _subgraphStateMap: Map<string, any> = new Map()
