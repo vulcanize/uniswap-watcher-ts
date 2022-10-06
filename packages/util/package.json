@@ -5,7 +5,6 @@
   "license": "AGPL-3.0",
   "dependencies": {
     "@ethersproject/providers": "5.3.0",
-    "@vulcanize/solidity-mapper": "^0.1.0",
     "csv-writer": "^1.6.0",
     "debug": "^4.3.1",
     "decimal.js": "^10.3.1",
@@ -22,6 +21,7 @@
   "devDependencies": {
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@types/fs-extra": "^9.0.11",
+    "@types/node-fetch": "2.x",
     "@typescript-eslint/eslint-plugin": "^4.25.0",
     "@typescript-eslint/parser": "^4.25.0",
     "@uniswap/v3-periphery": "1.0.0",

@@ -54,6 +54,11 @@ export const main = async (): Promise<any> => {
       type: 'number',
       default: 10,
       describe: 'Number of blocks prefetched in batch'
+    },
+    blockCid: {
+      type: 'boolean',
+      default: false,
+      describe: 'Only fetch and update block CIDs'
     }
   }).argv;
 

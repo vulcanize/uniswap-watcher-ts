@@ -10,10 +10,11 @@ import { providers, utils, BigNumber } from 'ethers';
 import { SelectionNode } from 'graphql';
 import _ from 'lodash';
 
+import * as codec from '@ipld/dag-cbor';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { GraphDecimal, JobQueue, eventProcessingEthCallDuration } from '@vulcanize/util';
-import { ServerConfig, IPFSClient, IpldStatus as IpldStatusInterface, ValueResult, Indexer as BaseIndexer, IndexerInterface, QueryOptions, OrderDirection, BlockHeight, Where } from '@cerc-io/util';
+import { ServerConfig, IPFSClient, IpldStatus as IpldStatusInterface, ValueResult, Indexer as BaseIndexer, IndexerInterface, QueryOptions, OrderDirection, BlockHeight, Where, ResultIPLDBlock } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
@@ -113,6 +114,26 @@ export class Indexer implements IndexerInterface {
     };
   }
 
+  getResultIPLDBlock (ipldBlock: IPLDBlock): ResultIPLDBlock {
+    const block = ipldBlock.block;
+
+    const data = codec.decode(Buffer.from(ipldBlock.data)) as any;
+
+    return {
+      block: {
+        cid: block.cid,
+        hash: block.blockHash,
+        number: block.blockNumber,
+        timestamp: block.blockTimestamp,
+        parentHash: block.parentHash
+      },
+      contractAddress: ipldBlock.contractAddress,
+      cid: ipldBlock.cid,
+      kind: ipldBlock.kind,
+      data: JSON.stringify(data)
+    };
+  }
+
   async getStorageValue (storageLayout: StorageLayout, blockHash: string, contractAddress: string, variable: string, ...mappingKeys: MappingKey[]): Promise<ValueResult> {
     return this._baseIndexer.getStorageValue(
       storageLayout,
@@ -147,6 +168,10 @@ export class Indexer implements IndexerInterface {
     await this._baseIndexer.processCheckpoint(this, blockHash, checkpointInterval);
 
     console.timeEnd('time:indexer#processCheckpoint-checkpoint');
+  }
+
+  async getPrevIPLDBlock (blockHash: string, contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
+    return this._db.getPrevIPLDBlock(blockHash, contractAddress, kind);
   }
 
   async getIPLDBlocksByHash (blockHash: string): Promise<IPLDBlock[]> {

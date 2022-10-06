@@ -12,16 +12,11 @@ import { providers } from 'ethers';
 
 import { Config as CacheConfig, getCache } from '@vulcanize/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { JobQueueConfig as WatcherJobQueueConfig, ServerConfig } from '@cerc-io/util';
+import { JobQueueConfig, ServerConfig } from '@cerc-io/util';
 
 import { getCustomProvider } from './misc';
 
 const log = debug('vulcanize:config');
-
-export interface JobQueueConfig extends WatcherJobQueueConfig {
-  lazyUpdateBlockProgress?: boolean;
-  subgraphEventsOrder: boolean;
-}
 
 export interface GQLMetricsConfig {
   port: number;

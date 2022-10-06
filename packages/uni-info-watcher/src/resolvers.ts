@@ -340,6 +340,16 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         gqlQueryCount.labels('indexingStatusForCurrentVersion').inc(1);
 
         return indexer.getIndexingStatus();
+      },
+
+      getState: async (_: any, { blockHash, contractAddress, kind }: { blockHash: string, contractAddress: string, kind: string }) => {
+        log('getState', blockHash, contractAddress, kind);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('getState').inc(1);
+
+        const ipldBlock = await indexer.getPrevIPLDBlock(blockHash, contractAddress, kind);
+
+        return ipldBlock && ipldBlock.block.isComplete ? indexer.getResultIPLDBlock(ipldBlock) : undefined;
       }
     }
   };

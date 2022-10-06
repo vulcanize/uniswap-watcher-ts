@@ -153,6 +153,12 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getLatestIPLDBlock(repo, contractAddress, kind, blockNumber);
   }
 
+  async getPrevIPLDBlock (blockHash: string, contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
+    const repo = this._conn.getRepository(IPLDBlock);
+
+    return this._baseDatabase.getPrevIPLDBlock(repo, blockHash, contractAddress, kind);
+  }
+
   // Fetch all diff IPLDBlocks after the specified block number.
   async getDiffIPLDBlocksInRange (contractAddress: string, startblock: number, endBlock: number): Promise<IPLDBlock[]> {
     const repo = this._conn.getRepository(IPLDBlock);

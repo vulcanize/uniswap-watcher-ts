@@ -6,7 +6,8 @@ import assert from 'assert';
 import debug from 'debug';
 import { DeepPartial, In } from 'typeorm';
 
-import { JobQueueConfig } from './config';
+import { JobQueueConfig } from '@cerc-io/util';
+
 import { JOB_KIND_INDEX, JOB_KIND_PRUNE, JOB_KIND_EVENTS, JOB_KIND_CONTRACT, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UNKNOWN_EVENT_NAME } from './constants';
 import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';

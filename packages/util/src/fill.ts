@@ -21,12 +21,19 @@ export const fillBlocks = async (
     endBlock: number,
     prefetch: boolean,
     batchBlocks: number,
+    blockCid: boolean
   }
 ): Promise<any> => {
-  let { startBlock, endBlock, prefetch, batchBlocks } = argv;
+  let { startBlock, endBlock, prefetch, batchBlocks, blockCid } = argv;
 
   if (startBlock > endBlock) {
     throw new Error(`endBlock ${endBlock} should be greater than or equal to startBlock ${startBlock}`);
+  }
+
+  if (blockCid) {
+    // If true only fetch and updated block CID for indexed blocks.
+    await updateBlockCIDs(indexer, argv);
+    return;
   }
 
   const syncStatus = await indexer.getSyncStatus();
@@ -148,5 +155,32 @@ const prefetchBlocks = async (
       log('Exiting as upstream block not available for prefetch');
       process.exit(0);
     }
+  }
+};
+
+const updateBlockCIDs = async (
+  indexer: IndexerInterface,
+  { startBlock, endBlock, batchBlocks }: {
+    startBlock: number,
+    endBlock: number,
+    batchBlocks: number,
+  }
+) => {
+  for (let i = startBlock; i <= endBlock; i++) {
+    console.time(`time:fill#updateBlockCIDs-update-block-${i})}`);
+    const blocks = await indexer.getBlocks({ blockNumber: i });
+
+    const blockUpdatePromises = blocks.map(async (block: any) => {
+      const { cid, blockHash, blockNumber, parentHash, timestamp } = block;
+      const blockProgress = await indexer.getBlockProgress(blockHash);
+
+      if (blockProgress) {
+        blockProgress.cid = cid;
+        await indexer.updateBlockProgress(blockProgress, blockProgress.lastProcessedEventIndex);
+      }
+    });
+
+    await Promise.all(blockUpdatePromises);
+    console.timeEnd(`time:fill#updateBlockCIDs-update-block-${i})}`);
   }
 };

@@ -62,6 +62,11 @@ export const main = async (): Promise<any> => {
       type: 'boolean',
       default: false,
       describe: 'Fill state for subgraph entities'
+    },
+    blockCid: {
+      type: 'boolean',
+      default: false,
+      describe: 'Only fetch and update block CIDs'
     }
   }).argv;
 

@@ -213,6 +213,10 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.removeEntities(queryRunner, entity, findConditions);
   }
 
+  async deleteEntitiesByConditions<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions: FindConditions<Entity>): Promise<void> {
+    await this._baseDatabase.deleteEntitiesByConditions(queryRunner, entity, findConditions);
+  }
+
   async isEntityEmpty<Entity> (entity: new () => Entity): Promise<boolean> {
     return this._baseDatabase.isEntityEmpty(entity);
   }

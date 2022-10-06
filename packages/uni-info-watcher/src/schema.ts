@@ -337,6 +337,22 @@ type SubgraphIndexingStatus {
   chains: [ChainIndexingStatus!]!
 }
 
+type _Block_ {
+  cid: String
+  hash: String!
+  number: Int!
+  timestamp: Int!
+  parentHash: String!
+}
+
+type ResultIPLDBlock {
+  block: _Block_!
+  contractAddress: String!
+  cid: String
+  kind: String!
+  data: String!
+}
+
 type Query {
   bundle(
     id: ID!
@@ -532,6 +548,8 @@ type Query {
   indexingStatusForCurrentVersion(
     subgraphName: String!
   ): SubgraphIndexingStatus
+
+  getState(blockHash: String!, contractAddress: String!, kind: String): ResultIPLDBlock
 }
 
 #
