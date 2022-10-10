@@ -5,5 +5,10 @@ query factories($block: Block_height){
     totalValueLockedUSD
     totalVolumeUSD
     txCount
+    poolCount
+    totalFeesETH
+    totalVolumeETH
+    untrackedVolumeUSD
+    totalValueLockedETH
   }
 }

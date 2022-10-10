@@ -4,5 +4,8 @@ query uniswapDayDatas($block: Block_height){
     id
     tvlUSD
     volumeUSD
+    feesUSD
+    txCount
+    volumeETH
   }
 }

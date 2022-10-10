@@ -27,5 +27,7 @@ query positions($block: Block_height){
     transaction{
       id
     }
+    withdrawnToken0
+    withdrawnToken1
   }
 }

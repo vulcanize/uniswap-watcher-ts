@@ -1378,6 +1378,14 @@ export class Database implements DatabaseInterface {
       transaction: {
         entity: Transaction,
         type: 'one-to-one'
+      },
+      token0: {
+        entity: Token,
+        type: 'one-to-one'
+      },
+      token1: {
+        entity: Token,
+        type: 'one-to-one'
       }
     });
 
@@ -1440,6 +1448,27 @@ export class Database implements DatabaseInterface {
       },
       transaction: {
         entity: Transaction,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(PoolDayData, {
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(TokenDayData, {
+      token: {
+        entity: Token,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(TokenHourData, {
+      token: {
+        entity: Token,
         type: 'one-to-one'
       }
     });

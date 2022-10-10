@@ -18,9 +18,6 @@ export class Transaction {
   @Column('integer')
   blockNumber!: number;
 
-  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  ethPriceUSD!: GraphDecimal
-
   @Column('numeric', { transformer: bigintTransformer })
   timestamp!: bigint;
 }

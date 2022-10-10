@@ -18,5 +18,12 @@ query pools($block: Block_height){
     token1{
       id
     }
+    feesUSD
+    volumeToken0
+    volumeToken1
+    untrackedVolumeUSD
+    totalValueLockedETH
+    feeGrowthGlobal0X128
+    feeGrowthGlobal1X128
   }
 }

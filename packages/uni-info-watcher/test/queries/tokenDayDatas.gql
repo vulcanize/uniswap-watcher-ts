@@ -4,5 +4,17 @@ query tokenDayDatas($block: Block_height){
     id
     totalValueLockedUSD
     volumeUSD
+    low
+    high
+    open
+    close
+    token{
+      id
+    }
+    volume
+    feesUSD
+    priceUSD
+    totalValueLocked
+    untrackedVolumeUSD
   }
 }
