@@ -9,7 +9,7 @@ import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { JobQueueConfig } from '@cerc-io/util';
+import { JobQueueConfig, startMetricsServer } from '@cerc-io/util';
 import { getCache } from '@vulcanize/cache';
 import {
   getConfig,
@@ -18,8 +18,7 @@ import {
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
   DEFAULT_CONFIG_PATH,
-  getCustomProvider,
-  startMetricsServer
+  getCustomProvider
 } from '@vulcanize/util';
 
 import { Indexer } from './indexer';

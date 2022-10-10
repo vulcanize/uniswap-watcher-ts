@@ -11,5 +11,4 @@ export * from './src/events';
 export * from './src/types';
 export * from './src/job-runner';
 export * from './src/graph-decimal';
-export * from './src/metrics';
 export * from './src/gql-metrics';

@@ -13,8 +13,8 @@ import _ from 'lodash';
 import * as codec from '@ipld/dag-cbor';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
-import { GraphDecimal, JobQueue, eventProcessingEthCallDuration } from '@vulcanize/util';
-import { ServerConfig, IPFSClient, IpldStatus as IpldStatusInterface, ValueResult, Indexer as BaseIndexer, IndexerInterface, QueryOptions, OrderDirection, BlockHeight, Where, ResultIPLDBlock } from '@cerc-io/util';
+import { GraphDecimal, JobQueue } from '@vulcanize/util';
+import { ServerConfig, IPFSClient, IpldStatus as IpldStatusInterface, ValueResult, Indexer as BaseIndexer, IndexerInterface, QueryOptions, OrderDirection, BlockHeight, Where, ResultIPLDBlock, eventProcessingEthCallDuration } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 

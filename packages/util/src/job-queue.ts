@@ -6,7 +6,7 @@ import assert from 'assert';
 import debug from 'debug';
 import PgBoss from 'pg-boss';
 
-import { jobCount, lastJobCompletedOn } from './metrics';
+import { jobCount, lastJobCompletedOn } from '@cerc-io/util';
 
 interface Config {
   dbConnectionString: string

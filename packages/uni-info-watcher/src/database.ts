@@ -24,9 +24,14 @@ import _ from 'lodash';
 import {
   eventProcessingLoadEntityCacheHitCount,
   eventProcessingLoadEntityCount,
-  eventProcessingLoadEntityDBQueryDuration
-} from '@vulcanize/util';
-import { StateKind, Database as BaseDatabase, DatabaseInterface, BlockHeight, QueryOptions, Where } from '@cerc-io/util';
+  eventProcessingLoadEntityDBQueryDuration,
+  StateKind,
+  Database as BaseDatabase,
+  DatabaseInterface,
+  BlockHeight,
+  QueryOptions,
+  Where
+} from '@cerc-io/util';
 
 import { Factory } from './entity/Factory';
 import { Pool } from './entity/Pool';

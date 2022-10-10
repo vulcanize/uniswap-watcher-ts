@@ -18,11 +18,10 @@ import {
   QUEUE_EVENT_PROCESSING,
   JobRunner as BaseJobRunner,
   DEFAULT_CONFIG_PATH,
-  getCustomProvider,
-  startMetricsServer
+  getCustomProvider
 } from '@vulcanize/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { JobQueueConfig } from '@cerc-io/util';
+import { JobQueueConfig, startMetricsServer } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
