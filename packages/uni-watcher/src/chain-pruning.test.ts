@@ -7,7 +7,8 @@ import { AssertionError } from 'assert';
 import 'mocha';
 import _ from 'lodash';
 
-import { getConfig, getCustomProvider, JobQueue, JobRunner, JOB_KIND_PRUNE } from '@vulcanize/util';
+import { JOB_KIND_PRUNE } from '@cerc-io/util';
+import { getConfig, getCustomProvider, JobQueue, JobRunner } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
 import { insertNDummyBlocks, removeEntities } from '@vulcanize/util/test';
 import { EthClient } from '@cerc-io/ipld-eth-client';

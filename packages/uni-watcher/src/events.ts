@@ -7,17 +7,16 @@ import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
+import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
 import {
   JobQueue,
   EventWatcher as BaseEventWatcher,
-  QUEUE_BLOCK_PROCESSING,
-  QUEUE_EVENT_PROCESSING,
   EventWatcherInterface,
   UpstreamConfig
 } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
-import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
+import { Event } from './entity/Event';
 
 const log = debug('vulcanize:events');
 

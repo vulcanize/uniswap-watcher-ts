@@ -7,7 +7,8 @@ import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { EventWatcher as BaseEventWatcher, EventWatcherInterface, JobQueue, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UpstreamConfig } from '@vulcanize/util';
+import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING } from '@cerc-io/util';
+import { EventWatcher as BaseEventWatcher, EventWatcherInterface, JobQueue, UpstreamConfig } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 

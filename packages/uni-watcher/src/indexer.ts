@@ -9,12 +9,12 @@ import { ethers } from 'ethers';
 import assert from 'assert';
 
 import { JobQueue, IndexerInterface } from '@vulcanize/util';
-import { Indexer as BaseIndexer, IPFSClient, IpldStatus as IpldStatusInterface, ServerConfig, Where, QueryOptions, ValueResult } from '@cerc-io/util';
+import { Indexer as BaseIndexer, IPFSClient, IpldStatus as IpldStatusInterface, ServerConfig, Where, QueryOptions, ValueResult, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { Database } from './database';
-import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
+import { Event } from './entity/Event';
 import { BlockProgress } from './entity/BlockProgress';
 import { Contract, KIND_FACTORY, KIND_POOL, KIND_NFPM } from './entity/Contract';
 import { SyncStatus } from './entity/SyncStatus';

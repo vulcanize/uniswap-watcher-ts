@@ -162,7 +162,7 @@ const prefetchBlocks = async (
 
 const updateBlockCIDs = async (
   indexer: IndexerInterface,
-  { startBlock, endBlock, batchBlocks }: {
+  { startBlock, endBlock }: {
     startBlock: number,
     endBlock: number,
     batchBlocks: number,
@@ -173,7 +173,7 @@ const updateBlockCIDs = async (
     const blocks = await indexer.getBlocks({ blockNumber: i });
 
     const blockUpdatePromises = blocks.map(async (block: any) => {
-      const { cid, blockHash, blockNumber, parentHash, timestamp } = block;
+      const { cid, blockHash } = block;
       const blockProgress = await indexer.getBlockProgress(blockHash);
 
       if (blockProgress) {

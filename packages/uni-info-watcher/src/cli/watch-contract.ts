@@ -6,7 +6,8 @@ import assert from 'assert';
 import yargs from 'yargs';
 import 'reflect-metadata';
 
-import { Config, DEFAULT_CONFIG_PATH, getConfig, getResetConfig, JobQueue } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
+import { Config, getConfig, getResetConfig, JobQueue } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 
