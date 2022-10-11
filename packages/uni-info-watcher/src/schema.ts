@@ -42,6 +42,21 @@ type Pool {
   totalValueLockedUSD: BigDecimal!
   txCount: BigInt!
   volumeUSD: BigDecimal!
+  createdAtTimestamp: BigInt!
+  createdAtBlockNumber: BigInt!
+  feeGrowthGlobal0X128: BigInt!
+  feeGrowthGlobal1X128: BigInt!
+  observationIndex: BigInt!
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  untrackedVolumeUSD: BigDecimal!
+  feesUSD: BigDecimal!
+  collectedFeesToken0: BigDecimal!
+  collectedFeesToken1: BigDecimal!
+  collectedFeesUSD: BigDecimal!
+  totalValueLockedETH: BigDecimal!
+  totalValueLockedUSDUntracked: BigDecimal!
+  liquidityProviderCount: BigInt!
 }
 
 type PoolDayData {
@@ -50,6 +65,21 @@ type PoolDayData {
   tvlUSD: BigDecimal!
   volumeUSD: BigDecimal!
   feesUSD: BigDecimal!
+  pool: Pool!
+  liquidity: BigInt!
+  sqrtPrice: BigInt!
+  token0Price: BigDecimal!
+  token1Price: BigDecimal!
+  tick: BigInt
+  feeGrowthGlobal0X128: BigInt!
+  feeGrowthGlobal1X128: BigInt!
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  txCount: BigInt!
+  open: BigDecimal!
+  high: BigDecimal!
+  low: BigDecimal!
+  close: BigDecimal!
 }
 
 type Tick {
@@ -72,6 +102,11 @@ type Mint {
   sender: Bytes
   timestamp: BigInt!
   transaction: Transaction!
+  token0: Token!
+  token1: Token!
+  amount: BigInt!
+  tickLower: BigInt!
+  tickUpper: BigInt!
 }
 
 type Swap {
@@ -83,6 +118,12 @@ type Swap {
   pool: Pool!
   timestamp: BigInt!
   transaction: Transaction!
+  token0: Token!
+  token1: Token!
+  sender: Bytes!
+  recipient: Bytes!
+  sqrtPriceX96: BigInt!
+  tick: BigInt!
 }
 
 type Burn {
@@ -102,6 +143,10 @@ type UniswapDayData {
   id: ID!
   tvlUSD: BigDecimal!
   volumeUSD: BigDecimal!
+  volumeETH: BigDecimal!
+  volumeUSDUntracked: BigDecimal!
+  feesUSD: BigDecimal!
+  txCount: BigInt!
 }
 
 type Factory {
@@ -110,6 +155,14 @@ type Factory {
   totalValueLockedUSD: BigDecimal!
   totalVolumeUSD: BigDecimal!
   txCount: BigInt!
+  poolCount: BigInt!
+  totalVolumeETH: BigDecimal!
+  totalFeesETH: BigDecimal!
+  untrackedVolumeUSD: BigDecimal!
+  totalValueLockedETH: BigDecimal!
+  totalValueLockedUSDUntracked: BigDecimal!
+  totalValueLockedETHUntracked: BigDecimal!
+  owner: ID!
 }
 
 type Transaction {
@@ -133,6 +186,8 @@ type Token {
   volume: BigDecimal!
   volumeUSD: BigDecimal!
   whitelistPools: [Pool]
+  totalSupply: BigInt!
+  untrackedVolumeUSD: BigDecimal!
 }
 
 type TokenDayData {
@@ -140,6 +195,16 @@ type TokenDayData {
   id: ID!
   totalValueLockedUSD: BigDecimal!
   volumeUSD: BigDecimal!
+  token: Token!
+  volume: BigDecimal!
+  untrackedVolumeUSD: BigDecimal!
+  totalValueLocked: BigDecimal!
+  priceUSD: BigDecimal!
+  feesUSD: BigDecimal!
+  open: BigDecimal!
+  high: BigDecimal!
+  low: BigDecimal!
+  close: BigDecimal!
 }
 
 type Bundle {
@@ -154,6 +219,14 @@ type TokenHourData {
   low: BigDecimal!
   open: BigDecimal!
   periodStartUnix: Int!
+  token: Token!
+  volume: BigDecimal!
+  volumeUSD: BigDecimal!
+  untrackedVolumeUSD: BigDecimal!
+  totalValueLocked: BigDecimal!
+  totalValueLockedUSD: BigDecimal!
+  priceUSD: BigDecimal!
+  feesUSD: BigDecimal!
 }
 
 type Position {
@@ -172,6 +245,8 @@ type Position {
   owner: Bytes!
   feeGrowthInside0LastX128: BigInt!
   feeGrowthInside1LastX128: BigInt!
+  withdrawnToken0: BigDecimal!
+  withdrawnToken1: BigDecimal!
 }
 
 type Block {
@@ -335,6 +410,22 @@ type SubgraphIndexingStatus {
   synced: Boolean!
   health: Health!
   chains: [ChainIndexingStatus!]!
+}
+
+type _Block_ {
+  cid: String
+  hash: String!
+  number: Int!
+  timestamp: Int!
+  parentHash: String!
+}
+
+type ResultIPLDBlock {
+  block: _Block_!
+  contractAddress: String!
+  cid: String
+  kind: String!
+  data: String!
 }
 
 type Query {
@@ -532,6 +623,8 @@ type Query {
   indexingStatusForCurrentVersion(
     subgraphName: String!
   ): SubgraphIndexingStatus
+
+  getState(blockHash: String!, contractAddress: String!, kind: String): ResultIPLDBlock
 }
 
 #

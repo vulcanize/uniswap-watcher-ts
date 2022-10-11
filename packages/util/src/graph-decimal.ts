@@ -29,6 +29,10 @@ export class GraphDecimal {
     return this.value.toString();
   }
 
+  toJSON (): string {
+    return this.toString();
+  }
+
   toFixed (): string {
     this._checkOutOfRange(this);
 

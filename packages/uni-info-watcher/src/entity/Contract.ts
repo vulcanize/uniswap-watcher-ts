@@ -20,6 +20,9 @@ export class Contract {
   @Column('varchar', { length: 8 })
   kind!: string;
 
+  @Column('boolean', { default: false })
+  checkpoint!: boolean;
+
   @Column('integer')
   startingBlock!: number;
 }

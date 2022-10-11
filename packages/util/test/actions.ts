@@ -5,6 +5,7 @@
 import { ethers, Contract, ContractTransaction, Signer, BigNumber, utils } from 'ethers';
 import assert from 'assert';
 
+import { DatabaseInterface } from '@cerc-io/util';
 import {
   abi as NFTD_ABI,
   bytecode as NFTD_BYTECODE
@@ -32,11 +33,7 @@ import {
   bytecode as WETH9_BYTECODE
 } from '../artifacts/test/contracts/WETH9.sol/WETH9.json';
 
-import { DatabaseInterface } from '../src/types';
-
-export { abi as NFPM_ABI } from '@uniswap/v3-periphery/artifacts/contracts/NonfungiblePositionManager.sol/NonfungiblePositionManager.json';
-export { abi as TESTERC20_ABI } from '../artifacts/test/contracts/TestERC20.sol/TestERC20.json';
-
+export { NFPM_ABI, TESTERC20_ABI };
 export const TICK_MIN = -887272;
 export const TICK_MAX = 887272;
 

@@ -6,9 +6,11 @@ import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 
+import { gqlTotalQueryCount, gqlQueryCount } from '@vulcanize/util';
+import { ValueResult } from '@cerc-io/util';
+
 import { Indexer } from './indexer';
 import { EventWatcher } from './events';
-import { ValueResult, gqlTotalQueryCount, gqlQueryCount } from '@vulcanize/util';
 
 const log = debug('vulcanize:resolver');
 

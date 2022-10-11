@@ -7,7 +7,8 @@ import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 import { GraphQLResolveInfo, GraphQLScalarType } from 'graphql';
 
-import { BlockHeight, gqlQueryCount, gqlTotalQueryCount, GraphDecimal, OrderDirection } from '@vulcanize/util';
+import { gqlQueryCount, gqlTotalQueryCount, GraphDecimal } from '@vulcanize/util';
+import { BlockHeight, OrderDirection } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
 import { Burn } from './entity/Burn';
@@ -159,12 +160,24 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getPool(id, block, info.fieldNodes[0].selectionSet.selections);
       },
 
-      poolDayDatas: async (_: any, { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      poolDayDatas: async (
+        _: any,
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('poolDayDatas', first, skip, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('poolDayDatas').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(PoolDayData, block, where, { limit: first, skip, orderBy, orderDirection });
+        return indexer.getEntities(
+          PoolDayData,
+          block,
+          where,
+          { limit: first, skip, orderBy, orderDirection },
+          info.fieldNodes[0].selectionSet.selections
+        );
       },
 
       pools: async (
@@ -254,24 +267,42 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
 
       tokenDayDatas: async (
         _: any,
-        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
       ) => {
         log('tokenDayDatas', first, skip, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokenDayDatas').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(TokenDayData, block, where, { limit: first, skip, orderBy, orderDirection });
+        return indexer.getEntities(
+          TokenDayData,
+          block,
+          where,
+          { limit: first, skip, orderBy, orderDirection },
+          info.fieldNodes[0].selectionSet.selections
+        );
       },
 
       tokenHourDatas: async (
         _: any,
-        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
       ) => {
         log('tokenHourDatas', first, skip, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokenHourDatas').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(TokenHourData, block, where, { limit: first, skip, orderBy, orderDirection });
+        return indexer.getEntities(
+          TokenHourData,
+          block,
+          where,
+          { limit: first, skip, orderBy, orderDirection },
+          info.fieldNodes[0].selectionSet.selections
+        );
       },
 
       transactions: async (
@@ -339,6 +370,16 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         gqlQueryCount.labels('indexingStatusForCurrentVersion').inc(1);
 
         return indexer.getIndexingStatus();
+      },
+
+      getState: async (_: any, { blockHash, contractAddress, kind }: { blockHash: string, contractAddress: string, kind: string }) => {
+        log('getState', blockHash, contractAddress, kind);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('getState').inc(1);
+
+        const ipldBlock = await indexer.getPrevIPLDBlock(blockHash, contractAddress, kind);
+
+        return ipldBlock && ipldBlock.block.isComplete ? indexer.getResultIPLDBlock(ipldBlock) : undefined;
       }
     }
   };

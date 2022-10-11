@@ -46,7 +46,6 @@
     "@types/lodash": "^4.14.168",
     "@vulcanize/cache": "^0.1.0",
     "@vulcanize/ipld-eth-client": "^0.1.0",
-    "@vulcanize/solidity-mapper": "^0.1.0",
     "@vulcanize/util": "^0.1.0",
     "apollo-server-express": "^2.25.0",
     "apollo-type-bigint": "^0.1.3",

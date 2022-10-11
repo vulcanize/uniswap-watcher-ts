@@ -35,6 +35,12 @@ import { Indexer } from '../indexer';
       demandOption: true,
       describe: 'Kind of contract (factory|pool|nfpm)'
     },
+    checkpoint: {
+      type: 'boolean',
+      require: true,
+      demandOption: true,
+      describe: 'Turn checkpointing on'
+    },
     startingBlock: {
       type: 'number',
       default: 1,
@@ -59,10 +65,10 @@ import { Indexer } from '../indexer';
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue);
+  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
   await indexer.init();
 
-  await indexer.watchContract(argv.address, argv.kind, argv.startingBlock);
+  await indexer.watchContract(argv.address, argv.kind, argv.checkpoint, argv.startingBlock);
 
   await db.close();
   await jobQueue.stop();

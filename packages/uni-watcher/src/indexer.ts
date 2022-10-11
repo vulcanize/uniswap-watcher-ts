@@ -8,8 +8,10 @@ import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
 import assert from 'assert';
 
-import { EthClient } from '@vulcanize/ipld-eth-client';
-import { IndexerInterface, Indexer as BaseIndexer, ValueResult, JobQueue, Where, QueryOptions } from '@vulcanize/util';
+import { JobQueue, IndexerInterface } from '@vulcanize/util';
+import { Indexer as BaseIndexer, IPFSClient, IpldStatus as IpldStatusInterface, ServerConfig, Where, QueryOptions, ValueResult } from '@cerc-io/util';
+import { EthClient } from '@cerc-io/ipld-eth-client';
+import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { Database } from './database';
 import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
@@ -20,6 +22,7 @@ import { SyncStatus } from './entity/SyncStatus';
 import { abi as factoryABI, storageLayout as factoryStorageLayout } from './artifacts/factory.json';
 import { abi as nfpmABI, storageLayout as nfpmStorageLayout } from './artifacts/NonfungiblePositionManager.json';
 import poolABI from './artifacts/pool.json';
+import { IPLDBlock } from './entity/IPLDBlock';
 
 const log = debug('vulcanize:indexer');
 
@@ -40,20 +43,32 @@ export class Indexer implements IndexerInterface {
   _ethClient: EthClient
   _baseIndexer: BaseIndexer
   _ethProvider: ethers.providers.BaseProvider
+  _serverConfig: ServerConfig
+  _storageLayoutMap: Map<string, StorageLayout> = new Map()
 
   _factoryContract: ethers.utils.Interface
   _poolContract: ethers.utils.Interface
   _nfpmContract: ethers.utils.Interface
 
-  constructor (db: Database, ethClient: EthClient, ethProvider: ethers.providers.BaseProvider, jobQueue: JobQueue) {
+  constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, ethProvider: ethers.providers.BaseProvider, jobQueue: JobQueue) {
     this._db = db;
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
-    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, this._ethProvider, jobQueue);
+    this._serverConfig = serverConfig;
+    const ipfsClient = new IPFSClient(this._serverConfig.ipfsApiAddr);
+    this._baseIndexer = new BaseIndexer(this._serverConfig, this._db, this._ethClient, this._ethProvider, jobQueue, ipfsClient);
 
     this._factoryContract = new ethers.utils.Interface(factoryABI);
     this._poolContract = new ethers.utils.Interface(poolABI);
     this._nfpmContract = new ethers.utils.Interface(nfpmABI);
+  }
+
+  get serverConfig (): ServerConfig {
+    return this._serverConfig;
+  }
+
+  get storageLayoutMap (): Map<string, StorageLayout> {
+    return this._storageLayoutMap;
   }
 
   async init (): Promise<void> {
@@ -93,13 +108,27 @@ export class Indexer implements IndexerInterface {
     };
   }
 
+  async getStorageValue (storageLayout: StorageLayout, blockHash: string, contractAddress: string, variable: string, ...mappingKeys: MappingKey[]): Promise<ValueResult> {
+    return this._baseIndexer.getStorageValue(
+      storageLayout,
+      blockHash,
+      contractAddress,
+      variable,
+      ...mappingKeys
+    );
+  }
+
+  getIPLDData (ipldBlock: IPLDBlock): any {
+    return this._baseIndexer.getIPLDData(ipldBlock);
+  }
+
   async triggerIndexingOnEvent (dbTx: QueryRunner, dbEvent: Event): Promise<void> {
     const re = this.getResultEvent(dbEvent);
 
     switch (re.event.__typename) {
       case 'PoolCreatedEvent': {
         const poolContract = ethers.utils.getAddress(re.event.pool);
-        await this.watchContract(poolContract, KIND_POOL, dbEvent.block.blockNumber);
+        await this.watchContract(poolContract, KIND_POOL, true, dbEvent.block.blockNumber);
       }
     }
   }
@@ -341,7 +370,7 @@ export class Indexer implements IndexerInterface {
     return contract;
   }
 
-  async getEventsByFilter (blockHash: string, contract: string, name: string | null): Promise<Array<Event>> {
+  async getEventsByFilter (blockHash: string, contract: string, name?: string): Promise<Array<Event>> {
     return this._baseIndexer.getEventsByFilter(blockHash, contract, name);
   }
 
@@ -349,8 +378,12 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.isWatchedContract(address);
   }
 
-  async watchContract (address: string, kind: string, startingBlock: number): Promise<void> {
-    return this._baseIndexer.watchContract(address, kind, startingBlock);
+  async watchContract (address: string, kind: string, checkpoint: boolean, startingBlock: number): Promise<void> {
+    return this._baseIndexer.watchContract(address, kind, checkpoint, startingBlock);
+  }
+
+  async updateIPLDStatusMap (address: string, ipldStatus: IpldStatusInterface): Promise<void> {
+    await this._baseIndexer.updateIPLDStatusMap(address, ipldStatus);
   }
 
   cacheContract (contract: Contract): void {
@@ -379,6 +412,11 @@ export class Indexer implements IndexerInterface {
       block,
       this._fetchEvents.bind(this)
     );
+  }
+
+  async fetchBlockWithEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+    // Method not used in uni-info-watcher but required for indexer interface.
+    return new BlockProgress();
   }
 
   async saveBlockProgress (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {

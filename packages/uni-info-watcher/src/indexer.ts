@@ -7,12 +7,16 @@ import debug from 'debug';
 import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan, MoreThan, QueryRunner } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { providers, utils, BigNumber } from 'ethers';
+import { SelectionNode } from 'graphql';
+import _ from 'lodash';
 
+import * as codec from '@ipld/dag-cbor';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
-import { EthClient } from '@vulcanize/ipld-eth-client';
-import { IndexerInterface, Indexer as BaseIndexer, QueryOptions, OrderDirection, BlockHeight, GraphDecimal, JobQueue, Where, DEFAULT_LIMIT, eventProcessingEthCallDuration } from '@vulcanize/util';
-import { SelectionNode } from 'graphql';
+import { GraphDecimal, JobQueue } from '@vulcanize/util';
+import { ServerConfig, IPFSClient, IpldStatus as IpldStatusInterface, ValueResult, Indexer as BaseIndexer, IndexerInterface, QueryOptions, OrderDirection, BlockHeight, Where, ResultIPLDBlock, eventProcessingEthCallDuration } from '@cerc-io/util';
+import { EthClient } from '@cerc-io/ipld-eth-client';
+import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
@@ -21,7 +25,7 @@ import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv } from './
 import { createTick, feeTierToTickSpacing } from './utils/tick';
 import { FACTORY_ADDRESS, WATCHED_CONTRACTS } from './utils/constants';
 import { Position } from './entity/Position';
-import { Database } from './database';
+import { Database, DEFAULT_LIMIT } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Block, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent } from './events';
 import { Factory } from './entity/Factory';
@@ -35,6 +39,9 @@ import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { Tick } from './entity/Tick';
 import { Contract, KIND_POOL } from './entity/Contract';
+import { IPLDBlock } from './entity/IPLDBlock';
+import { IpldStatus } from './entity/IpldStatus';
+import { createInitialState, createStateCheckpoint } from './hooks';
 
 const SYNC_DELTA = 5;
 
@@ -48,9 +55,12 @@ export class Indexer implements IndexerInterface {
   _erc20Client: ERC20Client
   _ethClient: EthClient
   _baseIndexer: BaseIndexer
+  _serverConfig: ServerConfig
   _isDemo: boolean
+  _storageLayoutMap: Map<string, StorageLayout> = new Map()
+  _subgraphStateMap: Map<string, any> = new Map()
 
-  constructor (db: Database, uniClient: UniClient, erc20Client: ERC20Client, ethClient: EthClient, ethProvider: providers.BaseProvider, jobQueue: JobQueue, mode: string) {
+  constructor (serverConfig: ServerConfig, db: Database, uniClient: UniClient, erc20Client: ERC20Client, ethClient: EthClient, ethProvider: providers.BaseProvider, jobQueue: JobQueue) {
     assert(db);
     assert(uniClient);
     assert(erc20Client);
@@ -59,12 +69,23 @@ export class Indexer implements IndexerInterface {
     this._uniClient = uniClient;
     this._erc20Client = erc20Client;
     this._ethClient = ethClient;
-    this._baseIndexer = new BaseIndexer(this._db, this._ethClient, ethProvider, jobQueue);
-    this._isDemo = mode === 'demo';
+    this._serverConfig = serverConfig;
+    const ipfsClient = new IPFSClient(this._serverConfig.ipfsApiAddr);
+    this._baseIndexer = new BaseIndexer(this._serverConfig, this._db, this._ethClient, ethProvider, jobQueue, ipfsClient);
+    this._isDemo = this._serverConfig.mode === 'demo';
+  }
+
+  get serverConfig (): ServerConfig {
+    return this._serverConfig;
+  }
+
+  get storageLayoutMap (): Map<string, StorageLayout> {
+    return this._storageLayoutMap;
   }
 
   async init (): Promise<void> {
     await this._baseIndexer.fetchContracts();
+    await this._baseIndexer.fetchIPLDStatus();
   }
 
   getResultEvent (event: Event): ResultEvent {
@@ -91,6 +112,109 @@ export class Indexer implements IndexerInterface {
 
       proof: JSON.parse(event.proof)
     };
+  }
+
+  getResultIPLDBlock (ipldBlock: IPLDBlock): ResultIPLDBlock {
+    const block = ipldBlock.block;
+
+    const data = codec.decode(Buffer.from(ipldBlock.data)) as any;
+
+    return {
+      block: {
+        cid: block.cid,
+        hash: block.blockHash,
+        number: block.blockNumber,
+        timestamp: block.blockTimestamp,
+        parentHash: block.parentHash
+      },
+      contractAddress: ipldBlock.contractAddress,
+      cid: ipldBlock.cid,
+      kind: ipldBlock.kind,
+      data: JSON.stringify(data)
+    };
+  }
+
+  async getStorageValue (storageLayout: StorageLayout, blockHash: string, contractAddress: string, variable: string, ...mappingKeys: MappingKey[]): Promise<ValueResult> {
+    return this._baseIndexer.getStorageValue(
+      storageLayout,
+      blockHash,
+      contractAddress,
+      variable,
+      ...mappingKeys
+    );
+  }
+
+  async pushToIPFS (data: any): Promise<void> {
+    await this._baseIndexer.pushToIPFS(data);
+  }
+
+  async processInitialState (contractAddress: string, blockHash: string): Promise<any> {
+    // Call initial state hook.
+    return createInitialState(this, contractAddress, blockHash);
+  }
+
+  async processStateCheckpoint (contractAddress: string, blockHash: string): Promise<boolean> {
+    // Call checkpoint hook.
+    return createStateCheckpoint(this, contractAddress, blockHash);
+  }
+
+  async processCheckpoint (blockHash: string): Promise<void> {
+    // Return if checkpointInterval is <= 0.
+    const checkpointInterval = this._serverConfig.checkpointInterval;
+    if (checkpointInterval <= 0) return;
+
+    console.time('time:indexer#processCheckpoint-checkpoint');
+
+    await this._baseIndexer.processCheckpoint(this, blockHash, checkpointInterval);
+
+    console.timeEnd('time:indexer#processCheckpoint-checkpoint');
+  }
+
+  async getPrevIPLDBlock (blockHash: string, contractAddress: string, kind?: string): Promise<IPLDBlock | undefined> {
+    return this._db.getPrevIPLDBlock(blockHash, contractAddress, kind);
+  }
+
+  async getIPLDBlocksByHash (blockHash: string): Promise<IPLDBlock[]> {
+    return this._baseIndexer.getIPLDBlocksByHash(blockHash);
+  }
+
+  async getIPLDBlocks (where: FindConditions<IPLDBlock>): Promise<IPLDBlock[]> {
+    return this._db.getIPLDBlocks(where);
+  }
+
+  async getIPLDBlockByCid (cid: string): Promise<IPLDBlock | undefined> {
+    return this._baseIndexer.getIPLDBlockByCid(cid);
+  }
+
+  getIPLDData (ipldBlock: IPLDBlock): any {
+    return this._baseIndexer.getIPLDData(ipldBlock);
+  }
+
+  isIPFSConfigured (): boolean {
+    return this._baseIndexer.isIPFSConfigured();
+  }
+
+  // Method used to create auto diffs (diff_staged).
+  async createDiffStaged (contractAddress: string, blockHash: string, data: any): Promise<void> {
+    console.time('time:indexer#createDiffStaged-auto_diff');
+
+    await this._baseIndexer.createDiffStaged(contractAddress, blockHash, data);
+
+    console.timeEnd('time:indexer#createDiffStaged-auto_diff');
+  }
+
+  // Method to be used by createStateDiff hook.
+  async createDiff (contractAddress: string, blockHash: string, data: any): Promise<void> {
+    const block = await this.getBlockProgress(blockHash);
+    assert(block);
+
+    await this._baseIndexer.createDiff(contractAddress, block, data);
+  }
+
+  // Method to be used by fill-state CLI.
+  async createInit (blockHash: string, blockNumber: number): Promise<void> {
+    // Create initial state for contracts.
+    await this._baseIndexer.createInit(this, blockHash, blockNumber);
   }
 
   async processEvent (dbEvent: Event): Promise<void> {
@@ -170,6 +294,57 @@ export class Indexer implements IndexerInterface {
 
       log(`Size of cachedEntities.frothyBlocks map: ${this._db.cachedEntities.frothyBlocks.size}`);
     }
+  }
+
+  async updateIPLDStatusHooksBlock (blockNumber: number, force?: boolean): Promise<IpldStatus> {
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
+
+    try {
+      res = await this._db.updateIPLDStatusHooksBlock(dbTx, blockNumber, force);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+
+    return res;
+  }
+
+  async updateIPLDStatusCheckpointBlock (blockNumber: number, force?: boolean): Promise<IpldStatus> {
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
+
+    try {
+      res = await this._db.updateIPLDStatusCheckpointBlock(dbTx, blockNumber, force);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+
+    return res;
+  }
+
+  async updateIPLDStatusIPFSBlock (blockNumber: number, force?: boolean): Promise<IpldStatus> {
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
+
+    try {
+      res = await this._db.updateIPLDStatusIPFSBlock(dbTx, blockNumber, force);
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+
+    return res;
   }
 
   async getBlockEntities (where: { [key: string]: any } = {}, queryOptions: QueryOptions): Promise<any> {
@@ -328,6 +503,10 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
+  async getEntitiesForBlock (blockHash: string, tableName: string): Promise<any[]> {
+    return this._db.getEntitiesForBlock(blockHash, tableName);
+  }
+
   async addContracts (): Promise<void> {
     // Watching the contract(s) if not watched already.
     for (const contract of WATCHED_CONTRACTS) {
@@ -335,7 +514,7 @@ export class Indexer implements IndexerInterface {
       const watchedContract = this.isWatchedContract(address);
 
       if (!watchedContract) {
-        await this.watchContract(address, kind, startingBlock);
+        await this.watchContract(address, kind, true, startingBlock);
       }
     }
   }
@@ -344,8 +523,12 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.isWatchedContract(address);
   }
 
-  async watchContract (address: string, kind: string, startingBlock: number): Promise<void> {
-    return this._baseIndexer.watchContract(address, kind, startingBlock);
+  async watchContract (address: string, kind: string, checkpoint: boolean, startingBlock: number): Promise<void> {
+    return this._baseIndexer.watchContract(address, kind, checkpoint, startingBlock);
+  }
+
+  async updateIPLDStatusMap (address: string, ipldStatus: IpldStatusInterface): Promise<void> {
+    await this._baseIndexer.updateIPLDStatusMap(address, ipldStatus);
   }
 
   cacheContract (contract: Contract): void {
@@ -373,6 +556,11 @@ export class Indexer implements IndexerInterface {
       block,
       this._fetchEvents.bind(this)
     );
+  }
+
+  async fetchBlockWithEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
+    // Method not used in uni-info-watcher but required for indexer interface.
+    return new BlockProgress();
   }
 
   async saveBlockProgress (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
@@ -428,6 +616,30 @@ export class Indexer implements IndexerInterface {
 
   async updateBlockProgress (block: BlockProgress, lastProcessedEventIndex: number): Promise<BlockProgress> {
     return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
+  }
+
+  async dumpSubgraphState (blockHash: string, isStateFinalized = false): Promise<void> {
+    // Create a diff for each contract in the subgraph state map.
+    const createDiffPromises = Array.from(this._subgraphStateMap.entries())
+      .map(([contractAddress, data]): Promise<void> => {
+        if (isStateFinalized) {
+          return this.createDiff(contractAddress, blockHash, data);
+        }
+
+        return this.createDiffStaged(contractAddress, blockHash, data);
+      });
+
+    await Promise.all(createDiffPromises);
+
+    // Reset the subgraph state map.
+    this._subgraphStateMap.clear();
+  }
+
+  updateEntityState (contractAddress: string, data: any): void {
+    // Update the subgraph state for a given contract.
+    const oldData = this._subgraphStateMap.get(contractAddress);
+    const updatedData = _.merge(oldData, data);
+    this._subgraphStateMap.set(contractAddress, updatedData);
   }
 
   _updateCachedEntitiesFrothyBlocks (canonicalBlockHash: string, canonicalBlockNumber: number) {
@@ -587,7 +799,7 @@ export class Indexer implements IndexerInterface {
       await dbTx.release();
     }
 
-    await this.watchContract(poolCreatedEvent.pool, KIND_POOL, block.number);
+    await this.watchContract(poolCreatedEvent.pool, KIND_POOL, true, block.number);
   }
 
   /**

@@ -10,7 +10,7 @@ import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
 
 import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
+import { EthClient } from '@cerc-io/ipld-eth-client';
 import { getConfig, fillBlocks, JobQueue, DEFAULT_CONFIG_PATH, getCustomProvider } from '@vulcanize/util';
 
 import { Database } from './database';
@@ -54,6 +54,11 @@ export const main = async (): Promise<any> => {
       type: 'number',
       default: 10,
       describe: 'Number of blocks prefetched in batch'
+    },
+    blockCid: {
+      type: 'boolean',
+      default: false,
+      describe: 'Only fetch and update block CIDs'
     }
   }).argv;
 
@@ -89,7 +94,7 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue);
+  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
   await indexer.init();
 
   const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);

@@ -14,5 +14,14 @@ query mints($block: Block_height){
     pool{
       id
     }
+    amount
+    token0{
+      id
+    }
+    token1{
+      id
+    }
+    tickLower
+    tickUpper
   }
 }

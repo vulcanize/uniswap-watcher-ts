@@ -9,15 +9,16 @@ import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 
 import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
 import { getConfig, fillBlocks, JobQueue, DEFAULT_CONFIG_PATH, getCustomProvider } from '@vulcanize/util';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
+import { EthClient } from '@cerc-io/ipld-eth-client';
 
 import { Database } from './database';
 import { PubSub } from 'apollo-server-express';
 import { Indexer } from './indexer';
 import { EventWatcher } from './events';
+import { fillState } from './cli/fill-state';
 
 const log = debug('vulcanize:server');
 
@@ -56,6 +57,16 @@ export const main = async (): Promise<any> => {
       type: 'number',
       default: 10,
       describe: 'Number of blocks prefetched in batch'
+    },
+    state: {
+      type: 'boolean',
+      default: false,
+      describe: 'Fill state for subgraph entities'
+    },
+    blockCid: {
+      type: 'boolean',
+      default: false,
+      describe: 'Only fetch and update block CIDs'
     }
   }).argv;
 
@@ -95,7 +106,13 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(config.server, db, uniClient, erc20Client, ethClient, ethProvider, jobQueue);
+  await indexer.init();
+
+  if (argv.state) {
+    await fillState(indexer, db, argv);
+    return;
+  }
 
   const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);
 

@@ -4,5 +4,23 @@ query poolDayDatas($block: Block_height){
     id
     tvlUSD
     volumeUSD
+    low
+    high
+    open
+    pool{
+      id
+    }
+    tick
+    close
+    feesUSD
+    txCount
+    liquidity
+    sqrtPrice
+    token0Price
+    token1Price
+    volumeToken0
+    volumeToken1
+    feeGrowthGlobal0X128
+    feeGrowthGlobal1X128
   }
 }

@@ -6,7 +6,7 @@
 import debug from 'debug';
 import BigInt from 'apollo-type-bigint';
 
-import { BlockHeight, OrderDirection } from '@vulcanize/util';
+import { BlockHeight, OrderDirection } from '@cerc-io/util';
 
 import { Data, Entity, NO_OF_BLOCKS } from './data';
 

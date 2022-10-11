@@ -70,7 +70,7 @@ export const handler = async (argv: any): Promise<void> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, ethProvider, jobQueue, serverConfig.mode);
+  const indexer = new Indexer(config.server, db, uniClient, erc20Client, ethClient, ethProvider, jobQueue);
 
   const syncStatus = await indexer.getSyncStatus();
   assert(syncStatus, 'Missing syncStatus');
@@ -103,11 +103,11 @@ export const handler = async (argv: any): Promise<void> => {
       Transaction,
       UniswapDayData
     ].map(async entityClass => {
-      return db.removeEntities<any>(dbTx, entityClass, { blockNumber: MoreThan(argv.blockNumber) });
+      return db.deleteEntitiesByConditions<any>(dbTx, entityClass, { blockNumber: MoreThan(argv.blockNumber) });
     });
 
     await Promise.all(removeEntitiesPromise);
-    await db.removeEntities(dbTx, Contract, { startingBlock: MoreThan(argv.blockNumber) });
+    await db.deleteEntitiesByConditions(dbTx, Contract, { startingBlock: MoreThan(argv.blockNumber) });
 
     if (syncStatus.latestIndexedBlockNumber > blockProgress.blockNumber) {
       await indexer.updateSyncStatusIndexedBlock(blockProgress.blockHash, blockProgress.blockNumber, true);

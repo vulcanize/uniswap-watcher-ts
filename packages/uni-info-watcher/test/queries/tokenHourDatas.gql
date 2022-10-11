@@ -6,5 +6,15 @@ query tokenHourDatas($block: Block_height){
     low
     open
     periodStartUnix
+    token{
+      id
+    }
+    volume
+    feesUSD
+    priceUSD
+    volumeUSD
+    totalValueLocked
+    untrackedVolumeUSD
+    totalValueLockedUSD
   }
 }

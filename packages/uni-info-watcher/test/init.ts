@@ -21,7 +21,7 @@ const watchContract = async (indexer: Indexer, address: string, kind: string): P
   const watchedContract = indexer.isWatchedContract(address);
 
   if (!watchedContract) {
-    await indexer.watchContract(address, kind, 100);
+    await indexer.watchContract(address, kind, true, 100);
   }
 };
 
@@ -29,7 +29,7 @@ const main = async () => {
   // Get config.
   const config = await getConfig(CONFIG_FILE);
 
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode } } = config;
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
   assert(dbConfig, 'Missing dbConfig.');
   // Initialize database.
@@ -55,7 +55,7 @@ const main = async () => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, uniClient, erc20Client, ethClient, ethProvider, jobQueue, mode);
+  const indexer = new Indexer(config.server, db, uniClient, erc20Client, ethClient, ethProvider, jobQueue);
   await indexer.init();
 
   // Get the factory contract address.

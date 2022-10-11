@@ -30,7 +30,7 @@ const deployFactoryContract = async (indexer: Indexer, signer: Signer): Promise<
   assert(factory.address, 'Factory contract not deployed.');
 
   // Watch factory contract.
-  await indexer.watchContract(factory.address, 'factory', 100);
+  await indexer.watchContract(factory.address, 'factory', true, 100);
 
   return factory;
 };
@@ -45,7 +45,7 @@ const deployNFPMContract = async (indexer: Indexer, signer: Signer, factory: Con
   assert(nfpm.address, 'NFPM contract not deployed.');
 
   // Watch NFPM contract.
-  await indexer.watchContract(nfpm.address, 'nfpm', 100);
+  await indexer.watchContract(nfpm.address, 'nfpm', true, 100);
 };
 
 const main = async () => {
@@ -81,7 +81,7 @@ const main = async () => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue);
+  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
 
   let factory: Contract;
   // Checking whether factory is deployed.

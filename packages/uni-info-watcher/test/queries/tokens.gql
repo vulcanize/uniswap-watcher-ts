@@ -14,5 +14,6 @@ query tokens($block: Block_height){
     whitelistPools {
       id
     }
+    untrackedVolumeUSD
   }
 }

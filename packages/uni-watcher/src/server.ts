@@ -12,8 +12,8 @@ import debug from 'debug';
 import 'graphql-import-node';
 import { createServer } from 'http';
 
+import { EthClient } from '@cerc-io/ipld-eth-client';
 import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
 import { DEFAULT_CONFIG_PATH, getConfig, getCustomProvider, JobQueue, startGQLMetricsServer } from '@vulcanize/util';
 
 import typeDefs from './schema';
@@ -74,7 +74,7 @@ export const main = async (): Promise<any> => {
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue);
+  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
   await indexer.init();
 
   const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);

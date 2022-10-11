@@ -1,5 +1,5 @@
 //
-// Copyright 2021 Vulcanize, Inc.
+// Copyright 2022 Vulcanize, Inc.
 //
 
 import assert from 'assert';
@@ -7,9 +7,11 @@ import yargs from 'yargs';
 import 'reflect-metadata';
 
 import { Config, DEFAULT_CONFIG_PATH, getConfig, getResetConfig, JobQueue } from '@vulcanize/util';
+import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
+import { Client as UniClient } from '@vulcanize/uni-watcher';
 
 import { Database } from '../database';
-import { CONTRACT_KIND, Indexer } from '../indexer';
+import { Indexer } from '../indexer';
 
 (async () => {
   const argv = await yargs.parserConfiguration({
@@ -28,6 +30,12 @@ import { CONTRACT_KIND, Indexer } from '../indexer';
       require: true,
       demandOption: true,
       describe: 'Address of the deployed contract'
+    },
+    kind: {
+      type: 'string',
+      require: true,
+      demandOption: true,
+      describe: 'Kind of contract (factory|pool|nfpm)'
     },
     checkpoint: {
       type: 'boolean',
@@ -59,9 +67,18 @@ import { CONTRACT_KIND, Indexer } from '../indexer';
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
   await jobQueue.start();
 
-  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
+  const {
+    uniWatcher,
+    tokenWatcher
+  } = config.upstream;
 
-  await indexer.watchContract(argv.address, CONTRACT_KIND, argv.checkpoint, argv.startingBlock);
+  const uniClient = new UniClient(uniWatcher);
+  const erc20Client = new ERC20Client(tokenWatcher);
+
+  const indexer = new Indexer(config.server, db, uniClient, erc20Client, ethClient, ethProvider, jobQueue);
+  await indexer.init();
+
+  await indexer.watchContract(argv.address, argv.kind, argv.checkpoint, argv.startingBlock);
 
   await db.close();
   await jobQueue.stop();

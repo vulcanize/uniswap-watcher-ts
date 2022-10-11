@@ -42,7 +42,7 @@ export const handler = async (argv: any): Promise<void> => {
 
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
 
-  const indexer = new Indexer(db, ethClient, ethProvider, jobQueue);
+  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
 
   const syncStatus = await indexer.getSyncStatus();
   assert(syncStatus, 'Missing syncStatus');
@@ -55,8 +55,8 @@ export const handler = async (argv: any): Promise<void> => {
   const dbTx = await db.createTransactionRunner();
 
   try {
-    await db.removeEntities(dbTx, BlockProgress, { blockNumber: MoreThan(blockProgress.blockNumber) });
-    await db.removeEntities(dbTx, Contract, { startingBlock: MoreThan(argv.blockNumber) });
+    await db.deleteEntitiesByConditions(dbTx, BlockProgress, { blockNumber: MoreThan(blockProgress.blockNumber) });
+    await db.deleteEntitiesByConditions(dbTx, Contract, { startingBlock: MoreThan(argv.blockNumber) });
 
     if (syncStatus.latestIndexedBlockNumber > blockProgress.blockNumber) {
       await indexer.updateSyncStatusIndexedBlock(blockProgress.blockHash, blockProgress.blockNumber, true);

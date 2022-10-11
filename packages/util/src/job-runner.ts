@@ -6,13 +6,13 @@ import assert from 'assert';
 import debug from 'debug';
 import { DeepPartial, In } from 'typeorm';
 
-import { JobQueueConfig } from './config';
+import { JobQueueConfig, lastBlockNumEvents, lastBlockProcessDuration, lastProcessedBlockNumber } from '@cerc-io/util';
+
 import { JOB_KIND_INDEX, JOB_KIND_PRUNE, JOB_KIND_EVENTS, JOB_KIND_CONTRACT, MAX_REORG_DEPTH, QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UNKNOWN_EVENT_NAME } from './constants';
 import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
 import { wait } from './misc';
 import { createPruningJob } from './common';
-import { eventProcessingLoadEntityCacheHitCount, eventProcessingLoadEntityCount, lastBlockNumEvents, lastBlockProcessDuration, lastProcessedBlockNumber } from './metrics';
 
 const log = debug('vulcanize:job-runner');
 
@@ -121,7 +121,7 @@ export class JobRunner {
   }
 
   async _indexBlock (job: any, syncStatus: SyncStatusInterface): Promise<void> {
-    const { data: { blockHash, blockNumber, parentHash, priority, timestamp } } = job;
+    const { data: { cid, blockHash, blockNumber, parentHash, priority, timestamp } } = job;
 
     const indexBlockStartTime = new Date();
 
@@ -179,10 +179,11 @@ export class JobRunner {
           throw new Error(message);
         }
 
-        const [{ blockNumber: parentBlockNumber, parentHash: grandparentHash, timestamp: parentTimestamp }] = blocks;
+        const [{ cid: parentCid, blockNumber: parentBlockNumber, parentHash: grandparentHash, timestamp: parentTimestamp }] = blocks;
 
         await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, {
           kind: JOB_KIND_INDEX,
+          cid: parentCid,
           blockHash: parentHash,
           blockNumber: parentBlockNumber,
           parentHash: grandparentHash,
@@ -203,6 +204,7 @@ export class JobRunner {
 
         await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, {
           kind: JOB_KIND_INDEX,
+          cid: parentBlock.cid,
           blockHash: parentHash,
           blockNumber: parentBlock.blockNumber,
           parentHash: parentBlock.parentHash,
@@ -232,6 +234,7 @@ export class JobRunner {
 
       console.time('time:job-runner#_indexBlock-saveBlockProgress');
       blockProgress = await this._indexer.saveBlockProgress({
+        cid,
         blockHash,
         blockNumber,
         parentHash,
@@ -341,8 +344,6 @@ export class JobRunner {
           dbEvent.eventInfo = JSON.stringify(eventInfo);
         }
 
-        eventProcessingLoadEntityCount.set(0);
-        eventProcessingLoadEntityCacheHitCount.set(0);
         await this._indexer.processEvent(dbEvent);
       }
 
@@ -350,10 +351,6 @@ export class JobRunner {
       if (this._jobQueueConfig.lazyUpdateBlockProgress) {
         block.lastProcessedEventIndex = dbEvent.index;
         block.numProcessedEvents++;
-
-        if (block.numProcessedEvents >= block.numEvents) {
-          block.isComplete = true;
-        }
       } else {
         block = await this._indexer.updateBlockProgress(block, dbEvent.index);
       }
@@ -367,9 +364,6 @@ export class JobRunner {
         const watchedContract = this._indexer.isWatchedContract(dbEvent.contract);
 
         if (watchedContract) {
-          eventProcessingLoadEntityCount.set(0);
-          eventProcessingLoadEntityCacheHitCount.set(0);
-
           // Events of contract added in same block might be processed multiple times.
           // This is because there is no check for lastProcessedEventIndex against these events.
           await this._indexer.processEvent(dbEvent);
@@ -385,18 +379,17 @@ export class JobRunner {
     }
 
     console.timeEnd('time:job-runner#_processEvents-processing_events');
+    block.isComplete = true;
 
-    // Save events after block processing complete.
-    await this._indexer.saveEvents(dbEvents.filter(event => event.eventName !== UNKNOWN_EVENT_NAME));
+    // Save events and update block after block processing complete.
+    console.time('time:job-runner#_processEvents-updateBlockProgress-saveEvents');
+    await Promise.all([
+      this._indexer.updateBlockProgress(block, block.lastProcessedEventIndex),
+      this._indexer.saveEvents(dbEvents.filter(event => event.eventName !== UNKNOWN_EVENT_NAME))
+    ]);
+    console.timeEnd('time:job-runner#_processEvents-updateBlockProgress-saveEvents');
     this._blockEventsMap.delete(block.blockHash);
     log('size:job-runner#_processEvents-_blockEventsMap:', this._blockEventsMap.size);
-
-    if (this._jobQueueConfig.lazyUpdateBlockProgress) {
-      // Update in database at end of all events processing.
-      console.time('time:job-runner#_processEvents-updateBlockProgress');
-      await this._indexer.updateBlockProgress(block, block.lastProcessedEventIndex);
-      console.timeEnd('time:job-runner#_processEvents-updateBlockProgress');
-    }
 
     console.timeEnd('time:job-runner#_processEvents-events');
   }

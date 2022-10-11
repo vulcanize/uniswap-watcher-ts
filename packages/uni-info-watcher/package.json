@@ -6,6 +6,7 @@
   "private": true,
   "dependencies": {
     "@apollo/client": "^3.3.19",
+    "@ipld/dag-cbor": "^6.0.12",
     "@vulcanize/cache": "^0.1.0",
     "@vulcanize/erc20-watcher": "^0.1.0",
     "@vulcanize/ipld-eth-client": "^0.1.0",
@@ -44,8 +45,10 @@
     "generate:schema": "get-graphql-schema https://api.thegraph.com/subgraphs/name/ianlapham/uniswap-v3-alt > docs/analysis/schema/full-schema.graphql",
     "generate:health-schema": "get-graphql-schema https://api.thegraph.com/index-node/graphql > docs/analysis/schema/health-schema.graphql",
     "lint:schema": "graphql-schema-linter",
+    "watch:contract": "DEBUG=vulcanize:* ts-node src/cli/watch-contract.ts",
     "reset": "DEBUG=vulcanize:* node --enable-source-maps dist/cli/reset.js",
-    "reset:dev": "DEBUG=vulcanize:* ts-node src/cli/reset.ts"
+    "reset:dev": "DEBUG=vulcanize:* ts-node src/cli/reset.ts",
+    "inspect-cid": "DEBUG=vulcanize:* ts-node src/cli/inspect-cid.ts"
   },
   "devDependencies": {
     "@types/chance": "^1.1.2",

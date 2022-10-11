@@ -9,8 +9,8 @@ import _ from 'lodash';
 
 import { getConfig, getCustomProvider, JobQueue, JobRunner, JOB_KIND_PRUNE } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
-import { EthClient } from '@vulcanize/ipld-eth-client';
 import { insertNDummyBlocks, removeEntities } from '@vulcanize/util/test';
+import { EthClient } from '@cerc-io/ipld-eth-client';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
@@ -61,7 +61,7 @@ describe('chain pruning', () => {
 
     const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
 
-    indexer = new Indexer(db, ethClient, ethProvider, jobQueue);
+    indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
     assert(indexer, 'Could not create indexer object.');
 
     jobRunner = new JobRunner(jobQueueConfig, indexer, jobQueue);
