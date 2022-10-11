@@ -9,7 +9,8 @@ import { hideBin } from 'yargs/helpers';
 import { utils, getDefaultProvider, providers } from 'ethers';
 import Decimal from 'decimal.js';
 
-import { DEFAULT_CONFIG_PATH } from './constants';
+import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
+
 import { Config } from './config';
 import { JobQueue } from './job-queue';
 import { GraphDecimal } from './graph-decimal';

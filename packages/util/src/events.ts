@@ -7,12 +7,18 @@ import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { OrderDirection } from '@cerc-io/util';
+import {
+  OrderDirection,
+  createPruningJob,
+  processBlockByNumber,
+  MAX_REORG_DEPTH,
+  JOB_KIND_PRUNE,
+  JOB_KIND_INDEX,
+  UNKNOWN_EVENT_NAME
+} from '@cerc-io/util';
 
 import { JobQueue } from './job-queue';
 import { BlockProgressInterface, EventInterface, IndexerInterface } from './types';
-import { MAX_REORG_DEPTH, JOB_KIND_PRUNE, JOB_KIND_INDEX, UNKNOWN_EVENT_NAME } from './constants';
-import { createPruningJob, processBlockByNumber } from './common';
 import { UpstreamConfig } from './config';
 
 const log = debug('vulcanize:events');
@@ -58,9 +64,7 @@ export class EventWatcher {
       startBlockNumber = syncStatus.chainHeadBlockNumber + 1;
     }
 
-    const { ethServer: { blockDelayInMilliSecs } } = this._upstreamConfig;
-
-    processBlockByNumber(this._jobQueue, this._indexer, blockDelayInMilliSecs, startBlockNumber);
+    processBlockByNumber(this._jobQueue, startBlockNumber);
 
     // Creating an AsyncIterable from AsyncIterator to iterate over the values.
     // https://www.codementor.io/@tiagolopesferreira/asynchronous-iterators-in-javascript-jl1yg8la1#for-wait-of
@@ -75,7 +79,7 @@ export class EventWatcher {
       const { onBlockProgressEvent: { blockNumber, isComplete } } = data;
 
       if (isComplete) {
-        await processBlockByNumber(this._jobQueue, this._indexer, blockDelayInMilliSecs, blockNumber + 1);
+        await processBlockByNumber(this._jobQueue, blockNumber + 1);
       }
     }
   }

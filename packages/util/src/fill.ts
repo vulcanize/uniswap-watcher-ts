@@ -4,10 +4,11 @@
 
 import debug from 'debug';
 
+import { processBlockByNumber } from '@cerc-io/util';
+
 import { JobQueue } from './job-queue';
 import { EventWatcherInterface, IndexerInterface } from './types';
 import { wait } from './misc';
-import { processBlockByNumber } from './common';
 
 const log = debug('vulcanize:fill');
 
@@ -60,7 +61,7 @@ export const fillBlocks = async (
 
   const numberOfBlocks = endBlock - startBlock + 1;
 
-  processBlockByNumber(jobQueue, indexer, blockDelayInMilliSecs, startBlock);
+  processBlockByNumber(jobQueue, startBlock);
 
   // Creating an AsyncIterable from AsyncIterator to iterate over the values.
   // https://www.codementor.io/@tiagolopesferreira/asynchronous-iterators-in-javascript-jl1yg8la1#for-wait-of
@@ -81,7 +82,7 @@ export const fillBlocks = async (
       const completePercentage = Math.round(blocksProcessed / numberOfBlocks * 100);
       log(`Processed ${blocksProcessed} of ${numberOfBlocks} blocks (${completePercentage}%)`);
 
-      await processBlockByNumber(jobQueue, indexer, blockDelayInMilliSecs, blockNumber + 1);
+      await processBlockByNumber(jobQueue, blockNumber + 1);
 
       if (blockNumber + 1 >= endBlock) {
         // Break the async loop when blockProgress event is for the endBlock and processing is complete.
