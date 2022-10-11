@@ -1402,6 +1402,14 @@ export class Database implements DatabaseInterface {
       transaction: {
         entity: Transaction,
         type: 'one-to-one'
+      },
+      token0: {
+        entity: Token,
+        type: 'one-to-one'
+      },
+      token1: {
+        entity: Token,
+        type: 'one-to-one'
       }
     });
 

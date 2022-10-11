@@ -42,9 +42,6 @@
   "homepage": "https://github.com/vulcanize/watcher-ts#readme",
   "dependencies": {
     "@apollo/client": "^3.3.19",
-    "@cerc-io/ipld-eth-client": "0.1.2",
-    "@cerc-io/solidity-mapper": "0.1.4",
-    "@cerc-io/util": "0.1.4",
     "@ethersproject/providers": "5.3.0",
     "@types/lodash": "^4.14.168",
     "@vulcanize/cache": "^0.1.0",

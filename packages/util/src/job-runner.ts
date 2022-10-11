@@ -121,7 +121,7 @@ export class JobRunner {
   }
 
   async _indexBlock (job: any, syncStatus: SyncStatusInterface): Promise<void> {
-    const { data: { blockHash, blockNumber, parentHash, priority, timestamp } } = job;
+    const { data: { cid, blockHash, blockNumber, parentHash, priority, timestamp } } = job;
 
     const indexBlockStartTime = new Date();
 
@@ -179,10 +179,11 @@ export class JobRunner {
           throw new Error(message);
         }
 
-        const [{ blockNumber: parentBlockNumber, parentHash: grandparentHash, timestamp: parentTimestamp }] = blocks;
+        const [{ cid: parentCid, blockNumber: parentBlockNumber, parentHash: grandparentHash, timestamp: parentTimestamp }] = blocks;
 
         await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, {
           kind: JOB_KIND_INDEX,
+          cid: parentCid,
           blockHash: parentHash,
           blockNumber: parentBlockNumber,
           parentHash: grandparentHash,
@@ -203,6 +204,7 @@ export class JobRunner {
 
         await this._jobQueue.pushJob(QUEUE_BLOCK_PROCESSING, {
           kind: JOB_KIND_INDEX,
+          cid: parentBlock.cid,
           blockHash: parentHash,
           blockNumber: parentBlock.blockNumber,
           parentHash: parentBlock.parentHash,
@@ -232,6 +234,7 @@ export class JobRunner {
 
       console.time('time:job-runner#_indexBlock-saveBlockProgress');
       blockProgress = await this._indexer.saveBlockProgress({
+        cid,
         blockHash,
         blockNumber,
         parentHash,

@@ -88,7 +88,7 @@ export const fillState = async (
             const diffData = prepareEntityState(updatedEntity, entityName, db.relationsMap);
 
             // Update the in-memory subgraph state
-            indexer.updateSubgraphState(contractAddress, diffData);
+            indexer.updateEntityState(contractAddress, diffData);
           });
         });
       });

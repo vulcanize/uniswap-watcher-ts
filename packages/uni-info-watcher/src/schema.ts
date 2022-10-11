@@ -118,6 +118,12 @@ type Swap {
   pool: Pool!
   timestamp: BigInt!
   transaction: Transaction!
+  token0: Token!
+  token1: Token!
+  sender: Bytes!
+  recipient: Bytes!
+  sqrtPriceX96: BigInt!
+  tick: BigInt!
 }
 
 type Burn {

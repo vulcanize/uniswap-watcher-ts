@@ -1,16 +1,48 @@
-# watcher-ts
+# uniswap-watcher-ts
 
 ## Setup
 
 This project uses [yarn workspaces](https://classic.yarnpkg.com/en/docs/workspaces/).
 
-Install packages (Node.JS v16.13.1):
+- Install packages (Node.JS v16.15.1):
 
-```bash
-yarn
+  ```bash
+  yarn
+  ```
 
-yarn build
-```
+- Link [@cerc-io/watcher-ts](https://github.com/cerc-io/watcher-ts) packages:
+
+  - In `@cerc-io/watcher-ts` repo, build and link the packages to use from uniswap-watcher-ts
+    
+    ```bash
+    # Build packages
+    yarn && yarn build
+
+    # Link packages
+    cd packages/util && yarn link && cd ../..
+    cd packages/ipld-eth-client && yarn link && cd ../..
+    cd packages/solidity-mapper && yarn link && cd ../..
+    # Workaround for typeorm dependency issue when using yarn link
+    cd node_modules/typeorm && yarn link && cd ../..
+    ```
+
+  - In `uniswap-watcher-ts`:
+
+    ```bash
+    yarn link "@cerc-io/util"
+    yarn link "@cerc-io/ipld-eth-client"
+    yarn link "@cerc-io/solidity-mapper"
+    yarn link "typeorm"
+    ```
+
+- Build packages:
+  
+  ```bash
+  yarn build
+
+  # For running tests
+  yarn build:contracts
+  ```
 
 ### Services
 

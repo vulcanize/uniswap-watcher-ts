@@ -6,9 +6,6 @@
   "private": true,
   "dependencies": {
     "@apollo/client": "^3.3.19",
-    "@cerc-io/ipld-eth-client": "0.1.0",
-    "@cerc-io/solidity-mapper": "0.1.0",
-    "@cerc-io/util": "0.1.0",
     "@ipld/dag-cbor": "^6.0.12",
     "@vulcanize/cache": "^0.1.0",
     "@vulcanize/erc20-watcher": "^0.1.0",

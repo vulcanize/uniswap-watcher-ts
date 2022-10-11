@@ -127,7 +127,7 @@ const prefetchBlocks = async (
     }
 
     const fetchBlockPromises = blocks.map(async block => {
-      const { blockHash, blockNumber, parentHash, timestamp } = block;
+      const { cid, blockHash, blockNumber, parentHash, timestamp } = block;
       const blockProgress = await indexer.getBlockProgress(blockHash);
 
       if (!blockProgress) {
@@ -135,6 +135,7 @@ const prefetchBlocks = async (
 
         // Save block progress in database.
         await indexer.saveBlockProgress({
+          cid,
           blockHash,
           blockNumber,
           parentHash,

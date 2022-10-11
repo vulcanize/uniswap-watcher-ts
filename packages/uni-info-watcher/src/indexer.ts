@@ -635,7 +635,7 @@ export class Indexer implements IndexerInterface {
     this._subgraphStateMap.clear();
   }
 
-  updateSubgraphState (contractAddress: string, data: any): void {
+  updateEntityState (contractAddress: string, data: any): void {
     // Update the subgraph state for a given contract.
     const oldData = this._subgraphStateMap.get(contractAddress);
     const updatedData = _.merge(oldData, data);

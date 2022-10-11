@@ -12,5 +12,15 @@ query swaps($block: Block_height){
     transaction {
       id
     }
+    token0 {
+      id
+    }
+    token1 {
+      id
+    }
+    sender
+    recipient
+    sqrtPriceX96
+    tick
   }
 }
