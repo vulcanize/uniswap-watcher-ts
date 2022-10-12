@@ -14,7 +14,7 @@ export class BlockProgress implements BlockProgressInterface {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column('varchar')
+  @Column('varchar', { nullable: true })
   cid!: string;
 
   @Column('varchar', { length: 66 })

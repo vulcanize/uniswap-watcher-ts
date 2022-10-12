@@ -35,9 +35,9 @@ export class SyncStatus implements SyncStatusInterface {
   @Column('integer')
   latestCanonicalBlockNumber!: number;
 
-  @Column('varchar', { length: 66 })
+  @Column('varchar', { length: 66, default: '0xf1156cb7e1a2acaa348c66fdc45b02f2547024ded63350a96a46ed12c62b4ff4' })
   initialIndexedBlockHash!: string;
 
-  @Column('integer')
+  @Column('integer', { default: 12369621 })
   initialIndexedBlockNumber!: number;
 }
