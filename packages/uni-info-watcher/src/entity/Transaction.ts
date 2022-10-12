@@ -20,4 +20,13 @@ export class Transaction {
 
   @Column('numeric', { transformer: bigintTransformer })
   timestamp!: bigint;
+
+  @Column('numeric', { transformer: bigintTransformer })
+  _blockNumber!: bigint;
+
+  @Column('numeric', { transformer: bigintTransformer })
+  gasUsed!: bigint
+
+  @Column('numeric', { transformer: bigintTransformer })
+  gasPrice!: bigint
 }

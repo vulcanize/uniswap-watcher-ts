@@ -25,5 +25,13 @@ query pools($block: Block_height){
     totalValueLockedETH
     feeGrowthGlobal0X128
     feeGrowthGlobal1X128
+    createdAtTimestamp
+    createdAtBlockNumber
+    observationIndex
+    collectedFeesToken0
+    collectedFeesToken1
+    collectedFeesUSD
+    totalValueLockedUSDUntracked
+    liquidityProviderCount
   }
 }

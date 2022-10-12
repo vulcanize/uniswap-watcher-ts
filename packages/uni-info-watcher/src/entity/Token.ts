@@ -57,5 +57,9 @@ export class Token {
   @Column('varchar', { length: 42, array: true, default: [] })
   whitelistPools!: string[];
 
-  // TODO: Add remaining fields when they are used.
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
+  poolCount!: bigint
+
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  totalValueLockedUSDUntracked!: GraphDecimal
 }

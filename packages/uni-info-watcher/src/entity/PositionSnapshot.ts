@@ -59,6 +59,9 @@ export class PositionSnapshot {
   @Column('varchar')
   position!: string
 
+  @Column('numeric', { transformer: bigintTransformer })
+  _blockNumber!: bigint;
+
   @Column('varchar')
   transaction!: string
 }

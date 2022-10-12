@@ -134,6 +134,23 @@ type TransferEvent {
 # All events emitted by the NonfungiblePositionManager contract.
 union NonFungiblePositionManagerEvent = IncreaseLiquidityEvent | DecreaseLiquidityEvent | CollectEvent | TransferEvent
 
+# Pool Types
+
+type TicksValue {
+  liquidityGross: BigInt!
+  liquidityNet: BigInt!
+  feeGrowthOutside0X128: BigInt!
+  feeGrowthOutside1X128: BigInt!
+  tickCumulativeOutside: BigInt!
+  secondsPerLiquidityOutsideX128: BigInt!
+  secondsOutside: Int!
+  initialized: Boolean!
+}
+
+type ResultTicks {
+  value: TicksValue!
+  proof: Proof
+}
 
 # Pool Events
 
@@ -175,11 +192,20 @@ type SwapEvent {
   tick: BigInt!
 }
 
-union PoolEvent = InitializeEvent | MintEvent | BurnEvent | SwapEvent
+type FlashEvent {
+  sender: String!
+  recipient: String!
+  amount0: BigInt!
+  amount1: BigInt!
+  paid0: BigInt!
+  paid1: BigInt!
+}
+
+union PoolEvent = InitializeEvent | MintEvent | BurnEvent | SwapEvent | FlashEvent
 
 
 # All events emitted by the watcher.
-union Event = TransferEvent | PoolCreatedEvent | IncreaseLiquidityEvent | DecreaseLiquidityEvent | CollectEvent | InitializeEvent | MintEvent | BurnEvent | SwapEvent
+union Event = TransferEvent | PoolCreatedEvent | IncreaseLiquidityEvent | DecreaseLiquidityEvent | CollectEvent | InitializeEvent | MintEvent | BurnEvent | SwapEvent | FlashEvent
 
 # Ethereum types
 
@@ -274,13 +300,21 @@ type Query {
 
   # Pool
 
+  ticks(
+    blockHash: String!,
+    contractAddress: String!,
+    tick: Int!
+  ): ResultTicks!
+
   feeGrowthGlobal0X128(
-    blockHash: String!
+    blockHash: String!,
+    contractAddress: String!,
   ): ResultUInt256!
 
   # Pool (feeGrowthGlobal1X128)
   feeGrowthGlobal1X128(
-    blockHash: String!
+    blockHash: String!,
+    contractAddress: String!,
   ): ResultUInt256!
 
   # Get uniswap events at a certain block, optionally filter by event name.

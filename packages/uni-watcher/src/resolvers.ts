@@ -101,6 +101,30 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.positions(blockHash, contractAddress, tokenId);
       },
 
+      ticks: (_: any, { blockHash, contractAddress, tick }: { blockHash: string, contractAddress: string, tick: number }): Promise<ValueResult> => {
+        log('ticks', blockHash, contractAddress, tick);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('ticks').inc(1);
+
+        return indexer.ticks(blockHash, contractAddress, tick);
+      },
+
+      feeGrowthGlobal0X128: (_: any, { blockHash, contractAddress }: { blockHash: string, contractAddress: string }): Promise<ValueResult> => {
+        log('feeGrowthGlobal0X128', blockHash, contractAddress);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('feeGrowthGlobal0X128').inc(1);
+
+        return indexer.feeGrowthGlobal0X128(blockHash, contractAddress);
+      },
+
+      feeGrowthGlobal1X128: (_: any, { blockHash, contractAddress }: { blockHash: string, contractAddress: string }): Promise<ValueResult> => {
+        log('feeGrowthGlobal1X128', blockHash, contractAddress);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('feeGrowthGlobal1X128').inc(1);
+
+        return indexer.feeGrowthGlobal1X128(blockHash, contractAddress);
+      },
+
       poolIdToPoolKey: (_: any, { blockHash, poolId }: { blockHash: string, poolId: string }) => {
         log('poolIdToPoolKey', blockHash, poolId);
         gqlTotalQueryCount.inc(1);

@@ -227,6 +227,20 @@ export class Indexer implements IndexerInterface {
 
             break;
           }
+          case 'Flash': {
+            eventName = logDescription.name;
+            const { sender, recipient, amount0, amount1, paid0, paid1 } = logDescription.args;
+            eventInfo = {
+              sender,
+              recipient,
+              amount0: amount0.toString(),
+              amount1: amount1.toString(),
+              paid0: paid0.toString(),
+              paid1: paid1.toString()
+            };
+
+            break;
+          }
         }
 
         break;
@@ -351,6 +365,63 @@ export class Indexer implements IndexerInterface {
 
     try {
       const value = await contract.positions(tokenId, { blockTag: blockHash });
+
+      return { value };
+    } catch (error: any) {
+      if (error.code === ethers.utils.Logger.errors.CALL_EXCEPTION) {
+        log('eth_call error');
+        log(error);
+
+        throw new Error(error.code);
+      }
+
+      throw error;
+    }
+  }
+
+  async ticks (blockHash: string, contractAddress: string, tick: number): Promise<ValueResult> {
+    const contract = new ethers.Contract(contractAddress, poolABI, this._ethProvider);
+
+    try {
+      const value = await contract.ticks(tick, { blockTag: blockHash });
+
+      return { value };
+    } catch (error: any) {
+      if (error.code === ethers.utils.Logger.errors.CALL_EXCEPTION) {
+        log('eth_call error');
+        log(error);
+
+        throw new Error(error.code);
+      }
+
+      throw error;
+    }
+  }
+
+  async feeGrowthGlobal0X128 (blockHash: string, contractAddress: string): Promise<ValueResult> {
+    const contract = new ethers.Contract(contractAddress, poolABI, this._ethProvider);
+
+    try {
+      const value = await contract.feeGrowthGlobal0X128({ blockTag: blockHash });
+
+      return { value };
+    } catch (error: any) {
+      if (error.code === ethers.utils.Logger.errors.CALL_EXCEPTION) {
+        log('eth_call error');
+        log(error);
+
+        throw new Error(error.code);
+      }
+
+      throw error;
+    }
+  }
+
+  async feeGrowthGlobal1X128 (blockHash: string, contractAddress: string): Promise<ValueResult> {
+    const contract = new ethers.Contract(contractAddress, poolABI, this._ethProvider);
+
+    try {
+      const value = await contract.feeGrowthGlobal1X128({ blockTag: blockHash });
 
       return { value };
     } catch (error: any) {

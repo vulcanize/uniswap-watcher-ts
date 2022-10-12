@@ -75,6 +75,4 @@ export class PoolDayData {
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal
-
-  // TODO: Add remaining fields when they are used.
 }

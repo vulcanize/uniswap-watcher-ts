@@ -35,4 +35,7 @@ export class UniswapDayData {
 
   @Column('numeric', { transformer: graphDecimalTransformer, default: 0 })
   feesUSD!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  volumeUSDUntracked!: GraphDecimal
 }

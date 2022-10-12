@@ -18,6 +18,8 @@ export const createTick = async (db: Database, dbTx: QueryRunner, tickId: string
   tick.tickIdx = tickIdx;
   tick.pool = pool.id;
   tick.poolAddress = pool.id;
+  tick.createdAtTimestamp = BigInt(block.timestamp);
+  tick.createdAtBlockNumber = BigInt(block.number);
 
   // 1.0001^tick is token1/token0.
   const price0 = bigDecimalExponated(new GraphDecimal('1.0001'), tickIdx);

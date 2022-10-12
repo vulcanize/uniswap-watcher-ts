@@ -2,7 +2,7 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { utils } from 'ethers';
+import { BigNumber, utils } from 'ethers';
 import { QueryRunner } from 'typeorm';
 import assert from 'assert';
 
@@ -10,9 +10,28 @@ import { GraphDecimal } from '@vulcanize/util';
 
 import { Transaction as TransactionEntity } from '../entity/Transaction';
 import { Database } from '../database';
-import { Block, Transaction } from '../events';
+import { Transaction } from '../events';
 import { Factory } from '../entity/Factory';
 import { FACTORY_ADDRESS } from './constants';
+
+export interface Block {
+  headerId: number;
+  number: number;
+  hash: string;
+  timestamp: number;
+  parentHash: string;
+  stateRoot: string;
+  td: string;
+  txRoot: string;
+  receiptRoot: string;
+  uncleHash: string;
+  difficulty: string;
+  gasLimit: string;
+  gasUsed: string;
+  author: string;
+  size: string;
+  baseFee?: string;
+}
 
 export const exponentToBigDecimal = (decimals: bigint): GraphDecimal => {
   let bd = new GraphDecimal(1);
@@ -43,8 +62,22 @@ export const loadTransaction = async (db: Database, dbTx: QueryRunner, event: { 
     transaction.id = txHash;
   }
 
-  transaction.blockNumber = block.number;
+  transaction._blockNumber = BigInt(block.number);
   transaction.timestamp = BigInt(block.timestamp);
+  transaction.gasUsed = BigInt(tx.gasLimit);
+
+  let gasPrice = tx.gasPrice;
+
+  if (!gasPrice) {
+    // Compute gasPrice for EIP-1559 transaction
+    // https://ethereum.stackexchange.com/questions/122090/what-does-tx-gasprice-represent-after-eip-1559
+    const feeDifference = BigNumber.from(tx.maxFeePerGas).sub(BigNumber.from(block.baseFee));
+    const maxPriorityFeePerGas = BigNumber.from(tx.maxPriorityFeePerGas);
+    const priorityFeePerGas = maxPriorityFeePerGas.lt(feeDifference) ? maxPriorityFeePerGas : feeDifference;
+    gasPrice = BigNumber.from(block.baseFee).add(priorityFeePerGas).toString();
+  }
+
+  transaction.gasPrice = BigInt(gasPrice);
 
   return db.saveTransaction(dbTx, transaction, block);
 };
@@ -77,4 +110,26 @@ export const loadFactory = async (db: Database, dbTx: QueryRunner, block: Block,
   assert(factory);
 
   return factory;
+};
+
+export const resolveEntityFieldConflicts = (entity: any): any => {
+  if (entity) {
+    // Remove fields blockHash and blockNumber from the entity.
+    delete entity.blockHash;
+    delete entity.blockNumber;
+
+    // Rename _blockHash -> blockHash.
+    if ('_blockHash' in entity) {
+      entity.blockHash = entity._blockHash;
+      delete entity._blockHash;
+    }
+
+    // Rename _blockNumber -> blockNumber.
+    if ('_blockNumber' in entity) {
+      entity.blockNumber = entity._blockNumber;
+      delete entity._blockNumber;
+    }
+  }
+
+  return entity;
 };

@@ -1,5 +1,5 @@
 //
-// Copyright 2021 Vulcanize, Inc.
+// Copyright 2022 Vulcanize, Inc.
 //
 
 import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
@@ -7,14 +7,10 @@ import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulca
 
 @Entity()
 @Index(['id', 'blockNumber'])
-@Index(['transaction'])
-@Index(['blockHash', 'id', 'token0'])
-@Index(['blockHash', 'id', 'token1'])
-export class Mint {
-  @PrimaryColumn('varchar')
+export class Collect {
+  @PrimaryColumn('varchar', { length: 42 })
   id!: string;
 
-  // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
   blockHash!: string
 
@@ -22,31 +18,16 @@ export class Mint {
   blockNumber!: number;
 
   @Column('varchar')
-  transaction!: string;
+  transaction!: string
 
   @Column('numeric', { transformer: bigintTransformer })
-  timestamp!: bigint;
+  timestamp!: bigint
 
   @Column('varchar', { length: 42 })
-  pool!: string;
-
-  @Column('varchar', { length: 42 })
-  token0!: string
-
-  @Column('varchar', { length: 42 })
-  token1!: string
+  pool!: string
 
   @Column('varchar', { length: 42 })
   owner!: string
-
-  @Column('varchar', { length: 42 })
-  sender!: string
-
-  @Column('varchar', { length: 42 })
-  origin!: string
-
-  @Column('numeric', { transformer: bigintTransformer })
-  amount!: bigint
 
   @Column('numeric', { transformer: graphDecimalTransformer })
   amount0!: GraphDecimal
@@ -63,6 +44,6 @@ export class Mint {
   @Column('numeric', { transformer: bigintTransformer })
   tickUpper!: bigint
 
-  @Column('numeric', { transformer: bigintTransformer })
+  @Column('numeric', { nullable: true, transformer: bigintTransformer })
   logIndex!: bigint
 }

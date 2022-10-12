@@ -78,5 +78,27 @@ export class Pool {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal
 
-  // TODO: Add remaining fields when they are used.
+  @Column('numeric', { transformer: bigintTransformer })
+  createdAtTimestamp!: bigint
+
+  @Column('numeric', { transformer: bigintTransformer })
+  createdAtBlockNumber!: bigint
+
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
+  observationIndex!: bigint
+
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  collectedFeesToken0!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  collectedFeesToken1!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  collectedFeesUSD!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  totalValueLockedUSDUntracked!: GraphDecimal
+
+  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
+  liquidityProviderCount!: bigint
 }

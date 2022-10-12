@@ -15,5 +15,7 @@ query tokens($block: Block_height){
       id
     }
     untrackedVolumeUSD
+    poolCount
+    totalValueLockedUSDUntracked
   }
 }

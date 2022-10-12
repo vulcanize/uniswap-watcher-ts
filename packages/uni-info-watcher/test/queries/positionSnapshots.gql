@@ -1,0 +1,26 @@
+query positionSnapshots($block: Block_height){
+  positionSnapshots(block: $block){
+    id
+    timestamp
+    feeGrowthInside0LastX128
+    feeGrowthInside1LastX128
+    liquidity
+    depositedToken0
+    depositedToken1
+    owner
+    withdrawnToken0
+    withdrawnToken1
+    collectedFeesToken0
+    collectedFeesToken1
+    blockNumber
+    pool {
+      id
+    }
+    position{
+      id
+    }
+    transaction{
+      id
+    }
+  }
+}

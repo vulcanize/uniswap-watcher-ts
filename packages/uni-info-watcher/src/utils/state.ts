@@ -3,6 +3,7 @@
 //
 
 import { jsonBigIntStringReplacer } from '@cerc-io/util';
+import { resolveEntityFieldConflicts } from './index';
 
 export const prepareEntityState = (updatedEntity: any, entityName: string, relationsMap: Map<any, { [key: string]: any }>): any => {
   // Resolve any field name conflicts in the dbData for auto-diff.
@@ -49,26 +50,4 @@ export const prepareEntityState = (updatedEntity: any, entityName: string, relat
   };
 
   return diffData;
-};
-
-const resolveEntityFieldConflicts = (entity: any): any => {
-  if (entity) {
-    // Remove fields blockHash and blockNumber from the entity.
-    delete entity.blockHash;
-    delete entity.blockNumber;
-
-    // Rename _blockHash -> blockHash.
-    if ('_blockHash' in entity) {
-      entity.blockHash = entity._blockHash;
-      delete entity._blockHash;
-    }
-
-    // Rename _blockNumber -> blockNumber.
-    if ('_blockNumber' in entity) {
-      entity.blockNumber = entity._blockNumber;
-      delete entity._blockNumber;
-    }
-  }
-
-  return entity;
 };

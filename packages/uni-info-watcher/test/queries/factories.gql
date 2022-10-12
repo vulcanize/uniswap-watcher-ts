@@ -10,5 +10,8 @@ query factories($block: Block_height){
     totalVolumeETH
     untrackedVolumeUSD
     totalValueLockedETH
+    totalValueLockedUSDUntracked
+    totalValueLockedETHUntracked
+    owner
   }
 }

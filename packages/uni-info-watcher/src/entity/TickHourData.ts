@@ -1,5 +1,5 @@
 //
-// Copyright 2021 Vulcanize, Inc.
+// Copyright 2022 Vulcanize, Inc.
 //
 
 import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
@@ -7,7 +7,7 @@ import { bigintTransformer, GraphDecimal, graphDecimalTransformer } from '@vulca
 
 @Entity()
 @Index(['id', 'blockNumber'])
-export class TickDayData {
+export class TickHourData {
   @PrimaryColumn('varchar')
   id!: string;
 
@@ -17,9 +17,6 @@ export class TickDayData {
 
   @Column('integer')
   blockNumber!: number;
-
-  @Column('integer')
-  date!: number
 
   @Column('varchar', { length: 42 })
   pool!: string;
@@ -33,6 +30,9 @@ export class TickDayData {
   @Column('numeric', { transformer: bigintTransformer })
   liquidityNet!: bigint;
 
+  @Column('integer')
+  periodStartUnix!: number
+
   @Column('numeric', { transformer: graphDecimalTransformer })
   volumeToken0!: GraphDecimal
 
@@ -44,10 +44,4 @@ export class TickDayData {
 
   @Column('numeric', { transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal
-
-  @Column('numeric', { default: 0, transformer: bigintTransformer })
-  feeGrowthOutside0X128!: bigint
-
-  @Column('numeric', { default: 0, transformer: bigintTransformer })
-  feeGrowthOutside1X128!: bigint
 }

@@ -1,0 +1,26 @@
+query poolHourDatas($block: Block_height){
+  poolHourDatas(block: $block){
+    id
+    pool {
+      id
+    }
+    periodStartUnix
+    high
+    low
+    open
+    close
+    sqrtPrice
+    tick
+    liquidity
+    feeGrowthGlobal0X128
+    feeGrowthGlobal1X128
+    token0Price
+    token1Price
+    tvlUSD
+    txCount
+    volumeToken0
+    volumeToken1
+    volumeUSD
+    feesUSD
+  }
+}

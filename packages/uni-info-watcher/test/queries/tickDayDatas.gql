@@ -1,0 +1,20 @@
+query tickDayDatas($block: Block_height){
+  tickDayDatas(block: $block){
+    id
+    pool {
+      id
+    }
+    tick {
+      id
+    }
+    date
+    liquidityGross
+    liquidityNet
+    volumeToken0
+    volumeToken1
+    volumeUSD
+    feesUSD
+    feeGrowthOutside0X128
+    feeGrowthOutside1X128
+  }
+}

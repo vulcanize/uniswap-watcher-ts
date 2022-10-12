@@ -1,0 +1,20 @@
+query flashes($block: Block_height){
+  flashes(block: $block){
+    id
+    transaction {
+      id
+    }
+    pool {
+      id
+    }
+    timestamp
+    sender
+    recipient
+    amount0
+    amount1
+    amountUSD
+    amount0Paid
+    amount1Paid
+    logIndex
+  }
+}

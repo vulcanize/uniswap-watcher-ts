@@ -82,6 +82,29 @@ type PoolDayData {
   close: BigDecimal!
 }
 
+type PoolHourData {
+  id: ID!
+  periodStartUnix: Int!
+  pool: Pool!
+  high: BigDecimal!
+  low: BigDecimal!
+  open: BigDecimal!
+  close: BigDecimal!
+  sqrtPrice: BigInt!
+  tick: BigInt
+  liquidity: BigInt!
+  feeGrowthGlobal0X128: BigInt!
+  feeGrowthGlobal1X128: BigInt!
+  token0Price: BigDecimal!
+  token1Price: BigDecimal!
+  tvlUSD: BigDecimal!
+  txCount: BigInt!
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+  feesUSD: BigDecimal!
+}
+
 type Tick {
   id: ID!
   liquidityGross: BigInt!
@@ -89,6 +112,49 @@ type Tick {
   price0: BigDecimal!
   price1: BigDecimal!
   tickIdx: BigInt!
+  poolAddress: String
+  pool: Pool!
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+  untrackedVolumeUSD: BigDecimal!
+  feesUSD: BigDecimal!
+  collectedFeesToken0: BigDecimal!
+  collectedFeesToken1: BigDecimal!
+  collectedFeesUSD: BigDecimal!
+  createdAtTimestamp: BigInt!
+  createdAtBlockNumber: BigInt!
+  liquidityProviderCount: BigInt! # used to detect new exchanges
+  feeGrowthOutside0X128: BigInt!
+  feeGrowthOutside1X128: BigInt!
+}
+
+type TickDayData {
+  id: ID!
+  date: Int!
+  pool: Pool!
+  tick: Tick!
+  liquidityGross: BigInt!
+  liquidityNet: BigInt!
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+  feesUSD: BigDecimal!
+  feeGrowthOutside0X128: BigInt!
+  feeGrowthOutside1X128: BigInt!
+}
+
+type TickHourData {
+  id: ID!  
+  pool: Pool!
+  tick: Tick!
+  liquidityGross: BigInt!
+  liquidityNet: BigInt!
+  periodStartUnix: Int!
+  volumeToken0: BigDecimal!
+  volumeToken1: BigDecimal!
+  volumeUSD: BigDecimal!
+  feesUSD: BigDecimal!
 }
 
 type Mint {
@@ -107,6 +173,7 @@ type Mint {
   amount: BigInt!
   tickLower: BigInt!
   tickUpper: BigInt!
+  logIndex: BigInt
 }
 
 type Swap {
@@ -124,6 +191,7 @@ type Swap {
   recipient: Bytes!
   sqrtPriceX96: BigInt!
   tick: BigInt!
+  logIndex: BigInt
 }
 
 type Burn {
@@ -136,6 +204,41 @@ type Burn {
   pool: Pool!
   timestamp: BigInt!
   transaction: Transaction!
+  token0: Token!
+  token1: Token!
+  amount: BigInt!
+  tickLower: BigInt!
+  tickUpper: BigInt!
+  logIndex: BigInt
+}
+
+type Collect {
+  id: ID!
+  transaction: Transaction!
+  timestamp: BigInt!
+  pool: Pool!
+  owner: Bytes!
+  amount0: BigDecimal!
+  amount1: BigDecimal!
+  amountUSD: BigDecimal!
+  tickLower: BigInt!
+  tickUpper: BigInt!
+  logIndex: BigInt
+}
+
+type Flash {
+  id: ID!
+  transaction: Transaction!
+  timestamp: BigInt!
+  pool: Pool!
+  sender: Bytes!
+  recipient: Bytes!
+  amount0: BigDecimal!
+  amount1: BigDecimal!
+  amountUSD: BigDecimal!
+  amount0Paid: BigDecimal!
+  amount1Paid: BigDecimal!
+  logIndex: BigInt!
 }
 
 type UniswapDayData {
@@ -171,6 +274,9 @@ type Transaction {
   mints(skip: Int = 0, first: Int = 100, orderBy: Mint_orderBy, orderDirection: OrderDirection, where: Mint_filter): [Mint]!
   swaps(skip: Int = 0, first: Int = 100, orderBy: Swap_orderBy, orderDirection: OrderDirection, where: Swap_filter): [Swap]!
   timestamp: BigInt!
+  blockNumber: BigInt!
+  gasUsed: BigInt!
+  gasPrice: BigInt!
 }
 
 type Token {
@@ -188,6 +294,8 @@ type Token {
   whitelistPools: [Pool]
   totalSupply: BigInt!
   untrackedVolumeUSD: BigDecimal!
+  poolCount: BigInt!
+  totalValueLockedUSDUntracked: BigDecimal!
 }
 
 type TokenDayData {
@@ -247,6 +355,25 @@ type Position {
   feeGrowthInside1LastX128: BigInt!
   withdrawnToken0: BigDecimal!
   withdrawnToken1: BigDecimal!
+}
+
+type PositionSnapshot {
+  id: ID!
+  timestamp: BigInt!
+  feeGrowthInside0LastX128: BigInt!
+  feeGrowthInside1LastX128: BigInt!
+  liquidity: BigInt!
+  depositedToken0: BigDecimal!
+  depositedToken1: BigDecimal!
+  owner: Bytes!
+  withdrawnToken0: BigDecimal!
+  withdrawnToken1: BigDecimal!
+  collectedFeesToken0: BigDecimal!
+  collectedFeesToken1: BigDecimal!
+  pool: Pool!
+  position: Position!
+  blockNumber: BigInt!
+  transaction: Transaction!
 }
 
 type Block {
@@ -504,6 +631,12 @@ type Query {
     subgraphError: _SubgraphErrorPolicy_! = deny
   ): [PoolDayData!]!
 
+  poolHourDatas(
+    first: Int = 100
+    block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [PoolHourData!]!
+
   pools(
     first: Int = 100
     orderBy: Pool_orderBy
@@ -611,6 +744,36 @@ type Query {
     block: Block_height
     subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Position!]!
+
+  positionSnapshots(
+    first: Int = 100
+    block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [PositionSnapshot!]!
+
+  tickDayDatas(
+    first: Int = 100
+    block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [TickDayData!]!
+
+  tickHourDatas(
+    first: Int = 100
+    block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [TickHourData!]!
+
+  flashes(
+    first: Int = 100
+    block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [Flash!]!
+
+  collects(
+    first: Int = 100
+    block: Block_height
+    subgraphError: _SubgraphErrorPolicy_! = deny
+  ): [Collect!]!
 
   blocks(
     first: Int = 100
