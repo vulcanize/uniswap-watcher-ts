@@ -693,9 +693,7 @@ export class Indexer implements IndexerInterface {
   async _fetchEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
     assert(block.blockHash);
 
-    console.time('time:indexer#_fetchEvents-uni-get-events');
     const events = await this._uniClient.getEvents(block.blockHash);
-    console.timeEnd('time:indexer#_fetchEvents-uni-get-events');
 
     const dbEvents: Array<DeepPartial<Event>> = [];
     const transactionsMap = new Map();

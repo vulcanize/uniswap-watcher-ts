@@ -16,7 +16,6 @@ import {
   fetchBlocks,
   JOB_KIND_INDEX,
   JOB_KIND_PRUNE,
-  JOB_KIND_FETCH_BLOCKS,
   JOB_KIND_EVENTS,
   JOB_KIND_CONTRACT,
   MAX_REORG_DEPTH,
@@ -26,7 +25,7 @@ import {
 } from '@cerc-io/util';
 
 import { JobQueue } from './job-queue';
-import { EventInterface, IndexerInterface, SyncStatusInterface } from './types';
+import { EventInterface, IndexerInterface } from './types';
 import { wait } from './misc';
 
 const log = debug('vulcanize:job-runner');
@@ -50,13 +49,17 @@ export class JobRunner {
     const { data: { kind } } = job;
 
     switch (kind) {
-      case JOB_KIND_FETCH_BLOCKS:
-        await this._fetchBlocks(job);
+      case JOB_KIND_INDEX: {
+        const blocksToBeIndexed = await fetchBlocks(
+          job,
+          this._indexer,
+          this._jobQueueConfig,
+          this._prefetchedBlocksMap
+        );
+        const indexBlockPromises = blocksToBeIndexed.map(blockToBeIndexed => this._indexBlock(job, blockToBeIndexed));
+        await Promise.all(indexBlockPromises);
         break;
-
-      case JOB_KIND_INDEX:
-        await this._indexBlock(job);
-        break;
+      }
 
       case JOB_KIND_PRUNE:
         await this._pruneChain(job);
@@ -88,17 +91,6 @@ export class JobRunner {
     }
 
     await this._jobQueue.markComplete(job);
-  }
-
-  async _fetchBlocks (job: any): Promise<void> {
-    const { blockNumber } = job.data;
-    return fetchBlocks(
-      blockNumber,
-      this._indexer,
-      this._jobQueue,
-      this._jobQueueConfig,
-      this._prefetchedBlocksMap
-    );
   }
 
   async _pruneChain (job: any): Promise<void> {
@@ -150,11 +142,12 @@ export class JobRunner {
     console.timeEnd('time:job-runner#_pruneChain');
   }
 
-  async _indexBlock (job: any): Promise<void> {
+  async _indexBlock (job: any, blockToBeIndexed: any): Promise<void> {
     const syncStatus = await this._indexer.getSyncStatus();
     assert(syncStatus);
 
-    const { data: { cid, blockHash, blockNumber, parentHash, priority, timestamp } } = job;
+    const { data: { priority } } = job;
+    const { cid, blockHash, blockNumber, parentHash, blockTimestamp } = blockToBeIndexed;
 
     const indexBlockStartTime = new Date();
 
@@ -256,7 +249,7 @@ export class JobRunner {
 
     if (!blockProgress) {
       const prefetchedBlock = this._prefetchedBlocksMap.get(blockHash);
-      const block = { blockHash, blockNumber, parentHash, blockTimestamp: timestamp };
+      const block = { blockHash, blockNumber, parentHash, blockTimestamp };
       let events;
 
       if (prefetchedBlock) {
@@ -275,7 +268,7 @@ export class JobRunner {
         blockHash,
         blockNumber,
         parentHash,
-        blockTimestamp: timestamp,
+        blockTimestamp,
         numEvents: events.length,
         isComplete: events.length === 0
       });
