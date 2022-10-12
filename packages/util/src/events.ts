@@ -141,13 +141,11 @@ export class EventWatcher {
   }
 
   async _handleIndexingComplete (jobData: any): Promise<void> {
-    const { blockHash, blockNumber, priority } = jobData;
-    log(`Job onComplete indexing block ${blockHash} ${blockNumber}`);
+    const { blockNumber, priority } = jobData;
+    log(`Job onComplete indexing blocks at height ${blockNumber}`);
 
-    const [blockProgress, syncStatus] = await Promise.all([
-      this._indexer.getBlockProgress(blockHash),
-      this._indexer.updateSyncStatusIndexedBlock(blockHash, blockNumber)
-    ]);
+    const blockProgressEntities = await this._indexer.getBlocksAtHeight(Number(blockNumber), false);
+    const syncStatus = await this._indexer.updateSyncStatusIndexedBlock(blockProgressEntities[0].blockHash, Number(blockNumber));
 
     // Create pruning job if required.
     if (syncStatus && syncStatus.latestIndexedBlockNumber > (syncStatus.latestCanonicalBlockNumber + MAX_REORG_DEPTH)) {
@@ -156,9 +154,11 @@ export class EventWatcher {
 
     // Publish block progress event if no events exist.
     // Event for blocks with events will be pusblished from eventProcessingCompleteHandler.
-    if (blockProgress && blockProgress.numEvents === 0) {
-      await this.publishBlockProgressToSubscribers(blockProgress);
-    }
+    blockProgressEntities.forEach(async (blockProgress) => {
+      if (blockProgress && blockProgress.numEvents === 0) {
+        await this.publishBlockProgressToSubscribers(blockProgress);
+      }
+    });
   }
 
   async _handlePruningComplete (jobData: any): Promise<void> {
