@@ -23,7 +23,6 @@
   [upstream.ethServer]
     gqlApiEndpoint = "http://127.0.0.1:8082/graphql"
     rpcProviderEndpoint = "http://127.0.0.1:8081"
-    blockDelayInMilliSecs = 2000
 
   [upstream.cache]
     name = "requests"
@@ -36,3 +35,6 @@
   jobDelayInMilliSecs = 0
   eventsInBatch = 50
   lazyUpdateBlockProgress = true
+  blockDelayInMilliSecs = 2000
+  prefetchBlocksInMem = true
+  prefetchBlockCount = 10
