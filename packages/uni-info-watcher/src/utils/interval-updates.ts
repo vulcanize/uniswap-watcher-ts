@@ -86,8 +86,11 @@ export const updatePoolDayData = async (db: Database, dbTx: QueryRunner, event: 
 
   poolDayData.liquidity = pool.liquidity;
   poolDayData.sqrtPrice = pool.sqrtPrice;
-  poolDayData.feeGrowthGlobal0X128 = pool.feeGrowthGlobal0X128;
-  poolDayData.feeGrowthGlobal1X128 = pool.feeGrowthGlobal1X128;
+
+  // Skipping fee growth as they are not queried.
+  // poolDayData.feeGrowthGlobal0X128 = pool.feeGrowthGlobal0X128;
+  // poolDayData.feeGrowthGlobal1X128 = pool.feeGrowthGlobal1X128;
+
   poolDayData.token0Price = pool.token0Price;
   poolDayData.token1Price = pool.token1Price;
   poolDayData.tick = pool.tick;
@@ -135,8 +138,11 @@ export const updatePoolHourData = async (db: Database, dbTx: QueryRunner, event:
   poolHourData.sqrtPrice = pool.sqrtPrice;
   poolHourData.token0Price = pool.token0Price;
   poolHourData.token1Price = pool.token1Price;
-  poolHourData.feeGrowthGlobal0X128 = pool.feeGrowthGlobal0X128;
-  poolHourData.feeGrowthGlobal1X128 = pool.feeGrowthGlobal1X128;
+
+  // Skipping fee growth as they are not queried.
+  // poolHourData.feeGrowthGlobal0X128 = pool.feeGrowthGlobal0X128;
+  // poolHourData.feeGrowthGlobal1X128 = pool.feeGrowthGlobal1X128;
+
   poolHourData.close = pool.token0Price;
   poolHourData.tick = pool.tick;
   poolHourData.tvlUSD = pool.totalValueLockedUSD;

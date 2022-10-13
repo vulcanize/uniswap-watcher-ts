@@ -42,12 +42,6 @@ export class Pool {
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   liquidity!: bigint
 
-  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  feeGrowthGlobal0X128!: bigint
-
-  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  feeGrowthGlobal1X128!: bigint
-
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   totalValueLockedUSD!: GraphDecimal
 
@@ -101,4 +95,11 @@ export class Pool {
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   liquidityProviderCount!: bigint
+
+  // Skipping fee growth as they are not queried.
+  // @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
+  // feeGrowthGlobal0X128!: bigint
+
+  // @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
+  // feeGrowthGlobal1X128!: bigint
 }

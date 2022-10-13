@@ -46,12 +46,6 @@ export class PoolDayData {
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   liquidity!: bigint
 
-  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  feeGrowthGlobal0X128!: bigint
-
-  @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  feeGrowthGlobal1X128!: bigint
-
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   token0Price!: GraphDecimal
 
@@ -75,4 +69,11 @@ export class PoolDayData {
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal
+
+  // Skipping fee growth as they are not queried.
+  // @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
+  // feeGrowthGlobal0X128!: bigint
+
+  // @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
+  // feeGrowthGlobal1X128!: bigint
 }

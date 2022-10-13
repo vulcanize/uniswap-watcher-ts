@@ -23,8 +23,6 @@ query pools($block: Block_height){
     volumeToken1
     untrackedVolumeUSD
     totalValueLockedETH
-    feeGrowthGlobal0X128
-    feeGrowthGlobal1X128
     createdAtTimestamp
     createdAtBlockNumber
     observationIndex
@@ -33,5 +31,9 @@ query pools($block: Block_height){
     collectedFeesUSD
     totalValueLockedUSDUntracked
     liquidityProviderCount
+
+    # Skipping fee growth as they are not queried.
+    # feeGrowthGlobal0X128
+    # feeGrowthGlobal1X128
   }
 }

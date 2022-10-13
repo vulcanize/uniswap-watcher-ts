@@ -44,8 +44,6 @@ type Pool {
   volumeUSD: BigDecimal!
   createdAtTimestamp: BigInt!
   createdAtBlockNumber: BigInt!
-  feeGrowthGlobal0X128: BigInt!
-  feeGrowthGlobal1X128: BigInt!
   observationIndex: BigInt!
   volumeToken0: BigDecimal!
   volumeToken1: BigDecimal!
@@ -57,6 +55,10 @@ type Pool {
   totalValueLockedETH: BigDecimal!
   totalValueLockedUSDUntracked: BigDecimal!
   liquidityProviderCount: BigInt!
+  
+  # Skipping fee growth as they are not queried.
+  # feeGrowthGlobal0X128: BigInt!
+  # feeGrowthGlobal1X128: BigInt!
 }
 
 type PoolDayData {
@@ -71,8 +73,6 @@ type PoolDayData {
   token0Price: BigDecimal!
   token1Price: BigDecimal!
   tick: BigInt
-  feeGrowthGlobal0X128: BigInt!
-  feeGrowthGlobal1X128: BigInt!
   volumeToken0: BigDecimal!
   volumeToken1: BigDecimal!
   txCount: BigInt!
@@ -80,6 +80,10 @@ type PoolDayData {
   high: BigDecimal!
   low: BigDecimal!
   close: BigDecimal!
+
+  # Skipping fee growth as they are not queried.
+  # feeGrowthGlobal0X128: BigInt!
+  # feeGrowthGlobal1X128: BigInt!
 }
 
 type PoolHourData {
@@ -93,8 +97,6 @@ type PoolHourData {
   sqrtPrice: BigInt!
   tick: BigInt
   liquidity: BigInt!
-  feeGrowthGlobal0X128: BigInt!
-  feeGrowthGlobal1X128: BigInt!
   token0Price: BigDecimal!
   token1Price: BigDecimal!
   tvlUSD: BigDecimal!
@@ -103,6 +105,10 @@ type PoolHourData {
   volumeToken1: BigDecimal!
   volumeUSD: BigDecimal!
   feesUSD: BigDecimal!
+
+  # Skipping fee growth as they are not queried.
+  # feeGrowthGlobal0X128: BigInt!
+  # feeGrowthGlobal1X128: BigInt!
 }
 
 type Tick {

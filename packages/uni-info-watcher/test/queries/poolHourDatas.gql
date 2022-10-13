@@ -12,8 +12,6 @@ query poolHourDatas($block: Block_height){
     sqrtPrice
     tick
     liquidity
-    feeGrowthGlobal0X128
-    feeGrowthGlobal1X128
     token0Price
     token1Price
     tvlUSD
@@ -22,5 +20,9 @@ query poolHourDatas($block: Block_height){
     volumeToken1
     volumeUSD
     feesUSD
+
+    # Skipping fee growth as they are not queried.
+    # feeGrowthGlobal0X128
+    # feeGrowthGlobal1X128
   }
 }

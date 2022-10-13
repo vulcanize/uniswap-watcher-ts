@@ -1372,21 +1372,22 @@ export class Indexer implements IndexerInterface {
       swap.sqrtPriceX96 = BigInt(swapEvent.sqrtPriceX96);
       swap.logIndex = BigInt(eventIndex);
 
-      // Update fee growth.
-      console.time('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
-      const endTimer = eventProcessingEthCallDuration.startTimer();
-      const [
-        { value: feeGrowthGlobal0X128 },
-        { value: feeGrowthGlobal1X128 }
-      ] = await Promise.all([
-        this._uniClient.feeGrowthGlobal0X128(block.hash, contractAddress),
-        this._uniClient.feeGrowthGlobal1X128(block.hash, contractAddress)
-      ]);
-      endTimer();
-      console.timeEnd('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
+      // Skipping update pool fee growth as they are not queried.
+      // // Update fee growth.
+      // console.time('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
+      // const endTimer = eventProcessingEthCallDuration.startTimer();
+      // const [
+      //   { value: feeGrowthGlobal0X128 },
+      //   { value: feeGrowthGlobal1X128 }
+      // ] = await Promise.all([
+      //   this._uniClient.feeGrowthGlobal0X128(block.hash, contractAddress),
+      //   this._uniClient.feeGrowthGlobal1X128(block.hash, contractAddress)
+      // ]);
+      // endTimer();
+      // console.timeEnd('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
 
-      pool.feeGrowthGlobal0X128 = BigInt(feeGrowthGlobal0X128);
-      pool.feeGrowthGlobal1X128 = BigInt(feeGrowthGlobal1X128);
+      // pool.feeGrowthGlobal0X128 = BigInt(feeGrowthGlobal0X128);
+      // pool.feeGrowthGlobal1X128 = BigInt(feeGrowthGlobal1X128);
 
       // Interval data.
       const uniswapDayData = await updateUniswapDayData(this._db, dbTx, { block, contractAddress }, this._isDemo);
@@ -1521,20 +1522,22 @@ export class Indexer implements IndexerInterface {
       const pool = await this._db.getPool(dbTx, { id: poolAddress, blockHash: block.hash });
       assert(pool);
 
-      console.time('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
-      const endTimer = eventProcessingEthCallDuration.startTimer();
-      const [
-        { value: feeGrowthGlobal0X128 },
-        { value: feeGrowthGlobal1X128 }
-      ] = await Promise.all([
-        this._uniClient.feeGrowthGlobal0X128(block.hash, contractAddress),
-        this._uniClient.feeGrowthGlobal1X128(block.hash, contractAddress)
-      ]);
-      endTimer();
-      console.timeEnd('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
+      // Skipping update pool fee growth as they are not queried.
+      // console.time('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
+      // const endTimer = eventProcessingEthCallDuration.startTimer();
+      // const [
+      //   { value: feeGrowthGlobal0X128 },
+      //   { value: feeGrowthGlobal1X128 }
+      // ] = await Promise.all([
+      //   this._uniClient.feeGrowthGlobal0X128(block.hash, contractAddress),
+      //   this._uniClient.feeGrowthGlobal1X128(block.hash, contractAddress)
+      // ]);
+      // endTimer();
+      // console.timeEnd('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
 
-      pool.feeGrowthGlobal0X128 = BigInt(feeGrowthGlobal0X128);
-      pool.feeGrowthGlobal1X128 = BigInt(feeGrowthGlobal1X128);
+      // pool.feeGrowthGlobal0X128 = BigInt(feeGrowthGlobal0X128);
+      // pool.feeGrowthGlobal1X128 = BigInt(feeGrowthGlobal1X128);
+
       await this._db.savePool(dbTx, pool, block);
     } catch (error) {
       await dbTx.rollbackTransaction();
