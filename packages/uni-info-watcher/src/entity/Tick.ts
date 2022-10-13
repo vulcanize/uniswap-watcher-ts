@@ -38,4 +38,43 @@ export class Tick {
 
   @Column('numeric', { default: 0, transformer: bigintTransformer })
   liquidityNet!: bigint
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  volumeToken0!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  volumeToken1!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  volumeUSD!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  untrackedVolumeUSD!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  feesUSD!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  collectedFeesToken0!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  collectedFeesToken1!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  collectedFeesUSD!: GraphDecimal
+
+  @Column('numeric', { transformer: bigintTransformer })
+  createdAtTimestamp!: bigint
+
+  @Column('numeric', { transformer: bigintTransformer })
+  createdAtBlockNumber!: bigint
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  liquidityProviderCount!: bigint
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  feeGrowthOutside0X128!: bigint
+
+  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  feeGrowthOutside1X128!: bigint
 }

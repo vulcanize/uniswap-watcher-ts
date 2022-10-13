@@ -1,0 +1,19 @@
+query collects($block: Block_height){
+  collects(block: $block){
+    id
+    pool {
+      id
+    }
+    transaction {
+      id
+    }
+    timestamp
+    owner
+    amount0
+    amount1
+    amountUSD
+    tickLower
+    tickUpper
+    logIndex
+  }
+}

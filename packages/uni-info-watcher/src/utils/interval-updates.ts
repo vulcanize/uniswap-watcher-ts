@@ -6,7 +6,7 @@ import assert from 'assert';
 import { BigNumber, utils } from 'ethers';
 import { QueryRunner } from 'typeorm';
 
-import { loadFactory } from './index';
+import { loadFactory, Block } from './index';
 import { Database } from '../database';
 import { PoolDayData } from '../entity/PoolDayData';
 import { PoolHourData } from '../entity/PoolHourData';
@@ -16,7 +16,6 @@ import { Token } from '../entity/Token';
 import { TokenDayData } from '../entity/TokenDayData';
 import { TokenHourData } from '../entity/TokenHourData';
 import { UniswapDayData } from '../entity/UniswapDayData';
-import { Block } from '../events';
 
 /**
  * Tracks global aggregate data over daily windows.
@@ -34,9 +33,8 @@ export const updateUniswapDayData = async (
 ): Promise<UniswapDayData> => {
   const { block } = event;
 
-  const factory = await loadFactory(db, dbTx, block, isDemo);
-
-  const dayID = Math.floor(block.timestamp / 86400); // Rounded.
+  const uniswap = await loadFactory(db, dbTx, block, isDemo);
+  const dayID = Math.floor(Number(block.timestamp) / 86400); // Rounded.
   const dayStartTimestamp = dayID * 86400;
 
   let uniswapDayData = await db.getUniswapDayData(dbTx, { id: dayID.toString(), blockHash: block.hash });
@@ -45,12 +43,10 @@ export const updateUniswapDayData = async (
     uniswapDayData = new UniswapDayData();
     uniswapDayData.id = dayID.toString();
     uniswapDayData.date = dayStartTimestamp;
-    uniswapDayData.tvlUSD = factory.totalValueLockedUSD;
-    uniswapDayData.txCount = factory.txCount;
   }
 
-  uniswapDayData.tvlUSD = factory.totalValueLockedUSD;
-  uniswapDayData.txCount = factory.txCount;
+  uniswapDayData.tvlUSD = uniswap.totalValueLockedUSD;
+  uniswapDayData.txCount = uniswap.txCount;
   return db.saveUniswapDayData(dbTx, uniswapDayData, block);
 };
 
@@ -80,18 +76,21 @@ export const updatePoolDayData = async (db: Database, dbTx: QueryRunner, event: 
     poolDayData = await db.savePoolDayData(dbTx, poolDayData, block);
   }
 
-  if (Number(pool.token0Price) > Number(poolDayData.high)) {
+  if (pool.token0Price.gt(poolDayData.high)) {
     poolDayData.high = pool.token0Price;
   }
 
-  if (Number(pool.token0Price) < Number(poolDayData.low)) {
+  if (pool.token0Price.lt(poolDayData.low)) {
     poolDayData.low = pool.token0Price;
   }
 
   poolDayData.liquidity = pool.liquidity;
   poolDayData.sqrtPrice = pool.sqrtPrice;
-  poolDayData.feeGrowthGlobal0X128 = pool.feeGrowthGlobal0X128;
-  poolDayData.feeGrowthGlobal1X128 = pool.feeGrowthGlobal1X128;
+
+  // Skipping fee growth as they are not queried.
+  // poolDayData.feeGrowthGlobal0X128 = pool.feeGrowthGlobal0X128;
+  // poolDayData.feeGrowthGlobal1X128 = pool.feeGrowthGlobal1X128;
+
   poolDayData.token0Price = pool.token0Price;
   poolDayData.token1Price = pool.token1Price;
   poolDayData.tick = pool.tick;
@@ -128,10 +127,10 @@ export const updatePoolHourData = async (db: Database, dbTx: QueryRunner, event:
     poolHourData = await db.savePoolHourData(dbTx, poolHourData, block);
   }
 
-  if (Number(pool.token0Price) > Number(poolHourData.high)) {
+  if (pool.token0Price.gt(poolHourData.high)) {
     poolHourData.high = pool.token0Price;
   }
-  if (Number(pool.token0Price) < Number(poolHourData.low)) {
+  if (pool.token0Price.lt(poolHourData.low)) {
     poolHourData.low = pool.token0Price;
   }
 
@@ -139,8 +138,11 @@ export const updatePoolHourData = async (db: Database, dbTx: QueryRunner, event:
   poolHourData.sqrtPrice = pool.sqrtPrice;
   poolHourData.token0Price = pool.token0Price;
   poolHourData.token1Price = pool.token1Price;
-  poolHourData.feeGrowthGlobal0X128 = pool.feeGrowthGlobal0X128;
-  poolHourData.feeGrowthGlobal1X128 = pool.feeGrowthGlobal1X128;
+
+  // Skipping fee growth as they are not queried.
+  // poolHourData.feeGrowthGlobal0X128 = pool.feeGrowthGlobal0X128;
+  // poolHourData.feeGrowthGlobal1X128 = pool.feeGrowthGlobal1X128;
+
   poolHourData.close = pool.token0Price;
   poolHourData.tick = pool.tick;
   poolHourData.tvlUSD = pool.totalValueLockedUSD;
@@ -174,9 +176,6 @@ export const updateTokenDayData = async (db: Database, dbTx: QueryRunner, token:
     tokenDayData.high = tokenPrice;
     tokenDayData.low = tokenPrice;
     tokenDayData.close = tokenPrice;
-    tokenDayData.priceUSD = token.derivedETH.times(bundle.ethPriceUSD);
-    tokenDayData.totalValueLocked = token.totalValueLocked;
-    tokenDayData.totalValueLockedUSD = token.totalValueLockedUSD;
   }
 
   if (tokenPrice.gt(tokenDayData.high)) {
@@ -218,9 +217,6 @@ export const updateTokenHourData = async (db: Database, dbTx: QueryRunner, token
     tokenHourData.high = tokenPrice;
     tokenHourData.low = tokenPrice;
     tokenHourData.close = tokenPrice;
-    tokenHourData.priceUSD = tokenPrice;
-    tokenHourData.totalValueLocked = token.totalValueLocked;
-    tokenHourData.totalValueLockedUSD = token.totalValueLockedUSD;
   }
 
   if (tokenPrice.gt(tokenHourData.high)) {
@@ -255,11 +251,17 @@ export const updateTickDayData = async (db: Database, dbTx: QueryRunner, tick: T
     tickDayData.id = tickDayDataID;
     tickDayData.date = dayStartTimestamp;
     tickDayData.pool = tick.pool;
-    tickDayData.tick = tick.id;
   }
 
+  tickDayData.tick = tick.id;
   tickDayData.liquidityGross = tick.liquidityGross;
   tickDayData.liquidityNet = tick.liquidityNet;
+  tickDayData.volumeToken0 = tick.volumeToken0;
+  tickDayData.volumeToken1 = tick.volumeToken0;
+  tickDayData.volumeUSD = tick.volumeUSD;
+  tickDayData.feesUSD = tick.feesUSD;
+  tickDayData.feeGrowthOutside0X128 = tick.feeGrowthOutside0X128;
+  tickDayData.feeGrowthOutside1X128 = tick.feeGrowthOutside1X128;
 
   return db.saveTickDayData(dbTx, tickDayData, block);
 };

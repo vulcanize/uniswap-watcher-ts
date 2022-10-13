@@ -24,8 +24,14 @@ import { TokenDayData } from './entity/TokenDayData';
 import { TokenHourData } from './entity/TokenHourData';
 import { UniswapDayData } from './entity/UniswapDayData';
 import { Position } from './entity/Position';
-import { EventWatcher } from './events';
 import { Transaction } from './entity/Transaction';
+import { PositionSnapshot } from './entity/PositionSnapshot';
+import { TickDayData } from './entity/TickDayData';
+import { TickHourData } from './entity/TickHourData';
+import { Flash } from './entity/Flash';
+import { Collect } from './entity/Collect';
+import { PoolHourData } from './entity/PoolHourData';
+import { EventWatcher } from './events';
 import { FACTORY_ADDRESS, BUNDLE_ID } from './utils/constants';
 
 const log = debug('vulcanize:resolver');
@@ -176,6 +182,26 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           block,
           where,
           { limit: first, skip, orderBy, orderDirection },
+          info.fieldNodes[0].selectionSet.selections
+        );
+      },
+
+      poolHourDatas: async (
+        _: any,
+        { block, first }: { block: BlockHeight, first: number },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
+        log('poolHourDatas', first);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('poolHourDatas').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
+
+        return indexer.getEntities(
+          PoolHourData,
+          block,
+          {},
+          { limit: first },
           info.fieldNodes[0].selectionSet.selections
         );
       },
@@ -351,6 +377,106 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           Position,
           block,
           where,
+          { limit: first },
+          info.fieldNodes[0].selectionSet.selections
+        );
+      },
+
+      positionSnapshots: async (
+        _: any,
+        { block, first }: { block: BlockHeight, first: number },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
+        log('positionSnapshots', first);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('positionSnapshots').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
+
+        return indexer.getEntities(
+          PositionSnapshot,
+          block,
+          {},
+          { limit: first },
+          info.fieldNodes[0].selectionSet.selections
+        );
+      },
+
+      tickDayDatas: async (
+        _: any,
+        { block, first }: { block: BlockHeight, first: number },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
+        log('tickDayDatas', first);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('tickDayDatas').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
+
+        return indexer.getEntities(
+          TickDayData,
+          block,
+          {},
+          { limit: first },
+          info.fieldNodes[0].selectionSet.selections
+        );
+      },
+
+      tickHourDatas: async (
+        _: any,
+        { block, first }: { block: BlockHeight, first: number },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
+        log('tickHourDatas', first);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('tickHourDatas').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
+
+        return indexer.getEntities(
+          TickHourData,
+          block,
+          {},
+          { limit: first },
+          info.fieldNodes[0].selectionSet.selections
+        );
+      },
+
+      flashes: async (
+        _: any,
+        { block, first }: { block: BlockHeight, first: number },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
+        log('flashes', first);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('flashes').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
+
+        return indexer.getEntities(
+          Flash,
+          block,
+          {},
+          { limit: first },
+          info.fieldNodes[0].selectionSet.selections
+        );
+      },
+
+      collects: async (
+        _: any,
+        { block, first }: { block: BlockHeight, first: number },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
+        log('collects', first);
+        gqlTotalQueryCount.inc(1);
+        gqlQueryCount.labels('collects').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
+
+        return indexer.getEntities(
+          Collect,
+          block,
+          {},
           { limit: first },
           info.fieldNodes[0].selectionSet.selections
         );

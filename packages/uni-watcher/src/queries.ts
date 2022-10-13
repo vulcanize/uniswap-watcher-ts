@@ -196,6 +196,49 @@ query callGetPool($blockHash: String!, $contractAddress: String!, $key0: String!
 }
 `;
 
+export const queryTicks = gql`
+query ticks($blockHash: String!, $contractAddress: String!, $tick: Int!) {
+  ticks(blockHash: $blockHash, contractAddress: $contractAddress, tick: $tick) {
+    value {
+      liquidityGross
+      liquidityNet
+      feeGrowthOutside0X128
+      feeGrowthOutside1X128
+      tickCumulativeOutside
+      secondsPerLiquidityOutsideX128
+      secondsOutside
+      initialized
+    }
+
+    proof {
+      data
+    }
+  }
+}
+`;
+
+export const queryFeeGrowthGlobal0X128 = gql`
+query feeGrowthGlobal0X128($blockHash: String!, $contractAddress: String!) {
+  feeGrowthGlobal0X128(blockHash: $blockHash, contractAddress: $contractAddress) {
+    value
+    proof {
+      data
+    }
+  }
+}
+`;
+
+export const queryFeeGrowthGlobal1X128 = gql`
+query feeGrowthGlobal1X128($blockHash: String!, $contractAddress: String!) {
+  feeGrowthGlobal1X128(blockHash: $blockHash, contractAddress: $contractAddress) {
+    value
+    proof {
+      data
+    }
+  }
+}
+`;
+
 export const queryGetContract = gql`
 query queryGetContract($type: String!) {
   getContract(type: $type) {

@@ -14,20 +14,20 @@ import * as codec from '@ipld/dag-cbor';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { GraphDecimal, JobQueue } from '@vulcanize/util';
-import { ServerConfig, IPFSClient, IpldStatus as IpldStatusInterface, ValueResult, Indexer as BaseIndexer, IndexerInterface, QueryOptions, OrderDirection, BlockHeight, Where, ResultIPLDBlock, eventProcessingEthCallDuration } from '@cerc-io/util';
+import { ServerConfig, IPFSClient, IpldStatus as IpldStatusInterface, ValueResult, Indexer as BaseIndexer, IndexerInterface, QueryOptions, OrderDirection, BlockHeight, Where, ResultIPLDBlock, eventProcessingEthCallDuration, getFullTransaction, getFullBlock } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
 import { Token } from './entity/Token';
-import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv } from './utils';
+import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv, Block } from './utils';
 import { createTick, feeTierToTickSpacing } from './utils/tick';
-import { FACTORY_ADDRESS, WATCHED_CONTRACTS } from './utils/constants';
+import { ADDRESS_ZERO, FACTORY_ADDRESS, WATCHED_CONTRACTS } from './utils/constants';
 import { Position } from './entity/Position';
 import { Database, DEFAULT_LIMIT } from './database';
 import { Event } from './entity/Event';
-import { ResultEvent, Block, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent } from './events';
+import { ResultEvent, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent, FlashEvent } from './events';
 import { Factory } from './entity/Factory';
 import { Bundle } from './entity/Bundle';
 import { Pool } from './entity/Pool';
@@ -54,11 +54,13 @@ export class Indexer implements IndexerInterface {
   _uniClient: UniClient
   _erc20Client: ERC20Client
   _ethClient: EthClient
+  _ethProvider: providers.BaseProvider
   _baseIndexer: BaseIndexer
   _serverConfig: ServerConfig
   _isDemo: boolean
   _storageLayoutMap: Map<string, StorageLayout> = new Map()
   _subgraphStateMap: Map<string, any> = new Map()
+  _fullBlock?: Block
 
   constructor (serverConfig: ServerConfig, db: Database, uniClient: UniClient, erc20Client: ERC20Client, ethClient: EthClient, ethProvider: providers.BaseProvider, jobQueue: JobQueue) {
     assert(db);
@@ -69,9 +71,10 @@ export class Indexer implements IndexerInterface {
     this._uniClient = uniClient;
     this._erc20Client = erc20Client;
     this._ethClient = ethClient;
+    this._ethProvider = ethProvider;
     this._serverConfig = serverConfig;
     const ipfsClient = new IPFSClient(this._serverConfig.ipfsApiAddr);
-    this._baseIndexer = new BaseIndexer(this._serverConfig, this._db, this._ethClient, ethProvider, jobQueue, ipfsClient);
+    this._baseIndexer = new BaseIndexer(this._serverConfig, this._db, this._ethClient, this._ethProvider, jobQueue, ipfsClient);
     this._isDemo = this._serverConfig.mode === 'demo';
   }
 
@@ -222,53 +225,71 @@ export class Indexer implements IndexerInterface {
     const resultEvent = this.getResultEvent(dbEvent);
 
     // TODO: Process proof (proof.data) in event.
-    const { contract, tx, block, event } = resultEvent;
+    const { contract, tx, block, event, eventIndex } = resultEvent;
     const { __typename: eventName } = event;
+
+    if (!this._fullBlock || (this._fullBlock.hash !== block.hash)) {
+      const { blockHash, blockNumber, timestamp, ...blockData } = await getFullBlock(this._ethClient, this._ethProvider, block.hash);
+
+      this._fullBlock = {
+        hash: blockHash,
+        number: blockNumber,
+        timestamp: Number(timestamp),
+        ...blockData
+      };
+
+      assert(this._fullBlock);
+    }
 
     switch (eventName) {
       case 'PoolCreatedEvent':
         log('Factory PoolCreated event', contract);
-        await this._handlePoolCreated(block, contract, tx, event as PoolCreatedEvent);
+        await this._handlePoolCreated(this._fullBlock, contract, tx, event as PoolCreatedEvent);
         break;
 
       case 'InitializeEvent':
         log('Pool Initialize event', contract);
-        await this._handleInitialize(block, contract, tx, event as InitializeEvent);
+        await this._handleInitialize(this._fullBlock, contract, tx, event as InitializeEvent);
         break;
 
       case 'MintEvent':
         log('Pool Mint event', contract);
-        await this._handleMint(block, contract, tx, event as MintEvent);
+        await this._handleMint(this._fullBlock, contract, tx, event as MintEvent, eventIndex);
         break;
 
       case 'BurnEvent':
         log('Pool Burn event', contract);
-        await this._handleBurn(block, contract, tx, event as BurnEvent);
+        await this._handleBurn(this._fullBlock, contract, tx, event as BurnEvent, eventIndex);
         break;
 
       case 'SwapEvent':
         log('Pool Swap event', contract);
-        await this._handleSwap(block, contract, tx, event as SwapEvent);
+        await this._handleSwap(this._fullBlock, contract, tx, event as SwapEvent, eventIndex);
+        break;
+
+      case 'FlashEvent':
+        log('Pool Flash event', contract);
+        await this._handleFlash(this._fullBlock, contract, tx, event as FlashEvent);
         break;
 
       case 'IncreaseLiquidityEvent':
         log('NFPM IncreaseLiquidity event', contract);
-        await this._handleIncreaseLiquidity(block, contract, tx, event as IncreaseLiquidityEvent);
+        await this._handleIncreaseLiquidity(this._fullBlock, contract, tx, event as IncreaseLiquidityEvent);
         break;
 
       case 'DecreaseLiquidityEvent':
         log('NFPM DecreaseLiquidity event', contract);
-        await this._handleDecreaseLiquidity(block, contract, tx, event as DecreaseLiquidityEvent);
+        await this._handleDecreaseLiquidity(this._fullBlock, contract, tx, event as DecreaseLiquidityEvent);
         break;
 
       case 'CollectEvent':
         log('NFPM Collect event', contract);
-        await this._handleCollect(block, contract, tx, event as CollectEvent);
+        await this._handleCollect(this._fullBlock, contract, tx, event as CollectEvent);
         break;
 
       case 'TransferEvent':
         log('NFPM Transfer event', contract);
-        await this._handleTransfer(block, contract, tx, event as TransferEvent);
+        await this._handleTransfer(this._fullBlock, contract, tx, event as TransferEvent);
         break;
 
       default:
@@ -677,6 +698,7 @@ export class Indexer implements IndexerInterface {
     console.timeEnd('time:indexer#_fetchEvents-uni-get-events');
 
     const dbEvents: Array<DeepPartial<Event>> = [];
+    const transactionsMap = new Map();
 
     for (let i = 0; i < events.length; i++) {
       const {
@@ -687,8 +709,21 @@ export class Indexer implements IndexerInterface {
         proof
       } = events[i];
 
+      // Get full transaction for extra params like gasUsed and gasPrice.
+      let transaction = transactionsMap.get(tx.hash);
+
+      if (!transaction) {
+        transaction = await getFullTransaction(this._ethClient, tx.hash);
+        assert(transaction);
+        transactionsMap.set(tx.hash, transaction);
+      }
+
       const { __typename: eventName, ...eventInfo } = event;
-      const extraInfo = { tx, eventIndex };
+
+      const extraInfo = {
+        tx: transaction,
+        eventIndex
+      };
 
       dbEvents.push({
         index: i,
@@ -722,7 +757,7 @@ export class Indexer implements IndexerInterface {
       this._db.getTokenNoTx({ blockHash: block.hash, id: token1Address })
     ]);
 
-    // Create Tokens if not present.
+    // Fetch info if null.
     if (!token0) {
       token0 = await this._initToken(block, token0Address);
     }
@@ -771,9 +806,8 @@ export class Indexer implements IndexerInterface {
       pool.token0 = token0.id;
       pool.token1 = token1.id;
       pool.feeTier = BigInt(fee);
-
-      // Skipping adding createdAtTimestamp field as it is not queried in frontend subgraph.
-
+      pool.createdAtTimestamp = BigInt(block.timestamp);
+      pool.createdAtBlockNumber = BigInt(block.number);
       pool = await this._db.savePool(dbTx, pool, block);
 
       // Update white listed pools.
@@ -885,7 +919,7 @@ export class Indexer implements IndexerInterface {
     }
   }
 
-  async _handleMint (block: Block, contractAddress: string, tx: Transaction, mintEvent: MintEvent): Promise<void> {
+  async _handleMint (block: Block, contractAddress: string, tx: Transaction, mintEvent: MintEvent, eventIndex: number): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
 
     try {
@@ -973,6 +1007,7 @@ export class Indexer implements IndexerInterface {
       mint.amountUSD = amountUSD;
       mint.tickLower = BigInt(mintEvent.tickLower);
       mint.tickUpper = BigInt(mintEvent.tickUpper);
+      mint.logIndex = BigInt(eventIndex);
 
       // Tick entities.
       const lowerTickIdx = mintEvent.tickLower;
@@ -1034,8 +1069,8 @@ export class Indexer implements IndexerInterface {
       ]);
 
       // Update inner tick vars and save the ticks.
-      await this._updateTickFeeVarsAndSave(dbTx, lowerTick, block);
-      await this._updateTickFeeVarsAndSave(dbTx, upperTick, block);
+      await this._updateTickFeeVarsAndSave(dbTx, lowerTick, block, contractAddress);
+      await this._updateTickFeeVarsAndSave(dbTx, upperTick, block, contractAddress);
 
       await dbTx.commitTransaction();
     } catch (error) {
@@ -1046,7 +1081,7 @@ export class Indexer implements IndexerInterface {
     }
   }
 
-  async _handleBurn (block: Block, contractAddress: string, tx: Transaction, burnEvent: BurnEvent): Promise<void> {
+  async _handleBurn (block: Block, contractAddress: string, tx: Transaction, burnEvent: BurnEvent, eventIndex: number): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
 
     try {
@@ -1135,6 +1170,7 @@ export class Indexer implements IndexerInterface {
       burn.amountUSD = amountUSD;
       burn.tickLower = BigInt(burnEvent.tickLower);
       burn.tickUpper = BigInt(burnEvent.tickUpper);
+      burn.logIndex = BigInt(eventIndex);
 
       // Tick entities.
       const lowerTickId = poolAddress + '#' + (burnEvent.tickLower).toString();
@@ -1155,8 +1191,8 @@ export class Indexer implements IndexerInterface {
       await updateTokenHourData(this._db, dbTx, token1, { block });
       await updatePoolDayData(this._db, dbTx, { block, contractAddress });
       await updatePoolHourData(this._db, dbTx, { block, contractAddress });
-      await this._updateTickFeeVarsAndSave(dbTx, lowerTick, block);
-      await this._updateTickFeeVarsAndSave(dbTx, upperTick, block);
+      await this._updateTickFeeVarsAndSave(dbTx, lowerTick, block, contractAddress);
+      await this._updateTickFeeVarsAndSave(dbTx, upperTick, block, contractAddress);
 
       [token0, token1] = await Promise.all([
         this._db.saveToken(dbTx, token0, block),
@@ -1167,8 +1203,6 @@ export class Indexer implements IndexerInterface {
       pool.token1 = token1.id;
       pool = await this._db.savePool(dbTx, pool, block);
       await this._db.saveFactory(dbTx, factory, block);
-
-      // Skipping update Tick fee and Tick day data as they are not queried.
 
       lowerTick.pool = pool.id;
       upperTick.pool = pool.id;
@@ -1190,7 +1224,7 @@ export class Indexer implements IndexerInterface {
     }
   }
 
-  async _handleSwap (block: Block, contractAddress: string, tx: Transaction, swapEvent: SwapEvent): Promise<void> {
+  async _handleSwap (block: Block, contractAddress: string, tx: Transaction, swapEvent: SwapEvent, eventIndex: number): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
 
     try {
@@ -1336,8 +1370,24 @@ export class Indexer implements IndexerInterface {
       swap.amountUSD = amountTotalUSDTracked;
       swap.tick = BigInt(swapEvent.tick);
       swap.sqrtPriceX96 = BigInt(swapEvent.sqrtPriceX96);
+      swap.logIndex = BigInt(eventIndex);
 
       // Skipping update pool fee growth as they are not queried.
+      // // Update fee growth.
+      // console.time('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
+      // const endTimer = eventProcessingEthCallDuration.startTimer();
+      // const [
+      //   { value: feeGrowthGlobal0X128 },
+      //   { value: feeGrowthGlobal1X128 }
+      // ] = await Promise.all([
+      //   this._uniClient.feeGrowthGlobal0X128(block.hash, contractAddress),
+      //   this._uniClient.feeGrowthGlobal1X128(block.hash, contractAddress)
+      // ]);
+      // endTimer();
+      // console.timeEnd('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
+
+      // pool.feeGrowthGlobal0X128 = BigInt(feeGrowthGlobal0X128);
+      // pool.feeGrowthGlobal1X128 = BigInt(feeGrowthGlobal1X128);
 
       // Interval data.
       const uniswapDayData = await updateUniswapDayData(this._db, dbTx, { block, contractAddress }, this._isDemo);
@@ -1455,6 +1505,40 @@ export class Indexer implements IndexerInterface {
       }
 
       await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+  }
+
+  async _handleFlash (block: Block, contractAddress: string, tx: Transaction, burnEvent: FlashEvent): Promise<void> {
+    const dbTx = await this._db.createTransactionRunner();
+
+    try {
+      // Get the contract address in lowercase as pool address.
+      const poolAddress = utils.hexlify(contractAddress);
+      const pool = await this._db.getPool(dbTx, { id: poolAddress, blockHash: block.hash });
+      assert(pool);
+
+      // Skipping update pool fee growth as they are not queried.
+      // console.time('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
+      // const endTimer = eventProcessingEthCallDuration.startTimer();
+      // const [
+      //   { value: feeGrowthGlobal0X128 },
+      //   { value: feeGrowthGlobal1X128 }
+      // ] = await Promise.all([
+      //   this._uniClient.feeGrowthGlobal0X128(block.hash, contractAddress),
+      //   this._uniClient.feeGrowthGlobal1X128(block.hash, contractAddress)
+      // ]);
+      // endTimer();
+      // console.timeEnd('time:indexer#_getPosition-eth_call_for_feeGrowthGlobal');
+
+      // pool.feeGrowthGlobal0X128 = BigInt(feeGrowthGlobal0X128);
+      // pool.feeGrowthGlobal1X128 = BigInt(feeGrowthGlobal1X128);
+
+      await this._db.savePool(dbTx, pool, block);
     } catch (error) {
       await dbTx.rollbackTransaction();
       throw error;
@@ -1614,8 +1698,20 @@ export class Indexer implements IndexerInterface {
     }
   }
 
-  async _updateTickFeeVarsAndSave (dbTx: QueryRunner, tick: Tick, block: Block): Promise<void> {
-    // Skipping update feeGrowthOutside0X128 and feeGrowthOutside1X128 data as they are not queried.
+  async _updateTickFeeVarsAndSave (dbTx: QueryRunner, tick: Tick, block: Block, contractAddress: string): Promise<void> {
+    const poolAddress = contractAddress;
+
+    // Not all ticks are initialized so obtaining null is expected behavior.
+    console.time('time:indexer#_getPosition-eth_call_for_ticks');
+    const endTimer = eventProcessingEthCallDuration.startTimer();
+    const { value: tickResult } = await this._uniClient.ticks(block.hash, poolAddress, Number(tick.tickIdx));
+    endTimer();
+    console.timeEnd('time:indexer#_getPosition-eth_call_for_ticks');
+
+    tick.feeGrowthOutside0X128 = tickResult.feeGrowthOutside0X128;
+    tick.feeGrowthOutside1X128 = tickResult.feeGrowthOutside1X128;
+
+    await this._db.saveTick(dbTx, tick, block);
 
     await updateTickDayData(this._db, dbTx, tick, { block });
   }
@@ -1634,7 +1730,7 @@ export class Indexer implements IndexerInterface {
     );
 
     if (tick) {
-      await this._updateTickFeeVarsAndSave(dbTx, tick, block);
+      await this._updateTickFeeVarsAndSave(dbTx, tick, block, contractAddress);
     }
   }
 
@@ -1673,6 +1769,8 @@ export class Indexer implements IndexerInterface {
 
         position = new Position();
         position.id = tokenId.toString();
+        // The owner gets correctly updated in the Transfer handler
+        position.owner = ADDRESS_ZERO;
         position.pool = poolAddress;
         position.token0 = utils.hexlify(positionResult.token0);
         position.token1 = utils.hexlify(positionResult.token1);
@@ -1735,10 +1833,10 @@ export class Indexer implements IndexerInterface {
   async _savePositionSnapshot (dbTx: QueryRunner, position: Position, block: Block, tx: Transaction): Promise<void> {
     const positionSnapshot = new PositionSnapshot();
     positionSnapshot.id = position.id.concat('#').concat(block.number.toString());
-    positionSnapshot.blockNumber = block.number;
     positionSnapshot.owner = position.owner;
     positionSnapshot.pool = position.pool;
     positionSnapshot.position = position.id;
+    positionSnapshot._blockNumber = BigInt(block.number);
     positionSnapshot.timestamp = BigInt(block.timestamp);
     positionSnapshot.liquidity = position.liquidity;
     positionSnapshot.depositedToken0 = position.depositedToken0;

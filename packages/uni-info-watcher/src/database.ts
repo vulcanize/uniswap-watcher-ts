@@ -57,6 +57,10 @@ import { TickDayData } from './entity/TickDayData';
 import { Contract } from './entity/Contract';
 import { IPLDBlock } from './entity/IPLDBlock';
 import { IpldStatus } from './entity/IpldStatus';
+import { Collect } from './entity/Collect';
+import { Flash } from './entity/Flash';
+import { TickHourData } from './entity/TickHourData';
+import { resolveEntityFieldConflicts } from './utils';
 
 const log = debug('vulcanize:database');
 
@@ -589,6 +593,7 @@ export class Database implements DatabaseInterface {
     }
 
     entities = await this.loadRelations(queryRunner, block, this._relationsMap, entity, entities, selections);
+    entities = entities.map(entity => resolveEntityFieldConflicts(entity));
 
     return entities;
   }
@@ -1361,6 +1366,41 @@ export class Database implements DatabaseInterface {
       token1: {
         entity: Token,
         type: 'one-to-one'
+      },
+      poolHourData: {
+        entity: PoolHourData,
+        type: 'one-to-many',
+        foreignKey: 'pool'
+      },
+      poolDayData: {
+        entity: PoolDayData,
+        type: 'one-to-many',
+        foreignKey: 'pool'
+      },
+      mints: {
+        entity: Mint,
+        type: 'one-to-many',
+        foreignKey: 'pool'
+      },
+      burns: {
+        entity: Burn,
+        type: 'one-to-many',
+        foreignKey: 'pool'
+      },
+      swaps: {
+        entity: Swap,
+        type: 'one-to-many',
+        foreignKey: 'pool'
+      },
+      collects: {
+        entity: Collect,
+        type: 'one-to-many',
+        foreignKey: 'pool'
+      },
+      ticks: {
+        entity: Tick,
+        type: 'one-to-many',
+        foreignKey: 'pool'
       }
     });
 
@@ -1371,6 +1411,14 @@ export class Database implements DatabaseInterface {
       },
       transaction: {
         entity: Transaction,
+        type: 'one-to-one'
+      },
+      token0: {
+        entity: Token,
+        type: 'one-to-one'
+      },
+      token1: {
+        entity: Token,
         type: 'one-to-one'
       }
     });
@@ -1417,6 +1465,11 @@ export class Database implements DatabaseInterface {
       whitelistPools: {
         entity: Pool,
         type: 'many-to-many'
+      },
+      tokenDayData: {
+        entity: TokenDayData,
+        type: 'one-to-many',
+        foreignKey: 'token'
       }
     });
 
@@ -1433,6 +1486,16 @@ export class Database implements DatabaseInterface {
       },
       swaps: {
         entity: Swap,
+        type: 'one-to-many',
+        foreignKey: 'transaction'
+      },
+      flashed: {
+        entity: Flash,
+        type: 'one-to-many',
+        foreignKey: 'transaction'
+      },
+      collects: {
+        entity: Collect,
         type: 'one-to-many',
         foreignKey: 'transaction'
       }
@@ -1472,6 +1535,13 @@ export class Database implements DatabaseInterface {
       }
     });
 
+    this._relationsMap.set(PoolHourData, {
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      }
+    });
+
     this._relationsMap.set(TokenDayData, {
       token: {
         entity: Token,
@@ -1482,6 +1552,65 @@ export class Database implements DatabaseInterface {
     this._relationsMap.set(TokenHourData, {
       token: {
         entity: Token,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(Collect, {
+      transaction: {
+        entity: Transaction,
+        type: 'one-to-one'
+      },
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(Flash, {
+      transaction: {
+        entity: Transaction,
+        type: 'one-to-one'
+      },
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(PositionSnapshot, {
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      },
+      position: {
+        entity: Position,
+        type: 'one-to-one'
+      },
+      transaction: {
+        entity: Transaction,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(TickDayData, {
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      },
+      tick: {
+        entity: Tick,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(TickHourData, {
+      pool: {
+        entity: Pool,
+        type: 'one-to-one'
+      },
+      tick: {
+        entity: Tick,
         type: 'one-to-one'
       }
     });

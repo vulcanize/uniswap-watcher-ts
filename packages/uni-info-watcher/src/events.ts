@@ -60,6 +60,16 @@ export interface SwapEvent {
   tick: string;
 }
 
+export interface FlashEvent {
+  __typename: 'FlashEvent';
+  sender: string;
+  recipient: string;
+  amount0: string;
+  amount1: string;
+  paid0: string;
+  paid1: string;
+}
+
 export interface IncreaseLiquidityEvent {
   __typename: 'IncreaseLiquidityEvent';
   tokenId: string;
@@ -103,6 +113,12 @@ export interface Transaction {
   from: string;
   to: string;
   index: number;
+  value: string;
+  gasLimit: string;
+  gasPrice?: string;
+  input: string;
+  maxPriorityFeePerGas?: string,
+  maxFeePerGas?: string,
 }
 
 export interface ResultEvent {
@@ -110,7 +126,7 @@ export interface ResultEvent {
   tx: Transaction;
   contract: string;
   eventIndex: number;
-  event: PoolCreatedEvent | InitializeEvent | MintEvent | BurnEvent | SwapEvent | IncreaseLiquidityEvent | DecreaseLiquidityEvent | CollectEvent | TransferEvent;
+  event: PoolCreatedEvent | InitializeEvent | MintEvent | BurnEvent | SwapEvent | FlashEvent | IncreaseLiquidityEvent | DecreaseLiquidityEvent | CollectEvent | TransferEvent;
   proof: {
     data: string;
   }

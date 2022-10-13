@@ -23,5 +23,6 @@ query mints($block: Block_height){
     }
     tickLower
     tickUpper
+    logIndex
   }
 }

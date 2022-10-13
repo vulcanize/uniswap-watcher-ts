@@ -1,25 +1,25 @@
-query poolDayDatas($block: Block_height){
-  poolDayDatas(block: $block){
-    date
+query poolHourDatas($block: Block_height){
+  poolHourDatas(block: $block){
     id
-    tvlUSD
-    volumeUSD
-    low
-    high
-    open
-    pool{
+    pool {
       id
     }
-    tick
+    periodStartUnix
+    high
+    low
+    open
     close
-    feesUSD
-    txCount
-    liquidity
     sqrtPrice
+    tick
+    liquidity
     token0Price
     token1Price
+    tvlUSD
+    txCount
     volumeToken0
     volumeToken1
+    volumeUSD
+    feesUSD
 
     # Skipping fee growth as they are not queried.
     # feeGrowthGlobal0X128

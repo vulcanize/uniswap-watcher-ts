@@ -57,4 +57,7 @@ export class Swap {
 
   @Column('numeric', { transformer: bigintTransformer })
   sqrtPriceX96!: bigint
+
+  @Column('numeric', { transformer: bigintTransformer })
+  logIndex!: bigint
 }

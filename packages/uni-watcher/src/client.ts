@@ -14,7 +14,10 @@ import {
   queryGetContract,
   queryEventsInRange,
   queryCallGetPool,
-  queryPositions
+  queryPositions,
+  queryTicks,
+  queryFeeGrowthGlobal0X128,
+  queryFeeGrowthGlobal1X128
 } from './queries';
 
 export class Client {
@@ -112,6 +115,43 @@ export class Client {
     );
 
     return positions;
+  }
+
+  async ticks (blockHash: string, contractAddress: string, tick: number): Promise<any> {
+    const { ticks } = await this._client.query(
+      gql(queryTicks),
+      {
+        blockHash,
+        contractAddress,
+        tick
+      }
+    );
+
+    return ticks;
+  }
+
+  async feeGrowthGlobal0X128 (blockHash: string, contractAddress: string): Promise<any> {
+    const { feeGrowthGlobal0X128 } = await this._client.query(
+      gql(queryFeeGrowthGlobal0X128),
+      {
+        blockHash,
+        contractAddress
+      }
+    );
+
+    return feeGrowthGlobal0X128;
+  }
+
+  async feeGrowthGlobal1X128 (blockHash: string, contractAddress: string): Promise<any> {
+    const { feeGrowthGlobal1X128 } = await this._client.query(
+      gql(queryFeeGrowthGlobal1X128),
+      {
+        blockHash,
+        contractAddress
+      }
+    );
+
+    return feeGrowthGlobal1X128;
   }
 
   async getContract (type: string): Promise<any> {

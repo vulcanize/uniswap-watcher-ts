@@ -11,5 +11,8 @@ query transactions($block: Block_height){
       id
     }
     timestamp
+    blockNumber
+    gasUsed
+    gasPrice
   }
 }

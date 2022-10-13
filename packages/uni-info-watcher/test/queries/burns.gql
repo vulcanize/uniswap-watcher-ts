@@ -13,5 +13,15 @@ query burns($block: Block_height){
     pool{
       id
     }
+    token0 {
+      id
+    }
+    token1 {
+      id
+    }
+    amount
+    tickLower
+    tickUpper
+    logIndex
   }
 }

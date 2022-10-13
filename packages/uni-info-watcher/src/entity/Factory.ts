@@ -4,6 +4,7 @@
 
 import { Entity, Column, PrimaryColumn, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
+import { ADDRESS_ZERO } from '../utils/constants';
 
 @Entity()
 @Index(['id', 'blockNumber'])
@@ -45,5 +46,12 @@ export class Factory {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   untrackedVolumeUSD!: GraphDecimal
 
-  // TODO: Add remaining fields when they are used.
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  totalValueLockedUSDUntracked!: GraphDecimal
+
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
+  totalValueLockedETHUntracked!: GraphDecimal
+
+  @Column('varchar', { length: 42, default: ADDRESS_ZERO })
+  owner!: string
 }

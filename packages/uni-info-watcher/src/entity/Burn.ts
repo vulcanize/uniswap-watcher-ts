@@ -57,4 +57,7 @@ export class Burn {
 
   @Column('numeric', { transformer: bigintTransformer })
   tickUpper!: bigint
+
+  @Column('numeric', { transformer: bigintTransformer })
+  logIndex!: bigint
 }

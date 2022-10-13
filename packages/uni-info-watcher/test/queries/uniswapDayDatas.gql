@@ -7,5 +7,7 @@ query uniswapDayDatas($block: Block_height){
     feesUSD
     txCount
     volumeETH
+    volumeUSDUntracked
+
   }
 }

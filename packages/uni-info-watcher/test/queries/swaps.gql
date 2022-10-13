@@ -22,5 +22,6 @@ query swaps($block: Block_height){
     recipient
     sqrtPriceX96
     tick
+    logIndex
   }
 }

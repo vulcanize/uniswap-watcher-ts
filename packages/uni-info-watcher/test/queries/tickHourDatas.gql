@@ -1,0 +1,18 @@
+query tickHourDatas($block: Block_height){
+  tickHourDatas(block: $block){
+    id
+    pool {
+      id
+    }
+    tick {
+      id
+    }
+    liquidityGross
+    liquidityNet
+    periodStartUnix
+    volumeToken0
+    volumeToken1
+    volumeUSD
+    feesUSD
+  }
+}
