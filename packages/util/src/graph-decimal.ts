@@ -30,7 +30,8 @@ export class GraphDecimal {
   }
 
   toJSON (): string {
-    return this.toString();
+    // Using fixed-point notation in preparing entity state.
+    return this.toFixed();
   }
 
   toFixed (): string {
