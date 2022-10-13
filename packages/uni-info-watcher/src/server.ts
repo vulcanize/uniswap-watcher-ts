@@ -14,7 +14,9 @@ import { createServer } from 'http';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { DEFAULT_CONFIG_PATH, getConfig, getCustomProvider, JobQueue, startGQLMetricsServer } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
+
+import { getConfig, getCustomProvider, JobQueue, startGQLMetricsServer } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 

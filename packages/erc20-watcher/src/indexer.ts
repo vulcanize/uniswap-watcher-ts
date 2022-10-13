@@ -9,9 +9,9 @@ import { DeepPartial, FindConditions, FindManyOptions } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
 
-import { UNKNOWN_EVENT_NAME, JobQueue, IndexerInterface } from '@vulcanize/util';
+import { JobQueue, IndexerInterface } from '@vulcanize/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { Indexer as BaseIndexer, IPFSClient, ServerConfig, IpldStatus as IpldStatusInterface, ValueResult, Where, QueryOptions } from '@cerc-io/util';
+import { Indexer as BaseIndexer, IPFSClient, ServerConfig, IpldStatus as IpldStatusInterface, ValueResult, Where, QueryOptions, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { Database } from './database';

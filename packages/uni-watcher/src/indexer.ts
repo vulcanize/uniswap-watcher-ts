@@ -9,12 +9,12 @@ import { ethers } from 'ethers';
 import assert from 'assert';
 
 import { JobQueue, IndexerInterface } from '@vulcanize/util';
-import { Indexer as BaseIndexer, IPFSClient, IpldStatus as IpldStatusInterface, ServerConfig, Where, QueryOptions, ValueResult } from '@cerc-io/util';
+import { Indexer as BaseIndexer, IPFSClient, IpldStatus as IpldStatusInterface, ServerConfig, Where, QueryOptions, ValueResult, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { Database } from './database';
-import { Event, UNKNOWN_EVENT_NAME } from './entity/Event';
+import { Event } from './entity/Event';
 import { BlockProgress } from './entity/BlockProgress';
 import { Contract, KIND_FACTORY, KIND_POOL, KIND_NFPM } from './entity/Contract';
 import { SyncStatus } from './entity/SyncStatus';
@@ -553,7 +553,6 @@ export class Indexer implements IndexerInterface {
   async _fetchEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
     assert(blockHash);
 
-    console.time('time:indexer#_fetchAndSaveEvents-get-logs-txs');
     const logsPromise = this._ethClient.getLogs({ blockHash });
     const transactionsPromise = this._ethClient.getBlockWithTransactions({ blockHash });
 
@@ -571,7 +570,6 @@ export class Indexer implements IndexerInterface {
         }
       }
     ] = await Promise.all([logsPromise, transactionsPromise]);
-    console.timeEnd('time:indexer#_fetchAndSaveEvents-get-logs-txs');
 
     const transactionMap = transactions.reduce((acc: {[key: string]: any}, transaction: {[key: string]: any}) => {
       acc[transaction.txHash] = transaction;

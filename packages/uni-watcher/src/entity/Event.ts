@@ -5,8 +5,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index } from 'typeorm';
 import { BlockProgress } from './BlockProgress';
 
-export const UNKNOWN_EVENT_NAME = '__unknown__';
-
 @Entity()
 // Index to query events by block and event index.
 @Index(['block', 'index'], { unique: true })

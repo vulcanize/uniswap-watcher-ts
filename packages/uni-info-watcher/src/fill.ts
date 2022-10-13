@@ -9,7 +9,8 @@ import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 
 import { getCache } from '@vulcanize/cache';
-import { getConfig, fillBlocks, JobQueue, DEFAULT_CONFIG_PATH, getCustomProvider } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
+import { getConfig, fillBlocks, JobQueue, getCustomProvider } from '@vulcanize/util';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@cerc-io/ipld-eth-client';

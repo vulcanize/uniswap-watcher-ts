@@ -9,9 +9,10 @@ import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
 
-import { getCache } from '@vulcanize/cache';
-import { getConfig, fillBlocks, JobQueue, DEFAULT_CONFIG_PATH, getCustomProvider } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
+import { getCache } from '@vulcanize/cache';
+import { getConfig, fillBlocks, JobQueue, getCustomProvider } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Indexer } from './indexer';

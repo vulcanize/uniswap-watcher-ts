@@ -4,7 +4,6 @@
 
 export * from './src/config';
 export * from './src/job-queue';
-export * from './src/constants';
 export * from './src/misc';
 export * from './src/fill';
 export * from './src/events';

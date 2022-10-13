@@ -11,7 +11,8 @@ import { PubSub } from 'apollo-server-express';
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { getConfig, fillBlocks, JobQueue, DEFAULT_CONFIG_PATH, getCustomProvider } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
+import { getConfig, fillBlocks, JobQueue, getCustomProvider } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Indexer } from './indexer';

@@ -6,13 +6,15 @@ import assert from 'assert';
 import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
 
+import {
+  QUEUE_BLOCK_PROCESSING,
+  QUEUE_EVENT_PROCESSING,
+  UNKNOWN_EVENT_NAME
+} from '@cerc-io/util';
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import {
   JobQueue,
   EventWatcher as BaseEventWatcher,
-  QUEUE_BLOCK_PROCESSING,
-  QUEUE_EVENT_PROCESSING,
-  UNKNOWN_EVENT_NAME,
   UpstreamConfig
 } from '@vulcanize/util';
 

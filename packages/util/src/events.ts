@@ -7,12 +7,18 @@ import debug from 'debug';
 import { PubSub } from 'apollo-server-express';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
-import { OrderDirection } from '@cerc-io/util';
+import {
+  OrderDirection,
+  createPruningJob,
+  processBlockByNumberWithCache,
+  MAX_REORG_DEPTH,
+  JOB_KIND_PRUNE,
+  JOB_KIND_INDEX,
+  UNKNOWN_EVENT_NAME
+} from '@cerc-io/util';
 
 import { JobQueue } from './job-queue';
 import { BlockProgressInterface, EventInterface, IndexerInterface } from './types';
-import { MAX_REORG_DEPTH, JOB_KIND_PRUNE, JOB_KIND_INDEX, UNKNOWN_EVENT_NAME } from './constants';
-import { createPruningJob, processBlockByNumber } from './common';
 import { UpstreamConfig } from './config';
 
 const log = debug('vulcanize:events');
@@ -58,9 +64,7 @@ export class EventWatcher {
       startBlockNumber = syncStatus.chainHeadBlockNumber + 1;
     }
 
-    const { ethServer: { blockDelayInMilliSecs } } = this._upstreamConfig;
-
-    processBlockByNumber(this._jobQueue, this._indexer, blockDelayInMilliSecs, startBlockNumber);
+    processBlockByNumberWithCache(this._jobQueue, startBlockNumber);
 
     // Creating an AsyncIterable from AsyncIterator to iterate over the values.
     // https://www.codementor.io/@tiagolopesferreira/asynchronous-iterators-in-javascript-jl1yg8la1#for-wait-of
@@ -75,7 +79,7 @@ export class EventWatcher {
       const { onBlockProgressEvent: { blockNumber, isComplete } } = data;
 
       if (isComplete) {
-        await processBlockByNumber(this._jobQueue, this._indexer, blockDelayInMilliSecs, blockNumber + 1);
+        await processBlockByNumberWithCache(this._jobQueue, blockNumber + 1);
       }
     }
   }
@@ -137,13 +141,11 @@ export class EventWatcher {
   }
 
   async _handleIndexingComplete (jobData: any): Promise<void> {
-    const { blockHash, blockNumber, priority } = jobData;
-    log(`Job onComplete indexing block ${blockHash} ${blockNumber}`);
+    const { blockNumber, priority } = jobData;
+    log(`Job onComplete indexing blocks at height ${blockNumber}`);
 
-    const [blockProgress, syncStatus] = await Promise.all([
-      this._indexer.getBlockProgress(blockHash),
-      this._indexer.updateSyncStatusIndexedBlock(blockHash, blockNumber)
-    ]);
+    const blockProgressEntities = await this._indexer.getBlocksAtHeight(Number(blockNumber), false);
+    const syncStatus = await this._indexer.updateSyncStatusIndexedBlock(blockProgressEntities[0].blockHash, Number(blockNumber));
 
     // Create pruning job if required.
     if (syncStatus && syncStatus.latestIndexedBlockNumber > (syncStatus.latestCanonicalBlockNumber + MAX_REORG_DEPTH)) {
@@ -152,9 +154,11 @@ export class EventWatcher {
 
     // Publish block progress event if no events exist.
     // Event for blocks with events will be pusblished from eventProcessingCompleteHandler.
-    if (blockProgress && blockProgress.numEvents === 0) {
-      await this.publishBlockProgressToSubscribers(blockProgress);
-    }
+    blockProgressEntities.forEach(async (blockProgress) => {
+      if (blockProgress && blockProgress.numEvents === 0) {
+        await this.publishBlockProgressToSubscribers(blockProgress);
+      }
+    });
   }
 
   async _handlePruningComplete (jobData: any): Promise<void> {
