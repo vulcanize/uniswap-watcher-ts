@@ -10,7 +10,7 @@ import { EthClient } from '@vulcanize/ipld-eth-client';
 import {
   OrderDirection,
   createPruningJob,
-  processBlockByNumber,
+  processBlockByNumberWithCache,
   MAX_REORG_DEPTH,
   JOB_KIND_PRUNE,
   JOB_KIND_INDEX,
@@ -64,7 +64,7 @@ export class EventWatcher {
       startBlockNumber = syncStatus.chainHeadBlockNumber + 1;
     }
 
-    processBlockByNumber(this._jobQueue, startBlockNumber);
+    processBlockByNumberWithCache(this._jobQueue, startBlockNumber);
 
     // Creating an AsyncIterable from AsyncIterator to iterate over the values.
     // https://www.codementor.io/@tiagolopesferreira/asynchronous-iterators-in-javascript-jl1yg8la1#for-wait-of
@@ -79,7 +79,7 @@ export class EventWatcher {
       const { onBlockProgressEvent: { blockNumber, isComplete } } = data;
 
       if (isComplete) {
-        await processBlockByNumber(this._jobQueue, blockNumber + 1);
+        await processBlockByNumberWithCache(this._jobQueue, blockNumber + 1);
       }
     }
   }

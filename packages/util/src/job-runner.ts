@@ -13,7 +13,7 @@ import {
   lastProcessedBlockNumber,
   createPruningJob,
   PrefetchedBlock,
-  fetchBlocks,
+  fetchBlocksAtHeight,
   JOB_KIND_INDEX,
   JOB_KIND_PRUNE,
   JOB_KIND_EVENTS,
@@ -50,7 +50,7 @@ export class JobRunner {
 
     switch (kind) {
       case JOB_KIND_INDEX: {
-        const blocksToBeIndexed = await fetchBlocks(
+        const blocksToBeIndexed = await fetchBlocksAtHeight(
           job,
           this._indexer,
           this._jobQueueConfig,

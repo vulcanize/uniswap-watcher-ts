@@ -54,8 +54,9 @@ export interface ContractInterface {
 }
 
 export interface IndexerInterface extends BaseIndexerInterface {
+  fetchBlockEvents (block: DeepPartial<BlockProgressInterface>): Promise<DeepPartial<EventInterface>[]>
   saveBlockProgress (block: DeepPartial<BlockProgressInterface>): Promise<BlockProgressInterface>
-  saveEvents (dbEvents: EventInterface[]): Promise<void>;
+  saveEvents (dbEvents: EventInterface[]): Promise<void>
 }
 
 export interface EventWatcherInterface {
