@@ -208,84 +208,14 @@ export class Indexer implements IndexerInterface {
   }
 
   async processEvent (dbEvent: Event): Promise<void> {
-    console.time('time:indexer#processEvent-mapping_code');
-    const resultEvent = this.getResultEvent(dbEvent);
+    try {
+      const resultEvent = this.getResultEvent(dbEvent);
 
-    // TODO: Process proof (proof.data) in event.
-    const { contract, tx, block, event, eventIndex } = resultEvent;
-    const { __typename: eventName } = event;
-
-    if (!this._fullBlock || (this._fullBlock.hash !== block.hash)) {
-      const { blockHash, blockNumber, timestamp, ...blockData } = await getFullBlock(this._ethClient, this._ethProvider, block.hash);
-
-      this._fullBlock = {
-        hash: blockHash,
-        number: blockNumber,
-        timestamp: Number(timestamp),
-        ...blockData
-      };
-
-      assert(this._fullBlock);
+      await this._triggerEventHandler(resultEvent);
+    } catch (error) {
+      this._clearCachedEntities();
+      throw error;
     }
-
-    switch (eventName) {
-      case 'PoolCreatedEvent':
-        log('Factory PoolCreated event', contract);
-        await this._handlePoolCreated(this._fullBlock, contract, tx, event as PoolCreatedEvent);
-        break;
-
-      case 'InitializeEvent':
-        log('Pool Initialize event', contract);
-        await this._handleInitialize(this._fullBlock, contract, tx, event as InitializeEvent);
-        break;
-
-      case 'MintEvent':
-        log('Pool Mint event', contract);
-        await this._handleMint(this._fullBlock, contract, tx, event as MintEvent, eventIndex);
-        break;
-
-      case 'BurnEvent':
-        log('Pool Burn event', contract);
-        await this._handleBurn(this._fullBlock, contract, tx, event as BurnEvent, eventIndex);
-        break;
-
-      case 'SwapEvent':
-        log('Pool Swap event', contract);
-        await this._handleSwap(this._fullBlock, contract, tx, event as SwapEvent, eventIndex);
-        break;
-
-      case 'FlashEvent':
-        log('Pool Flash event', contract);
-        await this._handleFlash(this._fullBlock, contract, tx, event as FlashEvent);
-        break;
-
-      case 'IncreaseLiquidityEvent':
-        log('NFPM IncreaseLiquidity event', contract);
-        await this._handleIncreaseLiquidity(this._fullBlock, contract, tx, event as IncreaseLiquidityEvent);
-        break;
-
-      case 'DecreaseLiquidityEvent':
-        log('NFPM DecreaseLiquidity event', contract);
-        await this._handleDecreaseLiquidity(this._fullBlock, contract, tx, event as DecreaseLiquidityEvent);
-        break;
-
-      case 'CollectEvent':
-        log('NFPM Collect event', contract);
-        await this._handleCollect(this._fullBlock, contract, tx, event as CollectEvent);
-        break;
-
-      case 'TransferEvent':
-        log('NFPM Transfer event', contract);
-        await this._handleTransfer(this._fullBlock, contract, tx, event as TransferEvent);
-        break;
-
-      default:
-        log('Event not handled', eventName);
-        break;
-    }
-
-    log('Event processing completed for', eventName);
-    console.timeEnd('time:indexer#processEvent-mapping_code');
   }
 
   async processBlock (blockProgress: BlockProgress): Promise<void> {
@@ -674,6 +604,11 @@ export class Indexer implements IndexerInterface {
     prunedBlockHashes.forEach(blockHash => this._db.cachedEntities.frothyBlocks.delete(blockHash));
   }
 
+  _clearCachedEntities () {
+    this._db.cachedEntities.frothyBlocks.clear();
+    this._db.cachedEntities.latestPrunedEntities.clear();
+  }
+
   async _fetchEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
     assert(block.blockHash);
 
@@ -719,6 +654,86 @@ export class Indexer implements IndexerInterface {
     }
 
     return dbEvents;
+  }
+
+  async _triggerEventHandler (resultEvent: ResultEvent): Promise<void> {
+    console.time('time:indexer#processEvent-mapping_code');
+
+    // TODO: Process proof (proof.data) in event.
+    const { contract, tx, block, event, eventIndex } = resultEvent;
+    const { __typename: eventName } = event;
+
+    if (!this._fullBlock || (this._fullBlock.hash !== block.hash)) {
+      const { blockHash, blockNumber, timestamp, ...blockData } = await getFullBlock(this._ethClient, this._ethProvider, block.hash);
+
+      this._fullBlock = {
+        hash: blockHash,
+        number: blockNumber,
+        timestamp: Number(timestamp),
+        ...blockData
+      };
+
+      assert(this._fullBlock);
+    }
+
+    switch (eventName) {
+      case 'PoolCreatedEvent':
+        log('Factory PoolCreated event', contract);
+        await this._handlePoolCreated(this._fullBlock, contract, tx, event as PoolCreatedEvent);
+        break;
+
+      case 'InitializeEvent':
+        log('Pool Initialize event', contract);
+        await this._handleInitialize(this._fullBlock, contract, tx, event as InitializeEvent);
+        break;
+
+      case 'MintEvent':
+        log('Pool Mint event', contract);
+        await this._handleMint(this._fullBlock, contract, tx, event as MintEvent, eventIndex);
+        break;
+
+      case 'BurnEvent':
+        log('Pool Burn event', contract);
+        await this._handleBurn(this._fullBlock, contract, tx, event as BurnEvent, eventIndex);
+        break;
+
+      case 'SwapEvent':
+        log('Pool Swap event', contract);
+        await this._handleSwap(this._fullBlock, contract, tx, event as SwapEvent, eventIndex);
+        break;
+
+      case 'FlashEvent':
+        log('Pool Flash event', contract);
+        await this._handleFlash(this._fullBlock, contract, tx, event as FlashEvent);
+        break;
+
+      case 'IncreaseLiquidityEvent':
+        log('NFPM IncreaseLiquidity event', contract);
+        await this._handleIncreaseLiquidity(this._fullBlock, contract, tx, event as IncreaseLiquidityEvent);
+        break;
+
+      case 'DecreaseLiquidityEvent':
+        log('NFPM DecreaseLiquidity event', contract);
+        await this._handleDecreaseLiquidity(this._fullBlock, contract, tx, event as DecreaseLiquidityEvent);
+        break;
+
+      case 'CollectEvent':
+        log('NFPM Collect event', contract);
+        await this._handleCollect(this._fullBlock, contract, tx, event as CollectEvent);
+        break;
+
+      case 'TransferEvent':
+        log('NFPM Transfer event', contract);
+        await this._handleTransfer(this._fullBlock, contract, tx, event as TransferEvent);
+        break;
+
+      default:
+        log('Event not handled', eventName);
+        break;
+    }
+
+    log('Event processing completed for', eventName);
+    console.timeEnd('time:indexer#processEvent-mapping_code');
   }
 
   async _handlePoolCreated (block: Block, contractAddress: string, tx: Transaction, poolCreatedEvent: PoolCreatedEvent): Promise<void> {
