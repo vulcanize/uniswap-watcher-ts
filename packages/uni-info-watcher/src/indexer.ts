@@ -164,6 +164,10 @@ export class Indexer implements IndexerInterface {
     console.timeEnd('time:indexer#processCheckpoint-checkpoint');
   }
 
+  async processCLICheckpoint (contractAddress: string, blockHash?: string): Promise<string | undefined> {
+    return this._baseIndexer.processCLICheckpoint(this, contractAddress, blockHash);
+  }
+
   async getPrevState (blockHash: string, contractAddress: string, kind?: string): Promise<State | undefined> {
     return this._db.getPrevState(blockHash, contractAddress, kind);
   }
