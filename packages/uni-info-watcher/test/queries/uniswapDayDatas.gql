@@ -1,5 +1,5 @@
-query uniswapDayDatas($block: Block_height){
-  uniswapDayDatas(block: $block){
+query uniswapDayDatas($block: Block_height, $first: Int, $skip: Int){
+  uniswapDayDatas(block: $block, first: $first, skip: $skip){
     date
     id
     tvlUSD

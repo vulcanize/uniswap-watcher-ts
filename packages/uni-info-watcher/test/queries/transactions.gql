@@ -1,5 +1,5 @@
-query transactions($block: Block_height){
-  transactions(block: $block){
+query transactions($block: Block_height, $first: Int, $skip: Int){
+  transactions(block: $block, first: $first, skip: $skip){
     burns {
       id
     }

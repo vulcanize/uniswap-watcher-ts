@@ -1,5 +1,5 @@
-query mints($block: Block_height){
-  mints(block: $block){
+query mints($block: Block_height, $first: Int, $skip: Int){
+  mints(block: $block, first: $first, skip: $skip){
     amount0
     amount1
     amountUSD

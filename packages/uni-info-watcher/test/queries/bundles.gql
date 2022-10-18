@@ -1,5 +1,5 @@
-query bundles($block: Block_height){
-  bundles(block: $block){
+query bundles($block: Block_height, $first: Int, $skip: Int){
+  bundles(block: $block, first: $first, skip: $skip){
     id
     ethPriceUSD
   }

@@ -1,5 +1,5 @@
-query ticks($block: Block_height){
-  ticks(block: $block){
+query ticks($block: Block_height, $first: Int, $skip: Int){
+  ticks(block: $block, first: $first, skip: $skip){
     id
     liquidityGross
     liquidityNet

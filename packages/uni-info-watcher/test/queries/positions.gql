@@ -1,5 +1,5 @@
-query positions($block: Block_height){
-  positions(block: $block){
+query positions($block: Block_height, $first: Int, $skip: Int){
+  positions(block: $block, first: $first, skip: $skip){
     id
     liquidity
     depositedToken0

@@ -1,5 +1,5 @@
-query positionSnapshots($block: Block_height){
-  positionSnapshots(block: $block){
+query positionSnapshots($block: Block_height, $first: Int, $skip: Int){
+  positionSnapshots(block: $block, first: $first, skip: $skip){
     id
     timestamp
     feeGrowthInside0LastX128

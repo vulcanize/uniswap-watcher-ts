@@ -1,5 +1,5 @@
-query tokens($block: Block_height){
-  tokens(block: $block){
+query tokens($block: Block_height, $first: Int, $skip: Int){
+  tokens(block: $block, first: $first, skip: $skip){
     decimals
     derivedETH
     feesUSD

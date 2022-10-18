@@ -1,5 +1,5 @@
-query swaps($block: Block_height){
-  swaps(block: $block){
+query swaps($block: Block_height, $first: Int, $skip: Int){
+  swaps(block: $block, first: $first, skip: $skip){
     amount0
     amount1
     amountUSD

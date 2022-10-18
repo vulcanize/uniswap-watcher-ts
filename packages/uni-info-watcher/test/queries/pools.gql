@@ -1,5 +1,5 @@
-query pools($block: Block_height){
-  pools(block: $block){
+query pools($block: Block_height, $first: Int, $skip: Int){
+  pools(block: $block, first: $first, skip: $skip){
     feeTier
     id
     liquidity
