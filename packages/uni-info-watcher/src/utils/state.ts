@@ -2,7 +2,10 @@
 // Copyright 2022 Vulcanize, Inc.
 //
 
+import { ValueTransformer } from 'typeorm';
+
 import { jsonBigIntStringReplacer } from '@cerc-io/util';
+
 import { resolveEntityFieldConflicts } from './index';
 
 export const prepareEntityState = (updatedEntity: any, entityName: string, relationsMap: Map<any, { [key: string]: any }>): any => {
@@ -50,4 +53,37 @@ export const prepareEntityState = (updatedEntity: any, entityName: string, relat
   };
 
   return diffData;
+};
+
+export const fromStateEntityValues = (
+  stateEntity: any,
+  propertyName: string,
+  relations: { [key: string]: any } = {},
+  transformer?: ValueTransformer | ValueTransformer[]
+): any => {
+  // Parse DB data value from state entity data.
+  if (relations) {
+    const relation = relations[propertyName];
+
+    if (relation) {
+      if (relation.type === 'many-to-many') {
+        return stateEntity[propertyName].map((relatedEntity: { id: string }) => relatedEntity.id);
+      } else {
+        return stateEntity[propertyName]?.id;
+      }
+    }
+  }
+
+  if (transformer) {
+    if (Array.isArray(transformer)) {
+      // Apply transformer in reverse order similar to when reading from DB.
+      return transformer.reduceRight((acc, elTransformer) => {
+        return elTransformer.from(acc);
+      }, stateEntity[propertyName]);
+    }
+
+    return transformer.from(stateEntity[propertyName]);
+  }
+
+  return stateEntity[propertyName];
 };

@@ -96,7 +96,7 @@ export const fillState = async (
     await Promise.all(contractStatePromises);
 
     // Persist subgraph state to the DB
-    await indexer.dumpSubgraphState(blockHash, true);
+    await indexer.dumpEntityState(blockHash, true);
     await indexer.updateStateSyncStatusIndexedBlock(blockNumber);
 
     // Create checkpoints

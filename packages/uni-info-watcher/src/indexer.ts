@@ -25,7 +25,8 @@ import {
   Where,
   eventProcessingEthCallDuration,
   getFullTransaction,
-  getFullBlock
+  getFullBlock,
+  StateKind
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
@@ -172,6 +173,10 @@ export class Indexer implements IndexerInterface {
     return this._db.getPrevState(blockHash, contractAddress, kind);
   }
 
+  async getLatestIPLDBlock (contractAddress: string, kind: StateKind | null, blockNumber?: number): Promise<IPLDBlock | undefined> {
+    return this._db.getLatestIPLDBlock(contractAddress, kind, blockNumber);
+  }
+
   async getStatesByHash (blockHash: string): Promise<State[]> {
     return this._baseIndexer.getStatesByHash(blockHash);
   }
@@ -205,10 +210,26 @@ export class Indexer implements IndexerInterface {
     await this._baseIndexer.createDiff(contractAddress, block, data);
   }
 
+  // Method to be used by export-state CLI.
+  async createCheckpoint (contractAddress: string, blockHash: string): Promise<string | undefined> {
+    const block = await this.getBlockProgress(blockHash);
+    assert(block);
+
+    return this._baseIndexer.createCheckpoint(this, contractAddress, block);
+  }
+
   // Method to be used by fill-state CLI.
   async createInit (blockHash: string, blockNumber: number): Promise<void> {
     // Create initial state for contracts.
     await this._baseIndexer.createInit(this, blockHash, blockNumber);
+  }
+
+  async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
+    return this._baseIndexer.saveOrUpdateIPLDBlock(ipldBlock);
+  }
+
+  async removeIPLDBlocks (blockNumber: number, kind: StateKind): Promise<void> {
+    await this._baseIndexer.removeIPLDBlocks(blockNumber, kind);
   }
 
   async processEvent (dbEvent: Event): Promise<void> {
@@ -284,6 +305,10 @@ export class Indexer implements IndexerInterface {
     assert(latestCanonicalBlock);
 
     return latestCanonicalBlock;
+  }
+
+  async getLatestHooksProcessedBlock (): Promise<BlockProgress> {
+    return this._baseIndexer.getLatestHooksProcessedBlock();
   }
 
   async getBlockEntities (where: { [key: string]: any } = {}, queryOptions: QueryOptions): Promise<any> {
@@ -557,7 +582,7 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
   }
 
-  async dumpSubgraphState (blockHash: string, isStateFinalized = false): Promise<void> {
+  async dumpEntityState (blockHash: string, isStateFinalized = false): Promise<void> {
     // Create a diff for each contract in the subgraph state map.
     const createDiffPromises = Array.from(this._subgraphStateMap.entries())
       .map(([contractAddress, data]): Promise<void> => {
@@ -579,6 +604,26 @@ export class Indexer implements IndexerInterface {
     const oldData = this._subgraphStateMap.get(contractAddress);
     const updatedData = _.merge(oldData, data);
     this._subgraphStateMap.set(contractAddress, updatedData);
+  }
+
+  async updateEntitiesFromIPLDState (ipldBlock: IPLDBlock): Promise<void> {
+    const data = this.getIPLDData(ipldBlock);
+
+    for (const [entityName, entities] of Object.entries(data.state)) {
+      // Get relations for entity
+      const result = Array.from(this._db.relationsMap.entries())
+        .find(([key]) => key.name === entityName);
+
+      const relations = result ? result[1] : {};
+
+      log(`Updating entities from IPLD state for entity ${entityName}`);
+      console.time(`time:indexer#updateEntitiesFromIPLDState-IPLD-update-entity-${entityName}`);
+      for (const [, entityData] of Object.entries(entities as any)) {
+        const dbData = this._db.entityFromIPLDState(ipldBlock.block, entityName, entityData, relations);
+        await this._db.saveEntity(entityName, dbData);
+      }
+      console.timeEnd(`time:indexer#updateEntitiesFromIPLDState-IPLD-update-entity-${entityName}`);
+    }
   }
 
   _updateCachedEntitiesFrothyBlocks (canonicalBlockHash: string, canonicalBlockNumber: number) {

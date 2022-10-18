@@ -16,6 +16,7 @@ import {
   SelectQueryBuilder
 } from 'typeorm';
 import { RawSqlResultsToEntityTransformer } from 'typeorm/query-builder/transformer/RawSqlResultsToEntityTransformer';
+import { ColumnMetadata } from 'typeorm/metadata/ColumnMetadata';
 import path from 'path';
 import { SelectionNode } from 'graphql';
 import debug from 'debug';
@@ -61,6 +62,7 @@ import { Collect } from './entity/Collect';
 import { Flash } from './entity/Flash';
 import { TickHourData } from './entity/TickHourData';
 import { resolveEntityFieldConflicts } from './utils';
+import { fromStateEntityValues } from './utils/state';
 
 const log = debug('vulcanize:database');
 
@@ -1007,6 +1009,13 @@ export class Database implements DatabaseInterface {
     return entities;
   }
 
+  async saveEntity (entity: string, data: any): Promise<any> {
+    const repo = this._conn.getRepository(entity);
+
+    const dbEntity: any = repo.create(data);
+    return repo.save(dbEntity);
+  }
+
   async saveFactory (queryRunner: QueryRunner, factory: Factory, block: Block): Promise<Factory> {
     const repo = queryRunner.manager.getRepository(Factory);
     factory.blockNumber = block.number;
@@ -1314,6 +1323,48 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getAncestorAtDepth(blockHash, depth);
   }
 
+  entityFromIPLDState (block: BlockProgress, entity: string, stateEntity: any, relations: { [key: string]: any } = {}): any {
+    const repo = this._conn.getRepository(entity);
+    const entityFields = repo.metadata.columns;
+
+    return this._getStateEntityValues(block, stateEntity, entityFields, relations);
+  }
+
+  _getStateEntityValues (
+    block: BlockProgress,
+    stateEntity: any,
+    entityFields: ColumnMetadata[],
+    relations: { [key: string]: any } = {}
+  ): { [key: string]: any } {
+    const entityValues = entityFields.map((field) => {
+      const { propertyName, transformer } = field;
+
+      // Get blockHash property for db entry from block instance.
+      if (propertyName === 'blockHash') {
+        return block.blockHash;
+      }
+
+      // Get blockNumber property for db entry from block instance.
+      if (propertyName === 'blockNumber') {
+        return block.blockNumber;
+      }
+
+      // Get blockNumber as _blockNumber and blockHash as _blockHash from the entityInstance (wasm).
+      if (['_blockNumber', '_blockHash'].includes(propertyName)) {
+        return fromStateEntityValues(stateEntity, propertyName.slice(1), relations, transformer);
+      }
+
+      return fromStateEntityValues(stateEntity, propertyName, relations, transformer);
+    }, {});
+
+    return entityFields.reduce((acc: { [key: string]: any }, field: any, index: number) => {
+      const { propertyName } = field;
+      acc[propertyName] = entityValues[index];
+
+      return acc;
+    }, {});
+  }
+
   cacheUpdatedEntity<Entity> (repo: Repository<Entity>, entity: any, pruned = false): void {
     const tableName = repo.metadata.tableName;
     if (pruned) {
@@ -1583,6 +1634,13 @@ export class Database implements DatabaseInterface {
       },
       transaction: {
         entity: Transaction,
+        type: 'one-to-one'
+      }
+    });
+
+    this._relationsMap.set(Tick, {
+      pool: {
+        entity: Pool,
         type: 'one-to-one'
       }
     });

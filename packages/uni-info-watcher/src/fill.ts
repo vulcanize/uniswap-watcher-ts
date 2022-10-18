@@ -10,7 +10,7 @@ import debug from 'debug';
 
 import { getCache } from '@vulcanize/cache';
 import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
-import { getConfig, fillBlocks, JobQueue, getCustomProvider } from '@vulcanize/util';
+import { getConfig, fillBlocks, JobQueue, getCustomProvider, DEFAULT_PREFETCH_BATCH_SIZE } from '@vulcanize/util';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@cerc-io/ipld-eth-client';
@@ -56,7 +56,7 @@ export const main = async (): Promise<any> => {
     },
     batchBlocks: {
       type: 'number',
-      default: 10,
+      default: DEFAULT_PREFETCH_BATCH_SIZE,
       describe: 'Number of blocks prefetched in batch'
     },
     state: {

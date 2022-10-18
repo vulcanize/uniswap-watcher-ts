@@ -12,6 +12,8 @@ import { wait } from './misc';
 
 const log = debug('vulcanize:fill');
 
+export const DEFAULT_PREFETCH_BATCH_SIZE = 10;
+
 export const fillBlocks = async (
   jobQueue: JobQueue,
   indexer: IndexerInterface,
@@ -21,11 +23,11 @@ export const fillBlocks = async (
     startBlock: number,
     endBlock: number,
     prefetch: boolean,
-    batchBlocks: number,
-    blockCid: boolean
+    batchBlocks?: number,
+    blockCid?: boolean
   }
 ): Promise<any> => {
-  let { startBlock, endBlock, prefetch, batchBlocks, blockCid } = argv;
+  let { startBlock, endBlock, prefetch, batchBlocks = DEFAULT_PREFETCH_BATCH_SIZE, blockCid = false } = argv;
 
   if (startBlock > endBlock) {
     throw new Error(`endBlock ${endBlock} should be greater than or equal to startBlock ${startBlock}`);
@@ -164,8 +166,7 @@ const updateBlockCIDs = async (
   indexer: IndexerInterface,
   { startBlock, endBlock }: {
     startBlock: number,
-    endBlock: number,
-    batchBlocks: number,
+    endBlock: number
   }
 ) => {
   for (let i = startBlock; i <= endBlock; i++) {

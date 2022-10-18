@@ -12,7 +12,7 @@ import { PubSub } from 'apollo-server-express';
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
-import { getConfig, fillBlocks, JobQueue, getCustomProvider } from '@vulcanize/util';
+import { getConfig, fillBlocks, JobQueue, getCustomProvider, DEFAULT_PREFETCH_BATCH_SIZE } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Indexer } from './indexer';
@@ -53,7 +53,7 @@ export const main = async (): Promise<any> => {
     },
     batchBlocks: {
       type: 'number',
-      default: 10,
+      default: DEFAULT_PREFETCH_BATCH_SIZE,
       describe: 'Number of blocks prefetched in batch'
     },
     blockCid: {

@@ -50,7 +50,11 @@
     "reset:dev": "DEBUG=vulcanize:* ts-node src/cli/reset.ts",
     "inspect-cid": "DEBUG=vulcanize:* ts-node src/cli/inspect-cid.ts",
     "checkpoint": "DEBUG=vulcanize:* node --enable-source-maps dist/cli/checkpoint.js",
-    "checkpoint:dev": "DEBUG=vulcanize:* ts-node src/cli/checkpoint.ts"
+    "checkpoint:dev": "DEBUG=vulcanize:* ts-node src/cli/checkpoint.ts",
+    "export-state": "DEBUG=vulcanize:* node --enable-source-maps dist/cli/export-state.js",
+    "export-state:dev": "DEBUG=vulcanize:* ts-node src/cli/export-state.ts",
+    "import-state": "DEBUG=vulcanize:* node --enable-source-maps dist/cli/import-state.js",
+    "import-state:dev": "DEBUG=vulcanize:* ts-node src/cli/import-state.ts"
   },
   "devDependencies": {
     "@types/chance": "^1.1.2",

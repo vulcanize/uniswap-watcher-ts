@@ -248,13 +248,22 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
 
       ticks: async (
         _: any,
-        { block = {}, first, skip, where = {} }: { block: BlockHeight, first: number, skip: number, where: { [key: string]: any } }
+        { block = {}, first, skip, where = {} }: { block: BlockHeight, first: number, skip: number, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
       ) => {
         log('ticks', block, first, skip, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('ticks').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(Tick, block, where, { limit: first, skip });
+        return indexer.getEntities(
+          Tick,
+          block,
+          where,
+          { limit: first, skip },
+          info.fieldNodes[0].selectionSet.selections
+        );
       },
 
       token: async (
