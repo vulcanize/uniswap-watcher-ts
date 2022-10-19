@@ -9,7 +9,7 @@ import { ethers } from 'ethers';
 import assert from 'assert';
 
 import { JobQueue, IndexerInterface } from '@vulcanize/util';
-import { Indexer as BaseIndexer, IpldStatus as IpldStatusInterface, ServerConfig, Where, QueryOptions, ValueResult, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
+import { Indexer as BaseIndexer, StateStatus, ServerConfig, Where, QueryOptions, ValueResult, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
@@ -18,11 +18,12 @@ import { Event } from './entity/Event';
 import { BlockProgress } from './entity/BlockProgress';
 import { Contract, KIND_FACTORY, KIND_POOL, KIND_NFPM } from './entity/Contract';
 import { SyncStatus } from './entity/SyncStatus';
+import { State } from './entity/State';
+import { StateSyncStatus } from './entity/StateSyncStatus';
 
 import { abi as factoryABI, storageLayout as factoryStorageLayout } from './artifacts/factory.json';
 import { abi as nfpmABI, storageLayout as nfpmStorageLayout } from './artifacts/NonfungiblePositionManager.json';
 import poolABI from './artifacts/pool.json';
-import { IPLDBlock } from './entity/IPLDBlock';
 
 const log = debug('vulcanize:indexer');
 
@@ -117,8 +118,8 @@ export class Indexer implements IndexerInterface {
     );
   }
 
-  getIPLDData (ipldBlock: IPLDBlock): any {
-    return this._baseIndexer.getIPLDData(ipldBlock);
+  getStateData (state: State): any {
+    return this._baseIndexer.getStateData(state);
   }
 
   async triggerIndexingOnEvent (dbTx: QueryRunner, dbEvent: Event): Promise<void> {
@@ -149,6 +150,14 @@ export class Indexer implements IndexerInterface {
 
   async processBlock (blockProgress: BlockProgress): Promise<void> {
     // Method for processing on indexing new block.
+  }
+
+  async processCanonicalBlock (blockHash: string, blockNumber: number): Promise<void> {
+    // TODO Implement
+  }
+
+  async processCheckpoint (blockHash: string): Promise<void> {
+    // TODO Implement
   }
 
   parseEventNameAndArgs (kind: string, logObj: any): any {
@@ -435,6 +444,30 @@ export class Indexer implements IndexerInterface {
     }
   }
 
+  async getStateSyncStatus (): Promise<StateSyncStatus | undefined> {
+    return this._db.getStateSyncStatus();
+  }
+
+  async updateStateSyncStatusIndexedBlock (blockNumber: number, force?: boolean): Promise<StateSyncStatus> {
+    // TODO Implement
+    return {} as StateSyncStatus;
+  }
+
+  async updateStateSyncStatusCheckpointBlock (blockNumber: number, force?: boolean): Promise<StateSyncStatus> {
+    // TODO Implement
+    return {} as StateSyncStatus;
+  }
+
+  async getLatestCanonicalBlock (): Promise<BlockProgress> {
+    const syncStatus = await this.getSyncStatus();
+    assert(syncStatus);
+
+    const latestCanonicalBlock = await this.getBlockProgress(syncStatus.latestCanonicalBlockHash);
+    assert(latestCanonicalBlock);
+
+    return latestCanonicalBlock;
+  }
+
   async getContract (type: string): Promise<any> {
     const contract = await this._db.getLatestContract(type);
     return contract;
@@ -452,8 +485,8 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.watchContract(address, kind, checkpoint, startingBlock);
   }
 
-  async updateIPLDStatusMap (address: string, ipldStatus: IpldStatusInterface): Promise<void> {
-    await this._baseIndexer.updateIPLDStatusMap(address, ipldStatus);
+  async updateStateStatusMap (address: string, stateStatus: StateStatus): Promise<void> {
+    await this._baseIndexer.updateStateStatusMap(address, stateStatus);
   }
 
   cacheContract (contract: Contract): void {
@@ -485,7 +518,7 @@ export class Indexer implements IndexerInterface {
   }
 
   async fetchBlockWithEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
-    // Method not used in uni-info-watcher but required for indexer interface.
+    // Method not used in uni-watcher but required for indexer interface.
     return new BlockProgress();
   }
 

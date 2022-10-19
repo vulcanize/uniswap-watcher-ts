@@ -55,7 +55,7 @@ type Pool {
   totalValueLockedETH: BigDecimal!
   totalValueLockedUSDUntracked: BigDecimal!
   liquidityProviderCount: BigInt!
-  
+
   # Skipping fee growth as they are not queried.
   # feeGrowthGlobal0X128: BigInt!
   # feeGrowthGlobal1X128: BigInt!
@@ -151,7 +151,7 @@ type TickDayData {
 }
 
 type TickHourData {
-  id: ID!  
+  id: ID!
   pool: Pool!
   tick: Tick!
   liquidityGross: BigInt!
@@ -553,7 +553,7 @@ type _Block_ {
   parentHash: String!
 }
 
-type ResultIPLDBlock {
+type ResultState {
   block: _Block_!
   contractAddress: String!
   cid: String
@@ -793,7 +793,7 @@ type Query {
     subgraphName: String!
   ): SubgraphIndexingStatus
 
-  getState(blockHash: String!, contractAddress: String!, kind: String): ResultIPLDBlock
+  getState(blockHash: String!, contractAddress: String!, kind: String): ResultState
 }
 
 #

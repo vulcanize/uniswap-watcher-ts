@@ -431,5 +431,7 @@ export class JobRunner {
 
     assert(this._indexer.cacheContract);
     this._indexer.cacheContract(contract);
+
+    this._indexer.updateStateStatusMap(contract.address, {});
   }
 }
