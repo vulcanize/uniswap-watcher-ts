@@ -414,8 +414,8 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.watchContract(address, CONTRACT_KIND, checkpoint, startingBlock);
   }
 
-  async updateStateStatusMap (address: string, stateStatus: StateStatus): Promise<void> {
-    await this._baseIndexer.updateStateStatusMap(address, stateStatus);
+  updateStateStatusMap (address: string, stateStatus: StateStatus): void {
+    this._baseIndexer.updateStateStatusMap(address, stateStatus);
   }
 
   async saveEventEntity (dbEvent: Event): Promise<Event> {
