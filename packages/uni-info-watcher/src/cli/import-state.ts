@@ -20,7 +20,7 @@ import * as codec from '@ipld/dag-cbor';
 import { Database } from '../database';
 import { Indexer } from '../indexer';
 import { EventWatcher } from '../events';
-import { IPLDBlock } from '../entity/IPLDBlock';
+import { State } from '../entity/State';
 
 const log = debug('vulcanize:import-state');
 
@@ -104,14 +104,14 @@ export const main = async (): Promise<any> => {
 
   // Fill the IPLDBlocks.
   for (const checkpoint of importData.ipldCheckpoints) {
-    let ipldBlock = new IPLDBlock();
+    let ipldBlock = new State();
 
     ipldBlock = Object.assign(ipldBlock, checkpoint);
     ipldBlock.block = block;
 
     ipldBlock.data = Buffer.from(codec.encode(ipldBlock.data));
 
-    ipldBlock = await indexer.saveOrUpdateIPLDBlock(ipldBlock);
+    ipldBlock = await indexer.saveOrUpdateState(ipldBlock);
     await indexer.updateEntitiesFromIPLDState(ipldBlock);
   }
 
@@ -120,12 +120,12 @@ export const main = async (): Promise<any> => {
   await indexer.updateBlockProgress(block, block.lastProcessedEventIndex);
   await indexer.updateSyncStatusChainHead(block.blockHash, block.blockNumber);
   await indexer.updateSyncStatusIndexedBlock(block.blockHash, block.blockNumber);
-  await indexer.updateIPLDStatusHooksBlock(block.blockNumber);
-  await indexer.updateIPLDStatusCheckpointBlock(block.blockNumber);
+  await indexer.updateStateSyncStatusIndexedBlock(block.blockNumber);
+  await indexer.updateStateSyncStatusCheckpointBlock(block.blockNumber);
 
   // The 'diff_staged' and 'init' IPLD blocks are unnecessary as checkpoints have been already created for the snapshot block.
-  await indexer.removeIPLDBlocks(block.blockNumber, StateKind.Init);
-  await indexer.removeIPLDBlocks(block.blockNumber, StateKind.DiffStaged);
+  await indexer.removeStates(block.blockNumber, StateKind.Init);
+  await indexer.removeStates(block.blockNumber, StateKind.DiffStaged);
 
   log(`Import completed for snapshot block at height ${block.blockNumber}`);
 };

@@ -75,7 +75,7 @@ const main = async (): Promise<void> => {
   };
 
   const contracts = await db.getContracts();
-  let block = await indexer.getLatestHooksProcessedBlock();
+  let block = await indexer.getLatestStateIndexedBlock();
   assert(block);
 
   if (argv.blockNumber) {
@@ -117,14 +117,10 @@ const main = async (): Promise<void> => {
     if (contract.checkpoint) {
       await indexer.createCheckpoint(contract.address, block.blockHash);
 
-      const ipldBlock = await indexer.getLatestIPLDBlock(contract.address, StateKind.Checkpoint, block.blockNumber);
+      const ipldBlock = await indexer.getLatestState(contract.address, StateKind.Checkpoint, block.blockNumber);
       assert(ipldBlock);
 
-      const data = indexer.getIPLDData(ipldBlock);
-
-      if (indexer.isIPFSConfigured()) {
-        await indexer.pushToIPFS(data);
-      }
+      const data = indexer.getStateData(ipldBlock);
 
       exportData.ipldCheckpoints.push({
         contractAddress: ipldBlock.contractAddress,

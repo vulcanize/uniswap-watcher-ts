@@ -174,8 +174,8 @@ export class Indexer implements IndexerInterface {
     return this._db.getPrevState(blockHash, contractAddress, kind);
   }
 
-  async getLatestIPLDBlock (contractAddress: string, kind: StateKind | null, blockNumber?: number): Promise<IPLDBlock | undefined> {
-    return this._db.getLatestIPLDBlock(contractAddress, kind, blockNumber);
+  async getLatestState (contractAddress: string, kind: StateKind | null, blockNumber?: number): Promise<State | undefined> {
+    return this._db.getLatestState(contractAddress, kind, blockNumber);
   }
 
   async getStatesByHash (blockHash: string): Promise<State[]> {
@@ -225,12 +225,12 @@ export class Indexer implements IndexerInterface {
     await this._baseIndexer.createInit(this, blockHash, blockNumber);
   }
 
-  async saveOrUpdateIPLDBlock (ipldBlock: IPLDBlock): Promise<IPLDBlock> {
-    return this._baseIndexer.saveOrUpdateIPLDBlock(ipldBlock);
+  async saveOrUpdateState (ipldBlock: State): Promise<State> {
+    return this._baseIndexer.saveOrUpdateState(ipldBlock);
   }
 
-  async removeIPLDBlocks (blockNumber: number, kind: StateKind): Promise<void> {
-    await this._baseIndexer.removeIPLDBlocks(blockNumber, kind);
+  async removeStates (blockNumber: number, kind: StateKind): Promise<void> {
+    await this._baseIndexer.removeStates(blockNumber, kind);
   }
 
   async processEvent (dbEvent: Event): Promise<void> {
@@ -317,8 +317,8 @@ export class Indexer implements IndexerInterface {
     return latestCanonicalBlock;
   }
 
-  async getLatestHooksProcessedBlock (): Promise<BlockProgress> {
-    return this._baseIndexer.getLatestHooksProcessedBlock();
+  async getLatestStateIndexedBlock (): Promise<BlockProgress> {
+    return this._baseIndexer.getLatestStateIndexedBlock();
   }
 
   async getBlockEntities (where: { [key: string]: any } = {}, queryOptions: QueryOptions): Promise<any> {
@@ -616,8 +616,8 @@ export class Indexer implements IndexerInterface {
     this._subgraphStateMap.set(contractAddress, updatedData);
   }
 
-  async updateEntitiesFromIPLDState (ipldBlock: IPLDBlock): Promise<void> {
-    const data = this.getIPLDData(ipldBlock);
+  async updateEntitiesFromIPLDState (ipldBlock: State): Promise<void> {
+    const data = this.getStateData(ipldBlock);
 
     for (const [entityName, entities] of Object.entries(data.state)) {
       // Get relations for entity
