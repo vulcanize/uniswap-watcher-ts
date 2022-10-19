@@ -8,7 +8,7 @@ import debug from 'debug';
 import { GraphQLResolveInfo, GraphQLScalarType } from 'graphql';
 
 import { gqlQueryCount, gqlTotalQueryCount, GraphDecimal } from '@vulcanize/util';
-import { BlockHeight, OrderDirection } from '@cerc-io/util';
+import { BlockHeight, OrderDirection, getResultState } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
 import { Burn } from './entity/Burn';
@@ -503,9 +503,9 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('getState').inc(1);
 
-        const ipldBlock = await indexer.getPrevIPLDBlock(blockHash, contractAddress, kind);
+        const state = await indexer.getPrevState(blockHash, contractAddress, kind);
 
-        return ipldBlock && ipldBlock.block.isComplete ? indexer.getResultIPLDBlock(ipldBlock) : undefined;
+        return state && state.block.isComplete ? getResultState(state) : undefined;
       }
     }
   };

@@ -11,13 +11,15 @@ import { getConfig, getResetConfig, JobQueue, resetJobs } from '@vulcanize/util'
 import { Database } from '../../database';
 import { Indexer } from '../../indexer';
 import { BlockProgress } from '../../entity/BlockProgress';
+import { Allowance } from '../../entity/Allowance';
+import { Balance } from '../../entity/Balance';
 import { Contract } from '../../entity/Contract';
 
-const log = debug('vulcanize:reset-state');
+const log = debug('vulcanize:reset-watcher');
 
-export const command = 'state';
+export const command = 'watcher';
 
-export const desc = 'Reset state to block number';
+export const desc = 'Reset watcher to a block number';
 
 export const builder = {
   blockNumber: {
@@ -29,7 +31,7 @@ export const handler = async (argv: any): Promise<void> => {
   const config = await getConfig(argv.configFile);
   await resetJobs(config);
   const { jobQueue: jobQueueConfig } = config;
-  const { dbConfig, ethClient, ethProvider } = await getResetConfig(config);
+  const { dbConfig, serverConfig, ethClient, ethProvider } = await getResetConfig(config);
 
   // Initialize database.
   const db = new Database(dbConfig);
@@ -42,7 +44,7 @@ export const handler = async (argv: any): Promise<void> => {
 
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
 
-  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
+  const indexer = new Indexer(serverConfig, db, ethClient, ethProvider, jobQueue);
 
   const syncStatus = await indexer.getSyncStatus();
   assert(syncStatus, 'Missing syncStatus');
@@ -55,8 +57,12 @@ export const handler = async (argv: any): Promise<void> => {
   const dbTx = await db.createTransactionRunner();
 
   try {
-    await db.deleteEntitiesByConditions(dbTx, BlockProgress, { blockNumber: MoreThan(blockProgress.blockNumber) });
-    await db.deleteEntitiesByConditions(dbTx, Contract, { startingBlock: MoreThan(argv.blockNumber) });
+    const removeEntitiesPromise = [BlockProgress, Allowance, Balance].map(async entityClass => {
+      return db.removeEntities<any>(dbTx, entityClass, { blockNumber: MoreThan(argv.blockNumber) });
+    });
+
+    await Promise.all(removeEntitiesPromise);
+    await db.removeEntities(dbTx, Contract, { startingBlock: MoreThan(argv.blockNumber) });
 
     if (syncStatus.latestIndexedBlockNumber > blockProgress.blockNumber) {
       await indexer.updateSyncStatusIndexedBlock(blockProgress.blockHash, blockProgress.blockNumber, true);
@@ -76,5 +82,5 @@ export const handler = async (argv: any): Promise<void> => {
     await dbTx.release();
   }
 
-  log('Reset state successfully');
+  log('Reset watcher successfully');
 };

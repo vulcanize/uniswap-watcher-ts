@@ -82,7 +82,7 @@ export class JobRunner {
         break;
 
       case JOB_KIND_CONTRACT:
-        await this._updateWatchedContracts(job);
+        this._updateWatchedContracts(job);
         break;
 
       default:
@@ -426,10 +426,12 @@ export class JobRunner {
     console.timeEnd('time:job-runner#_processEvents-events');
   }
 
-  async _updateWatchedContracts (job: any): Promise<void> {
+  _updateWatchedContracts (job: any): void {
     const { data: { contract } } = job;
 
     assert(this._indexer.cacheContract);
     this._indexer.cacheContract(contract);
+
+    this._indexer.updateStateStatusMap(contract.address, {});
   }
 }
