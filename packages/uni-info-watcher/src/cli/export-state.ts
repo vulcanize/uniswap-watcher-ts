@@ -71,7 +71,7 @@ const main = async (): Promise<void> => {
   const exportData: any = {
     snapshotBlock: {},
     contracts: [],
-    ipldCheckpoints: []
+    stateCheckpoints: []
   };
 
   const contracts = await db.getContracts();
@@ -117,15 +117,15 @@ const main = async (): Promise<void> => {
     if (contract.checkpoint) {
       await indexer.createCheckpoint(contract.address, block.blockHash);
 
-      const ipldBlock = await indexer.getLatestState(contract.address, StateKind.Checkpoint, block.blockNumber);
-      assert(ipldBlock);
+      const state = await indexer.getLatestState(contract.address, StateKind.Checkpoint, block.blockNumber);
+      assert(state);
 
-      const data = indexer.getStateData(ipldBlock);
+      const data = indexer.getStateData(state);
 
-      exportData.ipldCheckpoints.push({
-        contractAddress: ipldBlock.contractAddress,
-        cid: ipldBlock.cid,
-        kind: ipldBlock.kind,
+      exportData.stateCheckpoints.push({
+        contractAddress: state.contractAddress,
+        cid: state.cid,
+        kind: state.kind,
         data
       });
     }

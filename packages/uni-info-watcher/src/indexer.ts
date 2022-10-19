@@ -225,8 +225,8 @@ export class Indexer implements IndexerInterface {
     await this._baseIndexer.createInit(this, blockHash, blockNumber);
   }
 
-  async saveOrUpdateState (ipldBlock: State): Promise<State> {
-    return this._baseIndexer.saveOrUpdateState(ipldBlock);
+  async saveOrUpdateState (state: State): Promise<State> {
+    return this._baseIndexer.saveOrUpdateState(state);
   }
 
   async removeStates (blockNumber: number, kind: StateKind): Promise<void> {
@@ -239,34 +239,13 @@ export class Indexer implements IndexerInterface {
 
       await this._triggerEventHandler(resultEvent);
     } catch (error) {
-      this._clearCachedEntities();
+      this._db.clearCachedEntities();
       throw error;
     }
   }
 
   async processBlock (blockProgress: BlockProgress): Promise<void> {
-    // Set latest block in frothy region to cachedEntities.frothyBlocks map.
-    if (!this._db.cachedEntities.frothyBlocks.has(blockProgress.blockHash)) {
-      this._db.cachedEntities.frothyBlocks.set(
-        blockProgress.blockHash,
-        {
-          blockNumber: blockProgress.blockNumber,
-          parentHash: blockProgress.parentHash,
-          entities: new Map()
-        }
-      );
-    }
-
-    log(`Size of cachedEntities.frothyBlocks map: ${this._db.cachedEntities.frothyBlocks.size}`);
-    this._measureCachedPrunedEntities();
-
-    // Check if it is time to clear entities cache.
-    if (blockProgress.blockNumber % this._serverConfig.clearEntitiesCacheInterval === 0) {
-      log(`Clearing cachedEntities.latestPrunedEntities at block ${blockProgress.blockNumber}`);
-      // Clearing only pruned region as frothy region cache gets updated in pruning queue.
-      this._db.cachedEntities.latestPrunedEntities.clear();
-      log(`Cleared cachedEntities.latestPrunedEntities. Map size: ${this._db.cachedEntities.latestPrunedEntities.size}`);
-    }
+    this._db.updateEntityCacheFrothyBlocks(blockProgress, this._serverConfig.clearEntitiesCacheInterval);
   }
 
   async getStateSyncStatus (): Promise<StateSyncStatus | undefined> {
@@ -559,7 +538,7 @@ export class Indexer implements IndexerInterface {
 
   async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force = false): Promise<SyncStatus> {
     const syncStatus = await this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, force);
-    this._updateCachedEntitiesFrothyBlocks(syncStatus.latestCanonicalBlockHash, syncStatus.latestCanonicalBlockNumber);
+    this._db.pruneEntityCacheFrothyBlocks(syncStatus.latestCanonicalBlockHash, syncStatus.latestCanonicalBlockNumber);
 
     return syncStatus;
   }
@@ -614,66 +593,6 @@ export class Indexer implements IndexerInterface {
     const oldData = this._subgraphStateMap.get(contractAddress);
     const updatedData = _.merge(oldData, data);
     this._subgraphStateMap.set(contractAddress, updatedData);
-  }
-
-  async updateEntitiesFromIPLDState (ipldBlock: State): Promise<void> {
-    const data = this.getStateData(ipldBlock);
-
-    for (const [entityName, entities] of Object.entries(data.state)) {
-      // Get relations for entity
-      const result = Array.from(this._db.relationsMap.entries())
-        .find(([key]) => key.name === entityName);
-
-      const relations = result ? result[1] : {};
-
-      log(`Updating entities from IPLD state for entity ${entityName}`);
-      console.time(`time:indexer#updateEntitiesFromIPLDState-IPLD-update-entity-${entityName}`);
-      for (const [, entityData] of Object.entries(entities as any)) {
-        const dbData = this._db.entityFromIPLDState(ipldBlock.block, entityName, entityData, relations);
-        await this._db.saveEntity(entityName, dbData);
-      }
-      console.timeEnd(`time:indexer#updateEntitiesFromIPLDState-IPLD-update-entity-${entityName}`);
-    }
-  }
-
-  _updateCachedEntitiesFrothyBlocks (canonicalBlockHash: string, canonicalBlockNumber: number) {
-    const canonicalBlock = this._db.cachedEntities.frothyBlocks.get(canonicalBlockHash);
-
-    if (canonicalBlock) {
-      // Update latestPrunedEntities map with entities from latest canonical block.
-      canonicalBlock.entities.forEach((entityIdMap, entityTableName) => {
-        entityIdMap.forEach((data, id) => {
-          let entityIdMap = this._db.cachedEntities.latestPrunedEntities.get(entityTableName);
-
-          if (!entityIdMap) {
-            entityIdMap = new Map();
-          }
-
-          entityIdMap.set(id, data);
-          this._db.cachedEntities.latestPrunedEntities.set(entityTableName, entityIdMap);
-        });
-      });
-    }
-
-    // Remove pruned blocks from frothyBlocks.
-    const prunedBlockHashes = Array.from(this._db.cachedEntities.frothyBlocks.entries())
-      .filter(([, value]) => value.blockNumber <= canonicalBlockNumber)
-      .map(([blockHash]) => blockHash);
-
-    prunedBlockHashes.forEach(blockHash => this._db.cachedEntities.frothyBlocks.delete(blockHash));
-  }
-
-  _clearCachedEntities () {
-    this._db.cachedEntities.frothyBlocks.clear();
-    this._db.cachedEntities.latestPrunedEntities.clear();
-  }
-
-  _measureCachedPrunedEntities () {
-    const totalEntities = Array.from(this._db.cachedEntities.latestPrunedEntities.values())
-      .reduce((acc, idEntitiesMap) => acc + idEntitiesMap.size, 0);
-
-    log(`Total entities in cachedEntities.latestPrunedEntities map: ${totalEntities}`);
-    cachePrunedEntitiesCount.set(totalEntities);
   }
 
   async _fetchEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {

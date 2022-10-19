@@ -6,10 +6,11 @@ import 'reflect-metadata';
 import debug from 'debug';
 import { Between } from 'typeorm';
 
+import { prepareEntityState } from '@cerc-io/graph-node';
+
 import { Indexer } from '../indexer';
 import { Database } from '../database';
 import { FACTORY_ADDRESS } from '../utils/constants';
-import { prepareEntityState } from '../utils/state';
 
 const log = debug('vulcanize:fill-state');
 

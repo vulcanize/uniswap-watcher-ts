@@ -16,16 +16,12 @@ import {
   SelectQueryBuilder
 } from 'typeorm';
 import { RawSqlResultsToEntityTransformer } from 'typeorm/query-builder/transformer/RawSqlResultsToEntityTransformer';
-import { ColumnMetadata } from 'typeorm/metadata/ColumnMetadata';
 import path from 'path';
 import { SelectionNode } from 'graphql';
 import debug from 'debug';
 import _ from 'lodash';
 
 import {
-  eventProcessingLoadEntityCacheHitCount,
-  eventProcessingLoadEntityCount,
-  eventProcessingLoadEntityDBQueryDuration,
   StateKind,
   Database as BaseDatabase,
   DatabaseInterface,
@@ -33,6 +29,7 @@ import {
   QueryOptions,
   Where
 } from '@cerc-io/util';
+import { Database as GraphDatabase } from '@cerc-io/graph-node';
 
 import { Factory } from './entity/Factory';
 import { Pool } from './entity/Pool';
@@ -62,7 +59,6 @@ import { Collect } from './entity/Collect';
 import { Flash } from './entity/Flash';
 import { TickHourData } from './entity/TickHourData';
 import { resolveEntityFieldConflicts } from './utils';
-import { fromStateEntityValues } from './utils/state';
 
 const log = debug('vulcanize:database');
 
@@ -112,22 +108,20 @@ export class Database implements DatabaseInterface {
   _config: ConnectionOptions
   _conn!: Connection
   _baseDatabase: BaseDatabase
+  _graphDatabase: GraphDatabase
   _relationsMap: Map<any, { [key: string]: any }>
-
-  _cachedEntities: CachedEntities = {
-    frothyBlocks: new Map(),
-    latestPrunedEntities: new Map()
-  }
 
   constructor (config: ConnectionOptions) {
     assert(config);
+    const entitiesDir = path.join(__dirname, 'entity/*');
 
     this._config = {
       ...config,
-      entities: [path.join(__dirname, 'entity/*')]
+      entities: [entitiesDir]
     };
 
     this._baseDatabase = new BaseDatabase(this._config);
+    this._graphDatabase = new GraphDatabase(this._config, entitiesDir);
     this._relationsMap = new Map();
     this._populateRelationsMap();
   }
@@ -136,12 +130,13 @@ export class Database implements DatabaseInterface {
     return this._relationsMap;
   }
 
-  get cachedEntities (): CachedEntities {
-    return this._cachedEntities;
+  get graphDatabase (): GraphDatabase {
+    return this._graphDatabase;
   }
 
   async init (): Promise<void> {
     this._conn = await this._baseDatabase.init();
+    await this._graphDatabase.init();
   }
 
   async close (): Promise<void> {
@@ -774,74 +769,7 @@ export class Database implements DatabaseInterface {
   }
 
   async getModelEntity<Entity> (repo: Repository<Entity>, whereOptions: any): Promise<Entity | undefined> {
-    eventProcessingLoadEntityCount.inc();
-
-    const findOptions = {
-      where: whereOptions,
-      order: {
-        blockNumber: 'DESC'
-      }
-    };
-
-    if (findOptions.where.blockHash) {
-      // Check cache only if latestPrunedEntities is updated.
-      // latestPrunedEntities is updated when frothyBlocks is filled till canonical block height.
-      if (this._cachedEntities.latestPrunedEntities.size > 0) {
-        let frothyBlock = this._cachedEntities.frothyBlocks.get(findOptions.where.blockHash);
-        let canonicalBlockNumber = -1;
-
-        // Loop through frothy region until latest entity is found.
-        while (frothyBlock) {
-          const entity = frothyBlock.entities
-            .get(repo.metadata.tableName)
-            ?.get(findOptions.where.id);
-
-          if (entity) {
-            eventProcessingLoadEntityCacheHitCount.inc();
-            return _.cloneDeep(entity) as Entity;
-          }
-
-          canonicalBlockNumber = frothyBlock.blockNumber + 1;
-          frothyBlock = this._cachedEntities.frothyBlocks.get(frothyBlock.parentHash);
-        }
-
-        // Canonical block number is not assigned if blockHash does not exist in frothy region.
-        // Get latest pruned entity from cache only if blockHash exists in frothy region.
-        // i.e. Latest entity in cache is the version before frothy region.
-        if (canonicalBlockNumber > -1) {
-          // If entity not found in frothy region get latest entity in the pruned region.
-          // Check if latest entity is cached in pruned region.
-          const entity = this._cachedEntities.latestPrunedEntities
-            .get(repo.metadata.tableName)
-            ?.get(findOptions.where.id);
-
-          if (entity) {
-            eventProcessingLoadEntityCacheHitCount.inc();
-            return _.cloneDeep(entity) as Entity;
-          }
-
-          // Get latest pruned entity from DB if not found in cache.
-          const endTimer = eventProcessingLoadEntityDBQueryDuration.startTimer();
-          const dbEntity = await this._baseDatabase.getLatestPrunedEntity(repo, findOptions.where.id, canonicalBlockNumber);
-          endTimer();
-
-          if (dbEntity) {
-            // Update latest pruned entity in cache.
-            this.cacheUpdatedEntity(repo, dbEntity, true);
-          }
-
-          return dbEntity;
-        }
-      }
-
-      const endTimer = eventProcessingLoadEntityDBQueryDuration.startTimer();
-      const dbEntity = await this._baseDatabase.getPrevEntityVersion(repo.queryRunner!, repo, findOptions);
-      endTimer();
-
-      return dbEntity;
-    }
-
-    return repo.findOne(findOptions);
+    return this._graphDatabase.getModelEntity(repo, whereOptions);
   }
 
   async loadRelations<Entity> (
@@ -853,167 +781,150 @@ export class Database implements DatabaseInterface {
     selections: ReadonlyArray<SelectionNode> = []
   ): Promise<Entity[]> {
     const relations = relationsMap.get(entity);
-
-    if (!relations) {
+    if (relations === undefined) {
       return entities;
     }
 
-    // Filter selections from GQL query which are relations.
     const relationPromises = selections.filter((selection) => selection.kind === 'Field' && Boolean(relations[selection.name.value]))
-      .map(async (selection) => {
+      .map(async selection => {
         assert(selection.kind === 'Field');
         const field = selection.name.value;
-        const { entity: relationEntity, type, foreignKey } = relations[field];
+        const { entity: relationEntity, isArray, isDerived, field: foreignKey } = relations[field];
         let childSelections = selection.selectionSet?.selections || [];
 
         // Filter out __typename field in GQL for loading relations.
         childSelections = childSelections.filter(selection => !(selection.kind === 'Field' && selection.name.value === '__typename'));
 
-        switch (type) {
-          case 'one-to-many': {
-            assert(foreignKey);
+        if (isDerived) {
+          const where: Where = {
+            [foreignKey]: [{
+              value: entities.map((entity: any) => entity.id),
+              not: false,
+              operator: 'in'
+            }]
+          };
 
-            const where: Where = {
-              [foreignKey]: [{
-                value: entities.map((entity: any) => entity.id),
-                not: false,
-                operator: 'in'
-              }]
-            };
+          const relatedEntities = await this.getModelEntities(
+            queryRunner,
+            relationEntity,
+            block,
+            where,
+            {},
+            childSelections
+          );
 
-            const relatedEntities = await this.getModelEntities(
-              queryRunner,
-              relationEntity,
-              block,
-              where,
-              {},
-              childSelections
-            );
+          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any[]}, entity: any) => {
+            // Related entity might be loaded with data.
+            const parentEntityId = entity[foreignKey].id ?? entity[foreignKey];
 
-            const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any[]}, entity: any) => {
-              // Related entity might be loaded with data.
-              const parentEntityId = entity[foreignKey].id ?? entity[foreignKey];
+            if (!acc[parentEntityId]) {
+              acc[parentEntityId] = [];
+            }
 
-              if (!acc[parentEntityId]) {
-                acc[parentEntityId] = [];
-              }
+            if (acc[parentEntityId].length < DEFAULT_LIMIT) {
+              acc[parentEntityId].push(entity);
+            }
 
-              if (acc[parentEntityId].length < DEFAULT_LIMIT) {
-                acc[parentEntityId].push(entity);
-              }
+            return acc;
+          }, {});
 
-              return acc;
-            }, {});
+          entities.forEach((entity: any) => {
+            if (relatedEntitiesMap[entity.id]) {
+              entity[field] = relatedEntitiesMap[entity.id];
+            } else {
+              entity[field] = [];
+            }
+          });
 
-            entities.forEach((entity: any) => {
-              if (relatedEntitiesMap[entity.id]) {
-                entity[field] = relatedEntitiesMap[entity.id];
-              } else {
-                entity[field] = [];
-              }
-            });
+          return;
+        }
 
-            break;
-          }
+        if (isArray) {
+          const relatedIds = entities.reduce((acc: Set<string>, entity: any) => {
+            entity[field].forEach((relatedEntityId: string) => acc.add(relatedEntityId));
 
-          case 'many-to-many': {
-            const relatedIds = entities.reduce((acc, entity: any) => {
-              entity[field].forEach((relatedEntityId: any) => acc.add(relatedEntityId));
+            return acc;
+          }, new Set());
+
+          const where: Where = {
+            id: [{
+              value: Array.from(relatedIds),
+              not: false,
+              operator: 'in'
+            }]
+          };
+
+          const relatedEntities = await this.getModelEntities(
+            queryRunner,
+            relationEntity,
+            block,
+            where,
+            {},
+            childSelections
+          );
+
+          entities.forEach((entity: any) => {
+            const relatedEntityIds: Set<string> = entity[field].reduce((acc: Set<string>, id: string) => {
+              acc.add(id);
 
               return acc;
             }, new Set());
 
-            const where: Where = {
-              id: [{
-                value: Array.from(relatedIds),
-                not: false,
-                operator: 'in'
-              }]
-            };
+            entity[field] = [];
 
-            const relatedEntities = await this.getModelEntities(
-              queryRunner,
-              relationEntity,
-              block,
-              where,
-              {},
-              childSelections
-            );
-
-            entities.forEach((entity: any) => {
-              const relatedEntityIds: Set<string> = entity[field].reduce((acc: Set<string>, id: string) => {
-                acc.add(id);
-
-                return acc;
-              }, new Set());
-
-              entity[field] = [];
-
-              relatedEntities.forEach((relatedEntity: any) => {
-                if (relatedEntityIds.has(relatedEntity.id) && entity[field].length < DEFAULT_LIMIT) {
-                  entity[field].push(relatedEntity);
-                }
-              });
-            });
-
-            break;
-          }
-
-          default: {
-            // For one-to-one/many-to-one relations.
-            if (childSelections.length === 1 && childSelections[0].kind === 'Field' && childSelections[0].name.value === 'id') {
-              // Avoid loading relation if selections only has id field.
-              entities.forEach((entity: any) => {
-                entity[field] = { id: entity[field] };
-              });
-
-              break;
-            }
-
-            const where: Where = {
-              id: [{
-                value: entities.map((entity: any) => entity[field]),
-                not: false,
-                operator: 'in'
-              }]
-            };
-
-            const relatedEntities = await this.getModelEntities(
-              queryRunner,
-              relationEntity,
-              block,
-              where,
-              {},
-              childSelections
-            );
-
-            const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
-              acc[entity.id] = entity;
-
-              return acc;
-            }, {});
-
-            entities.forEach((entity: any) => {
-              if (relatedEntitiesMap[entity[field]]) {
-                entity[field] = relatedEntitiesMap[entity[field]];
+            relatedEntities.forEach((relatedEntity: any) => {
+              if (relatedEntityIds.has(relatedEntity.id) && entity[field].length < DEFAULT_LIMIT) {
+                entity[field].push(relatedEntity);
               }
             });
+          });
 
-            break;
-          }
+          return;
         }
+
+        // field is neither an array nor derivedFrom
+        if (childSelections.length === 1 && childSelections[0].kind === 'Field' && childSelections[0].name.value === 'id') {
+          // Avoid loading relation if selections only has id field.
+          entities.forEach((entity: any) => {
+            entity[field] = { id: entity[field] };
+          });
+
+          return;
+        }
+
+        const where: Where = {
+          id: [{
+            value: entities.map((entity: any) => entity[field]),
+            not: false,
+            operator: 'in'
+          }]
+        };
+
+        const relatedEntities = await this.getModelEntities(
+          queryRunner,
+          relationEntity,
+          block,
+          where,
+          {},
+          childSelections
+        );
+
+        const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
+          acc[entity.id] = entity;
+
+          return acc;
+        }, {});
+
+        entities.forEach((entity: any) => {
+          if (relatedEntitiesMap[entity[field]]) {
+            entity[field] = relatedEntitiesMap[entity[field]];
+          }
+        });
       });
 
     await Promise.all(relationPromises);
 
     return entities;
-  }
-
-  async saveEntity (entity: string, data: any): Promise<any> {
-    const repo = this._conn.getRepository(entity);
-
-    const dbEntity: any = repo.create(data);
-    return repo.save(dbEntity);
   }
 
   async saveFactory (queryRunner: QueryRunner, factory: Factory, block: Block): Promise<Factory> {
@@ -1323,70 +1234,21 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getAncestorAtDepth(blockHash, depth);
   }
 
-  entityFromIPLDState (block: BlockProgress, entity: string, stateEntity: any, relations: { [key: string]: any } = {}): any {
-    const repo = this._conn.getRepository(entity);
-    const entityFields = repo.metadata.columns;
-
-    return this._getStateEntityValues(block, stateEntity, entityFields, relations);
+  cacheUpdatedEntity<Entity> (repo: Repository<Entity>, entity: any): void {
+    this._graphDatabase.cacheUpdatedEntity(repo, entity);
   }
 
-  _getStateEntityValues (
-    block: BlockProgress,
-    stateEntity: any,
-    entityFields: ColumnMetadata[],
-    relations: { [key: string]: any } = {}
-  ): { [key: string]: any } {
-    const entityValues = entityFields.map((field) => {
-      const { propertyName, transformer } = field;
-
-      // Get blockHash property for db entry from block instance.
-      if (propertyName === 'blockHash') {
-        return block.blockHash;
-      }
-
-      // Get blockNumber property for db entry from block instance.
-      if (propertyName === 'blockNumber') {
-        return block.blockNumber;
-      }
-
-      // Get blockNumber as _blockNumber and blockHash as _blockHash from the entityInstance (wasm).
-      if (['_blockNumber', '_blockHash'].includes(propertyName)) {
-        return fromStateEntityValues(stateEntity, propertyName.slice(1), relations, transformer);
-      }
-
-      return fromStateEntityValues(stateEntity, propertyName, relations, transformer);
-    }, {});
-
-    return entityFields.reduce((acc: { [key: string]: any }, field: any, index: number) => {
-      const { propertyName } = field;
-      acc[propertyName] = entityValues[index];
-
-      return acc;
-    }, {});
+  updateEntityCacheFrothyBlocks (blockProgress: BlockProgress, clearEntitiesCacheInterval?: number): void {
+    this._graphDatabase.updateEntityCacheFrothyBlocks(blockProgress, clearEntitiesCacheInterval);
   }
 
-  cacheUpdatedEntity<Entity> (repo: Repository<Entity>, entity: any, pruned = false): void {
-    const tableName = repo.metadata.tableName;
-    if (pruned) {
-      let entityIdMap = this._cachedEntities.latestPrunedEntities.get(tableName);
-      if (!entityIdMap) {
-        entityIdMap = new Map();
-      }
-      entityIdMap.set(entity.id, _.cloneDeep(entity));
-      this._cachedEntities.latestPrunedEntities.set(tableName, entityIdMap);
-      return;
-    }
-    const frothyBlock = this._cachedEntities.frothyBlocks.get(entity.blockHash);
-    // Update frothyBlock only if already present in cache.
-    // Might not be present when event processing starts without block processing on job retry.
-    if (frothyBlock) {
-      let entityIdMap = frothyBlock.entities.get(tableName);
-      if (!entityIdMap) {
-        entityIdMap = new Map();
-      }
-      entityIdMap.set(entity.id, _.cloneDeep(entity));
-      frothyBlock.entities.set(tableName, entityIdMap);
-    }
+  clearCachedEntities () {
+    this._graphDatabase.cachedEntities.frothyBlocks.clear();
+    this._graphDatabase.cachedEntities.latestPrunedEntities.clear();
+  }
+
+  pruneEntityCacheFrothyBlocks (canonicalBlockHash: string, canonicalBlockNumber: number) {
+    this._graphDatabase.pruneEntityCacheFrothyBlocks(canonicalBlockHash, canonicalBlockNumber);
   }
 
   async _transformResults<Entity> (queryRunner: QueryRunner, qb: SelectQueryBuilder<Entity>, rawResults: any[]): Promise<any[]> {
@@ -1406,264 +1268,314 @@ export class Database implements DatabaseInterface {
     this._relationsMap.set(Pool, {
       token0: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       token1: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       poolHourData: {
         entity: PoolHourData,
-        type: 'one-to-many',
-        foreignKey: 'pool'
+        isArray: true,
+        isDerived: true,
+        field: 'pool'
       },
       poolDayData: {
         entity: PoolDayData,
-        type: 'one-to-many',
-        foreignKey: 'pool'
+        isArray: true,
+        isDerived: true,
+        field: 'pool'
       },
       mints: {
         entity: Mint,
-        type: 'one-to-many',
-        foreignKey: 'pool'
+        isArray: true,
+        isDerived: true,
+        field: 'pool'
       },
       burns: {
         entity: Burn,
-        type: 'one-to-many',
-        foreignKey: 'pool'
+        isArray: true,
+        isDerived: true,
+        field: 'pool'
       },
       swaps: {
         entity: Swap,
-        type: 'one-to-many',
-        foreignKey: 'pool'
+        isArray: true,
+        isDerived: true,
+        field: 'pool'
       },
       collects: {
         entity: Collect,
-        type: 'one-to-many',
-        foreignKey: 'pool'
+        isArray: true,
+        isDerived: true,
+        field: 'pool'
       },
       ticks: {
         entity: Tick,
-        type: 'one-to-many',
-        foreignKey: 'pool'
+        isArray: true,
+        isDerived: true,
+        field: 'pool'
       }
     });
 
     this._relationsMap.set(Burn, {
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       transaction: {
         entity: Transaction,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       token0: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       token1: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(Mint, {
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       transaction: {
         entity: Transaction,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       token0: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       token1: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(Swap, {
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       transaction: {
         entity: Transaction,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       token0: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       token1: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(Token, {
       whitelistPools: {
         entity: Pool,
-        type: 'many-to-many'
+        isArray: true,
+        isDerived: false
       },
       tokenDayData: {
         entity: TokenDayData,
-        type: 'one-to-many',
-        foreignKey: 'token'
+        isArray: true,
+        isDerived: true,
+        field: 'token'
       }
     });
 
     this._relationsMap.set(Transaction, {
       mints: {
         entity: Mint,
-        type: 'one-to-many',
-        foreignKey: 'transaction'
+        isArray: true,
+        isDerived: true,
+        field: 'transaction'
       },
       burns: {
         entity: Burn,
-        type: 'one-to-many',
-        foreignKey: 'transaction'
+        isArray: true,
+        isDerived: true,
+        field: 'transaction'
       },
       swaps: {
         entity: Swap,
-        type: 'one-to-many',
-        foreignKey: 'transaction'
+        isArray: true,
+        isDerived: true,
+        field: 'transaction'
       },
       flashed: {
         entity: Flash,
-        type: 'one-to-many',
-        foreignKey: 'transaction'
+        isArray: true,
+        isDerived: true,
+        field: 'transaction'
       },
       collects: {
         entity: Collect,
-        type: 'one-to-many',
-        foreignKey: 'transaction'
+        isArray: true,
+        isDerived: true,
+        field: 'transaction'
       }
     });
 
     this._relationsMap.set(Position, {
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       token0: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       token1: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       tickLower: {
         entity: Tick,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       tickUpper: {
         entity: Tick,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       transaction: {
         entity: Transaction,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(PoolDayData, {
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(PoolHourData, {
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(TokenDayData, {
       token: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(TokenHourData, {
       token: {
         entity: Token,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(Collect, {
       transaction: {
         entity: Transaction,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(Flash, {
       transaction: {
         entity: Transaction,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(PositionSnapshot, {
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       position: {
         entity: Position,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       transaction: {
         entity: Transaction,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(Tick, {
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(TickDayData, {
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       tick: {
         entity: Tick,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
 
     this._relationsMap.set(TickHourData, {
       pool: {
         entity: Pool,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       },
       tick: {
         entity: Tick,
-        type: 'one-to-one'
+        isArray: false,
+        isDerived: false
       }
     });
   }

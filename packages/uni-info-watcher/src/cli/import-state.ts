@@ -12,6 +12,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { getConfig, JobQueue, DEFAULT_CONFIG_PATH, Config, initClients, StateKind } from '@cerc-io/util';
+import { updateEntitiesFromState } from '@cerc-io/graph-node';
 import { fillBlocks } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
@@ -102,17 +103,17 @@ export const main = async (): Promise<any> => {
   const block = await indexer.getBlockProgress(importData.snapshotBlock.blockHash);
   assert(block);
 
-  // Fill the IPLDBlocks.
-  for (const checkpoint of importData.ipldCheckpoints) {
-    let ipldBlock = new State();
+  // Fill the States.
+  for (const checkpoint of importData.stateCheckpoints) {
+    let state = new State();
 
-    ipldBlock = Object.assign(ipldBlock, checkpoint);
-    ipldBlock.block = block;
+    state = Object.assign(state, checkpoint);
+    state.block = block;
 
-    ipldBlock.data = Buffer.from(codec.encode(ipldBlock.data));
+    state.data = Buffer.from(codec.encode(state.data));
 
-    ipldBlock = await indexer.saveOrUpdateState(ipldBlock);
-    await indexer.updateEntitiesFromIPLDState(ipldBlock);
+    state = await indexer.saveOrUpdateState(state);
+    await updateEntitiesFromState(db.graphDatabase, indexer, state);
   }
 
   // Mark snapshot block as completely processed.
@@ -123,7 +124,7 @@ export const main = async (): Promise<any> => {
   await indexer.updateStateSyncStatusIndexedBlock(block.blockNumber);
   await indexer.updateStateSyncStatusCheckpointBlock(block.blockNumber);
 
-  // The 'diff_staged' and 'init' IPLD blocks are unnecessary as checkpoints have been already created for the snapshot block.
+  // The 'diff_staged' and 'init' State entries are unnecessary as checkpoints have been already created for the snapshot block.
   await indexer.removeStates(block.blockNumber, StateKind.Init);
   await indexer.removeStates(block.blockNumber, StateKind.DiffStaged);
 
