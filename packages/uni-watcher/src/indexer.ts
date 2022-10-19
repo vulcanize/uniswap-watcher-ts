@@ -510,16 +510,8 @@ export class Indexer implements IndexerInterface {
   }
 
   // Note: Some event names might be unknown at this point, as earlier events might not yet be processed.
-  async fetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
-    return this._baseIndexer.fetchBlockEvents(
-      block,
-      this._fetchEvents.bind(this)
-    );
-  }
-
-  async fetchBlockWithEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
-    // Method not used in uni-watcher but required for indexer interface.
-    return new BlockProgress();
+  async saveBlockAndFetchEvents (block: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
+    return this._baseIndexer.saveBlockAndFetchEvents(block, this._saveBlockAndFetchEvents.bind(this));
   }
 
   async saveBlockProgress (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
@@ -582,7 +574,14 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
-  async _fetchEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
+  async _saveBlockAndFetchEvents ({
+    id,
+    cid: blockCid,
+    blockHash,
+    blockNumber,
+    blockTimestamp,
+    parentHash
+  }: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
     assert(blockHash);
 
     const logsPromise = this._ethClient.getLogs({ blockHash });
@@ -666,6 +665,21 @@ export class Indexer implements IndexerInterface {
       }
     }
 
-    return dbEvents;
+    const block = {
+      id,
+      cid: blockCid,
+      blockHash,
+      blockNumber,
+      blockTimestamp,
+      parentHash,
+      numEvents: dbEvents.length,
+      isComplete: dbEvents.length === 0
+    };
+
+    console.time(`time:indexer#_saveBlockAndFetchEvents-db-save-${blockNumber}`);
+    const blockProgress = await this.saveBlockProgress(block);
+    console.timeEnd(`time:indexer#_saveBlockAndFetchEvents-db-save-${blockNumber}`);
+
+    return [blockProgress, dbEvents];
   }
 }

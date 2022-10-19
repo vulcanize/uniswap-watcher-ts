@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { In } from 'typeorm';
+import { DeepPartial, In } from 'typeorm';
 
 import {
   JobQueueConfig,
@@ -249,30 +249,17 @@ export class JobRunner {
 
     if (!blockProgress) {
       const prefetchedBlock = this._prefetchedBlocksMap.get(blockHash);
-      const block = { blockHash, blockNumber, parentHash, blockTimestamp };
-      let events;
+      const block = { cid, blockHash, blockNumber, parentHash, blockTimestamp };
 
-      if (prefetchedBlock) {
-        ({ events } = prefetchedBlock);
-      } else {
+      if (!prefetchedBlock) {
         // Delay required to process block.
         const { jobDelayInMilliSecs = 0 } = this._jobQueueConfig;
         await wait(jobDelayInMilliSecs);
 
-        events = await this._indexer.fetchBlockEvents(block);
+        let events: DeepPartial<EventInterface>[];
+        [blockProgress, events] = await this._indexer.saveBlockAndFetchEvents(block);
+        this._prefetchedBlocksMap.set(block.blockHash, { block: blockProgress, events });
       }
-
-      console.time('time:job-runner#_indexBlock-saveBlockProgress');
-      blockProgress = await this._indexer.saveBlockProgress({
-        cid,
-        blockHash,
-        blockNumber,
-        parentHash,
-        blockTimestamp,
-        numEvents: events.length,
-        isComplete: events.length === 0
-      });
-      console.timeEnd('time:job-runner#_indexBlock-saveBlockProgress');
     }
 
     await this._indexer.processBlock(blockProgress);
@@ -298,7 +285,7 @@ export class JobRunner {
     console.time('time:job-runner#_processEvents-events');
 
     if (!this._prefetchedBlocksMap.has(block.blockHash)) {
-      const events = await this._indexer.fetchBlockEvents(block);
+      const [, events] = await this._indexer.saveBlockAndFetchEvents(block);
       this._prefetchedBlocksMap.set(block.blockHash, { block, events });
     }
 
