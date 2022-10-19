@@ -14,7 +14,7 @@ import * as codec from '@ipld/dag-cbor';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { GraphDecimal, JobQueue } from '@vulcanize/util';
-import { ServerConfig, IPFSClient, IpldStatus as IpldStatusInterface, ValueResult, Indexer as BaseIndexer, IndexerInterface, QueryOptions, OrderDirection, BlockHeight, Where, ResultIPLDBlock, eventProcessingEthCallDuration, getFullTransaction, getFullBlock } from '@cerc-io/util';
+import { ServerConfig, IpldStatus as IpldStatusInterface, ValueResult, Indexer as BaseIndexer, IndexerInterface, QueryOptions, OrderDirection, BlockHeight, Where, ResultIPLDBlock, eventProcessingEthCallDuration, getFullTransaction, getFullBlock } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
@@ -73,8 +73,7 @@ export class Indexer implements IndexerInterface {
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
     this._serverConfig = serverConfig;
-    const ipfsClient = new IPFSClient(this._serverConfig.ipfsApiAddr);
-    this._baseIndexer = new BaseIndexer(this._serverConfig, this._db, this._ethClient, this._ethProvider, jobQueue, ipfsClient);
+    this._baseIndexer = new BaseIndexer(this._serverConfig, this._db, this._ethClient, this._ethProvider, jobQueue);
     this._isDemo = this._serverConfig.mode === 'demo';
   }
 
@@ -147,10 +146,6 @@ export class Indexer implements IndexerInterface {
     );
   }
 
-  async pushToIPFS (data: any): Promise<void> {
-    await this._baseIndexer.pushToIPFS(data);
-  }
-
   async processInitialState (contractAddress: string, blockHash: string): Promise<any> {
     // Call initial state hook.
     return createInitialState(this, contractAddress, blockHash);
@@ -191,10 +186,6 @@ export class Indexer implements IndexerInterface {
 
   getIPLDData (ipldBlock: IPLDBlock): any {
     return this._baseIndexer.getIPLDData(ipldBlock);
-  }
-
-  isIPFSConfigured (): boolean {
-    return this._baseIndexer.isIPFSConfigured();
   }
 
   // Method used to create auto diffs (diff_staged).
@@ -340,23 +331,6 @@ export class Indexer implements IndexerInterface {
 
     try {
       res = await this._db.updateIPLDStatusCheckpointBlock(dbTx, blockNumber, force);
-      await dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-
-    return res;
-  }
-
-  async updateIPLDStatusIPFSBlock (blockNumber: number, force?: boolean): Promise<IpldStatus> {
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      res = await this._db.updateIPLDStatusIPFSBlock(dbTx, blockNumber, force);
       await dbTx.commitTransaction();
     } catch (error) {
       await dbTx.rollbackTransaction();

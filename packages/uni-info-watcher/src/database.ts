@@ -211,12 +211,6 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.updateIPLDStatusCheckpointBlock(repo, blockNumber, force);
   }
 
-  async updateIPLDStatusIPFSBlock (queryRunner: QueryRunner, blockNumber: number, force?: boolean): Promise<IpldStatus> {
-    const repo = queryRunner.manager.getRepository(IpldStatus);
-
-    return this._baseDatabase.updateIPLDStatusIPFSBlock(repo, blockNumber, force);
-  }
-
   async getFactory (queryRunner: QueryRunner, { id, blockHash }: DeepPartial<Factory>): Promise<Factory | undefined> {
     const repo = queryRunner.manager.getRepository(Factory);
     const whereOptions: FindConditions<Factory> = { id };

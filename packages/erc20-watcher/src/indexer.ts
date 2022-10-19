@@ -11,7 +11,7 @@ import { ethers } from 'ethers';
 
 import { JobQueue, IndexerInterface } from '@vulcanize/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { Indexer as BaseIndexer, IPFSClient, ServerConfig, IpldStatus as IpldStatusInterface, ValueResult, Where, QueryOptions, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
+import { Indexer as BaseIndexer, ServerConfig, IpldStatus as IpldStatusInterface, ValueResult, Where, QueryOptions, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { Database } from './database';
@@ -66,8 +66,7 @@ export class Indexer implements IndexerInterface {
     this._ethProvider = ethProvider;
     this._serverConfig = serverConfig;
     this._serverMode = this._serverConfig.mode;
-    const ipfsClient = new IPFSClient(serverConfig.ipfsApiAddr);
-    this._baseIndexer = new BaseIndexer(serverConfig, this._db, this._ethClient, this._ethProvider, jobQueue, ipfsClient);
+    this._baseIndexer = new BaseIndexer(serverConfig, this._db, this._ethClient, this._ethProvider, jobQueue);
 
     const { abi, storageLayout } = artifacts;
 
