@@ -33,7 +33,6 @@ export interface UpstreamConfig {
   ethServer: {
     gqlApiEndpoint: string;
     rpcProviderEndpoint: string;
-    blockDelayInMilliSecs: number;
   }
   traceProviderEndpoint: string;
   uniWatcher: {
