@@ -580,6 +580,7 @@ type Query {
 
   bundles(
     first: Int = 100
+    skip: Int = 0
 
     """
     The block at which the query should be executed. Can either be an '{ number:
@@ -593,6 +594,7 @@ type Query {
 
   burns(
     first: Int = 100
+    skip: Int = 0
     orderBy: Burn_orderBy
     orderDirection: OrderDirection
     where: Burn_filter
@@ -602,6 +604,7 @@ type Query {
 
   factories(
     first: Int = 100
+    skip: Int = 0
 
     """
     The block at which the query should be executed. Can either be an '{ number:
@@ -615,6 +618,7 @@ type Query {
 
   mints(
     first: Int = 100
+    skip: Int = 0
     orderBy: Mint_orderBy
     orderDirection: OrderDirection
     where: Mint_filter
@@ -639,12 +643,14 @@ type Query {
 
   poolHourDatas(
     first: Int = 100
+    skip: Int = 0
     block: Block_height
     subgraphError: _SubgraphErrorPolicy_! = deny
   ): [PoolHourData!]!
 
   pools(
     first: Int = 100
+    skip: Int = 0
     orderBy: Pool_orderBy
     orderDirection: OrderDirection
     where: Pool_filter
@@ -661,6 +667,7 @@ type Query {
 
   swaps(
     first: Int = 100
+    skip: Int = 0
     orderBy: Swap_orderBy
     orderDirection: OrderDirection
     where: Swap_filter
@@ -718,6 +725,7 @@ type Query {
 
   tokens(
     first: Int = 100
+    skip: Int = 0
     orderBy: Token_orderBy
     orderDirection: OrderDirection
     where: Token_filter
@@ -727,6 +735,7 @@ type Query {
 
   transactions(
     first: Int = 100
+    skip: Int = 0
     orderBy: Transaction_orderBy
     orderDirection: OrderDirection
     where: Transaction_filter
@@ -746,6 +755,7 @@ type Query {
 
   positions(
     first: Int = 100
+    skip: Int = 0
     where: Position_filter
     block: Block_height
     subgraphError: _SubgraphErrorPolicy_! = deny
@@ -753,30 +763,35 @@ type Query {
 
   positionSnapshots(
     first: Int = 100
+    skip: Int = 0
     block: Block_height
     subgraphError: _SubgraphErrorPolicy_! = deny
   ): [PositionSnapshot!]!
 
   tickDayDatas(
     first: Int = 100
+    skip: Int = 0
     block: Block_height
     subgraphError: _SubgraphErrorPolicy_! = deny
   ): [TickDayData!]!
 
   tickHourDatas(
     first: Int = 100
+    skip: Int = 0
     block: Block_height
     subgraphError: _SubgraphErrorPolicy_! = deny
   ): [TickHourData!]!
 
   flashes(
     first: Int = 100
+    skip: Int = 0
     block: Block_height
     subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Flash!]!
 
   collects(
     first: Int = 100
+    skip: Int = 0
     block: Block_height
     subgraphError: _SubgraphErrorPolicy_! = deny
   ): [Collect!]!

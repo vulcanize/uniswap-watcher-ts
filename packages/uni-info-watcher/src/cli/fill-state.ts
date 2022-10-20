@@ -6,10 +6,11 @@ import 'reflect-metadata';
 import debug from 'debug';
 import { Between } from 'typeorm';
 
+import { prepareEntityState } from '@cerc-io/graph-node';
+
 import { Indexer } from '../indexer';
 import { Database } from '../database';
 import { FACTORY_ADDRESS } from '../utils/constants';
-import { prepareEntityState } from '../utils/state';
 
 const log = debug('vulcanize:fill-state');
 
@@ -96,7 +97,7 @@ export const fillState = async (
     await Promise.all(contractStatePromises);
 
     // Persist subgraph state to the DB
-    await indexer.dumpSubgraphState(blockHash, true);
+    await indexer.dumpEntityState(blockHash, true);
     await indexer.updateStateSyncStatusIndexedBlock(blockNumber);
 
     // Create checkpoints

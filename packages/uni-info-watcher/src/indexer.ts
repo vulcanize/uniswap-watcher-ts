@@ -25,7 +25,9 @@ import {
   Where,
   eventProcessingEthCallDuration,
   getFullTransaction,
-  getFullBlock
+  getFullBlock,
+  StateKind,
+  cachePrunedEntitiesCount
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
@@ -164,8 +166,16 @@ export class Indexer implements IndexerInterface {
     console.timeEnd('time:indexer#processCheckpoint-checkpoint');
   }
 
+  async processCLICheckpoint (contractAddress: string, blockHash?: string): Promise<string | undefined> {
+    return this._baseIndexer.processCLICheckpoint(this, contractAddress, blockHash);
+  }
+
   async getPrevState (blockHash: string, contractAddress: string, kind?: string): Promise<State | undefined> {
     return this._db.getPrevState(blockHash, contractAddress, kind);
+  }
+
+  async getLatestState (contractAddress: string, kind: StateKind | null, blockNumber?: number): Promise<State | undefined> {
+    return this._db.getLatestState(contractAddress, kind, blockNumber);
   }
 
   async getStatesByHash (blockHash: string): Promise<State[]> {
@@ -201,107 +211,41 @@ export class Indexer implements IndexerInterface {
     await this._baseIndexer.createDiff(contractAddress, block, data);
   }
 
+  // Method to be used by export-state CLI.
+  async createCheckpoint (contractAddress: string, blockHash: string): Promise<string | undefined> {
+    const block = await this.getBlockProgress(blockHash);
+    assert(block);
+
+    return this._baseIndexer.createCheckpoint(this, contractAddress, block);
+  }
+
   // Method to be used by fill-state CLI.
   async createInit (blockHash: string, blockNumber: number): Promise<void> {
     // Create initial state for contracts.
     await this._baseIndexer.createInit(this, blockHash, blockNumber);
   }
 
+  async saveOrUpdateState (state: State): Promise<State> {
+    return this._baseIndexer.saveOrUpdateState(state);
+  }
+
+  async removeStates (blockNumber: number, kind: StateKind): Promise<void> {
+    await this._baseIndexer.removeStates(blockNumber, kind);
+  }
+
   async processEvent (dbEvent: Event): Promise<void> {
-    console.time('time:indexer#processEvent-mapping_code');
-    const resultEvent = this.getResultEvent(dbEvent);
+    try {
+      const resultEvent = this.getResultEvent(dbEvent);
 
-    // TODO: Process proof (proof.data) in event.
-    const { contract, tx, block, event, eventIndex } = resultEvent;
-    const { __typename: eventName } = event;
-
-    if (!this._fullBlock || (this._fullBlock.hash !== block.hash)) {
-      const { blockHash, blockNumber, timestamp, ...blockData } = await getFullBlock(this._ethClient, this._ethProvider, block.hash);
-
-      this._fullBlock = {
-        hash: blockHash,
-        number: blockNumber,
-        timestamp: Number(timestamp),
-        ...blockData
-      };
-
-      assert(this._fullBlock);
+      await this._triggerEventHandler(resultEvent);
+    } catch (error) {
+      this._db.clearCachedEntities();
+      throw error;
     }
-
-    switch (eventName) {
-      case 'PoolCreatedEvent':
-        log('Factory PoolCreated event', contract);
-        await this._handlePoolCreated(this._fullBlock, contract, tx, event as PoolCreatedEvent);
-        break;
-
-      case 'InitializeEvent':
-        log('Pool Initialize event', contract);
-        await this._handleInitialize(this._fullBlock, contract, tx, event as InitializeEvent);
-        break;
-
-      case 'MintEvent':
-        log('Pool Mint event', contract);
-        await this._handleMint(this._fullBlock, contract, tx, event as MintEvent, eventIndex);
-        break;
-
-      case 'BurnEvent':
-        log('Pool Burn event', contract);
-        await this._handleBurn(this._fullBlock, contract, tx, event as BurnEvent, eventIndex);
-        break;
-
-      case 'SwapEvent':
-        log('Pool Swap event', contract);
-        await this._handleSwap(this._fullBlock, contract, tx, event as SwapEvent, eventIndex);
-        break;
-
-      case 'FlashEvent':
-        log('Pool Flash event', contract);
-        await this._handleFlash(this._fullBlock, contract, tx, event as FlashEvent);
-        break;
-
-      case 'IncreaseLiquidityEvent':
-        log('NFPM IncreaseLiquidity event', contract);
-        await this._handleIncreaseLiquidity(this._fullBlock, contract, tx, event as IncreaseLiquidityEvent);
-        break;
-
-      case 'DecreaseLiquidityEvent':
-        log('NFPM DecreaseLiquidity event', contract);
-        await this._handleDecreaseLiquidity(this._fullBlock, contract, tx, event as DecreaseLiquidityEvent);
-        break;
-
-      case 'CollectEvent':
-        log('NFPM Collect event', contract);
-        await this._handleCollect(this._fullBlock, contract, tx, event as CollectEvent);
-        break;
-
-      case 'TransferEvent':
-        log('NFPM Transfer event', contract);
-        await this._handleTransfer(this._fullBlock, contract, tx, event as TransferEvent);
-        break;
-
-      default:
-        log('Event not handled', eventName);
-        break;
-    }
-
-    log('Event processing completed for', eventName);
-    console.timeEnd('time:indexer#processEvent-mapping_code');
   }
 
   async processBlock (blockProgress: BlockProgress): Promise<void> {
-    // Set latest block in frothy region to cachedEntities.frothyBlocks map.
-    if (!this._db.cachedEntities.frothyBlocks.has(blockProgress.blockHash)) {
-      this._db.cachedEntities.frothyBlocks.set(
-        blockProgress.blockHash,
-        {
-          blockNumber: blockProgress.blockNumber,
-          parentHash: blockProgress.parentHash,
-          entities: new Map()
-        }
-      );
-
-      log(`Size of cachedEntities.frothyBlocks map: ${this._db.cachedEntities.frothyBlocks.size}`);
-    }
+    this._db.updateEntityCacheFrothyBlocks(blockProgress, this._serverConfig.clearEntitiesCacheInterval);
   }
 
   async getStateSyncStatus (): Promise<StateSyncStatus | undefined> {
@@ -350,6 +294,10 @@ export class Indexer implements IndexerInterface {
     assert(latestCanonicalBlock);
 
     return latestCanonicalBlock;
+  }
+
+  async getLatestStateIndexedBlock (): Promise<BlockProgress> {
+    return this._baseIndexer.getLatestStateIndexedBlock();
   }
 
   async getBlockEntities (where: { [key: string]: any } = {}, queryOptions: QueryOptions): Promise<any> {
@@ -590,7 +538,7 @@ export class Indexer implements IndexerInterface {
 
   async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force = false): Promise<SyncStatus> {
     const syncStatus = await this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, force);
-    this._updateCachedEntitiesFrothyBlocks(syncStatus.latestCanonicalBlockHash, syncStatus.latestCanonicalBlockNumber);
+    this._db.pruneEntityCacheFrothyBlocks(syncStatus.latestCanonicalBlockHash, syncStatus.latestCanonicalBlockNumber);
 
     return syncStatus;
   }
@@ -623,7 +571,7 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
   }
 
-  async dumpSubgraphState (blockHash: string, isStateFinalized = false): Promise<void> {
+  async dumpEntityState (blockHash: string, isStateFinalized = false): Promise<void> {
     // Create a diff for each contract in the subgraph state map.
     const createDiffPromises = Array.from(this._subgraphStateMap.entries())
       .map(([contractAddress, data]): Promise<void> => {
@@ -645,33 +593,6 @@ export class Indexer implements IndexerInterface {
     const oldData = this._subgraphStateMap.get(contractAddress);
     const updatedData = _.merge(oldData, data);
     this._subgraphStateMap.set(contractAddress, updatedData);
-  }
-
-  _updateCachedEntitiesFrothyBlocks (canonicalBlockHash: string, canonicalBlockNumber: number) {
-    const canonicalBlock = this._db.cachedEntities.frothyBlocks.get(canonicalBlockHash);
-
-    if (canonicalBlock) {
-      // Update latestPrunedEntities map with entities from latest canonical block.
-      canonicalBlock.entities.forEach((entityIdMap, entityTableName) => {
-        entityIdMap.forEach((data, id) => {
-          let entityIdMap = this._db.cachedEntities.latestPrunedEntities.get(entityTableName);
-
-          if (!entityIdMap) {
-            entityIdMap = new Map();
-          }
-
-          entityIdMap.set(id, data);
-          this._db.cachedEntities.latestPrunedEntities.set(entityTableName, entityIdMap);
-        });
-      });
-    }
-
-    // Remove pruned blocks from frothyBlocks.
-    const prunedBlockHashes = Array.from(this._db.cachedEntities.frothyBlocks.entries())
-      .filter(([, value]) => value.blockNumber <= canonicalBlockNumber)
-      .map(([blockHash]) => blockHash);
-
-    prunedBlockHashes.forEach(blockHash => this._db.cachedEntities.frothyBlocks.delete(blockHash));
   }
 
   async _fetchEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
@@ -719,6 +640,86 @@ export class Indexer implements IndexerInterface {
     }
 
     return dbEvents;
+  }
+
+  async _triggerEventHandler (resultEvent: ResultEvent): Promise<void> {
+    console.time('time:indexer#processEvent-mapping_code');
+
+    // TODO: Process proof (proof.data) in event.
+    const { contract, tx, block, event, eventIndex } = resultEvent;
+    const { __typename: eventName } = event;
+
+    if (!this._fullBlock || (this._fullBlock.hash !== block.hash)) {
+      const { blockHash, blockNumber, timestamp, ...blockData } = await getFullBlock(this._ethClient, this._ethProvider, block.hash);
+
+      this._fullBlock = {
+        hash: blockHash,
+        number: blockNumber,
+        timestamp: Number(timestamp),
+        ...blockData
+      };
+
+      assert(this._fullBlock);
+    }
+
+    switch (eventName) {
+      case 'PoolCreatedEvent':
+        log('Factory PoolCreated event', contract);
+        await this._handlePoolCreated(this._fullBlock, contract, tx, event as PoolCreatedEvent);
+        break;
+
+      case 'InitializeEvent':
+        log('Pool Initialize event', contract);
+        await this._handleInitialize(this._fullBlock, contract, tx, event as InitializeEvent);
+        break;
+
+      case 'MintEvent':
+        log('Pool Mint event', contract);
+        await this._handleMint(this._fullBlock, contract, tx, event as MintEvent, eventIndex);
+        break;
+
+      case 'BurnEvent':
+        log('Pool Burn event', contract);
+        await this._handleBurn(this._fullBlock, contract, tx, event as BurnEvent, eventIndex);
+        break;
+
+      case 'SwapEvent':
+        log('Pool Swap event', contract);
+        await this._handleSwap(this._fullBlock, contract, tx, event as SwapEvent, eventIndex);
+        break;
+
+      case 'FlashEvent':
+        log('Pool Flash event', contract);
+        await this._handleFlash(this._fullBlock, contract, tx, event as FlashEvent);
+        break;
+
+      case 'IncreaseLiquidityEvent':
+        log('NFPM IncreaseLiquidity event', contract);
+        await this._handleIncreaseLiquidity(this._fullBlock, contract, tx, event as IncreaseLiquidityEvent);
+        break;
+
+      case 'DecreaseLiquidityEvent':
+        log('NFPM DecreaseLiquidity event', contract);
+        await this._handleDecreaseLiquidity(this._fullBlock, contract, tx, event as DecreaseLiquidityEvent);
+        break;
+
+      case 'CollectEvent':
+        log('NFPM Collect event', contract);
+        await this._handleCollect(this._fullBlock, contract, tx, event as CollectEvent);
+        break;
+
+      case 'TransferEvent':
+        log('NFPM Transfer event', contract);
+        await this._handleTransfer(this._fullBlock, contract, tx, event as TransferEvent);
+        break;
+
+      default:
+        log('Event not handled', eventName);
+        break;
+    }
+
+    log('Event processing completed for', eventName);
+    console.timeEnd('time:indexer#processEvent-mapping_code');
   }
 
   async _handlePoolCreated (block: Block, contractAddress: string, tx: Transaction, poolCreatedEvent: PoolCreatedEvent): Promise<void> {
@@ -1256,7 +1257,7 @@ export class Indexer implements IndexerInterface {
       const amount1USD = amount1ETH.times(bundle.ethPriceUSD);
 
       // Get amount that should be tracked only - div 2 because cant count both input and output as volume.
-      const trackedAmountUSD = await getTrackedAmountUSD(this._db, dbTx, amount0Abs, token0, amount1Abs, token1, this._isDemo);
+      const trackedAmountUSD = await getTrackedAmountUSD(this._db, dbTx, amount0Abs, token0, amount1Abs, token1, block, this._isDemo);
       const amountTotalUSDTracked = trackedAmountUSD.div(new GraphDecimal('2'));
       const amountTotalETHTracked = safeDiv(amountTotalUSDTracked, bundle.ethPriceUSD);
       const amountTotalUSDUntracked = amount0USD.plus(amount1USD).div(new GraphDecimal('2'));

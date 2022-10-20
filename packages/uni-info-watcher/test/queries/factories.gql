@@ -1,5 +1,5 @@
-query factories($block: Block_height){
-  factories(block: $block){
+query factories($block: Block_height, $first: Int, $skip: Int){
+  factories(block: $block, first: $first, skip: $skip){
     id
     totalFeesUSD
     totalValueLockedUSD

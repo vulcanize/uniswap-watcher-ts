@@ -1,5 +1,5 @@
-query burns($block: Block_height){
-  burns(block: $block){
+query burns($block: Block_height, $first: Int, $skip: Int){
+  burns(block: $block, first: $first, skip: $skip){
     amount0
     amount1
     amountUSD

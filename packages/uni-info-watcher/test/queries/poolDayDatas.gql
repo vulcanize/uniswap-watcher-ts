@@ -1,5 +1,5 @@
-query poolDayDatas($block: Block_height){
-  poolDayDatas(block: $block){
+query poolDayDatas($block: Block_height, $first: Int, $skip: Int){
+  poolDayDatas(block: $block, first: $first, skip: $skip){
     date
     id
     tvlUSD

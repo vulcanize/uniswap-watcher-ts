@@ -1,5 +1,5 @@
-query tokenHourDatas($block: Block_height){
-  tokenHourDatas(block: $block){
+query tokenHourDatas($block: Block_height, $first: Int, $skip: Int){
+  tokenHourDatas(block: $block, first: $first, skip: $skip){
     close
     high
     id

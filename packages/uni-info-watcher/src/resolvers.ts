@@ -81,8 +81,8 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         return indexer.getBundle(id, block);
       },
 
-      bundles: async (_: any, { block = {}, first }: { first: number, block: BlockHeight }) => {
-        log('bundles', block, first);
+      bundles: async (_: any, { block = {}, first, skip }: { first: number, skip: number, block: BlockHeight }) => {
+        log('bundles', block, first, skip);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('bundles').inc(1);
 
@@ -92,16 +92,16 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           where = { id: BUNDLE_ID };
         }
 
-        return indexer.getEntities(Bundle, block, where, { limit: first });
+        return indexer.getEntities(Bundle, block, where, { limit: first, skip });
       },
 
       burns: async (
         _: any,
-        { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('burns', first, orderBy, orderDirection, where);
+        log('burns', first, orderBy, orderDirection, where, skip);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('burns').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -110,16 +110,16 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           Burn,
           block,
           where,
-          { limit: first, orderBy, orderDirection },
+          { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
 
       factories: async (
         _: any,
-        { block = {}, first }: { first: number, block: BlockHeight }
+        { block = {}, first, skip }: { first: number, skip: number, block: BlockHeight }
       ) => {
-        log('factories', block, first);
+        log('factories', block, first, skip);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('factories').inc(1);
 
@@ -129,16 +129,16 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           where = { id: FACTORY_ADDRESS };
         }
 
-        return indexer.getEntities(Factory, block, where, { limit: first });
+        return indexer.getEntities(Factory, block, where, { limit: first, skip });
       },
 
       mints: async (
         _: any,
-        { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('mints', first, orderBy, orderDirection, where);
+        log('mints', first, skip, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('mints').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -147,7 +147,7 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           Mint,
           block,
           where,
-          { limit: first, orderBy, orderDirection },
+          { limit: first, skip, orderBy, orderDirection },
           info.fieldNodes[0].selectionSet.selections
         );
       },
@@ -188,11 +188,11 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
 
       poolHourDatas: async (
         _: any,
-        { block, first }: { block: BlockHeight, first: number },
+        { block, first, skip }: { block: BlockHeight, first: number, skip: number },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('poolHourDatas', first);
+        log('poolHourDatas', first, skip);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('poolHourDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -201,18 +201,18 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           PoolHourData,
           block,
           {},
-          { limit: first },
+          { limit: first, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
 
       pools: async (
         _: any,
-        { block = {}, first, orderBy, orderDirection, where = {} }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        { block = {}, first, skip, orderBy, orderDirection, where = {} }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('pools', block, first, orderBy, orderDirection, where);
+        log('pools', block, first, skip, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('pools').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -221,18 +221,18 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           Pool,
           block,
           where,
-          { limit: first, orderBy, orderDirection },
+          { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
 
       swaps: async (
         _: any,
-        { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('swaps', first, orderBy, orderDirection, where);
+        log('swaps', first, skip, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('swaps').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -241,20 +241,29 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           Swap,
           block,
           where,
-          { limit: first, orderBy, orderDirection },
+          { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
 
       ticks: async (
         _: any,
-        { block = {}, first, skip, where = {} }: { block: BlockHeight, first: number, skip: number, where: { [key: string]: any } }
+        { block = {}, first, skip, where = {} }: { block: BlockHeight, first: number, skip: number, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
       ) => {
         log('ticks', block, first, skip, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('ticks').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(Tick, block, where, { limit: first, skip });
+        return indexer.getEntities(
+          Tick,
+          block,
+          where,
+          { limit: first, skip },
+          info.fieldNodes[0].selectionSet.selections
+        );
       },
 
       token: async (
@@ -273,11 +282,11 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
 
       tokens: async (
         _: any,
-        { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('tokens', orderBy, orderDirection, where);
+        log('tokens', orderBy, orderDirection, where, skip);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokens').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -286,7 +295,7 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           Token,
           block,
           where,
-          { limit: first, orderBy, orderDirection },
+          { limit: first, skip, orderBy, orderDirection },
           info.fieldNodes[0].selectionSet.selections
         );
       },
@@ -333,11 +342,11 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
 
       transactions: async (
         _: any,
-        { block = {}, first, orderBy, orderDirection, where }: { block: BlockHeight, first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('transactions', first, orderBy, orderDirection);
+        log('transactions', first, skip, orderBy, orderDirection);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('transactions').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -346,7 +355,7 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           Transaction,
           block,
           where,
-          { limit: first, orderBy, orderDirection },
+          { limit: first, skip, orderBy, orderDirection },
           info.fieldNodes[0].selectionSet.selections
         );
       },
@@ -364,11 +373,11 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
 
       positions: async (
         _: any,
-        { block = {}, first, where }: { block: BlockHeight, first: number, where: { [key: string]: any } },
+        { block = {}, first, skip, where }: { block: BlockHeight, first: number, skip: number, where: { [key: string]: any } },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('positions', first, where);
+        log('positions', first, skip, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('positions').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -377,18 +386,18 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           Position,
           block,
           where,
-          { limit: first },
+          { limit: first, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
 
       positionSnapshots: async (
         _: any,
-        { block, first }: { block: BlockHeight, first: number },
+        { block, first, skip }: { block: BlockHeight, first: number, skip: number },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('positionSnapshots', first);
+        log('positionSnapshots', first, skip);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('positionSnapshots').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -397,18 +406,18 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           PositionSnapshot,
           block,
           {},
-          { limit: first },
+          { limit: first, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
 
       tickDayDatas: async (
         _: any,
-        { block, first }: { block: BlockHeight, first: number },
+        { block, first, skip }: { block: BlockHeight, first: number, skip: number },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('tickDayDatas', first);
+        log('tickDayDatas', first, skip);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tickDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -417,18 +426,18 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           TickDayData,
           block,
           {},
-          { limit: first },
+          { limit: first, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
 
       tickHourDatas: async (
         _: any,
-        { block, first }: { block: BlockHeight, first: number },
+        { block, first, skip }: { block: BlockHeight, first: number, skip: number },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('tickHourDatas', first);
+        log('tickHourDatas', first, skip);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tickHourDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -437,18 +446,18 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           TickHourData,
           block,
           {},
-          { limit: first },
+          { limit: first, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
 
       flashes: async (
         _: any,
-        { block, first }: { block: BlockHeight, first: number },
+        { block, first, skip }: { block: BlockHeight, first: number, skip: number },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('flashes', first);
+        log('flashes', first, skip);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('flashes').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -457,18 +466,18 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           Flash,
           block,
           {},
-          { limit: first },
+          { limit: first, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
 
       collects: async (
         _: any,
-        { block, first }: { block: BlockHeight, first: number },
+        { block, first, skip }: { block: BlockHeight, first: number, skip: number },
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('collects', first);
+        log('collects', first, skip);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('collects').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -477,7 +486,7 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
           Collect,
           block,
           {},
-          { limit: first },
+          { limit: first, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },

@@ -1,5 +1,5 @@
-query poolHourDatas($block: Block_height){
-  poolHourDatas(block: $block){
+query poolHourDatas($block: Block_height, $first: Int, $skip: Int){
+  poolHourDatas(block: $block, first: $first, skip: $skip){
     id
     pool {
       id

@@ -148,9 +148,10 @@ export const getTrackedAmountUSD = async (
   token0: Token,
   tokenAmount1: GraphDecimal,
   token1: Token,
+  block: Block,
   isDemo: boolean
 ): Promise<GraphDecimal> => {
-  const bundle = await db.getBundle(dbTx, { id: '1' });
+  const bundle = await db.getBundle(dbTx, { id: '1', blockHash: block.hash });
   assert(bundle);
   const price0USD = token0.derivedETH.times(bundle.ethPriceUSD);
   const price1USD = token1.derivedETH.times(bundle.ethPriceUSD);

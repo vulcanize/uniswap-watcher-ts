@@ -1,5 +1,5 @@
-query collects($block: Block_height){
-  collects(block: $block){
+query collects($block: Block_height, $first: Int, $skip: Int){
+  collects(block: $block, first: $first, skip: $skip){
     id
     pool {
       id

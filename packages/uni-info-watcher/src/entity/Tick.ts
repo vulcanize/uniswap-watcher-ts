@@ -39,28 +39,28 @@ export class Tick {
   @Column('numeric', { default: 0, transformer: bigintTransformer })
   liquidityNet!: bigint
 
-  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   volumeToken0!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   volumeToken1!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   volumeUSD!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   untrackedVolumeUSD!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   collectedFeesToken0!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   collectedFeesToken1!: GraphDecimal
 
-  @Column('numeric', { default: 0, transformer: bigintTransformer })
+  @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   collectedFeesUSD!: GraphDecimal
 
   @Column('numeric', { transformer: bigintTransformer })

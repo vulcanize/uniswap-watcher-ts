@@ -1,5 +1,5 @@
-query flashes($block: Block_height){
-  flashes(block: $block){
+query flashes($block: Block_height, $first: Int, $skip: Int){
+  flashes(block: $block, first: $first, skip: $skip){
     id
     transaction {
       id

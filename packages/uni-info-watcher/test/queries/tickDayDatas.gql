@@ -1,5 +1,5 @@
-query tickDayDatas($block: Block_height){
-  tickDayDatas(block: $block){
+query tickDayDatas($block: Block_height, $first: Int, $skip: Int){
+  tickDayDatas(block: $block, first: $first, skip: $skip){
     id
     pool {
       id
