@@ -4,7 +4,6 @@
 
 import debug from 'debug';
 import { DeepPartial, FindConditions, FindManyOptions, QueryRunner } from 'typeorm';
-import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
 import assert from 'assert';
 
@@ -163,12 +162,14 @@ export class Indexer implements IndexerInterface {
   parseEventNameAndArgs (kind: string, logObj: any): any {
     let eventName = UNKNOWN_EVENT_NAME;
     let eventInfo = {};
+    let eventSignature = '';
 
     const { topics, data } = logObj;
 
     switch (kind) {
       case KIND_FACTORY: {
         const logDescription = this._factoryContract.parseLog({ data, topics });
+        eventSignature = logDescription.signature;
         switch (logDescription.name) {
           case 'PoolCreated': {
             eventName = logDescription.name;
@@ -183,6 +184,7 @@ export class Indexer implements IndexerInterface {
       }
       case KIND_POOL: {
         const logDescription = this._poolContract.parseLog({ data, topics });
+        eventSignature = logDescription.signature;
         switch (logDescription.name) {
           case 'Initialize': {
             eventName = logDescription.name;
@@ -255,6 +257,7 @@ export class Indexer implements IndexerInterface {
       }
       case KIND_NFPM: {
         const logDescription = this._nfpmContract.parseLog({ data, topics });
+        eventSignature = logDescription.signature;
         switch (logDescription.name) {
           case 'IncreaseLiquidity': {
             eventName = logDescription.name;
@@ -313,7 +316,7 @@ export class Indexer implements IndexerInterface {
       }
     }
 
-    return { eventName, eventInfo };
+    return { eventName, eventInfo, eventSignature };
   }
 
   async position (blockHash: string, tokenId: string): Promise<any> {
@@ -584,86 +587,8 @@ export class Indexer implements IndexerInterface {
   }: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
     assert(blockHash);
 
-    const logsPromise = this._ethClient.getLogs({ blockHash });
-    const transactionsPromise = this._ethClient.getBlockWithTransactions({ blockHash });
-
-    const [
-      { logs },
-      {
-        allEthHeaderCids: {
-          nodes: [
-            {
-              ethTransactionCidsByHeaderId: {
-                nodes: transactions
-              }
-            }
-          ]
-        }
-      }
-    ] = await Promise.all([logsPromise, transactionsPromise]);
-
-    const transactionMap = transactions.reduce((acc: {[key: string]: any}, transaction: {[key: string]: any}) => {
-      acc[transaction.txHash] = transaction;
-      return acc;
-    }, {});
-
-    const dbEvents: Array<DeepPartial<Event>> = [];
-
-    for (let li = 0; li < logs.length; li++) {
-      const logObj = logs[li];
-      const {
-        topics,
-        data,
-        index: logIndex,
-        cid,
-        ipldBlock,
-        account: {
-          address
-        },
-        transaction: {
-          hash: txHash
-        },
-        receiptCID,
-        status
-      } = logObj;
-
-      if (status) {
-        let eventName = UNKNOWN_EVENT_NAME;
-        let eventInfo = {};
-        const tx = transactionMap[txHash];
-        const extraInfo = { topics, data, tx };
-
-        const contract = ethers.utils.getAddress(address);
-        const uniContract = await this.isWatchedContract(contract);
-
-        if (uniContract) {
-          const eventDetails = this.parseEventNameAndArgs(uniContract.kind, logObj);
-          eventName = eventDetails.eventName;
-          eventInfo = eventDetails.eventInfo;
-        }
-
-        dbEvents.push({
-          index: logIndex,
-          txHash,
-          contract,
-          eventName,
-          eventInfo: JSONbig.stringify(eventInfo),
-          extraInfo: JSONbig.stringify(extraInfo),
-          proof: JSONbig.stringify({
-            data: JSONbig.stringify({
-              blockHash,
-              receiptCID,
-              log: {
-                cid,
-                ipldBlock
-              }
-            })
-          })
-        });
-      } else {
-        log(`Skipping event for receipt ${receiptCID} due to failed transaction.`);
-      }
-    }
+    // serverConfig.filterLogs should not be set to allow fetching unknown events
+    const dbEvents = await this._baseIndexer.fetchEvents(blockHash, this.parseEventNameAndArgs.bind(this));
 
     const block = {
       id,
