@@ -8,7 +8,17 @@ import { ethers } from 'ethers';
 import assert from 'assert';
 
 import { JobQueue, IndexerInterface } from '@vulcanize/util';
-import { Indexer as BaseIndexer, StateStatus, ServerConfig, Where, QueryOptions, ValueResult, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
+import {
+  Indexer as BaseIndexer,
+  StateStatus,
+  ServerConfig,
+  Where,
+  QueryOptions,
+  ValueResult,
+  UNKNOWN_EVENT_NAME,
+  ResultEvent,
+  getResultEvent
+} from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
@@ -25,18 +35,6 @@ import { abi as nfpmABI, storageLayout as nfpmStorageLayout } from './artifacts/
 import poolABI from './artifacts/pool.json';
 
 const log = debug('vulcanize:indexer');
-
-type ResultEvent = {
-  block: any;
-  tx: any;
-
-  contract: string;
-
-  eventIndex: number;
-  event: any;
-
-  proof: string;
-};
 
 export class Indexer implements IndexerInterface {
   _db: Database
@@ -75,36 +73,7 @@ export class Indexer implements IndexerInterface {
   }
 
   getResultEvent (event: Event): ResultEvent {
-    const block = event.block;
-    const eventFields = JSON.parse(event.eventInfo);
-    const { tx } = JSON.parse(event.extraInfo);
-
-    return {
-      block: {
-        hash: block.blockHash,
-        number: block.blockNumber,
-        timestamp: block.blockTimestamp,
-        parentHash: block.parentHash
-      },
-
-      tx: {
-        hash: event.txHash,
-        from: tx.src,
-        to: tx.dst,
-        index: tx.index
-      },
-
-      contract: event.contract,
-
-      eventIndex: event.index,
-      event: {
-        __typename: `${event.eventName}Event`,
-        ...eventFields
-      },
-
-      // TODO: Return proof only if requested.
-      proof: JSON.parse(event.proof)
-    };
+    return getResultEvent(event);
   }
 
   async getStorageValue (storageLayout: StorageLayout, blockHash: string, contractAddress: string, variable: string, ...mappingKeys: MappingKey[]): Promise<ValueResult> {
