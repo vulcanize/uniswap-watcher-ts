@@ -83,7 +83,7 @@ export const main = async (): Promise<any> => {
   await db.init();
 
   assert(upstream, 'Missing upstream config');
-  const { ethServer: { gqlApiEndpoint, rpcProviderEndpoint, blockDelayInMilliSecs }, cache: cacheConfig, uniWatcher, tokenWatcher } = upstream;
+  const { ethServer: { gqlApiEndpoint, rpcProviderEndpoint }, cache: cacheConfig, uniWatcher, tokenWatcher } = upstream;
 
   const cache = await getCache(cacheConfig);
 
@@ -117,7 +117,7 @@ export const main = async (): Promise<any> => {
 
   const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);
 
-  await fillBlocks(jobQueue, indexer, eventWatcher, blockDelayInMilliSecs, argv);
+  await fillBlocks(jobQueue, indexer, eventWatcher, jobQueueConfig.blockDelayInMilliSecs, argv);
 };
 
 main().catch(err => {

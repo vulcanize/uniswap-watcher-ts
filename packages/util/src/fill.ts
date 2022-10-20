@@ -14,6 +14,8 @@ const log = debug('vulcanize:fill');
 
 export const DEFAULT_PREFETCH_BATCH_SIZE = 10;
 
+// TODO: Use from @vulcanize/util (watcher-ts)
+
 export const fillBlocks = async (
   jobQueue: JobQueue,
   indexer: IndexerInterface,
@@ -134,18 +136,7 @@ const prefetchBlocks = async (
       const blockProgress = await indexer.getBlockProgress(blockHash);
 
       if (!blockProgress) {
-        const events = await indexer.fetchBlockEvents({ blockHash });
-
-        // Save block progress in database.
-        await indexer.saveBlockProgress({
-          cid,
-          blockHash,
-          blockNumber,
-          parentHash,
-          blockTimestamp: timestamp,
-          numEvents: events.length,
-          isComplete: events.length === 0
-        });
+        await indexer.saveBlockAndFetchEvents({ cid, blockHash, blockNumber, parentHash, blockTimestamp: timestamp });
 
         // In fill prefetch, not saving events to database as now events are saved after processing them in job-runner.
         // Saving them in fill prefetch will result to error when events get saved after processing.

@@ -129,7 +129,7 @@ describe('uni-watcher', () => {
     // Verifying with the db.
     const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
     await indexer.init();
-    assert(await indexer.isWatchedContract(factory.address), 'Factory contract not added to the database.');
+    assert(indexer.isWatchedContract(factory.address), 'Factory contract not added to the database.');
   });
 
   it('should deploy 2 tokens', async () => {

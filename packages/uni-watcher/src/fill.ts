@@ -75,7 +75,7 @@ export const main = async (): Promise<any> => {
   await db.init();
 
   assert(upstream, 'Missing upstream config');
-  const { ethServer: { gqlApiEndpoint, rpcProviderEndpoint, blockDelayInMilliSecs }, cache: cacheConfig } = upstream;
+  const { ethServer: { gqlApiEndpoint, rpcProviderEndpoint }, cache: cacheConfig } = upstream;
 
   const cache = await getCache(cacheConfig);
   const ethClient = new EthClient({
@@ -89,6 +89,7 @@ export const main = async (): Promise<any> => {
   // Later: https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
   const pubsub = new PubSub();
 
+  assert(jobQueueConfig, 'Missing job queue config');
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
   assert(dbConnectionString, 'Missing job queue db connection string');
 
@@ -100,9 +101,7 @@ export const main = async (): Promise<any> => {
 
   const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);
 
-  assert(jobQueueConfig, 'Missing job queue config');
-
-  await fillBlocks(jobQueue, indexer, eventWatcher, blockDelayInMilliSecs, argv);
+  await fillBlocks(jobQueue, indexer, eventWatcher, jobQueueConfig.blockDelayInMilliSecs, argv);
 };
 
 main().catch(err => {

@@ -349,6 +349,7 @@ export class Indexer implements IndexerInterface {
 
     const { topics, data } = logObj;
     const logDescription = this._contract.parseLog({ data, topics });
+    const eventSignature = logDescription.signature;
 
     switch (logDescription.name) {
       case TRANSFER_EVENT: {
@@ -375,7 +376,7 @@ export class Indexer implements IndexerInterface {
       }
     }
 
-    return { eventName, eventInfo };
+    return { eventName, eventInfo, eventSignature };
   }
 
   async getStateSyncStatus (): Promise<StateSyncStatus | undefined> {
@@ -470,16 +471,8 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getBlocksAtHeight(height, isPruned);
   }
 
-  async fetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
-    return this._baseIndexer.fetchBlockEvents(
-      block,
-      this._fetchEvents.bind(this)
-    );
-  }
-
-  async fetchBlockWithEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
-    // Method not used in erc20-watcher but required for indexer interface.
-    return new BlockProgress();
+  async saveBlockAndFetchEvents (block: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
+    return this._baseIndexer.saveBlockAndFetchEvents(block, this._saveBlockAndFetchEvents.bind(this));
   }
 
   async saveBlockProgress (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
@@ -506,67 +499,33 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
-  async _fetchEvents ({ blockHash }: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
+  async _saveBlockAndFetchEvents ({
+    id,
+    cid: blockCid,
+    blockHash,
+    blockNumber,
+    blockTimestamp,
+    parentHash
+  }: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
     assert(blockHash);
-    const { logs } = await this._ethClient.getLogs({ blockHash });
 
-    const dbEvents: Array<DeepPartial<Event>> = [];
+    const dbEvents = await this._baseIndexer.fetchEvents(blockHash, this.parseEventNameAndArgs.bind(this));
 
-    for (let li = 0; li < logs.length; li++) {
-      const logObj = logs[li];
-      const {
-        topics,
-        data,
-        index: logIndex,
-        cid,
-        ipldBlock,
-        account: {
-          address
-        },
-        transaction: {
-          hash: txHash
-        },
-        receiptCID,
-        status
-      } = logObj;
+    const block = {
+      id,
+      cid: blockCid,
+      blockHash,
+      blockNumber,
+      blockTimestamp,
+      parentHash,
+      numEvents: dbEvents.length,
+      isComplete: dbEvents.length === 0
+    };
 
-      if (status) {
-        let eventName = UNKNOWN_EVENT_NAME;
-        let eventInfo = {};
-        const extraInfo = { topics, data };
+    console.time(`time:indexer#_saveBlockAndFetchEvents-db-save-${blockNumber}`);
+    const blockProgress = await this.saveBlockProgress(block);
+    console.timeEnd(`time:indexer#_saveBlockAndFetchEvents-db-save-${blockNumber}`);
 
-        const contract = ethers.utils.getAddress(address);
-        const watchedContract = await this.isWatchedContract(contract);
-
-        if (watchedContract) {
-          const eventDetails = this.parseEventNameAndArgs(watchedContract.kind, logObj);
-          eventName = eventDetails.eventName;
-          eventInfo = eventDetails.eventInfo;
-        }
-
-        dbEvents.push({
-          index: logIndex,
-          txHash,
-          contract,
-          eventName,
-          eventInfo: JSONbig.stringify(eventInfo),
-          extraInfo: JSONbig.stringify(extraInfo),
-          proof: JSONbig.stringify({
-            data: JSONbig.stringify({
-              blockHash,
-              receiptCID,
-              log: {
-                cid,
-                ipldBlock
-              }
-            })
-          })
-        });
-      } else {
-        log(`Skipping event for receipt ${receiptCID} due to failed transaction.`);
-      }
-    }
-
-    return dbEvents;
+    return [blockProgress, dbEvents];
   }
 }

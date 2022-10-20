@@ -504,16 +504,8 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
-  async fetchBlockEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
-    return this._baseIndexer.fetchBlockEvents(
-      block,
-      this._fetchEvents.bind(this)
-    );
-  }
-
-  async fetchBlockWithEvents (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
-    // Method not used in uni-info-watcher but required for indexer interface.
-    return new BlockProgress();
+  async saveBlockAndFetchEvents (block: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
+    return this._baseIndexer.saveBlockAndFetchEvents(block, this._saveBlockAndFetchEvents.bind(this));
   }
 
   async saveBlockProgress (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
@@ -595,13 +587,32 @@ export class Indexer implements IndexerInterface {
     this._subgraphStateMap.set(contractAddress, updatedData);
   }
 
-  async _fetchEvents (block: DeepPartial<BlockProgress>): Promise<DeepPartial<Event>[]> {
-    assert(block.blockHash);
+  async _saveBlockAndFetchEvents ({
+    id,
+    cid: blockCid,
+    blockHash,
+    blockNumber,
+    blockTimestamp,
+    parentHash
+  }: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
+    assert(blockHash);
 
-    const events = await this._uniClient.getEvents(block.blockHash);
+    const events = await this._uniClient.getEvents(blockHash);
 
     const dbEvents: Array<DeepPartial<Event>> = [];
     const transactionsMap = new Map();
+
+    const txHashSet = new Set();
+    events.forEach((event: any) => {
+      txHashSet.add(event.tx.hash);
+    });
+
+    await Promise.all(
+      Array.from(txHashSet).map(async (txHash: any) => {
+        const transaction = await getFullTransaction(this._ethClient, txHash);
+        transactionsMap.set(txHash, transaction);
+      })
+    );
 
     for (let i = 0; i < events.length; i++) {
       const {
@@ -613,13 +624,7 @@ export class Indexer implements IndexerInterface {
       } = events[i];
 
       // Get full transaction for extra params like gasUsed and gasPrice.
-      let transaction = transactionsMap.get(tx.hash);
-
-      if (!transaction) {
-        transaction = await getFullTransaction(this._ethClient, tx.hash);
-        assert(transaction);
-        transactionsMap.set(tx.hash, transaction);
-      }
+      const transaction = transactionsMap.get(tx.hash);
 
       const { __typename: eventName, ...eventInfo } = event;
 
@@ -639,7 +644,22 @@ export class Indexer implements IndexerInterface {
       });
     }
 
-    return dbEvents;
+    const block = {
+      id,
+      cid: blockCid,
+      blockHash,
+      blockNumber,
+      blockTimestamp,
+      parentHash,
+      numEvents: dbEvents.length,
+      isComplete: dbEvents.length === 0
+    };
+
+    console.time(`time:indexer#_saveBlockAndFetchEvents-db-save-${blockNumber}`);
+    const blockProgress = await this.saveBlockProgress(block);
+    console.timeEnd(`time:indexer#_saveBlockAndFetchEvents-db-save-${blockNumber}`);
+
+    return [blockProgress, dbEvents];
   }
 
   async _triggerEventHandler (resultEvent: ResultEvent): Promise<void> {
