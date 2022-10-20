@@ -145,6 +145,12 @@ export class EventWatcher {
     log(`Job onComplete indexing blocks at height ${blockNumber}`);
 
     const blockProgressEntities = await this._indexer.getBlocksAtHeight(Number(blockNumber), false);
+
+    if (blockProgressEntities.length === 0) {
+      log(`block not indexed at height ${blockNumber}`);
+      return;
+    }
+
     const syncStatus = await this._indexer.updateSyncStatusIndexedBlock(blockProgressEntities[0].blockHash, Number(blockNumber));
 
     // Create pruning job if required.
