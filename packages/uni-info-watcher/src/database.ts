@@ -12,10 +12,8 @@ import {
   FindManyOptions,
   LessThanOrEqual,
   QueryRunner,
-  Repository,
-  SelectQueryBuilder
+  Repository
 } from 'typeorm';
-import { RawSqlResultsToEntityTransformer } from 'typeorm/query-builder/transformer/RawSqlResultsToEntityTransformer';
 import path from 'path';
 import { SelectionNode } from 'graphql';
 import debug from 'debug';
@@ -29,7 +27,7 @@ import {
   QueryOptions,
   Where
 } from '@cerc-io/util';
-import { Database as GraphDatabase } from '@cerc-io/graph-node';
+import { Database as GraphDatabase, ENTITY_QUERY_TYPE } from '@cerc-io/graph-node';
 
 import { Factory } from './entity/Factory';
 import { Pool } from './entity/Pool';
@@ -64,12 +62,6 @@ const log = debug('vulcanize:database');
 
 export const DEFAULT_LIMIT = 100;
 
-export enum ENTITY_QUERY_TYPE {
-  SINGULAR,
-  DISTINCT_ON,
-  GROUP_BY
-}
-
 // Cache for updated entities used in job-runner event processing.
 export interface CachedEntities {
   frothyBlocks: Map<
@@ -84,7 +76,7 @@ export interface CachedEntities {
 }
 
 // Map: Entity to suitable query type.
-const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, number>([
+const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
   [Bundle, ENTITY_QUERY_TYPE.SINGULAR],
   [Factory, ENTITY_QUERY_TYPE.SINGULAR],
   [Pool, ENTITY_QUERY_TYPE.DISTINCT_ON],
@@ -121,7 +113,7 @@ export class Database implements DatabaseInterface {
     };
 
     this._baseDatabase = new BaseDatabase(this._config);
-    this._graphDatabase = new GraphDatabase(this._config, entitiesDir);
+    this._graphDatabase = new GraphDatabase(this._config, entitiesDir, ENTITY_QUERY_TYPE_MAP);
     this._relationsMap = new Map();
     this._populateRelationsMap();
   }
@@ -557,36 +549,7 @@ export class Database implements DatabaseInterface {
     queryOptions: QueryOptions = {},
     selections: ReadonlyArray<SelectionNode> = []
   ): Promise<Entity[]> {
-    let entities: Entity[];
-
-    // Use different suitable query patterns based on entities.
-    switch (ENTITY_QUERY_TYPE_MAP.get(entity)) {
-      case ENTITY_QUERY_TYPE.SINGULAR:
-        entities = await this.getModelEntitiesSingular(queryRunner, entity, block, where);
-        break;
-
-      case ENTITY_QUERY_TYPE.DISTINCT_ON:
-        entities = await this.getModelEntitiesDistinctOn(queryRunner, entity, block, where, queryOptions);
-        break;
-
-      case ENTITY_QUERY_TYPE.GROUP_BY:
-        entities = await this.getModelEntitiesGroupBy(queryRunner, entity, block, where, queryOptions);
-        break;
-
-      default:
-        log(`Invalid entity query type for entity ${entity}`);
-        entities = [];
-        break;
-    }
-
-    if (!entities.length) {
-      return [];
-    }
-
-    entities = await this.loadRelations(queryRunner, block, this._relationsMap, entity, entities, selections);
-    entities = entities.map(entity => resolveEntityFieldConflicts(entity));
-
-    return entities;
+    return this._graphDatabase.getEntities(queryRunner, entity, this._relationsMap, block, where, queryOptions, selections);
   }
 
   async getModelEntitiesNoTx<Entity> (
@@ -609,165 +572,6 @@ export class Database implements DatabaseInterface {
     return res;
   }
 
-  async getModelEntitiesGroupBy<Entity> (
-    queryRunner: QueryRunner,
-    entity: new () => Entity,
-    block: BlockHeight,
-    where: Where = {},
-    queryOptions: QueryOptions = {}
-  ): Promise<Entity[]> {
-    const repo = queryRunner.manager.getRepository(entity);
-    const { tableName } = repo.metadata;
-
-    let subQuery = repo.createQueryBuilder('subTable')
-      .select('subTable.id', 'id')
-      .addSelect('MAX(subTable.block_number)', 'block_number')
-      .addFrom('block_progress', 'blockProgress')
-      .where('subTable.block_hash = blockProgress.block_hash')
-      .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
-      .groupBy('subTable.id');
-
-    if (block.hash) {
-      const { canonicalBlockNumber, blockHashes } = await this._baseDatabase.getFrothyRegion(queryRunner, block.hash);
-
-      subQuery = subQuery
-        .andWhere(new Brackets(qb => {
-          qb.where('subTable.block_hash IN (:...blockHashes)', { blockHashes })
-            .orWhere('subTable.block_number <= :canonicalBlockNumber', { canonicalBlockNumber });
-        }));
-    }
-
-    if (block.number) {
-      subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
-    }
-
-    let selectQueryBuilder = repo.createQueryBuilder(tableName)
-      .innerJoin(
-        `(${subQuery.getQuery()})`,
-        'latestEntities',
-        `${tableName}.id = "latestEntities"."id" AND ${tableName}.block_number = "latestEntities"."block_number"`
-      )
-      .setParameters(subQuery.getParameters());
-
-    selectQueryBuilder = this._baseDatabase.buildQuery(repo, selectQueryBuilder, where);
-
-    if (queryOptions.orderBy) {
-      selectQueryBuilder = this._baseDatabase.orderQuery(repo, selectQueryBuilder, queryOptions);
-    }
-
-    selectQueryBuilder = this._baseDatabase.orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' });
-
-    if (queryOptions.skip) {
-      selectQueryBuilder = selectQueryBuilder.offset(queryOptions.skip);
-    }
-
-    if (queryOptions.limit) {
-      selectQueryBuilder = selectQueryBuilder.limit(queryOptions.limit);
-    }
-
-    const entities = await selectQueryBuilder.getMany();
-
-    return entities;
-  }
-
-  async getModelEntitiesDistinctOn<Entity> (
-    queryRunner: QueryRunner,
-    entity: new () => Entity,
-    block: BlockHeight,
-    where: Where = {},
-    queryOptions: QueryOptions = {}
-  ): Promise<Entity[]> {
-    const repo = queryRunner.manager.getRepository(entity);
-
-    let subQuery = repo.createQueryBuilder('subTable')
-      .distinctOn(['subTable.id'])
-      .addFrom('block_progress', 'blockProgress')
-      .where('subTable.block_hash = blockProgress.block_hash')
-      .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
-      .addOrderBy('subTable.id', 'ASC')
-      .addOrderBy('subTable.block_number', 'DESC');
-
-    if (block.hash) {
-      const { canonicalBlockNumber, blockHashes } = await this._baseDatabase.getFrothyRegion(queryRunner, block.hash);
-
-      subQuery = subQuery
-        .andWhere(new Brackets(qb => {
-          qb.where('subTable.block_hash IN (:...blockHashes)', { blockHashes })
-            .orWhere('subTable.block_number <= :canonicalBlockNumber', { canonicalBlockNumber });
-        }));
-    }
-
-    if (block.number) {
-      subQuery = subQuery.andWhere('subTable.block_number <= :blockNumber', { blockNumber: block.number });
-    }
-
-    subQuery = this._baseDatabase.buildQuery(repo, subQuery, where);
-
-    let selectQueryBuilder = queryRunner.manager.createQueryBuilder()
-      .from(
-        `(${subQuery.getQuery()})`,
-        'latestEntities'
-      )
-      .setParameters(subQuery.getParameters());
-
-    if (queryOptions.orderBy) {
-      selectQueryBuilder = this._baseDatabase.orderQuery(repo, selectQueryBuilder, queryOptions, 'subTable_');
-      if (queryOptions.orderBy !== 'id') {
-        selectQueryBuilder = this._baseDatabase.orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' }, 'subTable_');
-      }
-    }
-
-    if (queryOptions.skip) {
-      selectQueryBuilder = selectQueryBuilder.offset(queryOptions.skip);
-    }
-
-    if (queryOptions.limit) {
-      selectQueryBuilder = selectQueryBuilder.limit(queryOptions.limit);
-    }
-
-    let entities = await selectQueryBuilder.getRawMany();
-    entities = await this._transformResults(queryRunner, repo.createQueryBuilder('subTable'), entities);
-
-    return entities as Entity[];
-  }
-
-  async getModelEntitiesSingular<Entity> (
-    queryRunner: QueryRunner,
-    entity: new () => Entity,
-    block: BlockHeight,
-    where: Where = {}
-  ): Promise<Entity[]> {
-    const repo = queryRunner.manager.getRepository(entity);
-    const { tableName } = repo.metadata;
-
-    let selectQueryBuilder = repo.createQueryBuilder(tableName)
-      .addFrom('block_progress', 'blockProgress')
-      .where(`${tableName}.block_hash = blockProgress.block_hash`)
-      .andWhere('blockProgress.is_pruned = :isPruned', { isPruned: false })
-      .addOrderBy(`${tableName}.block_number`, 'DESC')
-      .limit(1);
-
-    if (block.hash) {
-      const { canonicalBlockNumber, blockHashes } = await this._baseDatabase.getFrothyRegion(queryRunner, block.hash);
-
-      selectQueryBuilder = selectQueryBuilder
-        .andWhere(new Brackets(qb => {
-          qb.where(`${tableName}.block_hash IN (:...blockHashes)`, { blockHashes })
-            .orWhere(`${tableName}.block_number <= :canonicalBlockNumber`, { canonicalBlockNumber });
-        }));
-    }
-
-    if (block.number) {
-      selectQueryBuilder = selectQueryBuilder.andWhere(`${tableName}.block_number <= :blockNumber`, { blockNumber: block.number });
-    }
-
-    selectQueryBuilder = this._baseDatabase.buildQuery(repo, selectQueryBuilder, where);
-
-    const entities = await selectQueryBuilder.getMany();
-
-    return entities as Entity[];
-  }
-
   async getModelEntity<Entity> (repo: Repository<Entity>, whereOptions: any): Promise<Entity | undefined> {
     return this._graphDatabase.getModelEntity(repo, whereOptions);
   }
@@ -780,151 +584,7 @@ export class Database implements DatabaseInterface {
     entities: Entity[],
     selections: ReadonlyArray<SelectionNode> = []
   ): Promise<Entity[]> {
-    const relations = relationsMap.get(entity);
-    if (relations === undefined) {
-      return entities;
-    }
-
-    const relationPromises = selections.filter((selection) => selection.kind === 'Field' && Boolean(relations[selection.name.value]))
-      .map(async selection => {
-        assert(selection.kind === 'Field');
-        const field = selection.name.value;
-        const { entity: relationEntity, isArray, isDerived, field: foreignKey } = relations[field];
-        let childSelections = selection.selectionSet?.selections || [];
-
-        // Filter out __typename field in GQL for loading relations.
-        childSelections = childSelections.filter(selection => !(selection.kind === 'Field' && selection.name.value === '__typename'));
-
-        if (isDerived) {
-          const where: Where = {
-            [foreignKey]: [{
-              value: entities.map((entity: any) => entity.id),
-              not: false,
-              operator: 'in'
-            }]
-          };
-
-          const relatedEntities = await this.getModelEntities(
-            queryRunner,
-            relationEntity,
-            block,
-            where,
-            {},
-            childSelections
-          );
-
-          const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any[]}, entity: any) => {
-            // Related entity might be loaded with data.
-            const parentEntityId = entity[foreignKey].id ?? entity[foreignKey];
-
-            if (!acc[parentEntityId]) {
-              acc[parentEntityId] = [];
-            }
-
-            if (acc[parentEntityId].length < DEFAULT_LIMIT) {
-              acc[parentEntityId].push(entity);
-            }
-
-            return acc;
-          }, {});
-
-          entities.forEach((entity: any) => {
-            if (relatedEntitiesMap[entity.id]) {
-              entity[field] = relatedEntitiesMap[entity.id];
-            } else {
-              entity[field] = [];
-            }
-          });
-
-          return;
-        }
-
-        if (isArray) {
-          const relatedIds = entities.reduce((acc: Set<string>, entity: any) => {
-            entity[field].forEach((relatedEntityId: string) => acc.add(relatedEntityId));
-
-            return acc;
-          }, new Set());
-
-          const where: Where = {
-            id: [{
-              value: Array.from(relatedIds),
-              not: false,
-              operator: 'in'
-            }]
-          };
-
-          const relatedEntities = await this.getModelEntities(
-            queryRunner,
-            relationEntity,
-            block,
-            where,
-            {},
-            childSelections
-          );
-
-          entities.forEach((entity: any) => {
-            const relatedEntityIds: Set<string> = entity[field].reduce((acc: Set<string>, id: string) => {
-              acc.add(id);
-
-              return acc;
-            }, new Set());
-
-            entity[field] = [];
-
-            relatedEntities.forEach((relatedEntity: any) => {
-              if (relatedEntityIds.has(relatedEntity.id) && entity[field].length < DEFAULT_LIMIT) {
-                entity[field].push(relatedEntity);
-              }
-            });
-          });
-
-          return;
-        }
-
-        // field is neither an array nor derivedFrom
-        if (childSelections.length === 1 && childSelections[0].kind === 'Field' && childSelections[0].name.value === 'id') {
-          // Avoid loading relation if selections only has id field.
-          entities.forEach((entity: any) => {
-            entity[field] = { id: entity[field] };
-          });
-
-          return;
-        }
-
-        const where: Where = {
-          id: [{
-            value: entities.map((entity: any) => entity[field]),
-            not: false,
-            operator: 'in'
-          }]
-        };
-
-        const relatedEntities = await this.getModelEntities(
-          queryRunner,
-          relationEntity,
-          block,
-          where,
-          {},
-          childSelections
-        );
-
-        const relatedEntitiesMap = relatedEntities.reduce((acc: {[key:string]: any}, entity: any) => {
-          acc[entity.id] = entity;
-
-          return acc;
-        }, {});
-
-        entities.forEach((entity: any) => {
-          if (relatedEntitiesMap[entity[field]]) {
-            entity[field] = relatedEntitiesMap[entity[field]];
-          }
-        });
-      });
-
-    await Promise.all(relationPromises);
-
-    return entities;
+    return this._graphDatabase.loadEntitiesRelations(queryRunner, block, relationsMap, entity, entities, selections);
   }
 
   async saveFactory (queryRunner: QueryRunner, factory: Factory, block: Block): Promise<Factory> {
@@ -1249,18 +909,6 @@ export class Database implements DatabaseInterface {
 
   pruneEntityCacheFrothyBlocks (canonicalBlockHash: string, canonicalBlockNumber: number) {
     this._graphDatabase.pruneEntityCacheFrothyBlocks(canonicalBlockHash, canonicalBlockNumber);
-  }
-
-  async _transformResults<Entity> (queryRunner: QueryRunner, qb: SelectQueryBuilder<Entity>, rawResults: any[]): Promise<any[]> {
-    const transformer = new RawSqlResultsToEntityTransformer(
-      qb.expressionMap,
-      queryRunner.manager.connection.driver,
-      [],
-      [],
-      queryRunner
-    );
-    assert(qb.expressionMap.mainAlias);
-    return transformer.transform(rawResults, qb.expressionMap.mainAlias);
   }
 
   _populateRelationsMap (): void {
