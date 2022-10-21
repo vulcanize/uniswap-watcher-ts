@@ -34,20 +34,20 @@ import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';
 import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
-import { Token } from './entity/Token';
 import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv, Block } from './utils';
 import { createTick, feeTierToTickSpacing } from './utils/tick';
 import { ADDRESS_ZERO, FACTORY_ADDRESS, WATCHED_CONTRACTS } from './utils/constants';
 import { Database, DEFAULT_LIMIT } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent, FlashEvent } from './events';
-import { Position } from './entity/Position';
 import { Factory } from './entity/Factory';
+import { Token } from './entity/Token';
 import { Bundle } from './entity/Bundle';
 import { Pool } from './entity/Pool';
 import { Mint } from './entity/Mint';
 import { Burn } from './entity/Burn';
 import { Swap } from './entity/Swap';
+import { Position } from './entity/Position';
 import { PositionSnapshot } from './entity/PositionSnapshot';
 import { Tick } from './entity/Tick';
 import { PoolDayData } from './entity/PoolDayData';
@@ -59,6 +59,7 @@ import { TickDayData } from './entity/TickDayData';
 import { Collect } from './entity/Collect';
 import { Flash } from './entity/Flash';
 import { TickHourData } from './entity/TickHourData';
+import { Transaction as TransactionEntity } from './entity/Transaction';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { Contract, KIND_POOL } from './entity/Contract';
@@ -597,7 +598,7 @@ export class Indexer implements IndexerInterface {
   }
 
   async resetWatcherToBlock (blockNumber: number): Promise<void> {
-    const entities = [Factory, Bundle, Pool, Mint, Burn, Swap, Position, PositionSnapshot, Tick, PoolDayData, PoolHourData, UniswapDayData, TokenDayData, TokenHourData, TickDayData, Collect, Flash, TickHourData];
+    const entities = [Factory, Token, Bundle, Pool, Mint, Burn, Swap, Position, PositionSnapshot, Tick, PoolDayData, PoolHourData, UniswapDayData, TokenDayData, TokenHourData, TickDayData, Collect, Flash, TickHourData, TransactionEntity];
     await this._baseIndexer.resetWatcherToBlock(blockNumber, entities);
   }
 
