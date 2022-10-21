@@ -39,3 +39,5 @@
   jobDelayInMilliSecs = 1000
   eventsInBatch = 50
   blockDelayInMilliSecs = 2000
+  prefetchBlocksInMem = true
+  prefetchBlockCount = 10
