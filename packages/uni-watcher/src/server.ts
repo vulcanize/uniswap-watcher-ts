@@ -79,6 +79,8 @@ export const main = async (): Promise<any> => {
   await indexer.init();
 
   const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);
+  // Delete jobs to prevent creating jobs after completion of processing previous block.
+  await jobQueue.deleteAllJobs();
   await eventWatcher.start();
 
   const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, eventWatcher);

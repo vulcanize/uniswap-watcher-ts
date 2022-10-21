@@ -546,6 +546,10 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
+  async resetWatcherToBlock (blockNumber: number): Promise<void> {
+    await this._baseIndexer.resetWatcherToBlock(blockNumber, []);
+  }
+
   async _saveBlockAndFetchEvents ({
     id,
     cid: blockCid,

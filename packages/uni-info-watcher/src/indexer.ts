@@ -38,10 +38,10 @@ import { Token } from './entity/Token';
 import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv, Block } from './utils';
 import { createTick, feeTierToTickSpacing } from './utils/tick';
 import { ADDRESS_ZERO, FACTORY_ADDRESS, WATCHED_CONTRACTS } from './utils/constants';
-import { Position } from './entity/Position';
 import { Database, DEFAULT_LIMIT } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent, FlashEvent } from './events';
+import { Position } from './entity/Position';
 import { Factory } from './entity/Factory';
 import { Bundle } from './entity/Bundle';
 import { Pool } from './entity/Pool';
@@ -49,9 +49,18 @@ import { Mint } from './entity/Mint';
 import { Burn } from './entity/Burn';
 import { Swap } from './entity/Swap';
 import { PositionSnapshot } from './entity/PositionSnapshot';
+import { Tick } from './entity/Tick';
+import { PoolDayData } from './entity/PoolDayData';
+import { PoolHourData } from './entity/PoolHourData';
+import { UniswapDayData } from './entity/UniswapDayData';
+import { TokenDayData } from './entity/TokenDayData';
+import { TokenHourData } from './entity/TokenHourData';
+import { TickDayData } from './entity/TickDayData';
+import { Collect } from './entity/Collect';
+import { Flash } from './entity/Flash';
+import { TickHourData } from './entity/TickHourData';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
-import { Tick } from './entity/Tick';
 import { Contract, KIND_POOL } from './entity/Contract';
 import { State } from './entity/State';
 import { StateSyncStatus } from './entity/StateSyncStatus';
@@ -585,6 +594,11 @@ export class Indexer implements IndexerInterface {
     const oldData = this._subgraphStateMap.get(contractAddress);
     const updatedData = _.merge(oldData, data);
     this._subgraphStateMap.set(contractAddress, updatedData);
+  }
+
+  async resetWatcherToBlock (blockNumber: number): Promise<void> {
+    const entities = [Factory, Bundle, Pool, Mint, Burn, Swap, Position, PositionSnapshot, Tick, PoolDayData, PoolHourData, UniswapDayData, TokenDayData, TokenHourData, TickDayData, Collect, Flash, TickHourData];
+    await this._baseIndexer.resetWatcherToBlock(blockNumber, entities);
   }
 
   async _saveBlockAndFetchEvents ({

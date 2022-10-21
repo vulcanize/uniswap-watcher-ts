@@ -31,6 +31,8 @@ import { BlockProgress } from './entity/BlockProgress';
 import { Contract } from './entity/Contract';
 import { State } from './entity/State';
 import { StateSyncStatus } from './entity/StateSyncStatus';
+import { Allowance } from './entity/Allowance';
+import { Balance } from './entity/Balance';
 
 const log = debug('vulcanize:indexer');
 
@@ -497,6 +499,11 @@ export class Indexer implements IndexerInterface {
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
+  }
+
+  async resetWatcherToBlock (blockNumber: number): Promise<void> {
+    const entities = [Allowance, Balance];
+    await this._baseIndexer.resetWatcherToBlock(blockNumber, entities);
   }
 
   async _saveBlockAndFetchEvents ({
