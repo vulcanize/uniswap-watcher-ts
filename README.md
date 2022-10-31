@@ -22,6 +22,7 @@ This project uses [yarn workspaces](https://classic.yarnpkg.com/en/docs/workspac
     cd packages/util && yarn link && cd ../..
     cd packages/ipld-eth-client && yarn link && cd ../..
     cd packages/solidity-mapper && yarn link && cd ../..
+    cd packages/graph-node && yarn link && cd ../..
     # Workaround for typeorm dependency issue when using yarn link
     cd node_modules/typeorm && yarn link && cd ../..
     ```
@@ -32,6 +33,7 @@ This project uses [yarn workspaces](https://classic.yarnpkg.com/en/docs/workspac
     yarn link "@cerc-io/util"
     yarn link "@cerc-io/ipld-eth-client"
     yarn link "@cerc-io/solidity-mapper"
+    yarn link "@cerc-io/graph-node"
     yarn link "typeorm"
     ```
 
