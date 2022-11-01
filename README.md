@@ -13,13 +13,14 @@ This project uses [yarn workspaces](https://classic.yarnpkg.com/en/docs/workspac
 - Link [@cerc-io/watcher-ts](https://github.com/cerc-io/watcher-ts) packages:
 
   - In `@cerc-io/watcher-ts` repo, build and link the packages to use from uniswap-watcher-ts
-    
+
     ```bash
     # Build packages
     yarn && yarn build
 
     # Link packages
     cd packages/util && yarn link && cd ../..
+    cd packages/cli && yarn link && cd ../..
     cd packages/ipld-eth-client && yarn link && cd ../..
     cd packages/solidity-mapper && yarn link && cd ../..
     cd packages/graph-node && yarn link && cd ../..
@@ -31,6 +32,7 @@ This project uses [yarn workspaces](https://classic.yarnpkg.com/en/docs/workspac
 
     ```bash
     yarn link "@cerc-io/util"
+    yarn link "@cerc-io/cli"
     yarn link "@cerc-io/ipld-eth-client"
     yarn link "@cerc-io/solidity-mapper"
     yarn link "@cerc-io/graph-node"
@@ -38,7 +40,7 @@ This project uses [yarn workspaces](https://classic.yarnpkg.com/en/docs/workspac
     ```
 
 - Build packages:
-  
+
   ```bash
   yarn build
 

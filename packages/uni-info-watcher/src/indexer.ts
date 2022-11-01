@@ -26,7 +26,8 @@ import {
   eventProcessingEthCallDuration,
   getFullTransaction,
   getFullBlock,
-  StateKind
+  StateKind,
+  DatabaseInterface
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
@@ -85,12 +86,17 @@ export class Indexer implements IndexerInterface {
   _subgraphStateMap: Map<string, any> = new Map()
   _fullBlock?: Block
 
-  constructor (serverConfig: ServerConfig, db: Database, uniClient: UniClient, erc20Client: ERC20Client, ethClient: EthClient, ethProvider: providers.BaseProvider, jobQueue: JobQueue) {
+  constructor (serverConfig: ServerConfig, db: DatabaseInterface, clients: { [key: string]: any }, ethProvider: providers.BaseProvider, jobQueue: JobQueue) {
     assert(db);
-    assert(uniClient);
-    assert(erc20Client);
 
-    this._db = db;
+    const ethClient = clients.ethClient;
+    const erc20Client = clients.erc20Client;
+    const uniClient = clients.uniClient;
+    assert(ethClient);
+    assert(erc20Client);
+    assert(uniClient);
+
+    this._db = db as Database;
     this._uniClient = uniClient;
     this._erc20Client = erc20Client;
     this._ethClient = ethClient;

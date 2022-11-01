@@ -17,7 +17,8 @@ import {
   ValueResult,
   UNKNOWN_EVENT_NAME,
   ResultEvent,
-  getResultEvent
+  getResultEvent,
+  DatabaseInterface
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
@@ -48,8 +49,13 @@ export class Indexer implements IndexerInterface {
   _poolContract: ethers.utils.Interface
   _nfpmContract: ethers.utils.Interface
 
-  constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, ethProvider: ethers.providers.BaseProvider, jobQueue: JobQueue) {
-    this._db = db;
+  constructor (serverConfig: ServerConfig, db: DatabaseInterface, clients: { [key: string]: any }, ethProvider: ethers.providers.BaseProvider, jobQueue: JobQueue) {
+    assert(db);
+
+    const ethClient = clients.ethClient;
+    assert(ethClient);
+
+    this._db = db as Database;
     this._ethClient = ethClient;
     this._ethProvider = ethProvider;
     this._serverConfig = serverConfig;
