@@ -27,7 +27,9 @@ import {
   getFullBlock,
   StateKind,
   JobQueue,
-  GraphDecimal
+  GraphDecimal,
+  DatabaseInterface,
+  Clients
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
@@ -77,15 +79,16 @@ export class Indexer implements IndexerInterface {
   _subgraphStateMap: Map<string, any> = new Map()
   _fullBlock?: Block
 
-  constructor (serverConfig: ServerConfig, db: Database, uniClient: UniClient, erc20Client: ERC20Client, ethClient: EthClient, ethProvider: providers.BaseProvider, jobQueue: JobQueue) {
+  constructor (serverConfig: ServerConfig, db: DatabaseInterface, clients: Clients, ethProvider: providers.BaseProvider, jobQueue: JobQueue) {
     assert(db);
-    assert(uniClient);
-    assert(erc20Client);
+    assert(clients.ethClient);
+    assert(clients.erc20Client);
+    assert(clients.uniClient);
 
-    this._db = db;
-    this._uniClient = uniClient;
-    this._erc20Client = erc20Client;
-    this._ethClient = ethClient;
+    this._db = db as Database;
+    this._uniClient = clients.uniClient;
+    this._erc20Client = clients.erc20Client;
+    this._ethClient = clients.ethClient;
     this._ethProvider = ethProvider;
     this._serverConfig = serverConfig;
     this._baseIndexer = new BaseIndexer(this._serverConfig, this._db, this._ethClient, this._ethProvider, jobQueue);

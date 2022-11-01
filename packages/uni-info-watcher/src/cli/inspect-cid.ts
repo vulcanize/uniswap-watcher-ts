@@ -61,7 +61,7 @@ const main = async (): Promise<void> => {
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);
 
-  const indexer = new Indexer(config.server, db, uniClient, erc20Client, ethClient, ethProvider, jobQueue);
+  const indexer = new Indexer(config.server, db, { uniClient, erc20Client, ethClient }, ethProvider, jobQueue);
   await indexer.init();
 
   const state = await indexer.getStateByCID(argv.cid);

@@ -36,6 +36,10 @@ export class Database implements DatabaseInterface {
     this._baseDatabase = new BaseDatabase(this._config);
   }
 
+  get baseDatabase (): BaseDatabase {
+    return this._baseDatabase;
+  }
+
   async init (): Promise<void> {
     this._conn = await this._baseDatabase.init();
   }
