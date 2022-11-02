@@ -133,6 +133,11 @@ export class Indexer implements IndexerInterface {
     // TODO Implement
   }
 
+  async processCLICheckpoint (contractAddress: string, blockHash?: string): Promise<string | undefined> {
+    // TODO Implement
+    return '';
+  }
+
   parseEventNameAndArgs (kind: string, logObj: any): any {
     let eventName = UNKNOWN_EVENT_NAME;
     let eventInfo = {};
