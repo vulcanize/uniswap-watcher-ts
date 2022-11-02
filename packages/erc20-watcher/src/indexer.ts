@@ -515,8 +515,9 @@ export class Indexer implements IndexerInterface {
     parentHash
   }: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
     assert(blockHash);
+    assert(blockNumber);
 
-    const dbEvents = await this._baseIndexer.fetchEvents(blockHash, this.parseEventNameAndArgs.bind(this));
+    const dbEvents = await this._baseIndexer.fetchEvents(blockHash, blockNumber, this.parseEventNameAndArgs.bind(this));
 
     const block = {
       id,
