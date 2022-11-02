@@ -36,7 +36,7 @@ import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToT
 import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDayData, updateTokenHourData, updateUniswapDayData } from './utils/interval-updates';
 import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv, Block } from './utils';
 import { createTick, feeTierToTickSpacing } from './utils/tick';
-import { ADDRESS_ZERO, FACTORY_ADDRESS, WATCHED_CONTRACTS } from './utils/constants';
+import { ADDRESS_ZERO, FACTORY_ADDRESS, FIRST_GRAFT_BLOCK, WATCHED_CONTRACTS } from './utils/constants';
 import { Database, DEFAULT_LIMIT } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent, FlashEvent } from './events';
@@ -828,6 +828,13 @@ export class Indexer implements IndexerInterface {
       pool.createdAtBlockNumber = BigInt(block.number);
       pool = await this._db.savePool(dbTx, pool, block);
 
+      if (block.number >= 13450924) {
+        // Temp workaround to fix mismatch of Factory totalVolumeUSD and totalFeesUSD values with hosted subgraph endpoint
+        if (!WHITELIST_TOKENS.includes('0x4dd28568d05f09b02220b09c2cb307bfd837cb95')) {
+          WHITELIST_TOKENS.push('0x4dd28568d05f09b02220b09c2cb307bfd837cb95');
+        }
+      }
+
       // Update white listed pools.
       if (WHITELIST_TOKENS.includes(token0.id) || this._isDemo) {
         token1.whitelistPools.push(pool.id);
@@ -1477,12 +1484,16 @@ export class Indexer implements IndexerInterface {
       poolDayData.pool = pool.id;
       await this._db.savePoolDayData(dbTx, poolDayData, block);
 
+      if (block.number > FIRST_GRAFT_BLOCK) {
+        await this._db.savePoolHourData(dbTx, poolHourData, block);
+      }
+
       // Update inner vars of current or crossed ticks.
       const newTick = pool.tick;
       // Check that the tick value is not null (can be zero).
       assert(newTick !== null);
 
-      const tickSpacing = feeTierToTickSpacing(pool.feeTier);
+      const tickSpacing = feeTierToTickSpacing(pool.feeTier, block);
       const modulo = newTick % tickSpacing;
 
       if (modulo === BigInt(0)) {
@@ -1640,7 +1651,6 @@ export class Indexer implements IndexerInterface {
       position.withdrawnToken1 = position.withdrawnToken1.plus(amount1);
 
       await this._db.savePosition(dbTx, position, block);
-
       await this._savePositionSnapshot(dbTx, position, block, tx);
       await dbTx.commitTransaction();
     } catch (error) {
@@ -1668,21 +1678,22 @@ export class Indexer implements IndexerInterface {
     const dbTx = await this._db.createTransactionRunner();
 
     try {
-      const [token0, token1] = await Promise.all([
-        this._db.getToken(dbTx, { id: position.token0, blockHash: block.hash }),
-        this._db.getToken(dbTx, { id: position.token1, blockHash: block.hash })
-      ]);
+      if (block.number <= FIRST_GRAFT_BLOCK) {
+        const [token0, token1] = await Promise.all([
+          this._db.getToken(dbTx, { id: position.token0, blockHash: block.hash }),
+          this._db.getToken(dbTx, { id: position.token1, blockHash: block.hash })
+        ]);
 
-      assert(token0 && token1);
+        assert(token0 && token1);
 
-      const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
-      const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
+        const amount0 = convertTokenToDecimal(BigInt(event.amount0), BigInt(token0.decimals));
+        const amount1 = convertTokenToDecimal(BigInt(event.amount1), BigInt(token1.decimals));
 
-      position.collectedFeesToken0 = position.collectedFeesToken0.plus(amount0);
-      position.collectedFeesToken1 = position.collectedFeesToken1.plus(amount1);
+        position.collectedFeesToken0 = position.collectedFeesToken0.plus(amount0);
+        position.collectedFeesToken1 = position.collectedFeesToken1.plus(amount1);
+      }
 
       await this._db.savePosition(dbTx, position, block);
-
       await this._savePositionSnapshot(dbTx, position, block, tx);
       await dbTx.commitTransaction();
     } catch (error) {

@@ -11,6 +11,7 @@ import { Database } from '../database';
 import { bigDecimalExponated, safeDiv } from '.';
 import { Tick } from '../entity/Tick';
 import { Block } from '../events';
+import { FIRST_GRAFT_BLOCK } from './constants';
 
 export const createTick = async (db: Database, dbTx: QueryRunner, tickId: string, tickIdx: bigint, pool: Pool, block: Block): Promise<Tick> => {
   const tick = new Tick();
@@ -30,7 +31,7 @@ export const createTick = async (db: Database, dbTx: QueryRunner, tickId: string
   return db.saveTick(dbTx, tick, block);
 };
 
-export const feeTierToTickSpacing = (feeTier: bigint): bigint => {
+export const feeTierToTickSpacing = (feeTier: bigint, block: Block): bigint => {
   if (feeTier === BigInt(10000)) {
     return BigInt(200);
   }
@@ -39,6 +40,9 @@ export const feeTierToTickSpacing = (feeTier: bigint): bigint => {
   }
   if (feeTier === BigInt(500)) {
     return BigInt(10);
+  }
+  if (block.number > FIRST_GRAFT_BLOCK && feeTier === BigInt(100)) {
+    return BigInt(1);
   }
 
   throw Error('Unexpected fee tier');
