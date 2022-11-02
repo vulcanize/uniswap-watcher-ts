@@ -12,9 +12,6 @@ import {
   JobQueue
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import {
-  UpstreamConfig
-} from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 
@@ -26,7 +23,7 @@ export class EventWatcher {
   _pubsub: PubSub
   _jobQueue: JobQueue
 
-  constructor (upstreamConfig: UpstreamConfig, ethClient: EthClient, indexer: Indexer, pubsub: PubSub, jobQueue: JobQueue) {
+  constructor (ethClient: EthClient, indexer: Indexer, pubsub: PubSub, jobQueue: JobQueue) {
     assert(ethClient);
     assert(indexer);
 
@@ -34,7 +31,7 @@ export class EventWatcher {
     this._indexer = indexer;
     this._pubsub = pubsub;
     this._jobQueue = jobQueue;
-    this._baseEventWatcher = new BaseEventWatcher(upstreamConfig, this._ethClient, this._indexer, this._pubsub, this._jobQueue);
+    this._baseEventWatcher = new BaseEventWatcher(this._ethClient, this._indexer, this._pubsub, this._jobQueue);
   }
 
   getEventIterator (): AsyncIterator<any> {

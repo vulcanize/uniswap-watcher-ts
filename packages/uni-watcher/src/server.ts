@@ -75,7 +75,7 @@ export const main = async (): Promise<any> => {
   const indexer = new Indexer(config.server, db, { ethClient }, ethProvider, jobQueue);
   await indexer.init();
 
-  const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);
+  const eventWatcher = new EventWatcher(ethClient, indexer, pubsub, jobQueue);
   // Delete jobs to prevent creating jobs after completion of processing previous block.
   await jobQueue.deleteAllJobs();
   await eventWatcher.start();
