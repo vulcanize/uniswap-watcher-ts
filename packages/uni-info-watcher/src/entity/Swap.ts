@@ -58,6 +58,7 @@ export class Swap {
   @Column('numeric', { transformer: bigintTransformer })
   sqrtPriceX96!: bigint
 
-  @Column('numeric', { transformer: bigintTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: bigintTransformer })
   logIndex!: bigint
 }

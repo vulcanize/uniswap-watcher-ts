@@ -63,10 +63,12 @@ export class Tick {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   collectedFeesUSD!: GraphDecimal
 
-  @Column('numeric', { transformer: bigintTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: bigintTransformer })
   createdAtTimestamp!: bigint
 
-  @Column('numeric', { transformer: bigintTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: bigintTransformer })
   createdAtBlockNumber!: bigint
 
   @Column('numeric', { default: 0, transformer: bigintTransformer })
