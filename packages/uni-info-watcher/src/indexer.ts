@@ -618,16 +618,19 @@ export class Indexer implements IndexerInterface {
     const transactionsMap = new Map();
 
     const txHashSet = new Set();
-    events.forEach((event: any) => {
-      txHashSet.add(event.tx.hash);
-    });
 
-    await Promise.all(
-      Array.from(txHashSet).map(async (txHash: any) => {
-        const transaction = await getFullTransaction(this._ethClient, txHash, blockNumber);
-        transactionsMap.set(txHash, transaction);
-      })
-    );
+    if (!this._serverConfig.skipStateFieldsUpdate) {
+      events.forEach((event: any) => {
+        txHashSet.add(event.tx.hash);
+      });
+
+      await Promise.all(
+        Array.from(txHashSet).map(async (txHash: any) => {
+          const transaction = await getFullTransaction(this._ethClient, txHash, blockNumber);
+          transactionsMap.set(txHash, transaction);
+        })
+      );
+    }
 
     for (let i = 0; i < events.length; i++) {
       const {
@@ -638,15 +641,16 @@ export class Indexer implements IndexerInterface {
         proof
       } = events[i];
 
+      const { __typename: eventName, ...eventInfo } = event;
+
+      const extraInfo = { tx, eventIndex };
+
       // Get full transaction for extra params like gasUsed and gasPrice.
       const transaction = transactionsMap.get(tx.hash);
 
-      const { __typename: eventName, ...eventInfo } = event;
-
-      const extraInfo = {
-        tx: transaction,
-        eventIndex
-      };
+      if (transaction) {
+        extraInfo.tx = transaction;
+      }
 
       dbEvents.push({
         index: i,
@@ -685,14 +689,20 @@ export class Indexer implements IndexerInterface {
     const { __typename: eventName } = event;
 
     if (!this._fullBlock || (this._fullBlock.hash !== block.hash)) {
-      const { blockHash, blockNumber, timestamp, ...blockData } = await getFullBlock(this._ethClient, this._ethProvider, block.hash, block.number);
+      // resultEvent.block does not contain all properties of a full block.
+      // It is fetched using getFullBlock below only if required for updating entity fields required in state creation.
+      this._fullBlock = block as Block;
 
-      this._fullBlock = {
-        hash: blockHash,
-        number: blockNumber,
-        timestamp: Number(timestamp),
-        ...blockData
-      };
+      if (!this._serverConfig.skipStateFieldsUpdate) {
+        const { blockHash, blockNumber, timestamp, ...blockData } = await getFullBlock(this._ethClient, this._ethProvider, block.hash, block.number);
+
+        this._fullBlock = {
+          hash: blockHash,
+          number: blockNumber,
+          timestamp: Number(timestamp),
+          ...blockData
+        };
+      }
 
       assert(this._fullBlock);
     }
@@ -1014,7 +1024,7 @@ export class Indexer implements IndexerInterface {
       factory.totalValueLockedETH = factory.totalValueLockedETH.plus(pool.totalValueLockedETH);
       factory.totalValueLockedUSD = factory.totalValueLockedETH.times(bundle.ethPriceUSD);
 
-      const transaction = await loadTransaction(this._db, dbTx, { block, tx });
+      const transaction = await loadTransaction(this._db, dbTx, { block, tx }, this._serverConfig.skipStateFieldsUpdate);
 
       const mint = new Mint();
       mint.id = transaction.id + '#' + pool.txCount.toString();
@@ -1178,7 +1188,7 @@ export class Indexer implements IndexerInterface {
       factory.totalValueLockedUSD = factory.totalValueLockedETH.times(bundle.ethPriceUSD);
 
       // Burn entity.
-      const transaction = await loadTransaction(this._db, dbTx, { block, tx });
+      const transaction = await loadTransaction(this._db, dbTx, { block, tx }, this._serverConfig.skipStateFieldsUpdate);
 
       const burn = new Burn();
       burn.id = transaction.id + '#' + pool.txCount.toString();
@@ -1378,7 +1388,7 @@ export class Indexer implements IndexerInterface {
       token1.totalValueLockedUSD = token1.totalValueLocked.times(token1.derivedETH).times(bundle.ethPriceUSD);
 
       // Create Swap event
-      const transaction = await loadTransaction(this._db, dbTx, { block, tx });
+      const transaction = await loadTransaction(this._db, dbTx, { block, tx }, this._serverConfig.skipStateFieldsUpdate);
 
       const swap = new Swap();
       swap.id = transaction.id + '#' + pool.txCount.toString();
@@ -1730,17 +1740,19 @@ export class Indexer implements IndexerInterface {
   async _updateTickFeeVarsAndSave (dbTx: QueryRunner, tick: Tick, block: Block, contractAddress: string): Promise<void> {
     const poolAddress = contractAddress;
 
-    // Not all ticks are initialized so obtaining null is expected behavior.
-    console.time('time:indexer#_getPosition-eth_call_for_ticks');
-    const endTimer = eventProcessingEthCallDuration.startTimer();
-    const { value: tickResult } = await this._uniClient.ticks(block.hash, poolAddress, Number(tick.tickIdx));
-    endTimer();
-    console.timeEnd('time:indexer#_getPosition-eth_call_for_ticks');
+    if (!this._serverConfig.skipStateFieldsUpdate) {
+      // Not all ticks are initialized so obtaining null is expected behavior.
+      console.time('time:indexer#_getPosition-eth_call_for_ticks');
+      const endTimer = eventProcessingEthCallDuration.startTimer();
+      const { value: tickResult } = await this._uniClient.ticks(block.hash, poolAddress, Number(tick.tickIdx));
+      endTimer();
+      console.timeEnd('time:indexer#_getPosition-eth_call_for_ticks');
 
-    tick.feeGrowthOutside0X128 = tickResult.feeGrowthOutside0X128;
-    tick.feeGrowthOutside1X128 = tickResult.feeGrowthOutside1X128;
+      tick.feeGrowthOutside0X128 = tickResult.feeGrowthOutside0X128;
+      tick.feeGrowthOutside1X128 = tickResult.feeGrowthOutside1X128;
 
-    await this._db.saveTick(dbTx, tick, block);
+      await this._db.saveTick(dbTx, tick, block);
+    }
 
     await updateTickDayData(this._db, dbTx, tick, { block });
   }
@@ -1809,7 +1821,7 @@ export class Indexer implements IndexerInterface {
         const dbTx = await this._db.createTransactionRunner();
 
         try {
-          const transaction = await loadTransaction(this._db, dbTx, { block, tx });
+          const transaction = await loadTransaction(this._db, dbTx, { block, tx }, this._serverConfig.skipStateFieldsUpdate);
           position.transaction = transaction.id;
 
           await dbTx.commitTransaction();
@@ -1874,7 +1886,7 @@ export class Indexer implements IndexerInterface {
     positionSnapshot.withdrawnToken1 = position.withdrawnToken1;
     positionSnapshot.collectedFeesToken0 = position.collectedFeesToken0;
     positionSnapshot.collectedFeesToken1 = position.collectedFeesToken1;
-    const transaction = await loadTransaction(this._db, dbTx, { block, tx });
+    const transaction = await loadTransaction(this._db, dbTx, { block, tx }, this._serverConfig.skipStateFieldsUpdate);
     positionSnapshot.transaction = transaction.id;
     positionSnapshot.feeGrowthInside0LastX128 = position.feeGrowthInside0LastX128;
     positionSnapshot.feeGrowthInside1LastX128 = position.feeGrowthInside1LastX128;

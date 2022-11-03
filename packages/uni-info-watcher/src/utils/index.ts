@@ -51,7 +51,7 @@ export const convertTokenToDecimal = (tokenAmount: bigint, exchangeDecimals: big
   return (new GraphDecimal(tokenAmount.toString())).div(exponentToBigDecimal(exchangeDecimals));
 };
 
-export const loadTransaction = async (db: Database, dbTx: QueryRunner, event: { block: Block, tx: Transaction }): Promise<TransactionEntity> => {
+export const loadTransaction = async (db: Database, dbTx: QueryRunner, event: { block: Block, tx: Transaction }, skipStateFieldsUpdate: boolean): Promise<TransactionEntity> => {
   const { tx, block } = event;
   // Get the txHash in lowercase.
   const txHash = utils.hexlify(tx.hash);
@@ -64,20 +64,23 @@ export const loadTransaction = async (db: Database, dbTx: QueryRunner, event: { 
 
   transaction._blockNumber = BigInt(block.number);
   transaction.timestamp = BigInt(block.timestamp);
-  transaction.gasUsed = BigInt(tx.gasLimit);
 
-  let gasPrice = tx.gasPrice;
+  if (!skipStateFieldsUpdate) {
+    transaction.gasUsed = BigInt(tx.gasLimit);
 
-  if (!gasPrice) {
-    // Compute gasPrice for EIP-1559 transaction
-    // https://ethereum.stackexchange.com/questions/122090/what-does-tx-gasprice-represent-after-eip-1559
-    const feeDifference = BigNumber.from(tx.maxFeePerGas).sub(BigNumber.from(block.baseFee));
-    const maxPriorityFeePerGas = BigNumber.from(tx.maxPriorityFeePerGas);
-    const priorityFeePerGas = maxPriorityFeePerGas.lt(feeDifference) ? maxPriorityFeePerGas : feeDifference;
-    gasPrice = BigNumber.from(block.baseFee).add(priorityFeePerGas).toString();
+    let gasPrice = tx.gasPrice;
+
+    if (!gasPrice) {
+      // Compute gasPrice for EIP-1559 transaction
+      // https://ethereum.stackexchange.com/questions/122090/what-does-tx-gasprice-represent-after-eip-1559
+      const feeDifference = BigNumber.from(tx.maxFeePerGas).sub(BigNumber.from(block.baseFee));
+      const maxPriorityFeePerGas = BigNumber.from(tx.maxPriorityFeePerGas);
+      const priorityFeePerGas = maxPriorityFeePerGas.lt(feeDifference) ? maxPriorityFeePerGas : feeDifference;
+      gasPrice = BigNumber.from(block.baseFee).add(priorityFeePerGas).toString();
+    }
+
+    transaction.gasPrice = BigInt(gasPrice);
   }
-
-  transaction.gasPrice = BigInt(gasPrice);
 
   return db.saveTransaction(dbTx, transaction, block);
 };
