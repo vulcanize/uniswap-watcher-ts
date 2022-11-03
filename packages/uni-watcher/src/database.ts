@@ -80,6 +80,18 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getStateSyncStatus(repo);
   }
 
+  async updateStateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockNumber: number, force?: boolean): Promise<StateSyncStatus> {
+    const repo = queryRunner.manager.getRepository(StateSyncStatus);
+
+    return this._baseDatabase.updateStateSyncStatusIndexedBlock(repo, blockNumber, force);
+  }
+
+  async updateStateSyncStatusCheckpointBlock (queryRunner: QueryRunner, blockNumber: number, force?: boolean): Promise<StateSyncStatus> {
+    const repo = queryRunner.manager.getRepository(StateSyncStatus);
+
+    return this._baseDatabase.updateStateSyncStatusCheckpointBlock(repo, blockNumber, force);
+  }
+
   async getLatestContract (kind: string): Promise<Contract | undefined> {
     return this._conn.getRepository(Contract)
       .createQueryBuilder('contract')

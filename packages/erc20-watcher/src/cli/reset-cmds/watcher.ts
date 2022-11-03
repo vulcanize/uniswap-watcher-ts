@@ -49,38 +49,6 @@ export const handler = async (argv: any): Promise<void> => {
   const syncStatus = await indexer.getSyncStatus();
   assert(syncStatus, 'Missing syncStatus');
 
-  const blockProgresses = await indexer.getBlocksAtHeight(argv.blockNumber, false);
-  assert(blockProgresses.length, `No blocks at specified block number ${argv.blockNumber}`);
-  assert(!blockProgresses.some(block => !block.isComplete), `Incomplete block at block number ${argv.blockNumber} with unprocessed events`);
-  const [blockProgress] = blockProgresses;
-
-  const dbTx = await db.createTransactionRunner();
-
-  try {
-    const removeEntitiesPromise = [BlockProgress, Allowance, Balance].map(async entityClass => {
-      return db.removeEntities<any>(dbTx, entityClass, { blockNumber: MoreThan(argv.blockNumber) });
-    });
-
-    await Promise.all(removeEntitiesPromise);
-    await db.removeEntities(dbTx, Contract, { startingBlock: MoreThan(argv.blockNumber) });
-
-    if (syncStatus.latestIndexedBlockNumber > blockProgress.blockNumber) {
-      await indexer.updateSyncStatusIndexedBlock(blockProgress.blockHash, blockProgress.blockNumber, true);
-    }
-
-    if (syncStatus.latestCanonicalBlockNumber > blockProgress.blockNumber) {
-      await indexer.updateSyncStatusCanonicalBlock(blockProgress.blockHash, blockProgress.blockNumber, true);
-    }
-
-    await indexer.updateSyncStatusChainHead(blockProgress.blockHash, blockProgress.blockNumber, true);
-
-    dbTx.commitTransaction();
-  } catch (error) {
-    await dbTx.rollbackTransaction();
-    throw error;
-  } finally {
-    await dbTx.release();
-  }
-
+  await indexer.resetWatcherToBlock(argv.blockNumber);
   log('Reset watcher successfully');
 };

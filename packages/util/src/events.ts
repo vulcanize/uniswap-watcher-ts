@@ -64,7 +64,7 @@ export class EventWatcher {
       startBlockNumber = syncStatus.chainHeadBlockNumber + 1;
     }
 
-    processBlockByNumberWithCache(this._jobQueue, startBlockNumber);
+    await processBlockByNumberWithCache(this._jobQueue, startBlockNumber);
 
     // Creating an AsyncIterable from AsyncIterator to iterate over the values.
     // https://www.codementor.io/@tiagolopesferreira/asynchronous-iterators-in-javascript-jl1yg8la1#for-wait-of
@@ -145,6 +145,12 @@ export class EventWatcher {
     log(`Job onComplete indexing blocks at height ${blockNumber}`);
 
     const blockProgressEntities = await this._indexer.getBlocksAtHeight(Number(blockNumber), false);
+
+    if (blockProgressEntities.length === 0) {
+      log(`block not indexed at height ${blockNumber}`);
+      return;
+    }
+
     const syncStatus = await this._indexer.updateSyncStatusIndexedBlock(blockProgressEntities[0].blockHash, Number(blockNumber));
 
     // Create pruning job if required.

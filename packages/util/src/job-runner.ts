@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { DeepPartial, In } from 'typeorm';
+import { In } from 'typeorm';
 
 import {
   JobQueueConfig,
@@ -26,7 +26,6 @@ import {
 
 import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface } from './types';
-import { wait } from './misc';
 
 const log = debug('vulcanize:job-runner');
 
@@ -93,6 +92,17 @@ export class JobRunner {
     await this._jobQueue.markComplete(job);
   }
 
+  async resetToPrevIndexedBlock (): Promise<void> {
+    const syncStatus = await this._indexer.getSyncStatus();
+
+    if (syncStatus) {
+      // Resetting to block before latest indexed as all events might not be processed in latest indexed block.
+      // Reprocessing of events in subgraph watchers is not possible as DB transaction is not implemented.
+      // TODO: Check updating latestIndexedBlock after blockProgress.isComplete is set to true.
+      await this._indexer.resetWatcherToBlock(syncStatus.latestIndexedBlockNumber - 1);
+    }
+  }
+
   async _pruneChain (job: any): Promise<void> {
     console.time('time:job-runner#_pruneChain');
 
@@ -147,7 +157,7 @@ export class JobRunner {
     assert(syncStatus);
 
     const { data: { priority } } = job;
-    const { cid, blockHash, blockNumber, parentHash, blockTimestamp } = blockToBeIndexed;
+    const { blockHash, blockNumber, parentHash } = blockToBeIndexed;
 
     const indexBlockStartTime = new Date();
 
@@ -249,19 +259,17 @@ export class JobRunner {
 
     if (!blockProgress) {
       const prefetchedBlock = this._prefetchedBlocksMap.get(blockHash);
-      const block = { cid, blockHash, blockNumber, parentHash, blockTimestamp };
 
       if (!prefetchedBlock) {
-        // Delay required to process block.
-        const { jobDelayInMilliSecs = 0 } = this._jobQueueConfig;
-        await wait(jobDelayInMilliSecs);
-
-        let events: DeepPartial<EventInterface>[];
-        [blockProgress, events] = await this._indexer.saveBlockAndFetchEvents(block);
-        this._prefetchedBlocksMap.set(block.blockHash, { block: blockProgress, events });
+        const message = `BlockProgress entity not found found in db and prefetchedBlocksMap for ${blockNumber}`;
+        throw new Error(message);
+      } else {
+        ({ block: blockProgress } = prefetchedBlock);
+        blockProgress = await this._indexer.saveBlockProgress(blockProgress);
       }
     }
 
+    assert(blockProgress);
     await this._indexer.processBlock(blockProgress);
     this._blockNumEvents = blockProgress.numEvents;
 

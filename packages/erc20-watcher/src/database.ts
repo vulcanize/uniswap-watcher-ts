@@ -85,6 +85,18 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getStateSyncStatus(repo);
   }
 
+  async updateStateSyncStatusIndexedBlock (queryRunner: QueryRunner, blockNumber: number, force?: boolean): Promise<StateSyncStatus> {
+    const repo = queryRunner.manager.getRepository(StateSyncStatus);
+
+    return this._baseDatabase.updateStateSyncStatusIndexedBlock(repo, blockNumber, force);
+  }
+
+  async updateStateSyncStatusCheckpointBlock (queryRunner: QueryRunner, blockNumber: number, force?: boolean): Promise<StateSyncStatus> {
+    const repo = queryRunner.manager.getRepository(StateSyncStatus);
+
+    return this._baseDatabase.updateStateSyncStatusCheckpointBlock(repo, blockNumber, force);
+  }
+
   async getBalance ({ blockHash, token, owner }: { blockHash: string, token: string, owner: string }): Promise<Balance | undefined> {
     return this._conn.getRepository(Balance)
       .createQueryBuilder('balance')
@@ -283,6 +295,10 @@ export class Database implements DatabaseInterface {
 
   async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void> {
     return this._baseDatabase.removeEntities(queryRunner, entity, findConditions);
+  }
+
+  async deleteEntitiesByConditions<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions: FindConditions<Entity>): Promise<void> {
+    await this._baseDatabase.deleteEntitiesByConditions(queryRunner, entity, findConditions);
   }
 
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
