@@ -26,8 +26,7 @@ import {
   eventProcessingEthCallDuration,
   getFullTransaction,
   getFullBlock,
-  StateKind,
-  cachePrunedEntitiesCount
+  StateKind
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
@@ -611,6 +610,7 @@ export class Indexer implements IndexerInterface {
     parentHash
   }: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
     assert(blockHash);
+    assert(blockNumber);
 
     const events = await this._uniClient.getEvents(blockHash);
 
@@ -624,7 +624,7 @@ export class Indexer implements IndexerInterface {
 
     await Promise.all(
       Array.from(txHashSet).map(async (txHash: any) => {
-        const transaction = await getFullTransaction(this._ethClient, txHash);
+        const transaction = await getFullTransaction(this._ethClient, txHash, blockNumber);
         transactionsMap.set(txHash, transaction);
       })
     );
