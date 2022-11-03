@@ -685,7 +685,7 @@ export class Indexer implements IndexerInterface {
     const { __typename: eventName } = event;
 
     if (!this._fullBlock || (this._fullBlock.hash !== block.hash)) {
-      const { blockHash, blockNumber, timestamp, ...blockData } = await getFullBlock(this._ethClient, this._ethProvider, block.hash);
+      const { blockHash, blockNumber, timestamp, ...blockData } = await getFullBlock(this._ethClient, this._ethProvider, block.hash, block.number);
 
       this._fullBlock = {
         hash: blockHash,
