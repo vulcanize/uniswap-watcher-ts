@@ -16,6 +16,9 @@
         volumeUSD
         tvlUSD
         feesUSD
+        pool {
+          feeTier
+        }
       }
     }
     ```
@@ -50,6 +53,12 @@
         totalValueLockedToken0
         totalValueLockedToken1
         totalValueLockedUSD
+        volumeToken0
+        volumeToken1
+      }
+
+      bundles (where: {id: "1"}) {
+        ethPriceUSD
       }
     }
     ```
@@ -556,6 +565,46 @@
       }
       oneWeek: bundles(first: 1, block: { number: $blockWeek }) {
         ethPriceUSD
+      }
+    }
+    ```
+
+  * https://github.com/Uniswap/uniswap-v3-info/blob/master/src/data/combined/pools.ts
+    ```
+    query pools {
+      pools(
+        where: {id_in: ${poolString}},` +
+        (block ? `block: {number: ${block}} ,` : ``) +
+        ` orderBy: totalValueLockedUSD,
+        orderDirection: desc,
+        subgraphError: allow
+      ) {
+        id
+        feeTier
+        liquidity
+        sqrtPrice
+        tick
+        token0 {
+            id
+            symbol 
+            name
+            decimals
+            derivedETH
+        }
+        token1 {
+            id
+            symbol 
+            name
+            decimals
+            derivedETH
+        }
+        token0Price
+        token1Price
+        volumeUSD
+        txCount
+        totalValueLockedToken0
+        totalValueLockedToken1
+        totalValueLockedUSD
       }
     }
     ```

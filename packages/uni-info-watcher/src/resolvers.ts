@@ -33,12 +33,13 @@ import { Collect } from './entity/Collect';
 import { PoolHourData } from './entity/PoolHourData';
 import { EventWatcher } from './events';
 import { FACTORY_ADDRESS, BUNDLE_ID } from './utils/constants';
+import { CustomIndexer } from './custom-indexer';
 
 const log = debug('vulcanize:resolver');
 
 export { BlockHeight };
 
-export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatcher): Promise<any> => {
+export const createResolvers = async (indexer: Indexer, customIndexer: CustomIndexer, eventWatcher: EventWatcher): Promise<any> => {
   assert(indexer);
 
   return {
@@ -350,6 +351,9 @@ export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatch
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('transactions').inc(1);
         assert(info.fieldNodes[0].selectionSet);
+
+        // Use custom indexer
+        // return customIndexer.getTransactions()
 
         return indexer.getEntities(
           Transaction,
