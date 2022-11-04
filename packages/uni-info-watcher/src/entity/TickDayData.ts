@@ -33,16 +33,20 @@ export class TickDayData {
   @Column('numeric', { transformer: bigintTransformer })
   liquidityNet!: bigint;
 
-  @Column('numeric', { transformer: graphDecimalTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: graphDecimalTransformer })
   volumeToken0!: GraphDecimal
 
-  @Column('numeric', { transformer: graphDecimalTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: graphDecimalTransformer })
   volumeToken1!: GraphDecimal
 
-  @Column('numeric', { transformer: graphDecimalTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: graphDecimalTransformer })
   volumeUSD!: GraphDecimal
 
-  @Column('numeric', { transformer: graphDecimalTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal
 
   @Column('numeric', { default: 0, transformer: bigintTransformer })

@@ -72,10 +72,12 @@ export class Pool {
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal
 
-  @Column('numeric', { transformer: bigintTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: bigintTransformer })
   createdAtTimestamp!: bigint
 
-  @Column('numeric', { transformer: bigintTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: bigintTransformer })
   createdAtBlockNumber!: bigint
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })

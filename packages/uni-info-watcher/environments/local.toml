@@ -18,6 +18,9 @@
   # Interval in number of blocks at which to clear entities cache.
   clearEntitiesCacheInterval = 1000
 
+  # Boolean to skip updating entity fields required in state creation and not required in the frontend.
+  skipStateFieldsUpdate = false
+
 [metrics]
   host = "127.0.0.1"
   port = 9004

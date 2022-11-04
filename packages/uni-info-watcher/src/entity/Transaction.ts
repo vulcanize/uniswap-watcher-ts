@@ -21,12 +21,15 @@ export class Transaction {
   @Column('numeric', { transformer: bigintTransformer })
   timestamp!: bigint;
 
-  @Column('numeric', { transformer: bigintTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: bigintTransformer })
   _blockNumber!: bigint;
 
-  @Column('numeric', { transformer: bigintTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: bigintTransformer })
   gasUsed!: bigint
 
-  @Column('numeric', { transformer: bigintTransformer })
+  // Field is nullable to work with old DB schema.
+  @Column('numeric', { nullable: true, transformer: bigintTransformer })
   gasPrice!: bigint
 }
