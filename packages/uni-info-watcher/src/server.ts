@@ -11,6 +11,7 @@ import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 import 'graphql-import-node';
 import { createServer } from 'http';
+import queue from 'express-queue';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
@@ -45,7 +46,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { host, port, mode } = config.server;
+  const { host, port, mode, maxSimultaneousRequests, maxRequestQueueLimit } = config.server;
 
   const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
@@ -96,6 +97,8 @@ export const main = async (): Promise<any> => {
   const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, eventWatcher);
 
   const app: Application = express();
+  app.use(queue({ activeLimit: maxSimultaneousRequests || 1, queuedLimit: maxRequestQueueLimit || -1 }));
+
   const server = new ApolloServer({
     typeDefs,
     resolvers

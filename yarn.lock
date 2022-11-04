@@ -3812,7 +3812,7 @@ debug@4, debug@4.3.1, debug@^4.0.1, debug@^4.1.0, debug@^4.1.1:
   dependencies:
     ms "2.1.2"
 
-debug@^3.2.6, debug@^3.2.7:
+debug@^3.1.0, debug@^3.2.6, debug@^3.2.7:
   version "3.2.7"
   resolved "https://registry.yarnpkg.com/debug/-/debug-3.2.7.tgz#72580b7e9145fb39b6676f9c5e5fb100b934179a"
   integrity sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==
@@ -3823,6 +3823,13 @@ debug@^4.2.0, debug@^4.3.1:
   version "4.3.2"
   resolved "https://registry.yarnpkg.com/debug/-/debug-4.3.2.tgz#f0a49c18ac8779e31d4a0c6029dfb76873c7428b"
   integrity sha512-mOp8wKcvj7XxC78zLgw/ZA+6TSgkoE2C/ienthhRD298T7UNwAg9diBpLRxC0mOezLl4B0xV7M0cCO6P/O0Xhw==
+  dependencies:
+    ms "2.1.2"
+
+debug@^4.3.4:
+  version "4.3.4"
+  resolved "https://registry.yarnpkg.com/debug/-/debug-4.3.4.tgz#1319f6579357f2338d3337d2cdd4914bb5dcc865"
+  integrity sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==
   dependencies:
     ms "2.1.2"
 
@@ -4629,6 +4636,22 @@ exit-on-epipe@~1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/exit-on-epipe/-/exit-on-epipe-1.0.1.tgz#0bdd92e87d5285d267daa8171d0eb06159689692"
   integrity sha512-h2z5mrROTxce56S+pnvAV890uu7ls7f1kEvVGJbw1OlFH3/mlJ5bkXu0KRyW94v37zzHPiUd55iLn3DA7TjWpw==
+
+express-end@0.0.8:
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/express-end/-/express-end-0.0.8.tgz#0c8fd95428932158f2b4cf91f4045346bf2c5323"
+  integrity sha512-PPntzICAq006LBpXKBVJtmRUiCRqTMZ+OB8L2RFXgx+OmkMWU66IL4DTEPF/DOcxmsuC7Y0NdbT2R71lb+pBpg==
+  dependencies:
+    debug "^2.2.0"
+
+express-queue@^0.0.13:
+  version "0.0.13"
+  resolved "https://registry.yarnpkg.com/express-queue/-/express-queue-0.0.13.tgz#e9800d67749d4dfab7c34223f00595af933ce5df"
+  integrity sha512-C4OEDasGDqpXLrZICSUxbY47p5c0bKqf/3/3hwauSCmI+jVVxKBWU2w39BuKLP6nF65z87uDFBbJMPAn2ZrG3g==
+  dependencies:
+    debug "^4.3.4"
+    express-end "0.0.8"
+    mini-queue "0.0.14"
 
 express@^4.17.1:
   version "4.17.1"
@@ -6893,6 +6916,13 @@ min-indent@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/min-indent/-/min-indent-1.0.1.tgz#a63f681673b30571fbe8bc25686ae746eefa9869"
   integrity sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==
+
+mini-queue@0.0.14:
+  version "0.0.14"
+  resolved "https://registry.yarnpkg.com/mini-queue/-/mini-queue-0.0.14.tgz#83d2f3f908e3cac5390bd986d1e6fbbfa0d95b93"
+  integrity sha512-DNh9Wn8U1jrmn1yVfpviwClyER/Y4ltgGbG+LF/KIdKJ8BEo2Q9jDDPG7tEhz6F/DTZ/ohv5D7AAXFVSFyP05Q==
+  dependencies:
+    debug "^3.1.0"
 
 minimalistic-assert@^1.0.0, minimalistic-assert@^1.0.1:
   version "1.0.1"
