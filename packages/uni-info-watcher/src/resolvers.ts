@@ -34,8 +34,6 @@ import { PoolHourData } from './entity/PoolHourData';
 import { EventWatcher } from './events';
 import { FACTORY_ADDRESS, BUNDLE_ID } from './utils/constants';
 import { CustomIndexer } from './custom-indexer';
-import { LatestPool } from './entity/LatestPool';
-import { LatestToken } from './entity/LatestToken';
 
 const log = debug('vulcanize:resolver');
 

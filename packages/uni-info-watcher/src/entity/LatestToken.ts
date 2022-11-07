@@ -18,4 +18,10 @@ export class LatestToken {
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   totalValueLockedUSD!: GraphDecimal;
+
+  @Column('varchar')
+  symbol!: string;
+
+  @Column('varchar')
+  name!: string;
 }

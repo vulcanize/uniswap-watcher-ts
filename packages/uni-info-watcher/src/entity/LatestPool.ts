@@ -18,4 +18,10 @@ export class LatestPool {
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   totalValueLockedUSD!: GraphDecimal
+
+  @Column('varchar', { length: 42 })
+  token0!: string;
+
+  @Column('varchar', { length: 42 })
+  token1!: string;
 }

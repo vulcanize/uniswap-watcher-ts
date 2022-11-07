@@ -4,7 +4,7 @@
 
 import { SelectionNode } from 'graphql';
 import assert from 'assert';
-import { QueryRunner } from 'typeorm';
+import { QueryRunner, Repository, SelectQueryBuilder } from 'typeorm';
 
 import { BlockHeight, Config, QueryOptions, Where } from '@cerc-io/util';
 import { ENTITY_QUERY_TYPE } from '@cerc-io/graph-node';
@@ -16,6 +16,18 @@ import { Pool } from './entity/Pool';
 import { LatestPool } from './entity/LatestPool';
 import { Token } from './entity/Token';
 import { LatestToken } from './entity/LatestToken';
+
+const OPERATOR_MAP = {
+  equals: '=',
+  gt: '>',
+  lt: '<',
+  gte: '>=',
+  lte: '<=',
+  in: 'IN',
+  contains: 'LIKE',
+  starts: 'LIKE',
+  ends: 'LIKE'
+};
 
 export class CustomIndexer {
   _config: Config;
@@ -137,13 +149,13 @@ export class CustomIndexer {
         `latest.id = ${tableName}.id AND latest.latestBlockHash = ${tableName}.blockHash`
       );
 
-    selectQueryBuilder = this._db.baseDatabase.buildQuery(repo, selectQueryBuilder, where);
+    selectQueryBuilder = this.buildQuery(repo, selectQueryBuilder, where, 'latest');
 
     if (queryOptions.orderBy) {
-      selectQueryBuilder = this._db.baseDatabase.orderQuery(repo, selectQueryBuilder, queryOptions);
+      selectQueryBuilder = this.orderQuery(repo, selectQueryBuilder, queryOptions, 'latest');
     }
 
-    selectQueryBuilder = this._db.baseDatabase.orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' });
+    selectQueryBuilder = this.orderQuery(repo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' }, 'latest');
 
     if (queryOptions.skip) {
       selectQueryBuilder = selectQueryBuilder.offset(queryOptions.skip);
@@ -308,5 +320,90 @@ export class CustomIndexer {
     }
 
     return entities;
+  }
+
+  buildQuery<Entity> (
+    repo: Repository<Entity>,
+    selectQueryBuilder: SelectQueryBuilder<Entity>,
+    where: Where = {},
+    alias: string
+  ): SelectQueryBuilder<Entity> {
+    Object.entries(where).forEach(([field, filters]) => {
+      filters.forEach((filter, index) => {
+        // Form the where clause.
+        let { not, operator, value } = filter;
+        const columnMetadata = repo.metadata.findColumnWithPropertyName(field);
+        assert(columnMetadata);
+        let whereClause = `"${alias}"."${columnMetadata.databaseName}" `;
+
+        if (columnMetadata.relationMetadata) {
+          // For relation fields, use the id column.
+          const idColumn = columnMetadata.relationMetadata.joinColumns.find(column => column.referencedColumn?.propertyName === 'id');
+          assert(idColumn);
+          whereClause = `"${alias}"."${idColumn.databaseName}" `;
+        }
+
+        if (not) {
+          if (operator === 'equals') {
+            whereClause += '!';
+          } else {
+            whereClause += 'NOT ';
+          }
+        }
+
+        whereClause += `${OPERATOR_MAP[operator]} `;
+
+        if (operator === 'in') {
+          whereClause += '(:...';
+        } else {
+          // Convert to string type value as bigint type throws error in query.
+          value = value.toString();
+
+          whereClause += ':';
+        }
+
+        const variableName = `${field}${index}`;
+        whereClause += variableName;
+
+        if (operator === 'in') {
+          whereClause += ')';
+
+          if (!value.length) {
+            whereClause = 'FALSE';
+          }
+        }
+
+        if (['contains', 'starts'].some(el => el === operator)) {
+          value = `%${value}`;
+        }
+
+        if (['contains', 'ends'].some(el => el === operator)) {
+          value += '%';
+        }
+
+        selectQueryBuilder = selectQueryBuilder.andWhere(whereClause, { [variableName]: value });
+      });
+    });
+
+    return selectQueryBuilder;
+  }
+
+  orderQuery<Entity> (
+    repo: Repository<Entity>,
+    selectQueryBuilder: SelectQueryBuilder<Entity>,
+    orderOptions: { orderBy?: string, orderDirection?: string },
+    alias: string,
+    columnPrefix = ''
+  ): SelectQueryBuilder<Entity> {
+    const { orderBy, orderDirection } = orderOptions;
+    assert(orderBy);
+
+    const columnMetadata = repo.metadata.findColumnWithPropertyName(orderBy);
+    assert(columnMetadata);
+
+    return selectQueryBuilder.addOrderBy(
+      `"${alias}"."${columnPrefix}${columnMetadata.databaseName}"`,
+      orderDirection === 'desc' ? 'DESC' : 'ASC'
+    );
   }
 }
