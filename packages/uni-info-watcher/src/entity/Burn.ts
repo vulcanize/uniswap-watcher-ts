@@ -8,6 +8,7 @@ import { bigintTransformer, graphDecimalTransformer, GraphDecimal } from '@vulca
 @Entity()
 @Index(['id', 'blockNumber'])
 @Index(['transaction'])
+@Index(['timestamp'])
 export class Burn {
   @PrimaryColumn('varchar')
   id!: string;

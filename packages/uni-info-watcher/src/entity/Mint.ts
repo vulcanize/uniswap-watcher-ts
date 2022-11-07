@@ -10,6 +10,7 @@ import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulca
 @Index(['transaction'])
 @Index(['blockHash', 'id', 'token0'])
 @Index(['blockHash', 'id', 'token1'])
+@Index(['timestamp'])
 export class Mint {
   @PrimaryColumn('varchar')
   id!: string;
