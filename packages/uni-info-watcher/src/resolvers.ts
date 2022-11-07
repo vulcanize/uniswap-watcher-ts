@@ -393,13 +393,31 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
 
       uniswapDayDatas: async (
         _: any,
-        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }
+        { block = {}, first, skip, orderBy, orderDirection, where }: { block: BlockHeight, first: number, skip: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
       ) => {
         log('uniswapDayDatas', first, skip, orderBy, orderDirection, where);
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('uniswapDayDatas').inc(1);
+        assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(UniswapDayData, block, where, { limit: first, skip, orderBy, orderDirection });
+        // Check if time travel query.
+        if (Object.keys(block).length) {
+          return indexer.getEntities(
+            UniswapDayData,
+            block,
+            where,
+            { limit: first, skip, orderBy, orderDirection }
+          );
+        }
+
+        return customIndexer.getLatestEntities(
+          UniswapDayData,
+          where,
+          { limit: first, orderBy, orderDirection, skip },
+          info.fieldNodes[0].selectionSet.selections
+        );
       },
 
       positions: async (

@@ -6,7 +6,7 @@ import { SelectionNode } from 'graphql';
 import assert from 'assert';
 import { QueryRunner, Repository, SelectQueryBuilder } from 'typeorm';
 
-import { BlockHeight, Config, QueryOptions, Where } from '@cerc-io/util';
+import { Config, QueryOptions, Where } from '@cerc-io/util';
 import { ENTITY_QUERY_TYPE } from '@cerc-io/graph-node';
 
 import { Indexer } from './indexer';
@@ -16,6 +16,8 @@ import { Pool } from './entity/Pool';
 import { LatestPool } from './entity/LatestPool';
 import { Token } from './entity/Token';
 import { LatestToken } from './entity/LatestToken';
+import { UniswapDayData } from './entity/UniswapDayData';
+import { LatestUniswapDayData } from './entity/LatestUniswapDayData';
 
 const OPERATOR_MAP = {
   equals: '=',
@@ -102,6 +104,10 @@ export class CustomIndexer {
 
         if (entity === Token as any) {
           latestEntity = LatestToken;
+        }
+
+        if (entity === UniswapDayData as any) {
+          latestEntity = LatestUniswapDayData;
         }
 
         if (latestEntity) {
