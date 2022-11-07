@@ -12,7 +12,7 @@ export class LatestPool {
   id!: string;
 
   @PrimaryColumn('varchar', { length: 66 })
-  latestBlockHash!: string
+  latestBlockHash!: string;
 
   @Column('integer')
   latestBlockNumber!: number;

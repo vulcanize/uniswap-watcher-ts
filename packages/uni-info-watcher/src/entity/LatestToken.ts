@@ -3,7 +3,7 @@
 //
 
 import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
-import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
+import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
 
 @Entity()
 @Index(['totalValueLockedUSD'])
