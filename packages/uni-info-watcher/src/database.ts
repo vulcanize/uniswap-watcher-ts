@@ -126,6 +126,10 @@ export class Database implements DatabaseInterface {
     return this._graphDatabase;
   }
 
+  get baseDatabase (): BaseDatabase {
+    return this._baseDatabase;
+  }
+
   async init (): Promise<void> {
     this._conn = await this._baseDatabase.init();
     await this._graphDatabase.init();

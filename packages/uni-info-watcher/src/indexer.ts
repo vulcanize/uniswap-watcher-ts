@@ -415,39 +415,18 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
-  async getEntities<Entity> (entity: new () => Entity, block: BlockHeight, where: { [key: string]: any } = {}, queryOptions: QueryOptions, selections: ReadonlyArray<SelectionNode> = []): Promise<Entity[]> {
+  async getEntities<Entity> (
+    entity: new () => Entity,
+    block: BlockHeight,
+    where: { [key: string]: any } = {},
+    queryOptions: QueryOptions,
+    selections: ReadonlyArray<SelectionNode> = []
+  ): Promise<Entity[]> {
     const dbTx = await this._db.createTransactionRunner();
     let res;
 
     try {
-      where = Object.entries(where).reduce((acc: { [key: string]: any }, [fieldWithSuffix, value]) => {
-        const [field, ...suffix] = fieldWithSuffix.split('_');
-
-        if (!acc[field]) {
-          acc[field] = [];
-        }
-
-        const filter = {
-          value,
-          not: false,
-          operator: 'equals'
-        };
-
-        let operator = suffix.shift();
-
-        if (operator === 'not') {
-          filter.not = true;
-          operator = suffix.shift();
-        }
-
-        if (operator) {
-          filter.operator = operator;
-        }
-
-        acc[field].push(filter);
-
-        return acc;
-      }, {});
+      where = this.getGQLToDBFilter(where);
 
       if (!queryOptions.limit) {
         queryOptions.limit = DEFAULT_LIMIT;
@@ -463,6 +442,37 @@ export class Indexer implements IndexerInterface {
     }
 
     return res;
+  }
+
+  getGQLToDBFilter (where: { [key: string]: any } = {}) {
+    return Object.entries(where).reduce((acc: { [key: string]: any }, [fieldWithSuffix, value]) => {
+      const [field, ...suffix] = fieldWithSuffix.split('_');
+
+      if (!acc[field]) {
+        acc[field] = [];
+      }
+
+      const filter = {
+        value,
+        not: false,
+        operator: 'equals'
+      };
+
+      let operator = suffix.shift();
+
+      if (operator === 'not') {
+        filter.not = true;
+        operator = suffix.shift();
+      }
+
+      if (operator) {
+        filter.operator = operator;
+      }
+
+      acc[field].push(filter);
+
+      return acc;
+    }, {});
   }
 
   async getEntitiesForBlock (blockHash: string, tableName: string): Promise<any[]> {

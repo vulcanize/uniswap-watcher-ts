@@ -34,6 +34,8 @@ import { PoolHourData } from './entity/PoolHourData';
 import { EventWatcher } from './events';
 import { FACTORY_ADDRESS, BUNDLE_ID } from './utils/constants';
 import { CustomIndexer } from './custom-indexer';
+import { LatestPool } from './entity/LatestPool';
+import { LatestToken } from './entity/LatestToken';
 
 const log = debug('vulcanize:resolver');
 
@@ -218,9 +220,20 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('pools').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(
+        // Check if time travel query.
+        if (Object.keys(block).length) {
+          return indexer.getEntities(
+            Pool,
+            block,
+            where,
+            { limit: first, orderBy, orderDirection, skip },
+            info.fieldNodes[0].selectionSet.selections
+          );
+        }
+
+        return customIndexer.getLatestEntities(
           Pool,
-          block,
+          LatestPool,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -292,11 +305,22 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('tokens').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(
+        // Check if time travel query.
+        if (Object.keys(block).length) {
+          return indexer.getEntities(
+            Token,
+            block,
+            where,
+            { limit: first, skip, orderBy, orderDirection },
+            info.fieldNodes[0].selectionSet.selections
+          );
+        }
+
+        return customIndexer.getLatestEntities(
           Token,
-          block,
+          LatestToken,
           where,
-          { limit: first, skip, orderBy, orderDirection },
+          { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
