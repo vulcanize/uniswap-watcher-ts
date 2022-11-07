@@ -6,7 +6,6 @@ import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 import { graphDecimalTransformer, GraphDecimal } from '@vulcanize/util';
 
 @Entity()
-@Index(['totalValueLockedUSD'])
 export class LatestToken {
   @PrimaryColumn('varchar', { length: 42 })
   id!: string;

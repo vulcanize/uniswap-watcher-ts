@@ -233,7 +233,6 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
 
         return customIndexer.getLatestEntities(
           Pool,
-          LatestPool,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -318,7 +317,6 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
 
         return customIndexer.getLatestEntities(
           Token,
-          LatestToken,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -376,14 +374,21 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('transactions').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Use custom indexer
-        // return customIndexer.getTransactions()
+        // Check if time travel query.
+        if (Object.keys(block).length) {
+          return indexer.getEntities(
+            Transaction,
+            block,
+            where,
+            { limit: first, skip, orderBy, orderDirection },
+            info.fieldNodes[0].selectionSet.selections
+          );
+        }
 
-        return indexer.getEntities(
+        return customIndexer.getLatestEntities(
           Transaction,
-          block,
           where,
-          { limit: first, skip, orderBy, orderDirection },
+          { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },

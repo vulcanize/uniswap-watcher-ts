@@ -76,7 +76,7 @@ export interface CachedEntities {
 }
 
 // Map: Entity to suitable query type.
-const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
+export const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
   [Bundle, ENTITY_QUERY_TYPE.SINGULAR],
   [Factory, ENTITY_QUERY_TYPE.SINGULAR],
   [Pool, ENTITY_QUERY_TYPE.GROUP_BY],
