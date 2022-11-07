@@ -108,9 +108,19 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('burns').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(
+        // Check if time travel query.
+        if (Object.keys(block).length) {
+          return indexer.getEntities(
+            Burn,
+            block,
+            where,
+            { limit: first, skip, orderBy, orderDirection },
+            info.fieldNodes[0].selectionSet.selections
+          );
+        }
+
+        return customIndexer.getLatestEntities(
           Burn,
-          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -145,11 +155,21 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('mints').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(
+        // Check if time travel query.
+        if (Object.keys(block).length) {
+          return indexer.getEntities(
+            Mint,
+            block,
+            where,
+            { limit: first, skip, orderBy, orderDirection },
+            info.fieldNodes[0].selectionSet.selections
+          );
+        }
+
+        return customIndexer.getLatestEntities(
           Mint,
-          block,
           where,
-          { limit: first, skip, orderBy, orderDirection },
+          { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
@@ -249,9 +269,19 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('swaps').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(
+        // Check if time travel query.
+        if (Object.keys(block).length) {
+          return indexer.getEntities(
+            Swap,
+            block,
+            where,
+            { limit: first, skip, orderBy, orderDirection },
+            info.fieldNodes[0].selectionSet.selections
+          );
+        }
+
+        return customIndexer.getLatestEntities(
           Swap,
-          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
