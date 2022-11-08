@@ -147,7 +147,7 @@ export class CustomIndexer {
       .innerJoin(
         latestEntity,
         'latest',
-        `latest.id = ${tableName}.id AND latest.latestBlockHash = ${tableName}.blockHash`
+        `latest.id = ${tableName}.id AND latest.blockHash = ${tableName}.blockHash`
       );
 
     selectQueryBuilder = this.buildQuery(repo, selectQueryBuilder, where, 'latest');
