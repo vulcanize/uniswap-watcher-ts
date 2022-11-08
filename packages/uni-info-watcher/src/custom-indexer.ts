@@ -6,30 +6,17 @@ import { SelectionNode } from 'graphql';
 import assert from 'assert';
 import { QueryRunner, Repository, SelectQueryBuilder } from 'typeorm';
 
-import { Config, QueryOptions, Where } from '@cerc-io/util';
-import { ENTITY_QUERY_TYPE } from '@cerc-io/graph-node';
+import { OPERATOR_MAP, Config, QueryOptions, Where } from '@cerc-io/util';
+import { ENTITY_QUERY_TYPE, resolveEntityFieldConflicts } from '@cerc-io/graph-node';
 
 import { Indexer } from './indexer';
 import { Database, DEFAULT_LIMIT, ENTITY_QUERY_TYPE_MAP } from './database';
-import { resolveEntityFieldConflicts } from './utils';
 import { Pool } from './entity/Pool';
 import { LatestPool } from './entity/LatestPool';
 import { Token } from './entity/Token';
 import { LatestToken } from './entity/LatestToken';
 import { UniswapDayData } from './entity/UniswapDayData';
 import { LatestUniswapDayData } from './entity/LatestUniswapDayData';
-
-const OPERATOR_MAP = {
-  equals: '=',
-  gt: '>',
-  lt: '<',
-  gte: '>=',
-  lte: '<=',
-  in: 'IN',
-  contains: 'LIKE',
-  starts: 'LIKE',
-  ends: 'LIKE'
-};
 
 export class CustomIndexer {
   _config: Config;
@@ -80,50 +67,58 @@ export class CustomIndexer {
   ): Promise<Entity[]> {
     let entities: Entity[];
 
-    // Use different suitable query patterns based on entities.
-    switch (ENTITY_QUERY_TYPE_MAP.get(entity)) {
-      case ENTITY_QUERY_TYPE.SINGULAR:
-        entities = await this._db.graphDatabase.getEntitiesSingular(queryRunner, entity, {}, where);
-        break;
+    let latestEntity;
 
-      case ENTITY_QUERY_TYPE.DISTINCT_ON:
-        entities = await this._db.graphDatabase.getEntitiesDistinctOn(queryRunner, entity, {}, where, queryOptions);
-        break;
+    if (entity === Pool as any) {
+      latestEntity = LatestPool;
+    }
 
-      case ENTITY_QUERY_TYPE.UNIQUE:
-        entities = await this._db.graphDatabase.getEntitiesUnique(queryRunner, entity, {}, where, queryOptions);
-        break;
+    if (entity === Token as any) {
+      latestEntity = LatestToken;
+    }
 
-      // Use group by query if entity query type is not specified in map.
-      default: {
-        let latestEntity;
+    if (entity === UniswapDayData as any) {
+      latestEntity = LatestUniswapDayData;
+    }
 
-        if (entity === Pool as any) {
-          latestEntity = LatestPool;
-        }
+    if (latestEntity) {
+      // Use latest entity tables for Pool and Token.
+      entities = await this.getDBLatestEntities(
+        queryRunner,
+        entity,
+        latestEntity,
+        where,
+        queryOptions
+      );
+    } else {
+      // Use different suitable query patterns based on entities.
+      switch (ENTITY_QUERY_TYPE_MAP.get(entity)) {
+        case ENTITY_QUERY_TYPE.SINGULAR:
+          entities = await this._db.graphDatabase.getEntitiesSingular(queryRunner, entity, {}, where);
+          break;
 
-        if (entity === Token as any) {
-          latestEntity = LatestToken;
-        }
+        case ENTITY_QUERY_TYPE.UNIQUE:
+          entities = await this._db.graphDatabase.getEntitiesUnique(queryRunner, entity, {}, where, queryOptions);
+          break;
 
-        if (entity === UniswapDayData as any) {
-          latestEntity = LatestUniswapDayData;
-        }
+        case ENTITY_QUERY_TYPE.DISTINCT_ON:
+          entities = await this._db.graphDatabase.getEntitiesDistinctOn(queryRunner, entity, {}, where, queryOptions);
+          break;
 
-        if (latestEntity) {
-          // Use latest entity tables for Pool and Token.
-          entities = await this.getDBLatestEntities(
-            queryRunner,
-            entity,
-            latestEntity,
-            where,
-            queryOptions
-          );
-        } else {
+        case ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED:
+          entities = await this._db.graphDatabase.getEntitiesDistinctOnWithoutPruned(queryRunner, entity, {}, where, queryOptions);
+          break;
+
+        case ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED:
+          // Use group by query if entity query type is not specified in map.
+          entities = await this._db.graphDatabase.getEntitiesGroupByWithoutPruned(queryRunner, entity, {}, where, queryOptions);
+          break;
+
+        case ENTITY_QUERY_TYPE.GROUP_BY:
+        default:
+          // Use group by query if entity query type is not specified in map.
           entities = await this._db.graphDatabase.getEntitiesGroupBy(queryRunner, entity, {}, where, queryOptions);
-        }
-
-        break;
+          break;
       }
     }
 

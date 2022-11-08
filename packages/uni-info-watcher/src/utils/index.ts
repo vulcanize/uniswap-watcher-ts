@@ -114,25 +114,3 @@ export const loadFactory = async (db: Database, dbTx: QueryRunner, block: Block,
 
   return factory;
 };
-
-export const resolveEntityFieldConflicts = (entity: any): any => {
-  if (entity) {
-    // Remove fields blockHash and blockNumber from the entity.
-    delete entity.blockHash;
-    delete entity.blockNumber;
-
-    // Rename _blockHash -> blockHash.
-    if ('_blockHash' in entity) {
-      entity.blockHash = entity._blockHash;
-      delete entity._blockHash;
-    }
-
-    // Rename _blockNumber -> blockNumber.
-    if ('_blockNumber' in entity) {
-      entity.blockNumber = entity._blockNumber;
-      delete entity._blockNumber;
-    }
-  }
-
-  return entity;
-};
