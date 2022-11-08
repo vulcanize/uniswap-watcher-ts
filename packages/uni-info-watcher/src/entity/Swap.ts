@@ -8,6 +8,7 @@ import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulca
 @Entity()
 @Index(['id', 'blockNumber'])
 @Index(['transaction'])
+@Index(['timestamp'])
 export class Swap {
   @PrimaryColumn('varchar')
   id!: string;

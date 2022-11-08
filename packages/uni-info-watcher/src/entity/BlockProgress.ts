@@ -11,6 +11,7 @@ import { BlockProgressInterface } from '@vulcanize/util';
 @Index(['blockNumber'])
 @Index(['parentHash'])
 @Index(['blockHash', 'isPruned'])
+@Index(['blockTimestamp'])
 export class BlockProgress implements BlockProgressInterface {
   @PrimaryGeneratedColumn()
   id!: number;

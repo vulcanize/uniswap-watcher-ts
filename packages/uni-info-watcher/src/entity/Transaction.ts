@@ -3,10 +3,11 @@
 //
 
 import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
-import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
+import { bigintTransformer } from '@vulcanize/util';
 
 @Entity()
 @Index(['id', 'blockNumber'])
+@Index(['timestamp'])
 export class Transaction {
   @PrimaryColumn('varchar')
   id!: string;

@@ -56,7 +56,6 @@ import { StateSyncStatus } from './entity/StateSyncStatus';
 import { Collect } from './entity/Collect';
 import { Flash } from './entity/Flash';
 import { TickHourData } from './entity/TickHourData';
-import { resolveEntityFieldConflicts } from './utils';
 
 const log = debug('vulcanize:database');
 
@@ -76,24 +75,24 @@ export interface CachedEntities {
 }
 
 // Map: Entity to suitable query type.
-const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
+export const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
   [Bundle, ENTITY_QUERY_TYPE.SINGULAR],
   [Factory, ENTITY_QUERY_TYPE.SINGULAR],
-  [Pool, ENTITY_QUERY_TYPE.GROUP_BY],
-  [Token, ENTITY_QUERY_TYPE.GROUP_BY],
-  [Burn, ENTITY_QUERY_TYPE.DISTINCT_ON],
-  [Mint, ENTITY_QUERY_TYPE.DISTINCT_ON],
-  [Swap, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [Pool, ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED],
+  [Token, ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED],
+  [Burn, ENTITY_QUERY_TYPE.UNIQUE],
+  [Mint, ENTITY_QUERY_TYPE.UNIQUE],
+  [Swap, ENTITY_QUERY_TYPE.UNIQUE],
   [Transaction, ENTITY_QUERY_TYPE.UNIQUE],
-  [TokenDayData, ENTITY_QUERY_TYPE.DISTINCT_ON],
-  [TokenHourData, ENTITY_QUERY_TYPE.DISTINCT_ON],
-  [PoolDayData, ENTITY_QUERY_TYPE.DISTINCT_ON],
-  [PoolHourData, ENTITY_QUERY_TYPE.DISTINCT_ON],
-  [Position, ENTITY_QUERY_TYPE.DISTINCT_ON],
-  [PositionSnapshot, ENTITY_QUERY_TYPE.DISTINCT_ON],
-  [Tick, ENTITY_QUERY_TYPE.DISTINCT_ON],
-  [TickDayData, ENTITY_QUERY_TYPE.DISTINCT_ON],
-  [UniswapDayData, ENTITY_QUERY_TYPE.GROUP_BY]
+  [TokenDayData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
+  [TokenHourData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
+  [PoolDayData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
+  [PoolHourData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
+  [Position, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
+  [PositionSnapshot, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
+  [Tick, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
+  [TickDayData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
+  [UniswapDayData, ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED]
 ]);
 
 export class Database implements DatabaseInterface {
@@ -109,7 +108,8 @@ export class Database implements DatabaseInterface {
 
     this._config = {
       ...config,
-      entities: [entitiesDir]
+      entities: [entitiesDir],
+      subscribers: [path.join(__dirname, 'entity/Subscriber.*')]
     };
 
     this._baseDatabase = new BaseDatabase(this._config);
