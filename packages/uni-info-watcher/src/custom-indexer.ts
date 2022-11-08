@@ -18,6 +18,11 @@ import { LatestToken } from './entity/LatestToken';
 import { UniswapDayData } from './entity/UniswapDayData';
 import { LatestUniswapDayData } from './entity/LatestUniswapDayData';
 
+export const entityToLatestEntityMap: Map<any, any> = new Map();
+entityToLatestEntityMap.set(Pool, LatestPool);
+entityToLatestEntityMap.set(Token, LatestToken);
+entityToLatestEntityMap.set(UniswapDayData, LatestUniswapDayData);
+
 export class CustomIndexer {
   _config: Config;
   _db: Database;
@@ -66,20 +71,7 @@ export class CustomIndexer {
     selections: ReadonlyArray<SelectionNode> = []
   ): Promise<Entity[]> {
     let entities: Entity[];
-
-    let latestEntity;
-
-    if (entity === Pool as any) {
-      latestEntity = LatestPool;
-    }
-
-    if (entity === Token as any) {
-      latestEntity = LatestToken;
-    }
-
-    if (entity === UniswapDayData as any) {
-      latestEntity = LatestUniswapDayData;
-    }
+    const latestEntity = entityToLatestEntityMap.get(entity);
 
     if (latestEntity) {
       // Use latest entity tables for Pool and Token.
