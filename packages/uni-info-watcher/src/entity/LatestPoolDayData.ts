@@ -1,21 +1,24 @@
 //
-// Copyright 2022 Vulcanize, Inc.
+// Copyright 2021 Vulcanize, Inc.
 //
 
 import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 
 @Entity()
 @Index(['id', 'blockHash'])
-export class LatestUniswapDayData {
-  @PrimaryColumn('varchar', { length: 42 })
+export class LatestPoolDayData {
+  @PrimaryColumn('varchar')
   id!: string;
 
   @Column('varchar', { length: 66 })
-  blockHash!: string;
+  blockHash!: string
 
   @Column('integer')
   blockNumber!: number;
 
   @Column('integer')
-  date!: number
+  date!: number;
+
+  @Column('varchar', { length: 42 })
+  pool!: string;
 }

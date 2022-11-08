@@ -6,16 +6,19 @@ import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 
 @Entity()
 @Index(['id', 'blockHash'])
-export class LatestUniswapDayData {
-  @PrimaryColumn('varchar', { length: 42 })
+export class LatestTokenHourData {
+  @PrimaryColumn('varchar')
   id!: string;
 
   @Column('varchar', { length: 66 })
-  blockHash!: string;
+  blockHash!: string
 
   @Column('integer')
   blockNumber!: number;
 
   @Column('integer')
-  date!: number
+  periodStartUnix!: number
+
+  @Column('varchar', { length: 42 })
+  token!: string;
 }
