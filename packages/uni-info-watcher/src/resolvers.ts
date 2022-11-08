@@ -6,6 +6,7 @@ import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 import { GraphQLResolveInfo, GraphQLScalarType } from 'graphql';
+import JSONbig from 'json-bigint';
 
 import { gqlQueryCount, gqlTotalQueryCount, GraphDecimal } from '@vulcanize/util';
 import { BlockHeight, OrderDirection, getResultState } from '@cerc-io/util';
@@ -75,7 +76,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         _: any,
         { id, block = {} }: { id: string, block: BlockHeight }
       ) => {
-        log('bundle', id, block);
+        log('bundle', JSONbig.stringify({ id, block }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('bundle').inc(1);
 
@@ -83,7 +84,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
       },
 
       bundles: async (_: any, { block = {}, first, skip }: { first: number, skip: number, block: BlockHeight }) => {
-        log('bundles', block, first, skip);
+        log('bundles', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('bundles').inc(1);
 
@@ -102,7 +103,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('burns', first, orderBy, orderDirection, where, skip);
+        log('burns', JSONbig.stringify({ block, first, orderBy, orderDirection, where, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('burns').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -120,7 +121,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         _: any,
         { block = {}, first, skip }: { first: number, skip: number, block: BlockHeight }
       ) => {
-        log('factories', block, first, skip);
+        log('factories', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('factories').inc(1);
 
@@ -139,7 +140,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('mints', first, skip, orderBy, orderDirection, where);
+        log('mints', JSONbig.stringify({ block, first, skip, orderBy, orderDirection, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('mints').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -159,7 +160,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('pool', id, block);
+        log('pool', JSONbig.stringify({ id, block }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('pool').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -173,7 +174,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('poolDayDatas', first, skip, orderBy, orderDirection, where);
+        log('poolDayDatas', JSONbig.stringify({ block, first, skip, orderBy, orderDirection, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('poolDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -193,7 +194,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('poolHourDatas', first, skip);
+        log('poolHourDatas', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('poolHourDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -213,7 +214,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('pools', block, first, skip, orderBy, orderDirection, where);
+        log('pools', JSONbig.stringify({ block, first, skip, orderBy, orderDirection, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('pools').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -243,7 +244,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('swaps', first, skip, orderBy, orderDirection, where);
+        log('swaps', JSONbig.stringify({ block, first, skip, orderBy, orderDirection, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('swaps').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -263,7 +264,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('ticks', block, first, skip, where);
+        log('ticks', JSONbig.stringify({ block, first, skip, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('ticks').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -283,7 +284,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('token', id, block);
+        log('token', JSONbig.stringify({ id, block }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('token').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -297,7 +298,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('tokens', orderBy, orderDirection, where, skip);
+        log('tokens', JSONbig.stringify({ block, orderBy, orderDirection, where, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokens').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -327,7 +328,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('tokenDayDatas', first, skip, orderBy, orderDirection, where);
+        log('tokenDayDatas', JSONbig.stringify({ block, first, skip, orderBy, orderDirection, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokenDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -347,7 +348,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('tokenHourDatas', first, skip, orderBy, orderDirection, where);
+        log('tokenHourDatas', JSONbig.stringify({ block, first, skip, orderBy, orderDirection, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokenHourDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -367,7 +368,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('transactions', first, skip, orderBy, orderDirection);
+        log('transactions', JSONbig.stringify({ block, first, skip, orderBy, orderDirection }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('transactions').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -397,7 +398,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('uniswapDayDatas', first, skip, orderBy, orderDirection, where);
+        log('uniswapDayDatas', JSONbig.stringify({ block, first, skip, orderBy, orderDirection, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('uniswapDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -426,7 +427,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('positions', first, skip, where);
+        log('positions', JSONbig.stringify({ block, first, skip, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('positions').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -446,7 +447,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('positionSnapshots', first, skip);
+        log('positionSnapshots', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('positionSnapshots').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -466,7 +467,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('tickDayDatas', first, skip);
+        log('tickDayDatas', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tickDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -486,7 +487,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('tickHourDatas', first, skip);
+        log('tickHourDatas', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tickHourDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -506,7 +507,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('flashes', first, skip);
+        log('flashes', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('flashes').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -526,7 +527,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         __: any,
         info: GraphQLResolveInfo
       ) => {
-        log('collects', first, skip);
+        log('collects', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('collects').inc(1);
         assert(info.fieldNodes[0].selectionSet);
@@ -541,7 +542,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
       },
 
       blocks: async (_: any, { first, orderBy, orderDirection, where }: { first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
-        log('blocks', first, orderBy, orderDirection, where);
+        log('blocks', JSONbig.stringify({ first, orderBy, orderDirection, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('blocks').inc(1);
 
