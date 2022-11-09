@@ -184,7 +184,7 @@ export class CustomIndexer {
     }
 
     let selectQueryBuilder = latestEntityRepo.createQueryBuilder('latest')
-      .select('result.*')
+      .select('*')
       .from(
         qb => {
           // https://stackoverflow.com/a/72026555/10026807
@@ -195,13 +195,13 @@ export class CustomIndexer {
         'result'
       );
 
-    selectQueryBuilder = this.buildQuery(entityRepo, selectQueryBuilder, where, 'result', 'subTable_');
+    selectQueryBuilder = this.buildQuery(latestEntityRepo, selectQueryBuilder, where, 'latest');
 
     if (queryOptions.orderBy) {
-      selectQueryBuilder = this.orderQuery(entityRepo, selectQueryBuilder, queryOptions, 'result', 'subTable_');
+      selectQueryBuilder = this.orderQuery(latestEntityRepo, selectQueryBuilder, queryOptions, 'latest');
     }
 
-    selectQueryBuilder = this.orderQuery(entityRepo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' }, 'result', 'subTable_');
+    selectQueryBuilder = this.orderQuery(latestEntityRepo, selectQueryBuilder, { ...queryOptions, orderBy: 'id' }, 'latest');
 
     if (queryOptions.skip) {
       selectQueryBuilder = selectQueryBuilder.offset(queryOptions.skip);
