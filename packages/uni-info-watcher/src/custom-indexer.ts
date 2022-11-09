@@ -17,11 +17,20 @@ import { Token } from './entity/Token';
 import { LatestToken } from './entity/LatestToken';
 import { UniswapDayData } from './entity/UniswapDayData';
 import { LatestUniswapDayData } from './entity/LatestUniswapDayData';
+import { TokenDayData } from './entity/TokenDayData';
+import { LatestTokenDayData } from './entity/LatestTokenDayData';
+import { TokenHourData } from './entity/TokenHourData';
+import { LatestTokenHourData } from './entity/LatestTokenHourData';
+import { PoolDayData } from './entity/PoolDayData';
+import { LatestPoolDayData } from './entity/LatestPoolDayData';
 
 export const entityToLatestEntityMap: Map<any, any> = new Map();
 entityToLatestEntityMap.set(Pool, LatestPool);
 entityToLatestEntityMap.set(Token, LatestToken);
 entityToLatestEntityMap.set(UniswapDayData, LatestUniswapDayData);
+entityToLatestEntityMap.set(TokenDayData, LatestTokenDayData);
+entityToLatestEntityMap.set(TokenHourData, LatestTokenHourData);
+entityToLatestEntityMap.set(PoolDayData, LatestPoolDayData);
 
 export class CustomIndexer {
   _config: Config;
@@ -80,7 +89,8 @@ export class CustomIndexer {
         entity,
         latestEntity,
         where,
-        queryOptions
+        queryOptions,
+        selections
       );
     } else {
       // Use different suitable query patterns based on entities.
@@ -91,6 +101,10 @@ export class CustomIndexer {
 
         case ENTITY_QUERY_TYPE.UNIQUE:
           entities = await this._db.graphDatabase.getEntitiesUnique(queryRunner, entity, {}, where, queryOptions);
+          break;
+
+        case ENTITY_QUERY_TYPE.UNIQUE_WITHOUT_PRUNED:
+          entities = await this._db.graphDatabase.getEntitiesUniqueWithoutPruned(queryRunner, entity, {}, where, queryOptions);
           break;
 
         case ENTITY_QUERY_TYPE.DISTINCT_ON:
@@ -130,17 +144,35 @@ export class CustomIndexer {
     entity: new () => Entity,
     latestEntity: new () => any,
     where: Where = {},
-    queryOptions: QueryOptions = {}
+    queryOptions: QueryOptions = {},
+    selections: ReadonlyArray<SelectionNode> = []
   ): Promise<Entity[]> {
-    const repo = queryRunner.manager.getRepository(entity);
-    const { tableName } = repo.metadata;
+    const entityRepo = queryRunner.manager.getRepository(entity);
+    const latestEntityRepo = queryRunner.manager.getRepository(latestEntity);
+    const latestEntityFields = latestEntityRepo.metadata.columns.map(column => column.propertyName);
 
-    let selectQueryBuilder = repo.createQueryBuilder(tableName)
-      .innerJoin(
-        latestEntity,
-        'latest',
-        `latest.id = ${tableName}.id AND latest.blockHash = ${tableName}.blockHash`
-      );
+    const selectionNotInLatestEntity = selections.filter(selection => selection.kind === 'Field' && selection.name.value !== '__typename')
+      .some(selection => {
+        assert(selection.kind === 'Field');
+
+        return !latestEntityFields.includes(selection.name.value);
+      });
+
+    // Use latest entity table for faster query.
+    let repo = latestEntityRepo;
+    let selectQueryBuilder = repo.createQueryBuilder('latest');
+
+    if (selectionNotInLatestEntity) {
+      // Join with latest entity table if selection field doesn't exist in latest entity.
+      repo = entityRepo;
+
+      selectQueryBuilder = repo.createQueryBuilder(repo.metadata.tableName)
+        .innerJoin(
+          latestEntity,
+          'latest',
+          `latest.id = ${repo.metadata.tableName}.id AND latest.blockHash = ${repo.metadata.tableName}.blockHash`
+        );
+    }
 
     selectQueryBuilder = this.buildQuery(repo, selectQueryBuilder, where, 'latest');
 

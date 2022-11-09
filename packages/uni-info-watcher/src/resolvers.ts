@@ -199,11 +199,21 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('poolDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(
+        // Check if time travel query.
+        if (Object.keys(block).length) {
+          return indexer.getEntities(
+            PoolDayData,
+            block,
+            where,
+            { limit: first, skip, orderBy, orderDirection },
+            info.fieldNodes[0].selectionSet.selections
+          );
+        }
+
+        return customIndexer.getLatestEntities(
           PoolDayData,
-          block,
           where,
-          { limit: first, skip, orderBy, orderDirection },
+          { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
@@ -363,11 +373,21 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('tokenDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(
+        // Check if time travel query.
+        if (Object.keys(block).length) {
+          return indexer.getEntities(
+            TokenDayData,
+            block,
+            where,
+            { limit: first, skip, orderBy, orderDirection },
+            info.fieldNodes[0].selectionSet.selections
+          );
+        }
+
+        return customIndexer.getLatestEntities(
           TokenDayData,
-          block,
           where,
-          { limit: first, skip, orderBy, orderDirection },
+          { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
@@ -383,11 +403,21 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('tokenHourDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(
+        // Check if time travel query.
+        if (Object.keys(block).length) {
+          return indexer.getEntities(
+            TokenHourData,
+            block,
+            where,
+            { limit: first, skip, orderBy, orderDirection },
+            info.fieldNodes[0].selectionSet.selections
+          );
+        }
+
+        return customIndexer.getLatestEntities(
           TokenHourData,
-          block,
           where,
-          { limit: first, skip, orderBy, orderDirection },
+          { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
         );
       },
