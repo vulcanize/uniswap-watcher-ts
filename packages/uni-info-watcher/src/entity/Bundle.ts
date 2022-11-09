@@ -20,4 +20,7 @@ export class Bundle {
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   ethPriceUSD!: GraphDecimal
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

@@ -49,4 +49,7 @@ export class Flash {
 
   @Column('numeric', { transformer: bigintTransformer })
   logIndex!: bigint
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

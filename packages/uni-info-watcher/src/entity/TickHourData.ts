@@ -44,4 +44,7 @@ export class TickHourData {
 
   @Column('numeric', { transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

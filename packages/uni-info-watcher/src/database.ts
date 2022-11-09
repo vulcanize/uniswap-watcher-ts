@@ -4,20 +4,20 @@
 
 import assert from 'assert';
 import {
-  Brackets,
   Connection,
   ConnectionOptions,
   DeepPartial,
   FindConditions,
   FindManyOptions,
+  In,
   LessThanOrEqual,
   QueryRunner,
-  Repository
+  Repository,
+  UpdateResult
 } from 'typeorm';
 import path from 'path';
 import { SelectionNode } from 'graphql';
 import debug from 'debug';
-import _ from 'lodash';
 
 import {
   StateKind,
@@ -94,6 +94,9 @@ export const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
   [TickDayData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
   [UniswapDayData, ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED]
 ]);
+
+const ENTITIES = [Bundle, Burn, Collect, Factory, Flash, Mint, Pool, PoolDayData, PoolHourData, Position, PositionSnapshot,
+  Swap, Tick, TickDayData, TickHourData, Transaction, UniswapDayData];
 
 export class Database implements DatabaseInterface {
   _config: ConnectionOptions
@@ -845,10 +848,58 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getBlocksAtHeight(repo, height, isPruned);
   }
 
+  async updateEntity<Entity> (queryRunner: QueryRunner, entity: new () => Entity, criteria: any, update: any): Promise<UpdateResult> {
+    const repo = queryRunner.manager.getRepository(entity);
+    return repo.createQueryBuilder()
+      .update()
+      .set(update)
+      .where(criteria)
+      .execute();
+  }
+
   async markBlocksAsPruned (queryRunner: QueryRunner, blocks: BlockProgress[]): Promise<void> {
     const repo = queryRunner.manager.getRepository(BlockProgress);
 
-    return this._baseDatabase.markBlocksAsPruned(repo, blocks);
+    const updatePromises: Promise<void>[] = [];
+    updatePromises.push(this._baseDatabase.markBlocksAsPruned(repo, blocks));
+
+    // Assumption: all blocks are at same height
+    assert(blocks.length);
+    const blockNumber = blocks[0].blockNumber;
+    const blockHashes = blocks.map(block => block.blockHash);
+
+    // Get all entities at the block height
+    const entitiesAtBlock = await Promise.all(
+      ENTITIES.map(entity => {
+        return this.getEntities(
+          queryRunner,
+          entity as any,
+          {
+            select: ['id'] as any,
+            where: { blockNumber }
+          }
+        );
+      })
+    );
+
+    // Extract entity ids from result
+    const entityIds = entitiesAtBlock.map(entities => {
+      return entities.map((entity: any) => entity.id);
+    });
+
+    // Update isPruned flag using fetched entity ids and hashes of blocks to be pruned
+    updatePromises.push(
+      ...ENTITIES.map((entity, index: number) => {
+        return this.updateEntity(
+          queryRunner,
+          entity as any,
+          { id: In(entityIds[index]), blockHash: In(blockHashes) },
+          { isPruned: true }
+        );
+      }) as any
+    );
+
+    await Promise.all(updatePromises);
   }
 
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
@@ -874,7 +925,7 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.updateBlockProgress(repo, block, lastProcessedEventIndex);
   }
 
-  async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<Entity[]> {
+  async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindManyOptions<Entity>): Promise<Entity[]> {
     return this._baseDatabase.getEntities(queryRunner, entity, findConditions);
   }
 

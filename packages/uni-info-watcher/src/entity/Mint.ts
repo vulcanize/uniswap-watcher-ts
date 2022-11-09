@@ -67,4 +67,7 @@ export class Mint {
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
   logIndex!: bigint
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

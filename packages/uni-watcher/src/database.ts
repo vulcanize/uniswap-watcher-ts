@@ -217,7 +217,7 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.updateBlockProgress(repo, block, lastProcessedEventIndex);
   }
 
-  async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<Entity[]> {
+  async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindManyOptions<Entity>): Promise<Entity[]> {
     return this._baseDatabase.getEntities(queryRunner, entity, findConditions);
   }
 

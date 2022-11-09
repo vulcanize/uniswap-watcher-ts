@@ -38,4 +38,7 @@ export class UniswapDayData {
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   volumeUSDUntracked!: GraphDecimal
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

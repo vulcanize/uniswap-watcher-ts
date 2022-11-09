@@ -46,4 +46,7 @@ export class Collect {
 
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
   logIndex!: bigint
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

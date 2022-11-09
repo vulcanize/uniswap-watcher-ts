@@ -98,6 +98,9 @@ export class Pool {
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   liquidityProviderCount!: bigint
 
+  @Column('boolean', { default: false })
+  isPruned!: boolean
+
   // Skipping fee growth as they are not queried.
   // @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
   // feeGrowthGlobal0X128!: bigint

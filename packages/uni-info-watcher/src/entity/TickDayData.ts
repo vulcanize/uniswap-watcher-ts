@@ -54,4 +54,7 @@ export class TickDayData {
 
   @Column('numeric', { default: 0, transformer: bigintTransformer })
   feeGrowthOutside1X128!: bigint
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

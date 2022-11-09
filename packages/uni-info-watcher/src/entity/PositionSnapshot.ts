@@ -65,4 +65,7 @@ export class PositionSnapshot {
 
   @Column('varchar')
   transaction!: string
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }
