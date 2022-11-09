@@ -7,7 +7,7 @@ import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 @Entity()
 @Index(['blockNumber'])
 export class FrothyEntity {
-  @PrimaryColumn('varchar', { length: 42 })
+  @PrimaryColumn('varchar')
   id!: string;
 
   @PrimaryColumn('varchar')
