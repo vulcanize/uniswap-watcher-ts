@@ -62,4 +62,7 @@ export class Token {
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   totalValueLockedUSDUntracked!: GraphDecimal
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

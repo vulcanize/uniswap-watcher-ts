@@ -33,4 +33,7 @@ export class Transaction {
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
   gasPrice!: bigint
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

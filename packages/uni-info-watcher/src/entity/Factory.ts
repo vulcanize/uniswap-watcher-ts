@@ -54,4 +54,7 @@ export class Factory {
 
   @Column('varchar', { length: 42, default: ADDRESS_ZERO })
   owner!: string
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

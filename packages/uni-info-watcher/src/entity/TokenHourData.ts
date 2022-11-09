@@ -57,4 +57,7 @@ export class TokenHourData {
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
   feesUSD!: GraphDecimal
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

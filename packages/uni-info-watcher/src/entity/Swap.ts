@@ -9,6 +9,7 @@ import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulca
 @Index(['id', 'blockNumber'])
 @Index(['transaction'])
 @Index(['timestamp'])
+@Index(['blockHash', 'blockNumber'])
 export class Swap {
   @PrimaryColumn('varchar')
   id!: string;
@@ -62,4 +63,7 @@ export class Swap {
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
   logIndex!: bigint
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }

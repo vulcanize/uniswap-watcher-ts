@@ -67,4 +67,7 @@ export class Position {
 
   @Column('varchar')
   transaction!: string;
+
+  @Column('boolean', { default: false })
+  isPruned!: boolean
 }
