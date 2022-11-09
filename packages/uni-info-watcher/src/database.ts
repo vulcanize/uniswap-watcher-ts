@@ -56,6 +56,7 @@ import { StateSyncStatus } from './entity/StateSyncStatus';
 import { Collect } from './entity/Collect';
 import { Flash } from './entity/Flash';
 import { TickHourData } from './entity/TickHourData';
+import { FrothyEntity } from './entity/FrothyEntity';
 
 const log = debug('vulcanize:database');
 
@@ -95,8 +96,8 @@ export const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
   [UniswapDayData, ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED]
 ]);
 
-const ENTITIES = [Bundle, Burn, Collect, Factory, Flash, Mint, Pool, PoolDayData, PoolHourData, Position, PositionSnapshot,
-  Swap, Tick, TickDayData, TickHourData, Transaction, UniswapDayData];
+export const ENTITIES = new Set([Bundle, Burn, Collect, Factory, Flash, Mint, Pool, PoolDayData, PoolHourData, Position, PositionSnapshot,
+  Swap, Tick, TickDayData, TickHourData, Transaction, UniswapDayData]);
 
 export class Database implements DatabaseInterface {
   _config: ConnectionOptions
@@ -868,38 +869,32 @@ export class Database implements DatabaseInterface {
     const blockNumber = blocks[0].blockNumber;
     const blockHashes = blocks.map(block => block.blockHash);
 
-    // Get all entities at the block height
-    const entitiesAtBlock = await Promise.all(
-      ENTITIES.map(entity => {
-        return this.getEntities(
-          queryRunner,
-          entity as any,
-          {
-            select: ['id'] as any,
-            where: { blockNumber }
-          }
-        );
-      })
-    );
+    const entitiesAtHeight = await this.getEntities(queryRunner, FrothyEntity, { where: { blockNumber } });
 
     // Extract entity ids from result
-    const entityIds = entitiesAtBlock.map(entities => {
-      return entities.map((entity: any) => entity.id);
-    });
+    const entityIdsMap: Map<string, string[]> = new Map();
+    entitiesAtHeight.forEach(entity =>
+      entityIdsMap.set(
+        entity.name,
+        [...entityIdsMap.get(entity.name) || [], entity.id]
+      )
+    );
 
     // Update isPruned flag using fetched entity ids and hashes of blocks to be pruned
     updatePromises.push(
-      ...ENTITIES.map((entity, index: number) => {
+      [...ENTITIES].map((entity) => {
         return this.updateEntity(
           queryRunner,
           entity as any,
-          { id: In(entityIds[index]), blockHash: In(blockHashes) },
+          { id: In(entityIdsMap.get(entity.name) || []), blockHash: In(blockHashes) },
           { isPruned: true }
         );
       }) as any
     );
 
     await Promise.all(updatePromises);
+
+    await this.removeEntities(queryRunner, FrothyEntity, { where: { blockNumber: LessThanOrEqual(blockNumber) } });
   }
 
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
@@ -929,7 +924,7 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getEntities(queryRunner, entity, findConditions);
   }
 
-  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindConditions<Entity>): Promise<void> {
+  async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindManyOptions<Entity>): Promise<void> {
     return this._baseDatabase.removeEntities(queryRunner, entity, findConditions);
   }
 

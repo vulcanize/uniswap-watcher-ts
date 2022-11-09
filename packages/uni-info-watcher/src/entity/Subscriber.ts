@@ -6,6 +6,8 @@ import { EventSubscriber, EntitySubscriberInterface, InsertEvent, UpdateEvent } 
 import _ from 'lodash';
 
 import { entityToLatestEntityMap } from '../custom-indexer';
+import { ENTITIES } from '../database';
+import { FrothyEntity } from './FrothyEntity';
 
 @EventSubscriber()
 export class EntitySubscriber implements EntitySubscriberInterface {
@@ -19,10 +21,33 @@ export class EntitySubscriber implements EntitySubscriberInterface {
 }
 
 const afterInsertOrUpdate = async (event: InsertEvent<any> | UpdateEvent<any>): Promise<void> => {
-  // Get latest entity's type
   const entity = event.entity;
-  const entityTarget = entityToLatestEntityMap.get(entity.constructor);
 
+  // Return if the entity is being pruned
+  if (entity.isPruned) {
+    return;
+  }
+
+  // Insert the entity details in FrothyEntity table
+  if (ENTITIES.has(entity.constructor)) {
+    const frothyEntity = event.manager.create(
+      FrothyEntity,
+      {
+        ..._.pick(entity, ['id', 'blockHash', 'blockNumber']),
+        ...{ name: entity.constructor.name }
+      }
+    );
+
+    await event.manager.createQueryBuilder()
+      .insert()
+      .into(FrothyEntity)
+      .values(frothyEntity)
+      .orIgnore()
+      .execute();
+  }
+
+  // Get latest entity's type
+  const entityTarget = entityToLatestEntityMap.get(entity.constructor);
   if (!entityTarget) {
     return;
   }
