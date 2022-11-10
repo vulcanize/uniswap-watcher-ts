@@ -118,7 +118,7 @@ export class Database implements DatabaseInterface {
     };
 
     this._baseDatabase = new BaseDatabase(this._config);
-    this._graphDatabase = new GraphDatabase(this._config, entitiesDir, ENTITY_QUERY_TYPE_MAP);
+    this._graphDatabase = new GraphDatabase(this.baseDatabase, ENTITY_QUERY_TYPE_MAP);
     this._relationsMap = new Map();
     this._populateRelationsMap();
   }
