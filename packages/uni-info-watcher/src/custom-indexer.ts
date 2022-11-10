@@ -4,7 +4,7 @@
 
 import { SelectionNode } from 'graphql';
 import assert from 'assert';
-import { Brackets, QueryRunner, Repository, SelectQueryBuilder } from 'typeorm';
+import { Brackets, FindConditions, LessThanOrEqual, QueryRunner, Repository, SelectQueryBuilder } from 'typeorm';
 
 import { OPERATOR_MAP, Config, QueryOptions, Where, BlockHeight } from '@cerc-io/util';
 import { ENTITY_QUERY_TYPE, resolveEntityFieldConflicts } from '@cerc-io/graph-node';
@@ -41,6 +41,47 @@ export class CustomIndexer {
     this._config = config;
     this._db = db;
     this._indexer = indexer;
+  }
+
+  async getPool (id: string, block: BlockHeight, selections: ReadonlyArray<SelectionNode> = []): Promise<Pool | undefined> {
+    const dbTx = await this._db.createTransactionRunner();
+    let res;
+
+    try {
+      const repo = dbTx.manager.getRepository(Pool);
+      const whereOptions: FindConditions<Pool> = { id };
+
+      if (block.hash) {
+        whereOptions.blockHash = block.hash;
+      }
+
+      if (block.number) {
+        whereOptions.blockNumber = LessThanOrEqual(block.number);
+      }
+
+      let entity = await this._db.getModelEntity(repo, whereOptions);
+
+      if (entity) {
+        [entity] = await this.loadEntitiesRelations(
+          dbTx,
+          block,
+          this._db.relationsMap,
+          Pool,
+          [entity],
+          selections
+        );
+      }
+
+      res = entity;
+      await dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+
+    return res;
   }
 
   async getEntities<Entity> (
@@ -146,7 +187,7 @@ export class CustomIndexer {
       return [];
     }
 
-    entities = await this.loadLatestEntitiesRelations(queryRunner, block, relationsMap, entity, entities, selections);
+    entities = await this.loadEntitiesRelations(queryRunner, block, relationsMap, entity, entities, selections);
     // Resolve any field name conflicts in the entity result.
     entities = entities.map(entity => resolveEntityFieldConflicts(entity));
 
@@ -271,7 +312,7 @@ export class CustomIndexer {
     return selectQueryBuilder.getMany();
   }
 
-  async loadLatestEntitiesRelations<Entity> (
+  async loadEntitiesRelations<Entity> (
     queryRunner: QueryRunner,
     block: BlockHeight,
     relationsMap: Map<any, { [key: string]: any }>,

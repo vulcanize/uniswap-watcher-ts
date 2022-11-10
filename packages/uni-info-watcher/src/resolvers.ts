@@ -165,7 +165,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('pool').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getPool(id, block, info.fieldNodes[0].selectionSet.selections);
+        return customIndexer.getPool(id, block, info.fieldNodes[0].selectionSet.selections);
       },
 
       poolDayDatas: async (
@@ -259,7 +259,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('ticks').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        return indexer.getEntities(
+        return customIndexer.getEntities(
           Tick,
           block,
           where,
