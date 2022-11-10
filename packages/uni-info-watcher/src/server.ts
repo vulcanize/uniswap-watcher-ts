@@ -47,7 +47,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { host, port, mode, maxSimultaneousRequests, maxRequestQueueLimit } = config.server;
+  const { host, port, maxSimultaneousRequests, maxRequestQueueLimit } = config.server;
 
   const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 

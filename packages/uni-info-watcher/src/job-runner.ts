@@ -79,7 +79,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode }, metrics } = config;
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode } } = config;
 
   assert(dbConfig, 'Missing database config');
 
