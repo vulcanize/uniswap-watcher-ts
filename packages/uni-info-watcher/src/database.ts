@@ -127,6 +127,10 @@ export class Database implements DatabaseInterface {
     return this._relationsMap;
   }
 
+  get baseDatabase (): BaseDatabase {
+    return this._baseDatabase;
+  }
+
   get graphDatabase (): GraphDatabase {
     return this._graphDatabase;
   }

@@ -108,19 +108,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('burns').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Check if time travel query.
-        if (Object.keys(block).length) {
-          return indexer.getEntities(
-            Burn,
-            block,
-            where,
-            { limit: first, skip, orderBy, orderDirection },
-            info.fieldNodes[0].selectionSet.selections
-          );
-        }
-
-        return customIndexer.getLatestEntities(
+        return customIndexer.getEntities(
           Burn,
+          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -155,19 +145,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('mints').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Check if time travel query.
-        if (Object.keys(block).length) {
-          return indexer.getEntities(
-            Mint,
-            block,
-            where,
-            { limit: first, skip, orderBy, orderDirection },
-            info.fieldNodes[0].selectionSet.selections
-          );
-        }
-
-        return customIndexer.getLatestEntities(
+        return customIndexer.getEntities(
           Mint,
+          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -199,19 +179,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('poolDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Check if time travel query.
-        if (Object.keys(block).length) {
-          return indexer.getEntities(
-            PoolDayData,
-            block,
-            where,
-            { limit: first, skip, orderBy, orderDirection },
-            info.fieldNodes[0].selectionSet.selections
-          );
-        }
-
-        return customIndexer.getLatestEntities(
+        return customIndexer.getEntities(
           PoolDayData,
+          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -249,19 +219,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('pools').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Check if time travel query.
-        if (Object.keys(block).length) {
-          return indexer.getEntities(
-            Pool,
-            block,
-            where,
-            { limit: first, orderBy, orderDirection, skip },
-            info.fieldNodes[0].selectionSet.selections
-          );
-        }
-
-        return customIndexer.getLatestEntities(
+        return customIndexer.getEntities(
           Pool,
+          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -279,19 +239,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('swaps').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Check if time travel query.
-        if (Object.keys(block).length) {
-          return indexer.getEntities(
-            Swap,
-            block,
-            where,
-            { limit: first, skip, orderBy, orderDirection },
-            info.fieldNodes[0].selectionSet.selections
-          );
-        }
-
-        return customIndexer.getLatestEntities(
+        return customIndexer.getEntities(
           Swap,
+          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -343,21 +293,11 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('tokens').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Check if time travel query.
-        if (Object.keys(block).length) {
-          return indexer.getEntities(
-            Token,
-            block,
-            where,
-            { limit: first, skip, orderBy, orderDirection },
-            info.fieldNodes[0].selectionSet.selections
-          );
-        }
-
-        return customIndexer.getLatestEntities(
+        return customIndexer.getEntities(
           Token,
+          block,
           where,
-          { limit: first, orderBy, orderDirection, skip },
+          { limit: first, skip, orderBy, orderDirection },
           info.fieldNodes[0].selectionSet.selections
         );
       },
@@ -373,19 +313,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('tokenDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Check if time travel query.
-        if (Object.keys(block).length) {
-          return indexer.getEntities(
-            TokenDayData,
-            block,
-            where,
-            { limit: first, skip, orderBy, orderDirection },
-            info.fieldNodes[0].selectionSet.selections
-          );
-        }
-
-        return customIndexer.getLatestEntities(
+        return customIndexer.getEntities(
           TokenDayData,
+          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -403,19 +333,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('tokenHourDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Check if time travel query.
-        if (Object.keys(block).length) {
-          return indexer.getEntities(
-            TokenHourData,
-            block,
-            where,
-            { limit: first, skip, orderBy, orderDirection },
-            info.fieldNodes[0].selectionSet.selections
-          );
-        }
-
-        return customIndexer.getLatestEntities(
+        return customIndexer.getEntities(
           TokenHourData,
+          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -433,19 +353,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('transactions').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Check if time travel query.
-        if (Object.keys(block).length) {
-          return indexer.getEntities(
-            Transaction,
-            block,
-            where,
-            { limit: first, skip, orderBy, orderDirection },
-            info.fieldNodes[0].selectionSet.selections
-          );
-        }
-
-        return customIndexer.getLatestEntities(
+        return customIndexer.getEntities(
           Transaction,
+          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
@@ -463,18 +373,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('uniswapDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Check if time travel query.
-        if (Object.keys(block).length) {
-          return indexer.getEntities(
-            UniswapDayData,
-            block,
-            where,
-            { limit: first, skip, orderBy, orderDirection }
-          );
-        }
-
-        return customIndexer.getLatestEntities(
+        return customIndexer.getEntities(
           UniswapDayData,
+          block,
           where,
           { limit: first, orderBy, orderDirection, skip },
           info.fieldNodes[0].selectionSet.selections
