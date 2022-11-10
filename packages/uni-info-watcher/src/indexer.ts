@@ -519,6 +519,20 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.markBlocksAsPruned(blocks);
   }
 
+  async pruneFrothyEntities (blockNumber: number): Promise<void> {
+    const dbTx = await this._db.createTransactionRunner();
+    try {
+      await this._db.pruneFrothyEntities(dbTx, blockNumber);
+
+      dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+  }
+
   async getAncestorAtDepth (blockHash: string, depth: number): Promise<string> {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
@@ -549,7 +563,10 @@ export class Indexer implements IndexerInterface {
 
   async updateSyncStatusCanonicalBlock (blockHash: string, blockNumber: number, force = false): Promise<SyncStatus> {
     const syncStatus = await this._baseIndexer.updateSyncStatusCanonicalBlock(blockHash, blockNumber, force);
+
     this._db.pruneEntityCacheFrothyBlocks(syncStatus.latestCanonicalBlockHash, syncStatus.latestCanonicalBlockNumber);
+
+    await this.pruneFrothyEntities(blockNumber);
 
     return syncStatus;
   }
