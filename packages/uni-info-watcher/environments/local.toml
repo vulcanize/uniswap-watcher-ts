@@ -11,6 +11,9 @@
   # Checkpoint interval in number of blocks.
   checkpointInterval = 2000
 
+  # Enable state creation
+  enableState = false
+
   # Max block range for which to return events in eventsInRange GQL query.
   # Use -1 for skipping check on block range.
   maxEventsBlockRange = 1000
