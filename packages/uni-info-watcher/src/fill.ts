@@ -111,7 +111,9 @@ export const main = async (): Promise<any> => {
   await indexer.init();
 
   if (argv.state) {
+    assert(config.server.enableState, 'State creation disabled');
     await fillState(indexer, db, argv);
+
     return;
   }
 
