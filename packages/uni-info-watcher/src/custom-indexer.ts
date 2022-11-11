@@ -23,6 +23,8 @@ import { TokenHourData } from './entity/TokenHourData';
 import { LatestTokenHourData } from './entity/LatestTokenHourData';
 import { PoolDayData } from './entity/PoolDayData';
 import { LatestPoolDayData } from './entity/LatestPoolDayData';
+import { Tick } from './entity/Tick';
+import { LatestTick } from './entity/LatestTick';
 
 export const entityToLatestEntityMap: Map<any, any> = new Map();
 entityToLatestEntityMap.set(Pool, LatestPool);
@@ -31,6 +33,7 @@ entityToLatestEntityMap.set(UniswapDayData, LatestUniswapDayData);
 entityToLatestEntityMap.set(TokenDayData, LatestTokenDayData);
 entityToLatestEntityMap.set(TokenHourData, LatestTokenHourData);
 entityToLatestEntityMap.set(PoolDayData, LatestPoolDayData);
+entityToLatestEntityMap.set(Tick, LatestTick);
 
 export class CustomIndexer {
   _config: Config;
