@@ -36,7 +36,7 @@ import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDa
 import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv, Block } from './utils';
 import { createTick, feeTierToTickSpacing } from './utils/tick';
 import { ADDRESS_ZERO, FACTORY_ADDRESS, FIRST_GRAFT_BLOCK, WATCHED_CONTRACTS } from './utils/constants';
-import { Database, DEFAULT_LIMIT } from './database';
+import { Database, DEFAULT_LIMIT, ENTITIES } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent, FlashEvent } from './events';
 import { Factory } from './entity/Factory';
@@ -49,16 +49,6 @@ import { Swap } from './entity/Swap';
 import { Position } from './entity/Position';
 import { PositionSnapshot } from './entity/PositionSnapshot';
 import { Tick } from './entity/Tick';
-import { PoolDayData } from './entity/PoolDayData';
-import { PoolHourData } from './entity/PoolHourData';
-import { UniswapDayData } from './entity/UniswapDayData';
-import { TokenDayData } from './entity/TokenDayData';
-import { TokenHourData } from './entity/TokenHourData';
-import { TickDayData } from './entity/TickDayData';
-import { Collect } from './entity/Collect';
-import { Flash } from './entity/Flash';
-import { TickHourData } from './entity/TickHourData';
-import { Transaction as TransactionEntity } from './entity/Transaction';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { Contract, KIND_POOL } from './entity/Contract';
@@ -73,8 +63,6 @@ const SYNC_DELTA = 5;
 const log = debug('vulcanize:indexer');
 
 export { OrderDirection, BlockHeight };
-
-export const ENTITIES = new Set([Bundle, Burn, Collect, Factory, Flash, Mint, Pool, PoolDayData, PoolHourData, Position, PositionSnapshot, Swap, Tick, TickDayData, TickHourData, Token, TokenDayData, TokenHourData, TransactionEntity, UniswapDayData]);
 
 export class Indexer implements IndexerInterface {
   _db: Database

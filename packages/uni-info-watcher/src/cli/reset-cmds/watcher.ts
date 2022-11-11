@@ -3,7 +3,6 @@
 //
 
 import debug from 'debug';
-import { MoreThan } from 'typeorm';
 import assert from 'assert';
 
 import { getConfig, getResetConfig, JobQueue, resetJobs } from '@vulcanize/util';
@@ -12,25 +11,6 @@ import { Client as UniClient } from '@vulcanize/uni-watcher';
 
 import { Database } from '../../database';
 import { Indexer } from '../../indexer';
-import { BlockProgress } from '../../entity/BlockProgress';
-import { Factory } from '../../entity/Factory';
-import { Bundle } from '../../entity/Bundle';
-import { Pool } from '../../entity/Pool';
-import { Mint } from '../../entity/Mint';
-import { Burn } from '../../entity/Burn';
-import { Swap } from '../../entity/Swap';
-import { PositionSnapshot } from '../../entity/PositionSnapshot';
-import { Position } from '../../entity/Position';
-import { Token } from '../../entity/Token';
-import { PoolDayData } from '../../entity/PoolDayData';
-import { PoolHourData } from '../../entity/PoolHourData';
-import { Tick } from '../../entity/Tick';
-import { TickDayData } from '../../entity/TickDayData';
-import { TokenDayData } from '../../entity/TokenDayData';
-import { TokenHourData } from '../../entity/TokenHourData';
-import { Transaction } from '../../entity/Transaction';
-import { UniswapDayData } from '../../entity/UniswapDayData';
-import { Contract } from '../../entity/Contract';
 
 const log = debug('vulcanize:reset-watcher');
 

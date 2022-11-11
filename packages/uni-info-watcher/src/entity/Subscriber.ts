@@ -5,9 +5,10 @@
 import { EventSubscriber, EntitySubscriberInterface, InsertEvent, UpdateEvent } from 'typeorm';
 import _ from 'lodash';
 
-import { entityToLatestEntityMap } from '../custom-indexer';
-import { ENTITIES } from '../indexer';
 import { FrothyEntity } from './FrothyEntity';
+import { entityToLatestEntityMap } from '../custom-indexer';
+import { ENTITIES } from '../database';
+import { getLatestEntityFromEntity } from '../common';
 
 @EventSubscriber()
 export class EntitySubscriber implements EntitySubscriberInterface {
@@ -54,15 +55,14 @@ const afterInsertOrUpdate = async (event: InsertEvent<any> | UpdateEvent<any>): 
 
   // Get latest entity's fields to be updated
   const latestEntityRepo = event.manager.getRepository(entityTarget);
-  const latestEntityFields = latestEntityRepo.metadata.columns.map(column => column.propertyName);
   const fieldsToUpdate = latestEntityRepo.metadata.columns.map(column => column.databaseName).filter(val => val !== 'id');
 
   // Create a latest entity instance and upsert in the db
-  const latestEntity = event.manager.create(entityTarget, _.pick(entity, latestEntityFields));
+  const latestEntity = getLatestEntityFromEntity(latestEntityRepo, entity);
   await event.manager.createQueryBuilder()
     .insert()
     .into(entityTarget)
-    .values(latestEntity)
+    .values(latestEntity as any)
     .orUpdate(
       { conflict_target: ['id'], overwrite: fieldsToUpdate }
     )

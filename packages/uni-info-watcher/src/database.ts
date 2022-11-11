@@ -18,6 +18,7 @@ import {
 import path from 'path';
 import { SelectionNode } from 'graphql';
 import debug from 'debug';
+import _ from 'lodash';
 
 import {
   StateKind,
@@ -58,7 +59,7 @@ import { Flash } from './entity/Flash';
 import { TickHourData } from './entity/TickHourData';
 import { FrothyEntity } from './entity/FrothyEntity';
 import { entityToLatestEntityMap } from './custom-indexer';
-import { ENTITIES } from './indexer';
+import { getLatestEntityFromEntity } from './common';
 
 const log = debug('vulcanize:database');
 
@@ -97,6 +98,8 @@ export const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
   [TickDayData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
   [UniswapDayData, ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED]
 ]);
+
+export const ENTITIES = new Set([Bundle, Burn, Collect, Factory, Flash, Mint, Pool, PoolDayData, PoolHourData, Position, PositionSnapshot, Swap, Tick, TickDayData, TickHourData, Token, TokenDayData, TokenHourData, Transaction, UniswapDayData]);
 
 export class Database implements DatabaseInterface {
   _config: ConnectionOptions
@@ -924,11 +927,15 @@ export class Database implements DatabaseInterface {
       // If found, update the latestEntity entry for the id
       // Else, delete the latestEntity entry for the id
       if (prunedVersion) {
+        // Create a latest entity instance and insert in the db
+        const latestEntityRepo = queryRunner.manager.getRepository(latestEntityType);
+        const latestEntity = getLatestEntityFromEntity(latestEntityRepo, prunedVersion);
+
         await this.updateEntity(
           queryRunner,
           latestEntityType,
           { id: entity.id },
-          prunedVersion
+          latestEntity
         );
       } else {
         await this.removeEntities(
