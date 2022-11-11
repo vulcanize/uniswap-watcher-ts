@@ -3,10 +3,11 @@
 //
 
 import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
+import { bigintTransformer } from '@vulcanize/util';
 
 @Entity()
 @Index(['id', 'blockHash'])
-export class LatestUniswapDayData {
+export class LatestTick {
   @PrimaryColumn('varchar')
   id!: string;
 
@@ -16,6 +17,9 @@ export class LatestUniswapDayData {
   @Column('integer')
   blockNumber!: number;
 
-  @Column('integer')
-  date!: number
+  @Column('numeric', { transformer: bigintTransformer })
+  tickIdx!: bigint;
+
+  @Column('varchar', { length: 42 })
+  poolAddress!: string
 }
