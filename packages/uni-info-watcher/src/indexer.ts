@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan, MoreThan, QueryRunner } from 'typeorm';
+import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan, LessThanOrEqual, MoreThan, QueryRunner } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { providers, utils, BigNumber } from 'ethers';
 import { SelectionNode } from 'graphql';
@@ -36,7 +36,7 @@ import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDa
 import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv, Block } from './utils';
 import { createTick, feeTierToTickSpacing } from './utils/tick';
 import { ADDRESS_ZERO, FACTORY_ADDRESS, FIRST_GRAFT_BLOCK, WATCHED_CONTRACTS } from './utils/constants';
-import { Database, DEFAULT_LIMIT } from './database';
+import { Database, DEFAULT_LIMIT, ENTITIES } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent, FlashEvent } from './events';
 import { Factory } from './entity/Factory';
@@ -49,22 +49,14 @@ import { Swap } from './entity/Swap';
 import { Position } from './entity/Position';
 import { PositionSnapshot } from './entity/PositionSnapshot';
 import { Tick } from './entity/Tick';
-import { PoolDayData } from './entity/PoolDayData';
-import { PoolHourData } from './entity/PoolHourData';
-import { UniswapDayData } from './entity/UniswapDayData';
-import { TokenDayData } from './entity/TokenDayData';
-import { TokenHourData } from './entity/TokenHourData';
-import { TickDayData } from './entity/TickDayData';
-import { Collect } from './entity/Collect';
-import { Flash } from './entity/Flash';
-import { TickHourData } from './entity/TickHourData';
-import { Transaction as TransactionEntity } from './entity/Transaction';
 import { SyncStatus } from './entity/SyncStatus';
 import { BlockProgress } from './entity/BlockProgress';
 import { Contract, KIND_POOL } from './entity/Contract';
 import { State } from './entity/State';
 import { StateSyncStatus } from './entity/StateSyncStatus';
 import { createInitialState, createStateCheckpoint } from './hooks';
+import { entityToLatestEntityMap } from './custom-indexer';
+import { FrothyEntity } from './entity/FrothyEntity';
 
 const SYNC_DELTA = 5;
 
@@ -522,7 +514,30 @@ export class Indexer implements IndexerInterface {
   async pruneFrothyEntities (blockNumber: number): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
     try {
-      await this._db.pruneFrothyEntities(dbTx, blockNumber);
+      // Remove frothy entity entries at | below the prune block height
+      await this._db.removeEntities(dbTx, FrothyEntity, { where: { blockNumber: LessThanOrEqual(blockNumber) } });
+
+      dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+  }
+
+  async resetLatestEntities (blockNumber: number): Promise<void> {
+    const dbTx = await this._db.createTransactionRunner();
+    try {
+      await Promise.all(
+        Array.from(entityToLatestEntityMap.entries()).map(async ([entityType, latestEntityType]) => {
+          // Get entries above the reset block
+          const entitiesToReset = await this._db.getEntities(dbTx, latestEntityType, { where: { blockNumber: MoreThan(blockNumber) } });
+
+          // Canonicalize latest entity table at the reset block height
+          await this._db.canonicalizeLatestEntity(dbTx, entityType, latestEntityType, entitiesToReset, blockNumber);
+        })
+      );
 
       dbTx.commitTransaction();
     } catch (error) {
@@ -624,7 +639,7 @@ export class Indexer implements IndexerInterface {
   }
 
   async resetWatcherToBlock (blockNumber: number): Promise<void> {
-    const entities = [Factory, Token, Bundle, Pool, Mint, Burn, Swap, Position, PositionSnapshot, Tick, PoolDayData, PoolHourData, UniswapDayData, TokenDayData, TokenHourData, TickDayData, Collect, Flash, TickHourData, TransactionEntity];
+    const entities = [...ENTITIES, FrothyEntity];
     await this._baseIndexer.resetWatcherToBlock(blockNumber, entities);
   }
 
