@@ -65,12 +65,15 @@ import { Contract, KIND_POOL } from './entity/Contract';
 import { State } from './entity/State';
 import { StateSyncStatus } from './entity/StateSyncStatus';
 import { createInitialState, createStateCheckpoint } from './hooks';
+import { FrothyEntity } from './entity/FrothyEntity';
 
 const SYNC_DELTA = 5;
 
 const log = debug('vulcanize:indexer');
 
 export { OrderDirection, BlockHeight };
+
+export const ENTITIES = new Set([Bundle, Burn, Collect, Factory, Flash, Mint, Pool, PoolDayData, PoolHourData, Position, PositionSnapshot, Swap, Tick, TickDayData, TickHourData, Token, TokenDayData, TokenHourData, TransactionEntity, UniswapDayData]);
 
 export class Indexer implements IndexerInterface {
   _db: Database
@@ -624,7 +627,7 @@ export class Indexer implements IndexerInterface {
   }
 
   async resetWatcherToBlock (blockNumber: number): Promise<void> {
-    const entities = [Factory, Token, Bundle, Pool, Mint, Burn, Swap, Position, PositionSnapshot, Tick, PoolDayData, PoolHourData, UniswapDayData, TokenDayData, TokenHourData, TickDayData, Collect, Flash, TickHourData, TransactionEntity];
+    const entities = [...ENTITIES, FrothyEntity];
     await this._baseIndexer.resetWatcherToBlock(blockNumber, entities);
   }
 

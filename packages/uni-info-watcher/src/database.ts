@@ -58,6 +58,7 @@ import { Flash } from './entity/Flash';
 import { TickHourData } from './entity/TickHourData';
 import { FrothyEntity } from './entity/FrothyEntity';
 import { entityToLatestEntityMap } from './custom-indexer';
+import { ENTITIES } from './indexer';
 
 const log = debug('vulcanize:database');
 
@@ -96,9 +97,6 @@ export const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
   [TickDayData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
   [UniswapDayData, ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED]
 ]);
-
-export const ENTITIES = new Set([Bundle, Burn, Collect, Factory, Flash, Mint, Pool, PoolDayData, PoolHourData, Position, PositionSnapshot,
-  Swap, Tick, TickDayData, TickHourData, Transaction, UniswapDayData]);
 
 export class Database implements DatabaseInterface {
   _config: ConnectionOptions
