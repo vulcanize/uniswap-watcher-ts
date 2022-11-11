@@ -889,11 +889,11 @@ export class Database implements DatabaseInterface {
 
     // Update isPruned flag using fetched entity ids and hashes of blocks to be pruned
     updatePromises.push(
-      [...ENTITIES].map((entity) => {
+      [...ENTITIES].map((entityType) => {
         return this.updateEntity(
           queryRunner,
-          entity as any,
-          { id: In(entityIdsMap.get(entity.name) || []), blockHash: In(blockHashes) },
+          entityType as any,
+          { id: In(entityIdsMap.get(entityType.name) || []), blockHash: In(blockHashes) },
           { isPruned: true }
         );
       }) as any
@@ -909,12 +909,12 @@ export class Database implements DatabaseInterface {
   async updateNonCanonicalLatestEntities (queryRunner: QueryRunner, blockNumber: number, nonCanonicalBlockHashes: string[]): Promise<void> {
     // Update latest entity tables with canonical entries
     await Promise.all(
-      Array.from(entityToLatestEntityMap.entries()).map(async ([entity, latestEntity]) => {
+      Array.from(entityToLatestEntityMap.entries()).map(async ([entityType, latestEntityType]) => {
         // Get entries for non canonical blocks
-        const nonCanonicalLatestEntities = await this.getEntities(queryRunner, latestEntity, { where: { blockHash: In(nonCanonicalBlockHashes) } });
+        const nonCanonicalLatestEntities = await this.getEntities(queryRunner, latestEntityType, { where: { blockHash: In(nonCanonicalBlockHashes) } });
 
         // Canonicalize latest entity table at given block height
-        await this.canonicalizeLatestEntity(queryRunner, entity, latestEntity, nonCanonicalLatestEntities, blockNumber);
+        await this.canonicalizeLatestEntity(queryRunner, entityType, latestEntityType, nonCanonicalLatestEntities, blockNumber);
       })
     );
   }

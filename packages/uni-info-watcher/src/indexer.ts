@@ -530,12 +530,12 @@ export class Indexer implements IndexerInterface {
     const dbTx = await this._db.createTransactionRunner();
     try {
       await Promise.all(
-        Array.from(entityToLatestEntityMap.entries()).map(async ([entity, latestEntity]) => {
+        Array.from(entityToLatestEntityMap.entries()).map(async ([entityType, latestEntityType]) => {
           // Get entries above the reset block
-          const entitiesToReset = await this._db.getEntities(dbTx, latestEntity, { where: { blockNumber: MoreThan(blockNumber) } });
+          const entitiesToReset = await this._db.getEntities(dbTx, latestEntityType, { where: { blockNumber: MoreThan(blockNumber) } });
 
           // Canonicalize latest entity table at the reset block height
-          await this._db.canonicalizeLatestEntity(dbTx, entity, latestEntity, entitiesToReset, blockNumber);
+          await this._db.canonicalizeLatestEntity(dbTx, entityType, latestEntityType, entitiesToReset, blockNumber);
         })
       );
 
