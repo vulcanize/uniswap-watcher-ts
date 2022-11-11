@@ -45,7 +45,7 @@ const main = async (): Promise<void> => {
   const config: Config = await getConfig(argv.configFile);
   const { ethClient, ethProvider } = await initClients(config);
 
-  const db = new Database(config.database);
+  const db = new Database(config.database, config.server);
   await db.init();
 
   const jobQueueConfig = config.jobQueue;

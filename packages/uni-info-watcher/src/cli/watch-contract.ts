@@ -57,7 +57,7 @@ import { Indexer } from '../indexer';
 
   assert(dbConfig);
 
-  const db = new Database(dbConfig);
+  const db = new Database(dbConfig, config.server);
   await db.init();
 
   assert(jobQueueConfig, 'Missing job queue config');

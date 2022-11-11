@@ -3,6 +3,7 @@
 //
 
 import { Repository, DeepPartial } from 'typeorm';
+import _ from 'lodash';
 
 export function getLatestEntityFromEntity<Entity> (latestEntityRepo: Repository<Entity>, entity: any): Entity {
   const latestEntityFields = latestEntityRepo.metadata.columns.map(column => column.propertyName);

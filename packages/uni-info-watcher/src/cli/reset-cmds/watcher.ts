@@ -31,7 +31,7 @@ export const handler = async (argv: any): Promise<void> => {
   const { dbConfig, upstreamConfig, ethClient, ethProvider } = await getResetConfig(config);
 
   // Initialize database.
-  const db = new Database(dbConfig);
+  const db = new Database(dbConfig, config.server);
   await db.init();
 
   const {

@@ -25,7 +25,7 @@ export const handler = async (argv: any): Promise<void> => {
   const config = await getConfig(argv.configFile);
 
   // Initialize database
-  const db = new Database(config.database);
+  const db = new Database(config.database, config.server);
   await db.init();
 
   // Create a DB transaction

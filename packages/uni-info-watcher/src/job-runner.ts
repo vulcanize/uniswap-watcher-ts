@@ -83,7 +83,7 @@ export const main = async (): Promise<any> => {
 
   assert(dbConfig, 'Missing database config');
 
-  const db = new Database(dbConfig);
+  const db = new Database(dbConfig, config.server);
   await db.init();
 
   assert(upstream, 'Missing upstream config');

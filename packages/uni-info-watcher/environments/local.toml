@@ -24,6 +24,9 @@
   # Boolean to skip updating entity fields required in state creation and not required in the frontend.
   skipStateFieldsUpdate = false
 
+  # Boolean to load GQL query nested entity relations sequentially.
+  loadRelationsSequential = false
+
 [metrics]
   host = "127.0.0.1"
   port = 9004

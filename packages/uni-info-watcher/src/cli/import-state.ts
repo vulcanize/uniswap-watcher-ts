@@ -47,7 +47,7 @@ export const main = async (): Promise<any> => {
   const config: Config = await getConfig(argv.configFile);
   const { ethClient, ethProvider } = await initClients(config);
 
-  const db = new Database(config.database);
+  const db = new Database(config.database, config.server);
   await db.init();
 
   // Note: In-memory pubsub works fine for now, as each watcher is a single process anyway.
