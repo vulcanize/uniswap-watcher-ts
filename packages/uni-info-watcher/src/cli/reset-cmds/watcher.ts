@@ -48,7 +48,7 @@ export const handler = async (argv: any): Promise<void> => {
   const config = await getConfig(argv.configFile);
   await resetJobs(config);
   const { jobQueue: jobQueueConfig } = config;
-  const { dbConfig, serverConfig, upstreamConfig, ethClient, ethProvider } = await getResetConfig(config);
+  const { dbConfig, upstreamConfig, ethClient, ethProvider } = await getResetConfig(config);
 
   // Initialize database.
   const db = new Database(dbConfig);
@@ -73,5 +73,7 @@ export const handler = async (argv: any): Promise<void> => {
   const indexer = new Indexer(config.server, db, uniClient, erc20Client, ethClient, ethProvider, jobQueue);
 
   await indexer.resetWatcherToBlock(argv.blockNumber);
+  await indexer.resetLatestEntities(argv.blockNumber);
+
   log('Reset watcher successfully');
 };

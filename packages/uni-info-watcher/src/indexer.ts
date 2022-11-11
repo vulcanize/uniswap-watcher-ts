@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan, MoreThan, QueryRunner } from 'typeorm';
+import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan, LessThanOrEqual, MoreThan, QueryRunner } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { providers, utils, BigNumber } from 'ethers';
 import { SelectionNode } from 'graphql';
@@ -65,6 +65,7 @@ import { Contract, KIND_POOL } from './entity/Contract';
 import { State } from './entity/State';
 import { StateSyncStatus } from './entity/StateSyncStatus';
 import { createInitialState, createStateCheckpoint } from './hooks';
+import { entityToLatestEntityMap } from './custom-indexer';
 import { FrothyEntity } from './entity/FrothyEntity';
 
 const SYNC_DELTA = 5;
@@ -525,7 +526,30 @@ export class Indexer implements IndexerInterface {
   async pruneFrothyEntities (blockNumber: number): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
     try {
-      await this._db.pruneFrothyEntities(dbTx, blockNumber);
+      // Remove frothy entity entries at | below the prune block height
+      await this._db.removeEntities(dbTx, FrothyEntity, { where: { blockNumber: LessThanOrEqual(blockNumber) } });
+
+      dbTx.commitTransaction();
+    } catch (error) {
+      await dbTx.rollbackTransaction();
+      throw error;
+    } finally {
+      await dbTx.release();
+    }
+  }
+
+  async resetLatestEntities (blockNumber: number): Promise<void> {
+    const dbTx = await this._db.createTransactionRunner();
+    try {
+      await Promise.all(
+        Array.from(entityToLatestEntityMap.entries()).map(async ([entity, latestEntity]) => {
+          // Get entries above the reset block
+          const entitiesToReset = await this._db.getEntities(dbTx, latestEntity, { where: { blockNumber: MoreThan(blockNumber) } });
+
+          // Canonicalize latest entity table at the reset block height
+          await this._db.canonicalizeLatestEntity(dbTx, entity, latestEntity, entitiesToReset, blockNumber);
+        })
+      );
 
       dbTx.commitTransaction();
     } catch (error) {

@@ -6,7 +6,7 @@ import { EventSubscriber, EntitySubscriberInterface, InsertEvent, UpdateEvent } 
 import _ from 'lodash';
 
 import { entityToLatestEntityMap } from '../custom-indexer';
-import { ENTITIES } from '../database';
+import { ENTITIES } from '../indexer';
 import { FrothyEntity } from './FrothyEntity';
 
 @EventSubscriber()
