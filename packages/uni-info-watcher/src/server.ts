@@ -5,7 +5,8 @@
 import assert from 'assert';
 import 'reflect-metadata';
 import express, { Application } from 'express';
-import { ApolloServer, PubSub } from 'apollo-server-express';
+import { ApolloServer } from 'apollo-server-express';
+import { PubSub } from 'graphql-subscriptions';
 import responseCachePlugin from 'apollo-server-plugin-response-cache';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
@@ -97,7 +98,7 @@ export const main = async (): Promise<any> => {
   await eventWatcher.start();
 
   const customIndexer = new CustomIndexer(config, db, indexer);
-  const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, customIndexer, eventWatcher);
+  const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, customIndexer, eventWatcher, config.server.gqlCache);
 
   const app: Application = express();
   app.use(queue({ activeLimit: maxSimultaneousRequests || 1, queuedLimit: maxRequestQueueLimit || -1 }));
@@ -112,7 +113,8 @@ export const main = async (): Promise<any> => {
   server.applyMiddleware({ app });
 
   const httpServer = createServer(app);
-  server.installSubscriptionHandlers(httpServer);
+  // TODO: Enable subscriptions for apollo server v3
+  // server.installSubscriptionHandlers(httpServer);
 
   httpServer.listen(port, host, () => {
     log(`Server is listening on host ${host} port ${port}`);
