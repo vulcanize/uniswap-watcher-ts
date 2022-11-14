@@ -83,12 +83,14 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         return indexer.getBundle(id, block);
       },
 
-      bundles: async (_: any, { block = {}, first, skip }: { first: number, skip: number, block: BlockHeight }) => {
+      bundles: async (
+        _: any,
+        { block = {}, first, skip, where = {} }: { first: number, skip: number, block: BlockHeight, where: { [key: string]: any } }
+      ) => {
         log('bundles', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('bundles').inc(1);
 
-        let where = {};
         if (!indexer._isDemo) {
           // Filter using address deployed on mainnet if not in demo mode
           where = { id: BUNDLE_ID };

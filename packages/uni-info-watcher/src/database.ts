@@ -26,7 +26,8 @@ import {
   DatabaseInterface,
   BlockHeight,
   QueryOptions,
-  Where
+  Where,
+  ServerConfig
 } from '@cerc-io/util';
 import { Database as GraphDatabase, ENTITY_QUERY_TYPE } from '@cerc-io/graph-node';
 
@@ -108,7 +109,7 @@ export class Database implements DatabaseInterface {
   _graphDatabase: GraphDatabase
   _relationsMap: Map<any, { [key: string]: any }>
 
-  constructor (config: ConnectionOptions) {
+  constructor (config: ConnectionOptions, serverConfig: ServerConfig) {
     assert(config);
     const entitiesDir = path.join(__dirname, 'entity/*');
 
@@ -119,7 +120,7 @@ export class Database implements DatabaseInterface {
     };
 
     this._baseDatabase = new BaseDatabase(this._config);
-    this._graphDatabase = new GraphDatabase(this.baseDatabase, ENTITY_QUERY_TYPE_MAP);
+    this._graphDatabase = new GraphDatabase(serverConfig, this.baseDatabase, ENTITY_QUERY_TYPE_MAP);
     this._relationsMap = new Map();
     this._populateRelationsMap();
   }

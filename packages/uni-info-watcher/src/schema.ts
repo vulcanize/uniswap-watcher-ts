@@ -401,6 +401,10 @@ enum OrderDirection {
   desc
 }
 
+input Bundle_filter {
+  id: ID
+}
+
 input PoolDayData_filter {
   date_gt: Int
   pool: String
@@ -581,6 +585,7 @@ type Query {
   bundles(
     first: Int = 100
     skip: Int = 0
+    where: Bundle_filter
 
     """
     The block at which the query should be executed. Can either be an '{ number:
