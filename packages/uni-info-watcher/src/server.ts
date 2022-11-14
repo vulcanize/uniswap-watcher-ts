@@ -98,7 +98,7 @@ export const main = async (): Promise<any> => {
   await eventWatcher.start();
 
   const customIndexer = new CustomIndexer(config, db, indexer);
-  const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, customIndexer, eventWatcher, config.server.gqlCache);
+  const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, customIndexer, eventWatcher);
 
   const app: Application = express();
   app.use(queue({ activeLimit: maxSimultaneousRequests || 1, queuedLimit: maxRequestQueueLimit || -1 }));

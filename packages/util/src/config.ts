@@ -12,11 +12,20 @@ import { providers } from 'ethers';
 
 import { Config as CacheConfig, getCache } from '@vulcanize/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { JobQueueConfig, ServerConfig } from '@cerc-io/util';
+import { JobQueueConfig, ServerConfig as BaseServerConfig } from '@cerc-io/util';
 
 import { getCustomProvider } from './misc';
 
 const log = debug('vulcanize:config');
+
+export interface CacheControlConfig {
+  maxAge: number;
+  timeTravelMaxAge: number;
+}
+
+export interface ServerConfig extends BaseServerConfig {
+  gqlCache: CacheControlConfig;
+}
 
 export interface GQLMetricsConfig {
   port: number;

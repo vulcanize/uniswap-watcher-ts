@@ -5,6 +5,17 @@
 import { gql } from '@apollo/client/core';
 
 export default gql`
+enum CacheControlScope {
+  PUBLIC
+  PRIVATE
+}
+
+directive @cacheControl(
+  maxAge: Int
+  scope: CacheControlScope
+  inheritMaxAge: Boolean
+) on FIELD_DEFINITION | OBJECT | INTERFACE | UNION
+
 scalar BigDecimal
 
 scalar BigInt
@@ -33,9 +44,9 @@ type Pool {
   liquidity: BigInt!
   sqrtPrice: BigInt!
   tick: BigInt
-  token0: Token!
+  token0: Token! @cacheControl(inheritMaxAge: true)
   token0Price: BigDecimal!
-  token1: Token!
+  token1: Token! @cacheControl(inheritMaxAge: true)
   token1Price: BigDecimal!
   totalValueLockedToken0: BigDecimal!
   totalValueLockedToken1: BigDecimal!

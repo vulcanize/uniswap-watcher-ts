@@ -27,6 +27,10 @@
   # Boolean to load GQL query nested entity relations sequentially.
   loadRelationsSequential = false
 
+  [server.gqlCache]
+    maxAge = 15
+    timeTravelMaxAge = 86400
+
 [metrics]
   host = "127.0.0.1"
   port = 9004
