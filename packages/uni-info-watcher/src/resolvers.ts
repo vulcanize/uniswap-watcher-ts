@@ -169,10 +169,12 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         assert(info.fieldNodes[0].selectionSet);
 
         // Set cache-control maxAge
-        const maxAge = lodash.isEmpty(block)
-          ? indexer.serverConfig.gqlCache.maxAge
-          : indexer.serverConfig.gqlCache.timeTravelMaxAge;
-        info.cacheControl.setCacheHint({ maxAge });
+        if (indexer.serverConfig.gqlCache) {
+          const maxAge = lodash.isEmpty(block)
+            ? indexer.serverConfig.gqlCache.maxAge
+            : indexer.serverConfig.gqlCache.timeTravelMaxAge;
+          info.cacheControl.setCacheHint({ maxAge });
+        }
 
         return customIndexer.getPool(id, block, info.fieldNodes[0].selectionSet.selections);
       },
@@ -229,10 +231,12 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         assert(info.fieldNodes[0].selectionSet);
 
         // Set cache-control maxAge
-        const maxAge = lodash.isEmpty(block)
-          ? indexer.serverConfig.gqlCache.maxAge
-          : indexer.serverConfig.gqlCache.timeTravelMaxAge;
-        info.cacheControl.setCacheHint({ maxAge });
+        if (indexer.serverConfig.gqlCache) {
+          const maxAge = lodash.isEmpty(block)
+            ? indexer.serverConfig.gqlCache.maxAge
+            : indexer.serverConfig.gqlCache.timeTravelMaxAge;
+          info.cacheControl.setCacheHint({ maxAge });
+        }
 
         return customIndexer.getEntities(
           Pool,

@@ -24,7 +24,7 @@ export interface CacheControlConfig {
 }
 
 export interface ServerConfig extends BaseServerConfig {
-  gqlCache: CacheControlConfig;
+  gqlCache?: CacheControlConfig;
 }
 
 export interface GQLMetricsConfig {

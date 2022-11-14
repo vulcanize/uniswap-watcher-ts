@@ -6,6 +6,10 @@ import assert from 'assert';
 import 'reflect-metadata';
 import express, { Application } from 'express';
 import { ApolloServer } from 'apollo-server-express';
+import WebSocket from 'ws';
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import { useServer } from 'graphql-ws/lib/use/ws';
+import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core';
 import { PubSub } from 'graphql-subscriptions';
 import responseCachePlugin from 'apollo-server-plugin-response-cache';
 import yargs from 'yargs';
@@ -100,24 +104,45 @@ export const main = async (): Promise<any> => {
   const customIndexer = new CustomIndexer(config, db, indexer);
   const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, customIndexer, eventWatcher);
 
+  // Create an Express app and HTTP server
   const app: Application = express();
   app.use(queue({ activeLimit: maxSimultaneousRequests || 1, queuedLimit: maxRequestQueueLimit || -1 }));
+  const httpServer = createServer(app);
+
+  // Create the schema
+  const schema = makeExecutableSchema({ typeDefs, resolvers });
+
+  // Create our WebSocket server using the HTTP server we just set up.
+  const wsServer = new WebSocket.Server({
+    server: httpServer,
+    path: '/graphql'
+  });
+  const serverCleanup = useServer({ schema }, wsServer);
 
   const server = new ApolloServer({
-    typeDefs,
-    resolvers,
-    plugins: [responseCachePlugin()]
+    schema,
+    csrfPrevention: true,
+    cache: 'bounded',
+    plugins: [
+      // Proper shutdown for the HTTP server
+      ApolloServerPluginDrainHttpServer({ httpServer }),
+      // Proper shutdown for the WebSocket server
+      {
+        async serverWillStart () {
+          return {
+            async drainServer () {
+              await serverCleanup.dispose();
+            }
+          };
+        }
+      },
+      responseCachePlugin()]
   });
-
   await server.start();
   server.applyMiddleware({ app });
 
-  const httpServer = createServer(app);
-  // TODO: Enable subscriptions for apollo server v3
-  // server.installSubscriptionHandlers(httpServer);
-
   httpServer.listen(port, host, () => {
-    log(`Server is listening on host ${host} port ${port}`);
+    log(`Server is listening on ${host}:${port}${server.graphqlPath}`);
   });
 
   await startGQLMetricsServer(config);
