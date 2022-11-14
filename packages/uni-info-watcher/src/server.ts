@@ -6,6 +6,7 @@ import assert from 'assert';
 import 'reflect-metadata';
 import express, { Application } from 'express';
 import { ApolloServer, PubSub } from 'apollo-server-express';
+import responseCachePlugin from 'apollo-server-plugin-response-cache';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
@@ -103,7 +104,8 @@ export const main = async (): Promise<any> => {
 
   const server = new ApolloServer({
     typeDefs,
-    resolvers
+    resolvers,
+    plugins: [responseCachePlugin()]
   });
 
   await server.start();

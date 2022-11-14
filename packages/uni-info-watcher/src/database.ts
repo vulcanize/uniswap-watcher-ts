@@ -18,7 +18,6 @@ import {
 import path from 'path';
 import { SelectionNode } from 'graphql';
 import debug from 'debug';
-import _ from 'lodash';
 
 import {
   StateKind,
