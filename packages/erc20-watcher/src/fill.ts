@@ -7,7 +7,7 @@ import 'reflect-metadata';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
-import { PubSub } from 'apollo-server-express';
+import { PubSub } from 'graphql-subscriptions';
 
 import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';

@@ -7,6 +7,7 @@ import 'reflect-metadata';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
+import { PubSub } from 'graphql-subscriptions';
 
 import { getCache } from '@vulcanize/cache';
 import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
@@ -16,7 +17,6 @@ import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 
 import { Database } from './database';
-import { PubSub } from 'apollo-server-express';
 import { Indexer } from './indexer';
 import { EventWatcher } from './events';
 import { fillState } from './cli/fill-state';

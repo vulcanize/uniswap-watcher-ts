@@ -7,7 +7,7 @@ import 'reflect-metadata';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
-import { PubSub } from 'apollo-server-express';
+import { PubSub } from 'graphql-subscriptions';
 
 import { getCache } from '@vulcanize/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';

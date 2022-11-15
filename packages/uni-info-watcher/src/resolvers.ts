@@ -9,7 +9,7 @@ import { GraphQLResolveInfo, GraphQLScalarType } from 'graphql';
 import JSONbig from 'json-bigint';
 
 import { gqlQueryCount, gqlTotalQueryCount, GraphDecimal } from '@vulcanize/util';
-import { BlockHeight, OrderDirection, getResultState } from '@cerc-io/util';
+import { BlockHeight, OrderDirection, getResultState, setGQLCacheHints } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
 import { Burn } from './entity/Burn';
@@ -43,6 +43,8 @@ export { BlockHeight };
 export const createResolvers = async (indexer: Indexer, customIndexer: CustomIndexer, eventWatcher: EventWatcher): Promise<any> => {
   assert(indexer);
 
+  const gqlCacheConfig = indexer.serverConfig.gqlCache;
+
   return {
     BigInt: new BigInt('bigInt'),
 
@@ -74,18 +76,25 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
     Query: {
       bundle: async (
         _: any,
-        { id, block = {} }: { id: string, block: BlockHeight }
+        { id, block = {} }: { id: string, block: BlockHeight },
+        __: any,
+        info: GraphQLResolveInfo
       ) => {
         log('bundle', JSONbig.stringify({ id, block }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('bundle').inc(1);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return indexer.getBundle(id, block);
       },
 
       bundles: async (
         _: any,
-        { block = {}, first, skip, where = {} }: { first: number, skip: number, block: BlockHeight, where: { [key: string]: any } }
+        { block = {}, first, skip, where = {} }: { first: number, skip: number, block: BlockHeight, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
       ) => {
         log('bundles', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
@@ -95,6 +104,11 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
           // Filter using address deployed on mainnet if not in demo mode
           where = { id: BUNDLE_ID };
         }
+
+        // NOTE: If queries for same type with & without block are fired in a single GQL query,
+        // cache-control might not be set as desired
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return indexer.getEntities(Bundle, block, where, { limit: first, skip });
       },
@@ -110,6 +124,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('burns').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return customIndexer.getEntities(
           Burn,
           block,
@@ -121,7 +138,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
 
       factories: async (
         _: any,
-        { block = {}, first, skip }: { first: number, skip: number, block: BlockHeight }
+        { block = {}, first, skip }: { first: number, skip: number, block: BlockHeight },
+        __: any,
+        info: GraphQLResolveInfo
       ) => {
         log('factories', JSONbig.stringify({ block, first, skip }));
         gqlTotalQueryCount.inc(1);
@@ -132,6 +151,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
           // Filter using address deployed on mainnet if not in demo mode
           where = { id: FACTORY_ADDRESS };
         }
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return indexer.getEntities(Factory, block, where, { limit: first, skip });
       },
@@ -146,6 +168,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('mints').inc(1);
         assert(info.fieldNodes[0].selectionSet);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return customIndexer.getEntities(
           Mint,
@@ -167,6 +192,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('pool').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return customIndexer.getPool(id, block, info.fieldNodes[0].selectionSet.selections);
       },
 
@@ -180,6 +208,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('poolDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return customIndexer.getEntities(
           PoolDayData,
@@ -201,6 +232,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('poolHourDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return indexer.getEntities(
           PoolHourData,
           block,
@@ -220,6 +254,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('pools').inc(1);
         assert(info.fieldNodes[0].selectionSet);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return customIndexer.getEntities(
           Pool,
@@ -241,6 +278,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('swaps').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return customIndexer.getEntities(
           Swap,
           block,
@@ -260,6 +300,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('ticks').inc(1);
         assert(info.fieldNodes[0].selectionSet);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return customIndexer.getEntities(
           Tick,
@@ -281,6 +324,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('token').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return indexer.getToken(id, block, info.fieldNodes[0].selectionSet.selections);
       },
 
@@ -294,6 +340,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokens').inc(1);
         assert(info.fieldNodes[0].selectionSet);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return customIndexer.getEntities(
           Token,
@@ -315,6 +364,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('tokenDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return customIndexer.getEntities(
           TokenDayData,
           block,
@@ -334,6 +386,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tokenHourDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return customIndexer.getEntities(
           TokenHourData,
@@ -355,6 +410,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('transactions').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return customIndexer.getEntities(
           Transaction,
           block,
@@ -374,6 +432,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('uniswapDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return customIndexer.getEntities(
           UniswapDayData,
@@ -395,6 +456,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('positions').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return indexer.getEntities(
           Position,
           block,
@@ -414,6 +478,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('positionSnapshots').inc(1);
         assert(info.fieldNodes[0].selectionSet);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return indexer.getEntities(
           PositionSnapshot,
@@ -435,6 +502,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('tickDayDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return indexer.getEntities(
           TickDayData,
           block,
@@ -454,6 +524,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('tickHourDatas').inc(1);
         assert(info.fieldNodes[0].selectionSet);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
 
         return indexer.getEntities(
           TickHourData,
@@ -475,6 +548,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('flashes').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return indexer.getEntities(
           Flash,
           block,
@@ -495,6 +571,9 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('collects').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
+        // Set cache-control hints
+        setGQLCacheHints(info, block, gqlCacheConfig);
+
         return indexer.getEntities(
           Collect,
           block,
@@ -504,10 +583,18 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         );
       },
 
-      blocks: async (_: any, { first, orderBy, orderDirection, where }: { first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } }) => {
+      blocks: async (
+        _: any,
+        { first, orderBy, orderDirection, where }: { first: number, orderBy: string, orderDirection: OrderDirection, where: { [key: string]: any } },
+        __: any,
+        info: GraphQLResolveInfo
+      ) => {
         log('blocks', JSONbig.stringify({ first, orderBy, orderDirection, where }));
         gqlTotalQueryCount.inc(1);
         gqlQueryCount.labels('blocks').inc(1);
+
+        // Set cache-control hints
+        setGQLCacheHints(info, {}, gqlCacheConfig);
 
         return indexer.getBlockEntities(where, { limit: first, orderBy, orderDirection });
       },

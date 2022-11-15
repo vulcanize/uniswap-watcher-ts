@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { PubSub } from 'apollo-server-express';
+import { PubSub } from 'graphql-subscriptions';
 
 import { EthClient } from '@vulcanize/ipld-eth-client';
 import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING } from '@cerc-io/util';

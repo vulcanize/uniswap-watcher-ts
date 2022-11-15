@@ -5,7 +5,8 @@
 import assert from 'assert';
 import 'reflect-metadata';
 import express, { Application } from 'express';
-import { ApolloServer, PubSub } from 'apollo-server-express';
+import { ApolloServer } from 'apollo-server-express';
+import { PubSub } from 'graphql-subscriptions';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
