@@ -12,8 +12,9 @@ import _ from 'lodash';
 
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
-import { GraphDecimal, JobQueue, ServerConfig } from '@vulcanize/util';
+import { GraphDecimal, JobQueue } from '@vulcanize/util';
 import {
+  ServerConfig,
   StateStatus,
   ValueResult,
   Indexer as BaseIndexer,

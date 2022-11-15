@@ -7,10 +7,9 @@ import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 import { GraphQLResolveInfo, GraphQLScalarType } from 'graphql';
 import JSONbig from 'json-bigint';
-import lodash from 'lodash';
 
 import { gqlQueryCount, gqlTotalQueryCount, GraphDecimal } from '@vulcanize/util';
-import { BlockHeight, OrderDirection, getResultState } from '@cerc-io/util';
+import { BlockHeight, OrderDirection, getResultState, setGQLCacheHints } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
 import { Burn } from './entity/Burn';
@@ -168,13 +167,8 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('pool').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Set cache-control maxAge
-        if (indexer.serverConfig.gqlCache) {
-          const maxAge = lodash.isEmpty(block)
-            ? indexer.serverConfig.gqlCache.maxAge
-            : indexer.serverConfig.gqlCache.timeTravelMaxAge;
-          info.cacheControl.setCacheHint({ maxAge });
-        }
+        // Set cache-control hints
+        setGQLCacheHints(info, block, indexer.serverConfig.gqlCache);
 
         return customIndexer.getPool(id, block, info.fieldNodes[0].selectionSet.selections);
       },
@@ -230,13 +224,8 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         gqlQueryCount.labels('pools').inc(1);
         assert(info.fieldNodes[0].selectionSet);
 
-        // Set cache-control maxAge
-        if (indexer.serverConfig.gqlCache) {
-          const maxAge = lodash.isEmpty(block)
-            ? indexer.serverConfig.gqlCache.maxAge
-            : indexer.serverConfig.gqlCache.timeTravelMaxAge;
-          info.cacheControl.setCacheHint({ maxAge });
-        }
+        // Set cache-control hints
+        setGQLCacheHints(info, block, indexer.serverConfig.gqlCache);
 
         return customIndexer.getEntities(
           Pool,
