@@ -78,7 +78,7 @@ type PoolDayData {
   tvlUSD: BigDecimal!
   volumeUSD: BigDecimal!
   feesUSD: BigDecimal!
-  pool: Pool!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
   liquidity: BigInt!
   sqrtPrice: BigInt!
   token0Price: BigDecimal!
@@ -100,7 +100,7 @@ type PoolDayData {
 type PoolHourData {
   id: ID!
   periodStartUnix: Int!
-  pool: Pool!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
   high: BigDecimal!
   low: BigDecimal!
   open: BigDecimal!
@@ -130,7 +130,7 @@ type Tick {
   price1: BigDecimal!
   tickIdx: BigInt!
   poolAddress: String
-  pool: Pool!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
   volumeToken0: BigDecimal!
   volumeToken1: BigDecimal!
   volumeUSD: BigDecimal!
@@ -149,8 +149,8 @@ type Tick {
 type TickDayData {
   id: ID!
   date: Int!
-  pool: Pool!
-  tick: Tick!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
+  tick: Tick! @cacheControl(inheritMaxAge: true)
   liquidityGross: BigInt!
   liquidityNet: BigInt!
   volumeToken0: BigDecimal!
@@ -163,8 +163,8 @@ type TickDayData {
 
 type TickHourData {
   id: ID!
-  pool: Pool!
-  tick: Tick!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
+  tick: Tick! @cacheControl(inheritMaxAge: true)
   liquidityGross: BigInt!
   liquidityNet: BigInt!
   periodStartUnix: Int!
@@ -181,12 +181,12 @@ type Mint {
   id: ID!
   origin: Bytes!
   owner: Bytes!
-  pool: Pool!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
   sender: Bytes
   timestamp: BigInt!
-  transaction: Transaction!
-  token0: Token!
-  token1: Token!
+  transaction: Transaction! @cacheControl(inheritMaxAge: true)
+  token0: Token! @cacheControl(inheritMaxAge: true)
+  token1: Token! @cacheControl(inheritMaxAge: true)
   amount: BigInt!
   tickLower: BigInt!
   tickUpper: BigInt!
@@ -199,11 +199,11 @@ type Swap {
   amountUSD: BigDecimal!
   id: ID!
   origin: Bytes!
-  pool: Pool!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
   timestamp: BigInt!
-  transaction: Transaction!
-  token0: Token!
-  token1: Token!
+  transaction: Transaction! @cacheControl(inheritMaxAge: true)
+  token0: Token! @cacheControl(inheritMaxAge: true)
+  token1: Token! @cacheControl(inheritMaxAge: true)
   sender: Bytes!
   recipient: Bytes!
   sqrtPriceX96: BigInt!
@@ -218,11 +218,11 @@ type Burn {
   id: ID!
   origin: Bytes!
   owner: Bytes
-  pool: Pool!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
   timestamp: BigInt!
-  transaction: Transaction!
-  token0: Token!
-  token1: Token!
+  transaction: Transaction! @cacheControl(inheritMaxAge: true)
+  token0: Token! @cacheControl(inheritMaxAge: true)
+  token1: Token! @cacheControl(inheritMaxAge: true)
   amount: BigInt!
   tickLower: BigInt!
   tickUpper: BigInt!
@@ -231,9 +231,9 @@ type Burn {
 
 type Collect {
   id: ID!
-  transaction: Transaction!
+  transaction: Transaction! @cacheControl(inheritMaxAge: true)
   timestamp: BigInt!
-  pool: Pool!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
   owner: Bytes!
   amount0: BigDecimal!
   amount1: BigDecimal!
@@ -245,9 +245,9 @@ type Collect {
 
 type Flash {
   id: ID!
-  transaction: Transaction!
+  transaction: Transaction! @cacheControl(inheritMaxAge: true)
   timestamp: BigInt!
-  pool: Pool!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
   sender: Bytes!
   recipient: Bytes!
   amount0: BigDecimal!
@@ -286,10 +286,10 @@ type Factory {
 }
 
 type Transaction {
-  burns(skip: Int = 0, first: Int = 100, orderBy: Burn_orderBy, orderDirection: OrderDirection, where: Burn_filter): [Burn]!
+  burns(skip: Int = 0, first: Int = 100, orderBy: Burn_orderBy, orderDirection: OrderDirection, where: Burn_filter): [Burn]! @cacheControl(inheritMaxAge: true)
   id: ID!
-  mints(skip: Int = 0, first: Int = 100, orderBy: Mint_orderBy, orderDirection: OrderDirection, where: Mint_filter): [Mint]!
-  swaps(skip: Int = 0, first: Int = 100, orderBy: Swap_orderBy, orderDirection: OrderDirection, where: Swap_filter): [Swap]!
+  mints(skip: Int = 0, first: Int = 100, orderBy: Mint_orderBy, orderDirection: OrderDirection, where: Mint_filter): [Mint]! @cacheControl(inheritMaxAge: true)
+  swaps(skip: Int = 0, first: Int = 100, orderBy: Swap_orderBy, orderDirection: OrderDirection, where: Swap_filter): [Swap]! @cacheControl(inheritMaxAge: true)
   timestamp: BigInt!
   blockNumber: BigInt!
   gasUsed: BigInt!
@@ -308,7 +308,7 @@ type Token {
   txCount: BigInt!
   volume: BigDecimal!
   volumeUSD: BigDecimal!
-  whitelistPools: [Pool]
+  whitelistPools: [Pool] @cacheControl(inheritMaxAge: true)
   totalSupply: BigInt!
   untrackedVolumeUSD: BigDecimal!
   poolCount: BigInt!
@@ -320,7 +320,7 @@ type TokenDayData {
   id: ID!
   totalValueLockedUSD: BigDecimal!
   volumeUSD: BigDecimal!
-  token: Token!
+  token: Token! @cacheControl(inheritMaxAge: true)
   volume: BigDecimal!
   untrackedVolumeUSD: BigDecimal!
   totalValueLocked: BigDecimal!
@@ -344,7 +344,7 @@ type TokenHourData {
   low: BigDecimal!
   open: BigDecimal!
   periodStartUnix: Int!
-  token: Token!
+  token: Token! @cacheControl(inheritMaxAge: true)
   volume: BigDecimal!
   volumeUSD: BigDecimal!
   untrackedVolumeUSD: BigDecimal!
@@ -356,12 +356,12 @@ type TokenHourData {
 
 type Position {
   id: ID!
-  pool: Pool!
-  token0: Token!
-  token1: Token!
-  tickLower: Tick!
-  tickUpper: Tick!
-  transaction: Transaction!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
+  token0: Token! @cacheControl(inheritMaxAge: true)
+  token1: Token! @cacheControl(inheritMaxAge: true)
+  tickLower: Tick! @cacheControl(inheritMaxAge: true)
+  tickUpper: Tick! @cacheControl(inheritMaxAge: true)
+  transaction: Transaction! @cacheControl(inheritMaxAge: true)
   liquidity: BigInt!
   depositedToken0: BigDecimal!
   depositedToken1: BigDecimal!
@@ -387,10 +387,10 @@ type PositionSnapshot {
   withdrawnToken1: BigDecimal!
   collectedFeesToken0: BigDecimal!
   collectedFeesToken1: BigDecimal!
-  pool: Pool!
-  position: Position!
+  pool: Pool! @cacheControl(inheritMaxAge: true)
+  position: Position! @cacheControl(inheritMaxAge: true)
   blockNumber: BigInt!
-  transaction: Transaction!
+  transaction: Transaction! @cacheControl(inheritMaxAge: true)
 }
 
 type Block {

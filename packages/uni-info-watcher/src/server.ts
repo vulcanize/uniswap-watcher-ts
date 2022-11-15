@@ -22,7 +22,7 @@ import queue from 'express-queue';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { DEFAULT_CONFIG_PATH, MAX_GQL_CACHE_SIZE } from '@cerc-io/util';
+import { DEFAULT_CONFIG_PATH, DEFAULT_MAX_GQL_CACHE_SIZE } from '@cerc-io/util';
 
 import { getConfig, getCustomProvider, JobQueue, startGQLMetricsServer } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
@@ -122,7 +122,7 @@ export const main = async (): Promise<any> => {
 
   let gqlCache;
   if (gqlCacheConfig && gqlCacheConfig.enabled) {
-    const maxSize = gqlCacheConfig.maxCacheSize ? gqlCacheConfig.maxCacheSize : MAX_GQL_CACHE_SIZE;
+    const maxSize = gqlCacheConfig.maxCacheSize ? gqlCacheConfig.maxCacheSize : DEFAULT_MAX_GQL_CACHE_SIZE;
     gqlCache = new InMemoryLRUCache({ maxSize });
   }
 
