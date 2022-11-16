@@ -36,7 +36,7 @@ import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDa
 import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv, Block } from './utils';
 import { createTick, feeTierToTickSpacing } from './utils/tick';
 import { ADDRESS_ZERO, FACTORY_ADDRESS, FIRST_GRAFT_BLOCK, WATCHED_CONTRACTS } from './utils/constants';
-import { Database, DEFAULT_LIMIT, ENTITIES, ENTITY_TO_LATEST_ENTITY_MAP } from './database';
+import { Database, DEFAULT_LIMIT, ENTITIES } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent, FlashEvent } from './events';
 import { Factory } from './entity/Factory';
@@ -527,15 +527,7 @@ export class Indexer implements IndexerInterface {
   async resetLatestEntities (blockNumber: number): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
     try {
-      await Promise.all(
-        Array.from(ENTITY_TO_LATEST_ENTITY_MAP.entries()).map(async ([entityType, latestEntityType]) => {
-          // Get entries above the reset block
-          const entitiesToReset = await this._db.getEntities(dbTx, latestEntityType, { where: { blockNumber: MoreThan(blockNumber) } });
-
-          // Canonicalize latest entity table at the reset block height
-          await this._db.canonicalizeLatestEntity(dbTx, entityType, latestEntityType, entitiesToReset, blockNumber);
-        })
-      );
+      this._db.graphDatabase.resetLatestEntities(dbTx, blockNumber);
 
       dbTx.commitTransaction();
     } catch (error) {

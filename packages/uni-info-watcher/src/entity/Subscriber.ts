@@ -5,65 +5,18 @@
 import { EventSubscriber, EntitySubscriberInterface, InsertEvent, UpdateEvent } from 'typeorm';
 import _ from 'lodash';
 
+import { afterEntityInsertOrUpdate } from '@cerc-io/graph-node';
+
 import { FrothyEntity } from './FrothyEntity';
 import { ENTITIES, ENTITY_TO_LATEST_ENTITY_MAP } from '../database';
-import { getLatestEntityFromEntity } from '../common';
 
 @EventSubscriber()
 export class EntitySubscriber implements EntitySubscriberInterface {
   async afterInsert (event: InsertEvent<any>): Promise<void> {
-    await afterInsertOrUpdate(event);
+    await afterEntityInsertOrUpdate(FrothyEntity, ENTITIES, event, ENTITY_TO_LATEST_ENTITY_MAP);
   }
 
   async afterUpdate (event: UpdateEvent<any>): Promise<void> {
-    await afterInsertOrUpdate(event);
+    await afterEntityInsertOrUpdate(FrothyEntity, ENTITIES, event, ENTITY_TO_LATEST_ENTITY_MAP);
   }
 }
-
-const afterInsertOrUpdate = async (event: InsertEvent<any> | UpdateEvent<any>): Promise<void> => {
-  const entity = event.entity;
-
-  // Return if the entity is being pruned
-  if (entity.isPruned) {
-    return;
-  }
-
-  // Insert the entity details in FrothyEntity table
-  if (ENTITIES.has(entity.constructor)) {
-    const frothyEntity = event.manager.create(
-      FrothyEntity,
-      {
-        ..._.pick(entity, ['id', 'blockHash', 'blockNumber']),
-        ...{ name: entity.constructor.name }
-      }
-    );
-
-    await event.manager.createQueryBuilder()
-      .insert()
-      .into(FrothyEntity)
-      .values(frothyEntity)
-      .orIgnore()
-      .execute();
-  }
-
-  // Get latest entity's type
-  const entityTarget = ENTITY_TO_LATEST_ENTITY_MAP.get(entity.constructor);
-  if (!entityTarget) {
-    return;
-  }
-
-  // Get latest entity's fields to be updated
-  const latestEntityRepo = event.manager.getRepository(entityTarget);
-  const fieldsToUpdate = latestEntityRepo.metadata.columns.map(column => column.databaseName).filter(val => val !== 'id');
-
-  // Create a latest entity instance and upsert in the db
-  const latestEntity = getLatestEntityFromEntity(latestEntityRepo, entity);
-  await event.manager.createQueryBuilder()
-    .insert()
-    .into(entityTarget)
-    .values(latestEntity as any)
-    .orUpdate(
-      { conflict_target: ['id'], overwrite: fieldsToUpdate }
-    )
-    .execute();
-};
