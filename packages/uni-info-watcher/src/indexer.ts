@@ -36,7 +36,7 @@ import { updatePoolDayData, updatePoolHourData, updateTickDayData, updateTokenDa
 import { convertTokenToDecimal, loadFactory, loadTransaction, safeDiv, Block } from './utils';
 import { createTick, feeTierToTickSpacing } from './utils/tick';
 import { ADDRESS_ZERO, FACTORY_ADDRESS, FIRST_GRAFT_BLOCK, WATCHED_CONTRACTS } from './utils/constants';
-import { Database, DEFAULT_LIMIT, ENTITIES } from './database';
+import { Database, DEFAULT_LIMIT, ENTITIES, ENTITY_TO_LATEST_ENTITY_MAP } from './database';
 import { Event } from './entity/Event';
 import { ResultEvent, Transaction, PoolCreatedEvent, InitializeEvent, MintEvent, BurnEvent, SwapEvent, IncreaseLiquidityEvent, DecreaseLiquidityEvent, CollectEvent, TransferEvent, FlashEvent } from './events';
 import { Factory } from './entity/Factory';
@@ -55,7 +55,6 @@ import { Contract, KIND_POOL } from './entity/Contract';
 import { State } from './entity/State';
 import { StateSyncStatus } from './entity/StateSyncStatus';
 import { createInitialState, createStateCheckpoint } from './hooks';
-import { entityToLatestEntityMap } from './custom-indexer';
 import { FrothyEntity } from './entity/FrothyEntity';
 
 const SYNC_DELTA = 5;
@@ -529,7 +528,7 @@ export class Indexer implements IndexerInterface {
     const dbTx = await this._db.createTransactionRunner();
     try {
       await Promise.all(
-        Array.from(entityToLatestEntityMap.entries()).map(async ([entityType, latestEntityType]) => {
+        Array.from(ENTITY_TO_LATEST_ENTITY_MAP.entries()).map(async ([entityType, latestEntityType]) => {
           // Get entries above the reset block
           const entitiesToReset = await this._db.getEntities(dbTx, latestEntityType, { where: { blockNumber: MoreThan(blockNumber) } });
 

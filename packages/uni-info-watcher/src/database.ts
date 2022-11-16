@@ -58,8 +58,14 @@ import { Collect } from './entity/Collect';
 import { Flash } from './entity/Flash';
 import { TickHourData } from './entity/TickHourData';
 import { FrothyEntity } from './entity/FrothyEntity';
-import { entityToLatestEntityMap } from './custom-indexer';
 import { getLatestEntityFromEntity } from './common';
+import { LatestPool } from './entity/LatestPool';
+import { LatestToken } from './entity/LatestToken';
+import { LatestUniswapDayData } from './entity/LatestUniswapDayData';
+import { LatestTokenDayData } from './entity/LatestTokenDayData';
+import { LatestTokenHourData } from './entity/LatestTokenHourData';
+import { LatestPoolDayData } from './entity/LatestPoolDayData';
+import { LatestTick } from './entity/LatestTick';
 
 const log = debug('vulcanize:database');
 
@@ -101,6 +107,15 @@ export const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
 
 export const ENTITIES = new Set([Bundle, Burn, Collect, Factory, Flash, Mint, Pool, PoolDayData, PoolHourData, Position, PositionSnapshot, Swap, Tick, TickDayData, TickHourData, Token, TokenDayData, TokenHourData, Transaction, UniswapDayData]);
 
+export const ENTITY_TO_LATEST_ENTITY_MAP: Map<any, any> = new Map();
+ENTITY_TO_LATEST_ENTITY_MAP.set(Pool, LatestPool);
+ENTITY_TO_LATEST_ENTITY_MAP.set(Token, LatestToken);
+ENTITY_TO_LATEST_ENTITY_MAP.set(UniswapDayData, LatestUniswapDayData);
+ENTITY_TO_LATEST_ENTITY_MAP.set(TokenDayData, LatestTokenDayData);
+ENTITY_TO_LATEST_ENTITY_MAP.set(TokenHourData, LatestTokenHourData);
+ENTITY_TO_LATEST_ENTITY_MAP.set(PoolDayData, LatestPoolDayData);
+ENTITY_TO_LATEST_ENTITY_MAP.set(Tick, LatestTick);
+
 export class Database implements DatabaseInterface {
   _config: ConnectionOptions
   _conn!: Connection
@@ -119,7 +134,7 @@ export class Database implements DatabaseInterface {
     };
 
     this._baseDatabase = new BaseDatabase(this._config);
-    this._graphDatabase = new GraphDatabase(serverConfig, this.baseDatabase, ENTITY_QUERY_TYPE_MAP);
+    this._graphDatabase = new GraphDatabase(serverConfig, this.baseDatabase, ENTITY_QUERY_TYPE_MAP, ENTITY_TO_LATEST_ENTITY_MAP);
     this._relationsMap = new Map();
     this._populateRelationsMap();
   }
@@ -909,7 +924,7 @@ export class Database implements DatabaseInterface {
   async updateNonCanonicalLatestEntities (queryRunner: QueryRunner, blockNumber: number, nonCanonicalBlockHashes: string[]): Promise<void> {
     // Update latest entity tables with canonical entries
     await Promise.all(
-      Array.from(entityToLatestEntityMap.entries()).map(async ([entityType, latestEntityType]) => {
+      Array.from(ENTITY_TO_LATEST_ENTITY_MAP.entries()).map(async ([entityType, latestEntityType]) => {
         // Get entries for non canonical blocks
         const nonCanonicalLatestEntities = await this.getEntities(queryRunner, latestEntityType, { where: { blockHash: In(nonCanonicalBlockHashes) } });
 

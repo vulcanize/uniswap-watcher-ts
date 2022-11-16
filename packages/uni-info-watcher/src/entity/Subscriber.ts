@@ -6,8 +6,7 @@ import { EventSubscriber, EntitySubscriberInterface, InsertEvent, UpdateEvent } 
 import _ from 'lodash';
 
 import { FrothyEntity } from './FrothyEntity';
-import { entityToLatestEntityMap } from '../custom-indexer';
-import { ENTITIES } from '../database';
+import { ENTITIES, ENTITY_TO_LATEST_ENTITY_MAP } from '../database';
 import { getLatestEntityFromEntity } from '../common';
 
 @EventSubscriber()
@@ -48,7 +47,7 @@ const afterInsertOrUpdate = async (event: InsertEvent<any> | UpdateEvent<any>): 
   }
 
   // Get latest entity's type
-  const entityTarget = entityToLatestEntityMap.get(entity.constructor);
+  const entityTarget = ENTITY_TO_LATEST_ENTITY_MAP.get(entity.constructor);
   if (!entityTarget) {
     return;
   }

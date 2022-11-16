@@ -10,30 +10,8 @@ import { OPERATOR_MAP, Config, QueryOptions, Where, BlockHeight } from '@cerc-io
 import { ENTITY_QUERY_TYPE, resolveEntityFieldConflicts } from '@cerc-io/graph-node';
 
 import { Indexer } from './indexer';
-import { Database, DEFAULT_LIMIT, ENTITY_QUERY_TYPE_MAP } from './database';
+import { Database, DEFAULT_LIMIT, ENTITY_QUERY_TYPE_MAP, ENTITY_TO_LATEST_ENTITY_MAP } from './database';
 import { Pool } from './entity/Pool';
-import { LatestPool } from './entity/LatestPool';
-import { Token } from './entity/Token';
-import { LatestToken } from './entity/LatestToken';
-import { UniswapDayData } from './entity/UniswapDayData';
-import { LatestUniswapDayData } from './entity/LatestUniswapDayData';
-import { TokenDayData } from './entity/TokenDayData';
-import { LatestTokenDayData } from './entity/LatestTokenDayData';
-import { TokenHourData } from './entity/TokenHourData';
-import { LatestTokenHourData } from './entity/LatestTokenHourData';
-import { PoolDayData } from './entity/PoolDayData';
-import { LatestPoolDayData } from './entity/LatestPoolDayData';
-import { Tick } from './entity/Tick';
-import { LatestTick } from './entity/LatestTick';
-
-export const entityToLatestEntityMap: Map<any, any> = new Map();
-entityToLatestEntityMap.set(Pool, LatestPool);
-entityToLatestEntityMap.set(Token, LatestToken);
-entityToLatestEntityMap.set(UniswapDayData, LatestUniswapDayData);
-entityToLatestEntityMap.set(TokenDayData, LatestTokenDayData);
-entityToLatestEntityMap.set(TokenHourData, LatestTokenHourData);
-entityToLatestEntityMap.set(PoolDayData, LatestPoolDayData);
-entityToLatestEntityMap.set(Tick, LatestTick);
 
 export class CustomIndexer {
   _config: Config;
@@ -126,7 +104,7 @@ export class CustomIndexer {
     selections: ReadonlyArray<SelectionNode> = []
   ): Promise<Entity[]> {
     let entities: Entity[];
-    const latestEntity = entityToLatestEntityMap.get(entity);
+    const latestEntity = ENTITY_TO_LATEST_ENTITY_MAP.get(entity);
 
     if (latestEntity) {
       if (Object.keys(block).length) {
@@ -141,13 +119,12 @@ export class CustomIndexer {
         );
       } else {
         // Use latest entity tables if block height not passed.
-        entities = await this.getDBLatestEntities(
+        entities = await this._db.graphDatabase.getEntitiesLatest(
           queryRunner,
           entity,
           latestEntity,
           where,
-          queryOptions,
-          selections
+          queryOptions
         );
       }
     } else {
