@@ -25,44 +25,12 @@ export class CustomIndexer {
   }
 
   async getPool (id: string, block: BlockHeight, selections: ReadonlyArray<SelectionNode> = []): Promise<Pool | undefined> {
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      const repo = dbTx.manager.getRepository(Pool);
-      const whereOptions: FindConditions<Pool> = { id };
-
-      if (block.hash) {
-        whereOptions.blockHash = block.hash;
-      }
-
-      if (block.number) {
-        whereOptions.blockNumber = LessThanOrEqual(block.number);
-      }
-
-      let entity = await this._db.getModelEntity(repo, whereOptions);
-
-      if (entity) {
-        [entity] = await this.loadEntitiesRelations(
-          dbTx,
-          block,
-          this._db.relationsMap,
-          Pool,
-          [entity],
-          selections
-        );
-      }
-
-      res = entity;
-      await dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-
-    return res;
+    // TODO: Use indexer method in resolver and remove custom-indexer after checking query performance.
+    return this._indexer.getPool(
+      id,
+      block,
+      selections
+    );
   }
 
   async getEntities<Entity> (
@@ -72,26 +40,14 @@ export class CustomIndexer {
     queryOptions: QueryOptions,
     selections: ReadonlyArray<SelectionNode> = []
   ): Promise<Entity[]> {
-    const dbTx = await this._db.createTransactionRunner();
-    let res;
-
-    try {
-      where = this._indexer.getGQLToDBFilter(where);
-
-      if (!queryOptions.limit) {
-        queryOptions.limit = DEFAULT_LIMIT;
-      }
-
-      res = await this.getModelEntities(dbTx, entity, this._db.relationsMap, block, where, queryOptions, selections);
-      dbTx.commitTransaction();
-    } catch (error) {
-      await dbTx.rollbackTransaction();
-      throw error;
-    } finally {
-      await dbTx.release();
-    }
-
-    return res;
+    // TODO: Use indexer method in resolver and remove custom-indexer after checking query performance.
+    return this._indexer.getEntities(
+      entity,
+      block,
+      where,
+      queryOptions,
+      selections
+    );
   }
 
   async getModelEntities<Entity> (
