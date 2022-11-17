@@ -26,7 +26,6 @@ import { createResolvers } from './resolvers';
 import { Indexer } from './indexer';
 import { Database } from './database';
 import { EventWatcher } from './events';
-import { CustomIndexer } from './custom-indexer';
 
 const log = debug('vulcanize:server');
 
@@ -91,8 +90,7 @@ export const main = async (): Promise<any> => {
   await jobQueue.deleteAllJobs();
   await eventWatcher.start();
 
-  const customIndexer = new CustomIndexer(config, db, indexer);
-  const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, customIndexer, eventWatcher);
+  const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, eventWatcher);
 
   // Create an Express app and server
   const app: Application = express();
