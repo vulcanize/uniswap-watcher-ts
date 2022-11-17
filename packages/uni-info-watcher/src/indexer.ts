@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan, LessThanOrEqual, MoreThan, QueryRunner } from 'typeorm';
+import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan, MoreThan, QueryRunner } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { providers, utils, BigNumber } from 'ethers';
 import { SelectionNode } from 'graphql';
@@ -514,8 +514,7 @@ export class Indexer implements IndexerInterface {
   async pruneFrothyEntities (blockNumber: number): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
     try {
-      // Remove frothy entity entries at | below the prune block height
-      await this._db.removeEntities(dbTx, FrothyEntity, { where: { blockNumber: LessThanOrEqual(blockNumber) } });
+      await this._db.graphDatabase.pruneFrothyEntities(dbTx, FrothyEntity, blockNumber);
 
       dbTx.commitTransaction();
     } catch (error) {

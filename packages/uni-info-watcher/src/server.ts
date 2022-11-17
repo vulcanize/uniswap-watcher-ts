@@ -5,24 +5,15 @@
 import assert from 'assert';
 import 'reflect-metadata';
 import express, { Application } from 'express';
-import { ApolloServer } from 'apollo-server-express';
-import WebSocket from 'ws';
-import { makeExecutableSchema } from '@graphql-tools/schema';
-import { useServer } from 'graphql-ws/lib/use/ws';
-import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core';
 import { PubSub } from 'graphql-subscriptions';
-import responseCachePlugin from 'apollo-server-plugin-response-cache';
-import { InMemoryLRUCache } from '@apollo/utils.keyvaluecache';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 import 'graphql-import-node';
-import { createServer } from 'http';
-import queue from 'express-queue';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { DEFAULT_CONFIG_PATH, DEFAULT_MAX_GQL_CACHE_SIZE } from '@cerc-io/util';
+import { createAndStartServer, DEFAULT_CONFIG_PATH } from '@cerc-io/util';
 
 import { getConfig, getCustomProvider, JobQueue, startGQLMetricsServer } from '@vulcanize/util';
 import { getCache } from '@vulcanize/cache';
@@ -53,8 +44,6 @@ export const main = async (): Promise<any> => {
   const config = await getConfig(argv.f);
 
   assert(config.server, 'Missing server config');
-
-  const { host, port, maxSimultaneousRequests, maxRequestQueueLimit, gqlCache: gqlCacheConfig } = config.server;
 
   const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
@@ -105,52 +94,9 @@ export const main = async (): Promise<any> => {
   const customIndexer = new CustomIndexer(config, db, indexer);
   const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, customIndexer, eventWatcher);
 
-  // Create an Express app and HTTP server
+  // Create an Express app and server
   const app: Application = express();
-  app.use(queue({ activeLimit: maxSimultaneousRequests || 1, queuedLimit: maxRequestQueueLimit || -1 }));
-  const httpServer = createServer(app);
-
-  // Create the schema
-  const schema = makeExecutableSchema({ typeDefs, resolvers });
-
-  // Create our WebSocket server using the HTTP server we just set up.
-  const wsServer = new WebSocket.Server({
-    server: httpServer,
-    path: '/graphql'
-  });
-  const serverCleanup = useServer({ schema }, wsServer);
-
-  let gqlCache;
-  if (gqlCacheConfig && gqlCacheConfig.enabled) {
-    const maxSize = gqlCacheConfig.maxCacheSize ? gqlCacheConfig.maxCacheSize : DEFAULT_MAX_GQL_CACHE_SIZE;
-    gqlCache = new InMemoryLRUCache({ maxSize });
-  }
-
-  const server = new ApolloServer({
-    schema,
-    csrfPrevention: true,
-    cache: gqlCache,
-    plugins: [
-      // Proper shutdown for the HTTP server
-      ApolloServerPluginDrainHttpServer({ httpServer }),
-      // Proper shutdown for the WebSocket server
-      {
-        async serverWillStart () {
-          return {
-            async drainServer () {
-              await serverCleanup.dispose();
-            }
-          };
-        }
-      },
-      responseCachePlugin()]
-  });
-  await server.start();
-  server.applyMiddleware({ app });
-
-  httpServer.listen(port, host, () => {
-    log(`Server is listening on ${host}:${port}${server.graphqlPath}`);
-  });
+  const server = createAndStartServer(app, typeDefs, resolvers, config.server);
 
   await startGQLMetricsServer(config);
 

@@ -5,18 +5,17 @@
 import assert from 'assert';
 import 'reflect-metadata';
 import express, { Application } from 'express';
-import { ApolloServer } from 'apollo-server-express';
 import { PubSub } from 'graphql-subscriptions';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 import 'graphql-import-node';
-import { createServer } from 'http';
 
 import { getCache } from '@vulcanize/cache';
 import {
   KIND_ACTIVE,
-  DEFAULT_CONFIG_PATH
+  DEFAULT_CONFIG_PATH,
+  createAndStartServer
 } from '@cerc-io/util';
 import { getConfig, getCustomProvider, JobQueue, startGQLMetricsServer } from '@vulcanize/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
@@ -46,7 +45,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { host, port, kind: watcherKind } = config.server;
+  const { kind: watcherKind } = config.server;
 
   const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
@@ -91,21 +90,9 @@ export const main = async (): Promise<any> => {
 
   const resolvers = process.env.MOCK ? await createMockResolvers() : await createResolvers(indexer, eventWatcher);
 
+  // Create an Express app and server
   const app: Application = express();
-  const server = new ApolloServer({
-    typeDefs,
-    resolvers
-  });
-
-  await server.start();
-  server.applyMiddleware({ app });
-
-  const httpServer = createServer(app);
-  server.installSubscriptionHandlers(httpServer);
-
-  httpServer.listen(port, host, () => {
-    log(`Server is listening on host ${host} port ${port}`);
-  });
+  const server = createAndStartServer(app, typeDefs, resolvers, config.server);
 
   await startGQLMetricsServer(config);
 
