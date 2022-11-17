@@ -6,7 +6,7 @@ import assert from 'assert';
 import debug from 'debug';
 import { PubSub } from 'graphql-subscriptions';
 
-import { EthClient } from '@vulcanize/ipld-eth-client';
+import { EthClient } from '@cerc-io/ipld-eth-client';
 import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
 import {
   JobQueue,

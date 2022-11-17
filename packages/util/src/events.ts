@@ -6,7 +6,7 @@ import assert from 'assert';
 import debug from 'debug';
 import { PubSub } from 'graphql-subscriptions';
 
-import { EthClient } from '@vulcanize/ipld-eth-client';
+import { EthClient } from '@cerc-io/ipld-eth-client';
 import {
   OrderDirection,
   createPruningJob,
