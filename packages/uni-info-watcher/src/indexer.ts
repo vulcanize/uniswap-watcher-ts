@@ -55,7 +55,6 @@ import { Contract, KIND_POOL } from './entity/Contract';
 import { State } from './entity/State';
 import { StateSyncStatus } from './entity/StateSyncStatus';
 import { createInitialState, createStateCheckpoint } from './hooks';
-import { entityToLatestEntityMap } from './custom-indexer';
 import { FrothyEntity } from './entity/FrothyEntity';
 
 const SYNC_DELTA = 5;
@@ -528,15 +527,7 @@ export class Indexer implements IndexerInterface {
   async resetLatestEntities (blockNumber: number): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
     try {
-      await Promise.all(
-        Array.from(entityToLatestEntityMap.entries()).map(async ([entityType, latestEntityType]) => {
-          // Get entries above the reset block
-          const entitiesToReset = await this._db.getEntities(dbTx, latestEntityType, { where: { blockNumber: MoreThan(blockNumber) } });
-
-          // Canonicalize latest entity table at the reset block height
-          await this._db.canonicalizeLatestEntity(dbTx, entityType, latestEntityType, entitiesToReset, blockNumber);
-        })
-      );
+      this._db.graphDatabase.resetLatestEntities(dbTx, blockNumber);
 
       dbTx.commitTransaction();
     } catch (error) {

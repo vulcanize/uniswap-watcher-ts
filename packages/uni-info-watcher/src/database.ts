@@ -58,8 +58,13 @@ import { Collect } from './entity/Collect';
 import { Flash } from './entity/Flash';
 import { TickHourData } from './entity/TickHourData';
 import { FrothyEntity } from './entity/FrothyEntity';
-import { entityToLatestEntityMap } from './custom-indexer';
-import { getLatestEntityFromEntity } from './common';
+import { LatestPool } from './entity/LatestPool';
+import { LatestToken } from './entity/LatestToken';
+import { LatestUniswapDayData } from './entity/LatestUniswapDayData';
+import { LatestTokenDayData } from './entity/LatestTokenDayData';
+import { LatestTokenHourData } from './entity/LatestTokenHourData';
+import { LatestPoolDayData } from './entity/LatestPoolDayData';
+import { LatestTick } from './entity/LatestTick';
 
 const log = debug('vulcanize:database');
 
@@ -82,24 +87,33 @@ export interface CachedEntities {
 export const ENTITY_QUERY_TYPE_MAP = new Map<new() => any, ENTITY_QUERY_TYPE>([
   [Bundle, ENTITY_QUERY_TYPE.SINGULAR],
   [Factory, ENTITY_QUERY_TYPE.SINGULAR],
-  [Pool, ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED],
-  [Token, ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED],
-  [Burn, ENTITY_QUERY_TYPE.UNIQUE_WITHOUT_PRUNED],
-  [Mint, ENTITY_QUERY_TYPE.UNIQUE_WITHOUT_PRUNED],
-  [Swap, ENTITY_QUERY_TYPE.UNIQUE_WITHOUT_PRUNED],
-  [Transaction, ENTITY_QUERY_TYPE.UNIQUE_WITHOUT_PRUNED],
-  [TokenDayData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
-  [TokenHourData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
-  [PoolDayData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
-  [PoolHourData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
-  [Position, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
-  [PositionSnapshot, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
-  [Tick, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
-  [TickDayData, ENTITY_QUERY_TYPE.DISTINCT_ON_WITHOUT_PRUNED],
-  [UniswapDayData, ENTITY_QUERY_TYPE.GROUP_BY_WITHOUT_PRUNED]
+  [Pool, ENTITY_QUERY_TYPE.GROUP_BY],
+  [Token, ENTITY_QUERY_TYPE.GROUP_BY],
+  [Burn, ENTITY_QUERY_TYPE.UNIQUE],
+  [Mint, ENTITY_QUERY_TYPE.UNIQUE],
+  [Swap, ENTITY_QUERY_TYPE.UNIQUE],
+  [Transaction, ENTITY_QUERY_TYPE.UNIQUE],
+  [TokenDayData, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [TokenHourData, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [PoolDayData, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [PoolHourData, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [Position, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [PositionSnapshot, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [Tick, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [TickDayData, ENTITY_QUERY_TYPE.DISTINCT_ON],
+  [UniswapDayData, ENTITY_QUERY_TYPE.GROUP_BY]
 ]);
 
 export const ENTITIES = new Set([Bundle, Burn, Collect, Factory, Flash, Mint, Pool, PoolDayData, PoolHourData, Position, PositionSnapshot, Swap, Tick, TickDayData, TickHourData, Token, TokenDayData, TokenHourData, Transaction, UniswapDayData]);
+
+export const ENTITY_TO_LATEST_ENTITY_MAP: Map<any, any> = new Map();
+ENTITY_TO_LATEST_ENTITY_MAP.set(Pool, LatestPool);
+ENTITY_TO_LATEST_ENTITY_MAP.set(Token, LatestToken);
+ENTITY_TO_LATEST_ENTITY_MAP.set(UniswapDayData, LatestUniswapDayData);
+ENTITY_TO_LATEST_ENTITY_MAP.set(TokenDayData, LatestTokenDayData);
+ENTITY_TO_LATEST_ENTITY_MAP.set(TokenHourData, LatestTokenHourData);
+ENTITY_TO_LATEST_ENTITY_MAP.set(PoolDayData, LatestPoolDayData);
+ENTITY_TO_LATEST_ENTITY_MAP.set(Tick, LatestTick);
 
 export class Database implements DatabaseInterface {
   _config: ConnectionOptions
@@ -119,7 +133,7 @@ export class Database implements DatabaseInterface {
     };
 
     this._baseDatabase = new BaseDatabase(this._config);
-    this._graphDatabase = new GraphDatabase(serverConfig, this.baseDatabase, ENTITY_QUERY_TYPE_MAP);
+    this._graphDatabase = new GraphDatabase(serverConfig, this.baseDatabase, ENTITY_QUERY_TYPE_MAP, ENTITY_TO_LATEST_ENTITY_MAP);
     this._relationsMap = new Map();
     this._populateRelationsMap();
   }
@@ -866,85 +880,9 @@ export class Database implements DatabaseInterface {
 
   async markBlocksAsPruned (queryRunner: QueryRunner, blocks: BlockProgress[]): Promise<void> {
     const repo = queryRunner.manager.getRepository(BlockProgress);
+    await this._baseDatabase.markBlocksAsPruned(repo, blocks);
 
-    const updatePromises: Promise<void>[] = [];
-    updatePromises.push(this._baseDatabase.markBlocksAsPruned(repo, blocks));
-
-    // Assumption: all blocks are at same height
-    assert(blocks.length);
-    const blockNumber = blocks[0].blockNumber;
-    const blockHashes = blocks.map(block => block.blockHash);
-
-    // Get all entities at the block height
-    const entitiesAtHeight = await this.getEntities(queryRunner, FrothyEntity, { where: { blockNumber } });
-
-    // Extract entity ids from result
-    const entityIdsMap: Map<string, string[]> = new Map();
-    entitiesAtHeight.forEach(entity =>
-      entityIdsMap.set(
-        entity.name,
-        [...entityIdsMap.get(entity.name) || [], entity.id]
-      )
-    );
-
-    // Update isPruned flag using fetched entity ids and hashes of blocks to be pruned
-    updatePromises.push(
-      [...ENTITIES].map((entityType) => {
-        return this.updateEntity(
-          queryRunner,
-          entityType as any,
-          { id: In(entityIdsMap.get(entityType.name) || []), blockHash: In(blockHashes) },
-          { isPruned: true }
-        );
-      }) as any
-    );
-
-    // Simultaneously update isPruned flag for all entities
-    await Promise.all(updatePromises);
-
-    // Update latest entity tables with canonical entries
-    await this.updateNonCanonicalLatestEntities(queryRunner, blockNumber, blockHashes);
-  }
-
-  async updateNonCanonicalLatestEntities (queryRunner: QueryRunner, blockNumber: number, nonCanonicalBlockHashes: string[]): Promise<void> {
-    // Update latest entity tables with canonical entries
-    await Promise.all(
-      Array.from(entityToLatestEntityMap.entries()).map(async ([entityType, latestEntityType]) => {
-        // Get entries for non canonical blocks
-        const nonCanonicalLatestEntities = await this.getEntities(queryRunner, latestEntityType, { where: { blockHash: In(nonCanonicalBlockHashes) } });
-
-        // Canonicalize latest entity table at given block height
-        await this.canonicalizeLatestEntity(queryRunner, entityType, latestEntityType, nonCanonicalLatestEntities, blockNumber);
-      })
-    );
-  }
-
-  async canonicalizeLatestEntity (queryRunner: QueryRunner, entityType: any, latestEntityType: any, entities: any[], blockNumber: number): Promise<void> {
-    await Promise.all(entities.map(async (entity: any) => {
-      // Get latest pruned (canonical) version for the given entity
-      const prunedVersion = await this.getLatestPrunedEntity(queryRunner, entityType, entity.id, blockNumber);
-
-      // If found, update the latestEntity entry for the id
-      // Else, delete the latestEntity entry for the id
-      if (prunedVersion) {
-        // Create a latest entity instance and insert in the db
-        const latestEntityRepo = queryRunner.manager.getRepository(latestEntityType);
-        const latestEntity = getLatestEntityFromEntity(latestEntityRepo, prunedVersion);
-
-        await this.updateEntity(
-          queryRunner,
-          latestEntityType,
-          { id: entity.id },
-          latestEntity
-        );
-      } else {
-        await this.removeEntities(
-          queryRunner,
-          latestEntityType,
-          { where: { id: entity.id } }
-        );
-      }
-    }));
+    await this._graphDatabase.pruneEntities(FrothyEntity, queryRunner, blocks, ENTITIES);
   }
 
   async getBlockProgress (blockHash: string): Promise<BlockProgress | undefined> {
@@ -972,20 +910,6 @@ export class Database implements DatabaseInterface {
 
   async getEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindManyOptions<Entity>): Promise<Entity[]> {
     return this._baseDatabase.getEntities(queryRunner, entity, findConditions);
-  }
-
-  async getLatestPrunedEntity<Entity> (queryRunner: QueryRunner, entity: new () => Entity, id: string, canonicalBlockNumber: number): Promise<Entity | undefined> {
-    // Fetch the latest canonical entity for given id
-    const repo = queryRunner.manager.getRepository(entity);
-    const entityInPrunedRegion = await repo.createQueryBuilder('entity')
-      .where('entity.id = :id', { id })
-      .andWhere('entity.is_pruned = false')
-      .andWhere('entity.block_number <= :canonicalBlockNumber', { canonicalBlockNumber })
-      .orderBy('entity.block_number', 'DESC')
-      .limit(1)
-      .getOne();
-
-    return entityInPrunedRegion;
   }
 
   async removeEntities<Entity> (queryRunner: QueryRunner, entity: new () => Entity, findConditions?: FindManyOptions<Entity>): Promise<void> {

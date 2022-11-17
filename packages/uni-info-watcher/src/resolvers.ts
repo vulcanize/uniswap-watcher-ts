@@ -34,13 +34,12 @@ import { Collect } from './entity/Collect';
 import { PoolHourData } from './entity/PoolHourData';
 import { EventWatcher } from './events';
 import { FACTORY_ADDRESS, BUNDLE_ID } from './utils/constants';
-import { CustomIndexer } from './custom-indexer';
 
 const log = debug('vulcanize:resolver');
 
 export { BlockHeight };
 
-export const createResolvers = async (indexer: Indexer, customIndexer: CustomIndexer, eventWatcher: EventWatcher): Promise<any> => {
+export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatcher): Promise<any> => {
   assert(indexer);
 
   const gqlCacheConfig = indexer.serverConfig.gqlCache;
@@ -127,7 +126,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           Burn,
           block,
           where,
@@ -172,7 +171,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           Mint,
           block,
           where,
@@ -195,7 +194,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getPool(id, block, info.fieldNodes[0].selectionSet.selections);
+        return indexer.getPool(id, block, info.fieldNodes[0].selectionSet.selections);
       },
 
       poolDayDatas: async (
@@ -212,7 +211,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           PoolDayData,
           block,
           where,
@@ -223,7 +222,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
 
       poolHourDatas: async (
         _: any,
-        { block, first, skip }: { block: BlockHeight, first: number, skip: number },
+        { block = {}, first, skip }: { block: BlockHeight, first: number, skip: number },
         __: any,
         info: GraphQLResolveInfo
       ) => {
@@ -258,7 +257,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           Pool,
           block,
           where,
@@ -281,7 +280,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           Swap,
           block,
           where,
@@ -304,7 +303,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           Tick,
           block,
           where,
@@ -344,7 +343,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           Token,
           block,
           where,
@@ -367,7 +366,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           TokenDayData,
           block,
           where,
@@ -390,7 +389,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           TokenHourData,
           block,
           where,
@@ -413,7 +412,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           Transaction,
           block,
           where,
@@ -436,7 +435,7 @@ export const createResolvers = async (indexer: Indexer, customIndexer: CustomInd
         // Set cache-control hints
         setGQLCacheHints(info, block, gqlCacheConfig);
 
-        return customIndexer.getEntities(
+        return indexer.getEntities(
           UniswapDayData,
           block,
           where,
