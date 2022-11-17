@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { In } from 'typeorm';
+import { DeepPartial, In } from 'typeorm';
 
 import {
   JobQueueConfig,
@@ -21,7 +21,9 @@ import {
   MAX_REORG_DEPTH,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  UNKNOWN_EVENT_NAME
+  UNKNOWN_EVENT_NAME,
+  wait,
+  BlockProgressInterface
 } from '@cerc-io/util';
 
 import { JobQueue } from './job-queue';
@@ -152,12 +154,15 @@ export class JobRunner {
     console.timeEnd('time:job-runner#_pruneChain');
   }
 
-  async _indexBlock (job: any, blockToBeIndexed: any): Promise<void> {
+  async _indexBlock (job: any, blockToBeIndexed: DeepPartial<BlockProgressInterface>): Promise<void> {
     const syncStatus = await this._indexer.getSyncStatus();
     assert(syncStatus);
 
     const { data: { priority } } = job;
-    const { blockHash, blockNumber, parentHash } = blockToBeIndexed;
+    const { cid, blockHash, blockNumber, parentHash, blockTimestamp } = blockToBeIndexed;
+    assert(blockNumber);
+    assert(blockHash);
+    assert(parentHash);
 
     const indexBlockStartTime = new Date();
 
@@ -260,12 +265,19 @@ export class JobRunner {
     if (!blockProgress) {
       const prefetchedBlock = this._prefetchedBlocksMap.get(blockHash);
 
-      if (!prefetchedBlock) {
-        const message = `BlockProgress entity not found found in db and prefetchedBlocksMap for ${blockNumber}`;
-        throw new Error(message);
-      } else {
+      if (prefetchedBlock) {
         ({ block: blockProgress } = prefetchedBlock);
-        blockProgress = await this._indexer.saveBlockProgress(blockProgress);
+      } else {
+        // Delay required to process block.
+        const { jobDelayInMilliSecs = 0 } = this._jobQueueConfig;
+        await wait(jobDelayInMilliSecs);
+        let events = [];
+
+        console.time('time:job-runner#_indexBlock-saveBlockAndFetchEvents');
+        [blockProgress, events] = await this._indexer.saveBlockAndFetchEvents({ cid, blockHash, blockNumber, parentHash, blockTimestamp });
+        console.timeEnd('time:job-runner#_indexBlock-saveBlockAndFetchEvents');
+
+        this._prefetchedBlocksMap.set(blockHash, { block: blockProgress, events });
       }
     }
 
