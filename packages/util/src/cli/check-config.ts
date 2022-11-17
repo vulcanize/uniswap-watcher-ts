@@ -5,7 +5,7 @@
 import debug from 'debug';
 import yargs from 'yargs';
 import assert from 'assert';
-import { EthClient } from '@vulcanize/ipld-eth-client';
+import { EthClient } from '@cerc-io/ipld-eth-client';
 
 import { getConfig } from '../config';
 import { getCustomProvider } from '../misc';

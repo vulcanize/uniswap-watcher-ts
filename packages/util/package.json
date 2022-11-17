@@ -27,7 +27,6 @@
     "@typescript-eslint/parser": "^4.25.0",
     "@uniswap/v3-periphery": "1.0.0",
     "@vulcanize/cache": "^0.1.0",
-    "@vulcanize/ipld-eth-client": "^0.1.0",
     "apollo-server-express": "^2.25.0",
     "eslint": "^7.27.0",
     "eslint-config-semistandard": "^15.0.1",
