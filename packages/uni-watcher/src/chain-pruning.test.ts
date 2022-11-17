@@ -9,7 +9,7 @@ import _ from 'lodash';
 
 import { JOB_KIND_PRUNE } from '@cerc-io/util';
 import { getConfig, getCustomProvider, JobQueue, JobRunner } from '@vulcanize/util';
-import { getCache } from '@vulcanize/cache';
+import { getCache } from '@cerc-io/cache';
 import { insertNDummyBlocks, removeEntities } from '@vulcanize/util/test';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 

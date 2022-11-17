@@ -16,7 +16,7 @@ import {
   QUEUE_EVENT_PROCESSING,
   DEFAULT_CONFIG_PATH
 } from '@cerc-io/util';
-import { getCache } from '@vulcanize/cache';
+import { getCache } from '@cerc-io/cache';
 import {
   getConfig,
   JobQueue,
@@ -77,7 +77,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode } } = config;
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
   assert(dbConfig, 'Missing database config');
 

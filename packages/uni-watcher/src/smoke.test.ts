@@ -21,7 +21,7 @@ import {
   approveToken,
   NFPM_ABI
 } from '@vulcanize/util/test';
-import { getCache } from '@vulcanize/cache';
+import { getCache } from '@cerc-io/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import {
   abi as FACTORY_ABI

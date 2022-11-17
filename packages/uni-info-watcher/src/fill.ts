@@ -9,7 +9,7 @@ import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 import { PubSub } from 'graphql-subscriptions';
 
-import { getCache } from '@vulcanize/cache';
+import { getCache } from '@cerc-io/cache';
 import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
 import { getConfig, fillBlocks, JobQueue, getCustomProvider, DEFAULT_PREFETCH_BATCH_SIZE } from '@vulcanize/util';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
@@ -75,7 +75,7 @@ export const main = async (): Promise<any> => {
 
   assert(config.server, 'Missing server config');
 
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode } } = config;
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 
   assert(dbConfig, 'Missing database config');
 

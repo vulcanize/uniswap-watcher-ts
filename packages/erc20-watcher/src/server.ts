@@ -11,7 +11,7 @@ import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 import 'graphql-import-node';
 
-import { getCache } from '@vulcanize/cache';
+import { getCache } from '@cerc-io/cache';
 import {
   KIND_ACTIVE,
   DEFAULT_CONFIG_PATH,
