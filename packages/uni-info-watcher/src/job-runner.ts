@@ -10,7 +10,7 @@ import debug from 'debug';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { getCache } from '@vulcanize/cache';
+import { getCache } from '@cerc-io/cache';
 import {
   getConfig,
   JobQueue,

@@ -10,7 +10,7 @@ import debug from 'debug';
 import { ConnectionOptions } from 'typeorm';
 import { providers } from 'ethers';
 
-import { Config as CacheConfig, getCache } from '@vulcanize/cache';
+import { Config as CacheConfig, getCache } from '@cerc-io/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { JobQueueConfig, ServerConfig } from '@cerc-io/util';
 

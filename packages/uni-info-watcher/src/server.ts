@@ -16,7 +16,7 @@ import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { createAndStartServer, DEFAULT_CONFIG_PATH } from '@cerc-io/util';
 
 import { getConfig, getCustomProvider, JobQueue, startGQLMetricsServer } from '@vulcanize/util';
-import { getCache } from '@vulcanize/cache';
+import { getCache } from '@cerc-io/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 
 import typeDefs from './schema';

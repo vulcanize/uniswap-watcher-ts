@@ -16,7 +16,7 @@ import {
   QUEUE_EVENT_PROCESSING,
   DEFAULT_CONFIG_PATH
 } from '@cerc-io/util';
-import { getCache } from '@vulcanize/cache';
+import { getCache } from '@cerc-io/cache';
 import {
   getConfig,
   JobQueue,
