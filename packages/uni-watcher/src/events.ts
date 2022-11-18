@@ -3,7 +3,6 @@
 //
 
 import assert from 'assert';
-import debug from 'debug';
 import { PubSub } from 'graphql-subscriptions';
 
 import { EthClient } from '@cerc-io/ipld-eth-client';
@@ -11,18 +10,12 @@ import {
   EventWatcher as BaseEventWatcher,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  UNKNOWN_EVENT_NAME,
   JobQueue,
   EventWatcherInterface
 } from '@cerc-io/util';
 import { UpstreamConfig } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
-import { Event } from './entity/Event';
-
-const log = debug('vulcanize:events');
-
-export const UniswapEvent = 'uniswap-event';
 
 export class EventWatcher implements EventWatcherInterface {
   _ethClient: EthClient
@@ -41,7 +34,7 @@ export class EventWatcher implements EventWatcherInterface {
   }
 
   getEventIterator (): AsyncIterator<any> {
-    return this._pubsub.asyncIterator([UniswapEvent]);
+    return this._baseEventWatcher.getEventIterator();
   }
 
   getBlockProgressEventIterator (): AsyncIterator<any> {
@@ -62,57 +55,13 @@ export class EventWatcher implements EventWatcherInterface {
 
   async initBlockProcessingOnCompleteHandler (): Promise<void> {
     this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
-      const { id, data: { failed } } = job;
-
-      if (failed) {
-        log(`Job ${id} for queue ${QUEUE_BLOCK_PROCESSING} failed`);
-        return;
-      }
-
       await this._baseEventWatcher.blockProcessingCompleteHandler(job);
     });
   }
 
   async initEventProcessingOnCompleteHandler (): Promise<void> {
     await this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
-      const { id, data: { request, failed, state, createdOn } } = job;
-
-      if (failed) {
-        log(`Job ${id} for queue ${QUEUE_EVENT_PROCESSING} failed`);
-        return;
-      }
-
-      const dbEvents = await this._baseEventWatcher.eventProcessingCompleteHandler(job);
-      const timeElapsedInSeconds = (Date.now() - Date.parse(createdOn)) / 1000;
-
-      // Cannot publish individual event as they are processed together in a single job.
-      // TODO: Use a different pubsub to publish event from job-runner.
-      // https://www.apollographql.com/docs/apollo-server/data/subscriptions/#production-pubsub-libraries
-      for (const dbEvent of dbEvents) {
-        log(`Job onComplete event ${dbEvent.id} publish ${!!request.data.publish}`);
-
-        if (!failed && state === 'completed' && request.data.publish) {
-          // Check for max acceptable lag time between request and sending results to live subscribers.
-          if (timeElapsedInSeconds <= this._jobQueue.maxCompletionLag) {
-            await this.publishUniswapEventToSubscribers(dbEvent, timeElapsedInSeconds);
-          } else {
-            log(`event ${dbEvent.id} is too old (${timeElapsedInSeconds}s), not broadcasting to live subscribers`);
-          }
-        }
-      }
+      await this._baseEventWatcher.eventProcessingCompleteHandler(job);
     });
-  }
-
-  async publishUniswapEventToSubscribers (dbEvent: Event, timeElapsedInSeconds: number): Promise<void> {
-    if (dbEvent && dbEvent.eventName !== UNKNOWN_EVENT_NAME) {
-      const resultEvent = this._indexer.getResultEvent(dbEvent);
-
-      log(`pushing event to GQL subscribers (${timeElapsedInSeconds}s elapsed): ${resultEvent.event.__typename}`);
-
-      // Publishing the event here will result in pushing the payload to GQL subscribers for `onEvent`.
-      await this._pubsub.publish(UniswapEvent, {
-        onEvent: resultEvent
-      });
-    }
   }
 }
