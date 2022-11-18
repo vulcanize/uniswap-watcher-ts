@@ -12,7 +12,7 @@ import _ from 'lodash';
 
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
-import { GraphDecimal, JobQueue } from '@vulcanize/util';
+import { GraphDecimal } from '@vulcanize/util';
 import {
   ServerConfig,
   StateStatus,
@@ -26,7 +26,8 @@ import {
   eventProcessingEthCallDuration,
   getFullTransaction,
   getFullBlock,
-  StateKind
+  StateKind,
+  JobQueue
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';

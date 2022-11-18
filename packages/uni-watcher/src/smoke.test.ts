@@ -6,10 +6,10 @@ import { expect, assert } from 'chai';
 import { ethers, Contract, ContractTransaction, Signer, constants } from 'ethers';
 import 'mocha';
 
+import { JobQueue } from '@cerc-io/util';
 import {
   Config,
-  getConfig,
-  JobQueue
+  getConfig
 } from '@vulcanize/util';
 import {
   deployTokens,

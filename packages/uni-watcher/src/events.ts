@@ -11,10 +11,10 @@ import {
   EventWatcher as BaseEventWatcher,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  UNKNOWN_EVENT_NAME
+  UNKNOWN_EVENT_NAME,
+  JobQueue
 } from '@cerc-io/util';
 import {
-  JobQueue,
   EventWatcherInterface,
   UpstreamConfig
 } from '@vulcanize/util';

@@ -5,8 +5,9 @@
 import { Contract, ethers, Signer } from 'ethers';
 import assert from 'assert';
 
+import { JobQueue } from '@cerc-io/util';
 import {
-  getConfig, getResetConfig, JobQueue
+  getConfig, getResetConfig
 } from '@vulcanize/util';
 import {
   deployWETH9Token,

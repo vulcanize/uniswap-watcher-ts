@@ -4,10 +4,10 @@
 
 import assert from 'assert';
 
+import { JobQueue } from '@cerc-io/util';
 import {
   getConfig,
-  getResetConfig,
-  JobQueue
+  getResetConfig
 } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
@@ -29,11 +29,11 @@ const main = async () => {
   // Get config.
   const config = await getConfig(CONFIG_FILE);
 
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
+  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: serverConfig } = config;
 
   assert(dbConfig, 'Missing dbConfig.');
   // Initialize database.
-  const db = new Database(dbConfig);
+  const db = new Database(dbConfig, serverConfig);
   await db.init();
 
   // Initialize uniClient.

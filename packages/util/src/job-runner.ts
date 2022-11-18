@@ -23,10 +23,10 @@ import {
   QUEUE_EVENT_PROCESSING,
   UNKNOWN_EVENT_NAME,
   wait,
-  BlockProgressInterface
+  BlockProgressInterface,
+  JobQueue
 } from '@cerc-io/util';
 
-import { JobQueue } from './job-queue';
 import { EventInterface, IndexerInterface } from './types';
 
 const log = debug('vulcanize:job-runner');

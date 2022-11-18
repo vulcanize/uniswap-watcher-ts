@@ -4,9 +4,8 @@
 
 import debug from 'debug';
 
-import { processBlockByNumberWithCache } from '@cerc-io/util';
+import { processBlockByNumberWithCache, JobQueue } from '@cerc-io/util';
 
-import { JobQueue } from './job-queue';
 import { EventWatcherInterface, IndexerInterface } from './types';
 import { wait } from './misc';
 

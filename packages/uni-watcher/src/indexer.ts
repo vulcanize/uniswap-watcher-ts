@@ -7,7 +7,7 @@ import { DeepPartial, FindConditions, FindManyOptions, QueryRunner } from 'typeo
 import { ethers } from 'ethers';
 import assert from 'assert';
 
-import { JobQueue, IndexerInterface } from '@vulcanize/util';
+import { IndexerInterface } from '@vulcanize/util';
 import {
   Indexer as BaseIndexer,
   StateStatus,
@@ -17,7 +17,8 @@ import {
   ValueResult,
   UNKNOWN_EVENT_NAME,
   ResultEvent,
-  getResultEvent
+  getResultEvent,
+  JobQueue
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';

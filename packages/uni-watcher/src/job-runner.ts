@@ -10,6 +10,7 @@ import debug from 'debug';
 
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import {
+  JobQueue,
   JobQueueConfig,
   startMetricsServer,
   QUEUE_BLOCK_PROCESSING,
@@ -19,7 +20,6 @@ import {
 import { getCache } from '@cerc-io/cache';
 import {
   getConfig,
-  JobQueue,
   JobRunner as BaseJobRunner,
   getCustomProvider
 } from '@vulcanize/util';

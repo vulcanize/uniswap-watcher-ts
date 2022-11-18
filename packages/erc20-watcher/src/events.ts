@@ -10,11 +10,11 @@ import {
   EventWatcher as BaseEventWatcher,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  UNKNOWN_EVENT_NAME
+  UNKNOWN_EVENT_NAME,
+  JobQueue
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import {
-  JobQueue,
   UpstreamConfig
 } from '@vulcanize/util';
 

@@ -13,12 +13,12 @@ import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { getCache } from '@cerc-io/cache';
 import {
   getConfig,
-  JobQueue,
   JobRunner as BaseJobRunner,
   getCustomProvider
 } from '@vulcanize/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import {
+  JobQueue,
   JobQueueConfig,
   startMetricsServer,
   QUEUE_BLOCK_PROCESSING,

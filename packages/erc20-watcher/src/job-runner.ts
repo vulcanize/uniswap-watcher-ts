@@ -14,12 +14,12 @@ import {
   startMetricsServer,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  DEFAULT_CONFIG_PATH
+  DEFAULT_CONFIG_PATH,
+  JobQueue
 } from '@cerc-io/util';
 import { getCache } from '@cerc-io/cache';
 import {
   getConfig,
-  JobQueue,
   JobRunner as BaseJobRunner,
   getCustomProvider
 } from '@vulcanize/util';

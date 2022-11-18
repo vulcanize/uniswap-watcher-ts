@@ -6,8 +6,8 @@ import assert from 'assert';
 import yargs from 'yargs';
 import 'reflect-metadata';
 
-import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
-import { Config, getConfig, getResetConfig, JobQueue } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH, JobQueue } from '@cerc-io/util';
+import { Config, getConfig, getResetConfig } from '@vulcanize/util';
 
 import { Database } from '../database';
 import { CONTRACT_KIND, Indexer } from '../indexer';

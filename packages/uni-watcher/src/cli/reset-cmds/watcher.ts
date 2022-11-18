@@ -3,15 +3,13 @@
 //
 
 import debug from 'debug';
-import { MoreThan } from 'typeorm';
 import assert from 'assert';
 
-import { getConfig, getResetConfig, JobQueue, resetJobs } from '@vulcanize/util';
+import { JobQueue } from '@cerc-io/util';
+import { getConfig, getResetConfig, resetJobs } from '@vulcanize/util';
 
 import { Database } from '../../database';
 import { Indexer } from '../../indexer';
-import { BlockProgress } from '../../entity/BlockProgress';
-import { Contract } from '../../entity/Contract';
 
 const log = debug('vulcanize:reset-watcher');
 
