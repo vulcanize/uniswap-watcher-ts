@@ -13,8 +13,8 @@ import 'graphql-import-node';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { getConfig, startGQLMetricsServer } from '@vulcanize/util';
-import { createAndStartServer, DEFAULT_CONFIG_PATH, JobQueue, getCustomProvider } from '@cerc-io/util';
+import { getConfig } from '@vulcanize/util';
+import { createAndStartServer, DEFAULT_CONFIG_PATH, JobQueue, getCustomProvider, startGQLMetricsServer } from '@cerc-io/util';
 import { getCache } from '@cerc-io/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 

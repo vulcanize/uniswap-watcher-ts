@@ -17,9 +17,10 @@ import {
   DEFAULT_CONFIG_PATH,
   createAndStartServer,
   JobQueue,
-  getCustomProvider
+  getCustomProvider,
+  startGQLMetricsServer
 } from '@cerc-io/util';
-import { getConfig, startGQLMetricsServer } from '@vulcanize/util';
+import { getConfig } from '@vulcanize/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 
 import typeDefs from './schema';
