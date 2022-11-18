@@ -6,7 +6,7 @@ import assert from 'assert';
 import { BigNumber } from 'ethers';
 import { QueryRunner } from 'typeorm';
 
-import { GraphDecimal } from '@vulcanize/util';
+import { GraphDecimal } from '@cerc-io/util';
 
 import { exponentToBigDecimal, safeDiv } from '.';
 import { Database } from '../database';

@@ -9,10 +9,9 @@ import { hideBin } from 'yargs/helpers';
 import { utils, getDefaultProvider, providers } from 'ethers';
 import Decimal from 'decimal.js';
 
-import { DEFAULT_CONFIG_PATH, JobQueue } from '@cerc-io/util';
+import { DEFAULT_CONFIG_PATH, JobQueue, GraphDecimal } from '@cerc-io/util';
 
 import { Config } from './config';
-import { GraphDecimal } from './graph-decimal';
 
 /**
  * Method to wait for specified time.

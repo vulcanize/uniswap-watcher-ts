@@ -8,8 +8,8 @@ import debug from 'debug';
 import { GraphQLResolveInfo, GraphQLScalarType } from 'graphql';
 import JSONbig from 'json-bigint';
 
-import { gqlQueryCount, gqlTotalQueryCount, GraphDecimal } from '@vulcanize/util';
-import { BlockHeight, OrderDirection, getResultState, setGQLCacheHints } from '@cerc-io/util';
+import { gqlQueryCount, gqlTotalQueryCount } from '@vulcanize/util';
+import { BlockHeight, OrderDirection, getResultState, setGQLCacheHints, GraphDecimal } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
 import { Burn } from './entity/Burn';

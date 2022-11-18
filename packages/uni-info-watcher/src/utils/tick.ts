@@ -4,7 +4,7 @@
 
 import { QueryRunner } from 'typeorm';
 
-import { GraphDecimal } from '@vulcanize/util';
+import { GraphDecimal } from '@cerc-io/util';
 
 import { Pool } from '../entity/Pool';
 import { Database } from '../database';
