@@ -11,9 +11,9 @@ import { PubSub } from 'graphql-subscriptions';
 import fs from 'fs';
 import path from 'path';
 
-import { getConfig, JobQueue, DEFAULT_CONFIG_PATH, Config, initClients, StateKind } from '@cerc-io/util';
+import { getConfig, JobQueue, DEFAULT_CONFIG_PATH, initClients, StateKind } from '@cerc-io/util';
 import { updateEntitiesFromState } from '@cerc-io/graph-node';
-import { fillBlocks } from '@vulcanize/util';
+import { fillBlocks, Config } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import * as codec from '@ipld/dag-cbor';

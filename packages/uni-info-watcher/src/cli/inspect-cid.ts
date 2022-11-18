@@ -10,8 +10,8 @@ import util from 'util';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { DEFAULT_CONFIG_PATH, JobQueue } from '@cerc-io/util';
-import { Config, getConfig, getResetConfig } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH, JobQueue, getConfig, initClients } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 
 import { Database } from '../database';
 import { Indexer } from '../indexer';
@@ -39,7 +39,7 @@ const main = async (): Promise<void> => {
   }).argv;
 
   const config: Config = await getConfig(argv.configFile);
-  const { ethClient, ethProvider } = await getResetConfig(config);
+  const { ethClient, ethProvider } = await initClients(config);
 
   const db = new Database(config.database, config.server);
   await db.init();

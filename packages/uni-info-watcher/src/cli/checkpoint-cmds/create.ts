@@ -5,7 +5,8 @@
 import debug from 'debug';
 import assert from 'assert';
 
-import { getConfig, initClients, JobQueue, Config } from '@cerc-io/util';
+import { getConfig, initClients, JobQueue } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 

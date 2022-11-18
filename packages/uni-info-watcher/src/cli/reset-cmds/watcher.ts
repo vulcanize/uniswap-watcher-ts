@@ -5,8 +5,8 @@
 import debug from 'debug';
 import assert from 'assert';
 
-import { JobQueue, resetJobs } from '@cerc-io/util';
-import { getConfig, getResetConfig } from '@vulcanize/util';
+import { JobQueue, resetJobs, getConfig, initClients } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 
@@ -26,19 +26,19 @@ export const builder = {
 };
 
 export const handler = async (argv: any): Promise<void> => {
-  const config = await getConfig(argv.configFile);
+  const config: Config = await getConfig(argv.configFile);
   await resetJobs(config);
   const { jobQueue: jobQueueConfig } = config;
-  const { dbConfig, upstreamConfig, ethClient, ethProvider } = await getResetConfig(config);
+  const { ethClient, ethProvider } = await initClients(config);
 
   // Initialize database.
-  const db = new Database(dbConfig, config.server);
+  const db = new Database(config.database, config.server);
   await db.init();
 
   const {
     uniWatcher,
     tokenWatcher
-  } = upstreamConfig;
+  } = config.upstream;
 
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);

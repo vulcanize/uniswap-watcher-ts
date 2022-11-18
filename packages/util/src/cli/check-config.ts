@@ -7,9 +7,9 @@ import yargs from 'yargs';
 import assert from 'assert';
 
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { getCustomProvider } from '@cerc-io/util';
+import { getCustomProvider, getConfig } from '@cerc-io/util';
 
-import { getConfig } from '../config';
+import { Config } from '../config';
 
 const log = debug('vulcanize:check-config');
 
@@ -24,7 +24,7 @@ const main = async () => {
     }
   }).argv;
 
-  const { upstream: { ethServer: { gqlApiEndpoint, rpcProviderEndpoint } } } = await getConfig(argv.configFile);
+  const { upstream: { ethServer: { gqlApiEndpoint, rpcProviderEndpoint } } } = await getConfig<Config>(argv.configFile);
 
   // Get latest block in chain using ipld-eth-server GQL.
   log(`Checking ipld-eth-server GQL endpoint ${gqlApiEndpoint}`);

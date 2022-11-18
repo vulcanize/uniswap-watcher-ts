@@ -4,11 +4,8 @@
 
 import assert from 'assert';
 
-import { JobQueue } from '@cerc-io/util';
-import {
-  getConfig,
-  getResetConfig
-} from '@vulcanize/util';
+import { JobQueue, getConfig, initClients } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 
@@ -27,7 +24,7 @@ const watchContract = async (indexer: Indexer, address: string, kind: string): P
 
 const main = async () => {
   // Get config.
-  const config = await getConfig(CONFIG_FILE);
+  const config: Config = await getConfig(CONFIG_FILE);
 
   const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: serverConfig } = config;
 
@@ -46,7 +43,7 @@ const main = async () => {
 
   const erc20Client = new ERC20Client(tokenWatcher);
 
-  const { ethClient, ethProvider } = await getResetConfig(config);
+  const { ethClient, ethProvider } = await initClients(config);
 
   assert(jobQueueConfig, 'Missing job queue config');
   const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;

@@ -18,9 +18,10 @@ import {
   createAndStartServer,
   JobQueue,
   getCustomProvider,
-  startGQLMetricsServer
+  startGQLMetricsServer,
+  getConfig
 } from '@cerc-io/util';
-import { getConfig } from '@vulcanize/util';
+import { Config } from '@vulcanize/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 
 import typeDefs from './schema';
@@ -44,7 +45,7 @@ export const main = async (): Promise<any> => {
     })
     .argv;
 
-  const config = await getConfig(argv.f);
+  const config: Config = await getConfig(argv.f);
 
   assert(config.server, 'Missing server config');
 

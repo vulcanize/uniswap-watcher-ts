@@ -4,8 +4,8 @@
 
 import debug from 'debug';
 
-import { resetJobs } from '@cerc-io/util';
-import { getConfig } from '@vulcanize/util';
+import { resetJobs, getConfig } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 
 const log = debug('vulcanize:reset-job-queue');
 
@@ -16,7 +16,7 @@ export const desc = 'Reset job queue';
 export const builder = {};
 
 export const handler = async (argv: any): Promise<void> => {
-  const config = await getConfig(argv.configFile);
+  const config: Config = await getConfig(argv.configFile);
   await resetJobs(config);
 
   log('Job queue reset successfully');

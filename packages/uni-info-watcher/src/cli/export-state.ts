@@ -9,7 +9,8 @@ import debug from 'debug';
 import fs from 'fs';
 import path from 'path';
 
-import { Config, DEFAULT_CONFIG_PATH, getConfig, initClients, JobQueue, StateKind } from '@cerc-io/util';
+import { DEFAULT_CONFIG_PATH, getConfig, initClients, JobQueue, StateKind } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import * as codec from '@ipld/dag-cbor';

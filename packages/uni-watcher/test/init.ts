@@ -5,10 +5,8 @@
 import { Contract, ethers, Signer } from 'ethers';
 import assert from 'assert';
 
-import { JobQueue } from '@cerc-io/util';
-import {
-  getConfig, getResetConfig
-} from '@vulcanize/util';
+import { JobQueue, getConfig, initClients } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 import {
   deployWETH9Token,
   deployNFPM
@@ -51,14 +49,14 @@ const deployNFPMContract = async (indexer: Indexer, signer: Signer, factory: Con
 
 const main = async () => {
   // Get config.
-  const config = await getConfig(CONFIG_FILE);
+  const config: Config = await getConfig(CONFIG_FILE);
 
   const { database: dbConfig, server: { host, port }, jobQueue: jobQueueConfig } = config;
   assert(dbConfig, 'Missing dbConfig.');
   assert(host, 'Missing host.');
   assert(port, 'Missing port.');
 
-  const { ethClient, ethProvider } = await getResetConfig(config);
+  const { ethClient, ethProvider } = await initClients(config);
 
   // Initialize uniClient.
   const endpoint = `http://${host}:${port}/graphql`;
