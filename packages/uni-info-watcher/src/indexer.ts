@@ -1856,6 +1856,11 @@ export class Indexer implements IndexerInterface {
         try {
           const transaction = await loadTransaction(this._db, dbTx, { block, tx }, this._serverConfig.skipStateFieldsUpdate);
           position.transaction = transaction.id;
+          position.feeGrowthInside0LastX128 = BigInt(positionResult.feeGrowthInside0LastX128.toString());
+          position.feeGrowthInside1LastX128 = BigInt(positionResult.feeGrowthInside1LastX128.toString());
+
+          // Save position to DB to load entity fields with default values.
+          position = await this._db.savePosition(dbTx, position, block);
 
           await dbTx.commitTransaction();
         } catch (error) {
@@ -1864,9 +1869,6 @@ export class Indexer implements IndexerInterface {
         } finally {
           await dbTx.release();
         }
-
-        position.feeGrowthInside0LastX128 = BigInt(positionResult.feeGrowthInside0LastX128.toString());
-        position.feeGrowthInside1LastX128 = BigInt(positionResult.feeGrowthInside1LastX128.toString());
       } catch (error: any) {
         // The contract call reverts in situations where the position is minted and deleted in the same block.
         // From my investigation this happens in calls from BancorSwap.
