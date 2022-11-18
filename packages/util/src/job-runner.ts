@@ -24,10 +24,11 @@ import {
   UNKNOWN_EVENT_NAME,
   wait,
   BlockProgressInterface,
-  JobQueue
+  JobQueue,
+  EventInterface
 } from '@cerc-io/util';
 
-import { EventInterface, IndexerInterface } from './types';
+import { IndexerInterface } from './types';
 
 const log = debug('vulcanize:job-runner');
 

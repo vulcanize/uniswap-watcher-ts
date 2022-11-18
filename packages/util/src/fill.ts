@@ -4,9 +4,9 @@
 
 import debug from 'debug';
 
-import { processBlockByNumberWithCache, JobQueue, wait } from '@cerc-io/util';
+import { processBlockByNumberWithCache, JobQueue, wait, EventWatcherInterface } from '@cerc-io/util';
 
-import { EventWatcherInterface, IndexerInterface } from './types';
+import { IndexerInterface } from './types';
 
 const log = debug('vulcanize:fill');
 

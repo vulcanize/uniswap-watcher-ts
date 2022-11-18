@@ -12,12 +12,10 @@ import {
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
   UNKNOWN_EVENT_NAME,
-  JobQueue
+  JobQueue,
+  EventWatcherInterface
 } from '@cerc-io/util';
-import {
-  EventWatcherInterface,
-  UpstreamConfig
-} from '@vulcanize/util';
+import { UpstreamConfig } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { Event } from './entity/Event';
