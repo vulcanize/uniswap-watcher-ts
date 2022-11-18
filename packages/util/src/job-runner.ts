@@ -38,7 +38,7 @@ export class JobRunner {
   _blockProcessStartTime?: Date
   _blockNumEvents = 0
 
-  _prefetchedBlocksMap: Map<string, PrefetchedBlock> = new Map()
+  _blockAndEventsMap: Map<string, PrefetchedBlock> = new Map()
 
   constructor (jobQueueConfig: JobQueueConfig, indexer: IndexerInterface, jobQueue: JobQueue) {
     this._jobQueueConfig = jobQueueConfig;
@@ -55,7 +55,7 @@ export class JobRunner {
           job,
           this._indexer,
           this._jobQueueConfig,
-          this._prefetchedBlocksMap
+          this._blockAndEventsMap
         );
         const indexBlockPromises = blocksToBeIndexed.map(blockToBeIndexed => this._indexBlock(job, blockToBeIndexed));
         await Promise.all(indexBlockPromises);
@@ -263,7 +263,7 @@ export class JobRunner {
     }
 
     if (!blockProgress) {
-      const prefetchedBlock = this._prefetchedBlocksMap.get(blockHash);
+      const prefetchedBlock = this._blockAndEventsMap.get(blockHash);
 
       if (prefetchedBlock) {
         ({ block: blockProgress } = prefetchedBlock);
@@ -277,7 +277,7 @@ export class JobRunner {
         [blockProgress, events] = await this._indexer.saveBlockAndFetchEvents({ cid, blockHash, blockNumber, parentHash, blockTimestamp });
         console.timeEnd('time:job-runner#_indexBlock-saveBlockAndFetchEvents');
 
-        this._prefetchedBlocksMap.set(blockHash, { block: blockProgress, events });
+        this._blockAndEventsMap.set(blockHash, { block: blockProgress, events });
       }
     }
 
@@ -304,12 +304,12 @@ export class JobRunner {
 
     console.time('time:job-runner#_processEvents-events');
 
-    if (!this._prefetchedBlocksMap.has(block.blockHash)) {
+    if (!this._blockAndEventsMap.has(block.blockHash)) {
       const [, events] = await this._indexer.saveBlockAndFetchEvents(block);
-      this._prefetchedBlocksMap.set(block.blockHash, { block, events });
+      this._blockAndEventsMap.set(block.blockHash, { block, events });
     }
 
-    const prefetchedBlock = this._prefetchedBlocksMap.get(block.blockHash);
+    const prefetchedBlock = this._blockAndEventsMap.get(block.blockHash);
     assert(prefetchedBlock);
 
     const { events } = prefetchedBlock;
@@ -427,8 +427,8 @@ export class JobRunner {
       this._indexer.saveEvents(dbEvents.filter(event => event.eventName !== UNKNOWN_EVENT_NAME))
     ]);
     console.timeEnd('time:job-runner#_processEvents-updateBlockProgress-saveEvents');
-    this._prefetchedBlocksMap.delete(block.blockHash);
-    log('size:job-runner#_processEvents-_prefetchedBlocksMap:', this._prefetchedBlocksMap.size);
+    this._blockAndEventsMap.delete(block.blockHash);
+    log('size:job-runner#_processEvents-_blockAndEventsMap:', this._blockAndEventsMap.size);
 
     console.timeEnd('time:job-runner#_processEvents-events');
   }
