@@ -15,13 +15,13 @@ import {
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
   DEFAULT_CONFIG_PATH,
-  JobQueue
+  JobQueue,
+  getCustomProvider
 } from '@cerc-io/util';
 import { getCache } from '@cerc-io/cache';
 import {
   getConfig,
-  JobRunner as BaseJobRunner,
-  getCustomProvider
+  JobRunner as BaseJobRunner
 } from '@vulcanize/util';
 
 import { Indexer } from './indexer';

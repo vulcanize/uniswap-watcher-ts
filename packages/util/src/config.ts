@@ -12,9 +12,7 @@ import { providers } from 'ethers';
 
 import { Config as CacheConfig, getCache } from '@cerc-io/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { JobQueueConfig, ServerConfig } from '@cerc-io/util';
-
-import { getCustomProvider } from './misc';
+import { JobQueueConfig, ServerConfig, getCustomProvider } from '@cerc-io/util';
 
 const log = debug('vulcanize:config');
 

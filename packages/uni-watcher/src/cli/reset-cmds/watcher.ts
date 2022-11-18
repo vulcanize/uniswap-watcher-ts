@@ -5,8 +5,8 @@
 import debug from 'debug';
 import assert from 'assert';
 
-import { JobQueue } from '@cerc-io/util';
-import { getConfig, getResetConfig, resetJobs } from '@vulcanize/util';
+import { JobQueue, resetJobs } from '@cerc-io/util';
+import { getConfig, getResetConfig } from '@vulcanize/util';
 
 import { Database } from '../../database';
 import { Indexer } from '../../indexer';

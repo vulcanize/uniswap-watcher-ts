@@ -9,10 +9,10 @@ import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 import { PubSub } from 'graphql-subscriptions';
 
-import { DEFAULT_CONFIG_PATH, JobQueue } from '@cerc-io/util';
+import { DEFAULT_CONFIG_PATH, JobQueue, getCustomProvider } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { getCache } from '@cerc-io/cache';
-import { getConfig, fillBlocks, getCustomProvider, DEFAULT_PREFETCH_BATCH_SIZE } from '@vulcanize/util';
+import { getConfig, fillBlocks, DEFAULT_PREFETCH_BATCH_SIZE } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Indexer } from './indexer';

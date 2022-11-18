@@ -10,8 +10,8 @@ import debug from 'debug';
 import { PubSub } from 'graphql-subscriptions';
 
 import { getCache } from '@cerc-io/cache';
-import { DEFAULT_CONFIG_PATH, JobQueue } from '@cerc-io/util';
-import { getConfig, fillBlocks, getCustomProvider, DEFAULT_PREFETCH_BATCH_SIZE } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH, JobQueue, getCustomProvider } from '@cerc-io/util';
+import { getConfig, fillBlocks, DEFAULT_PREFETCH_BATCH_SIZE } from '@vulcanize/util';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { EthClient } from '@cerc-io/ipld-eth-client';

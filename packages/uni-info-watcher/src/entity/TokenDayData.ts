@@ -4,8 +4,7 @@
 
 import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 
-import { graphDecimalTransformer } from '@vulcanize/util';
-import { GraphDecimal } from '@cerc-io/util';
+import { graphDecimalTransformer, GraphDecimal } from '@cerc-io/util';
 
 @Entity()
 @Index(['id', 'blockNumber'])

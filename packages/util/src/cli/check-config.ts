@@ -5,10 +5,11 @@
 import debug from 'debug';
 import yargs from 'yargs';
 import assert from 'assert';
+
 import { EthClient } from '@cerc-io/ipld-eth-client';
+import { getCustomProvider } from '@cerc-io/util';
 
 import { getConfig } from '../config';
-import { getCustomProvider } from '../misc';
 
 const log = debug('vulcanize:check-config');
 

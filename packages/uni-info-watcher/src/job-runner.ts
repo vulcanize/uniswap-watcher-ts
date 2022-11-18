@@ -13,8 +13,7 @@ import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { getCache } from '@cerc-io/cache';
 import {
   getConfig,
-  JobRunner as BaseJobRunner,
-  getCustomProvider
+  JobRunner as BaseJobRunner
 } from '@vulcanize/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import {
@@ -23,7 +22,8 @@ import {
   startMetricsServer,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  DEFAULT_CONFIG_PATH
+  DEFAULT_CONFIG_PATH,
+  getCustomProvider
 } from '@cerc-io/util';
 
 import { Indexer } from './indexer';

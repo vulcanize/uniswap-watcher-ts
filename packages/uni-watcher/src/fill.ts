@@ -11,8 +11,8 @@ import { PubSub } from 'graphql-subscriptions';
 
 import { getCache } from '@cerc-io/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { DEFAULT_CONFIG_PATH, JobQueue } from '@cerc-io/util';
-import { getConfig, fillBlocks, getCustomProvider, DEFAULT_PREFETCH_BATCH_SIZE } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH, JobQueue, getCustomProvider } from '@cerc-io/util';
+import { getConfig, fillBlocks, DEFAULT_PREFETCH_BATCH_SIZE } from '@vulcanize/util';
 
 import { Database } from './database';
 import { Indexer } from './indexer';

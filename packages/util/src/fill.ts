@@ -4,16 +4,15 @@
 
 import debug from 'debug';
 
-import { processBlockByNumberWithCache, JobQueue } from '@cerc-io/util';
+import { processBlockByNumberWithCache, JobQueue, wait } from '@cerc-io/util';
 
 import { EventWatcherInterface, IndexerInterface } from './types';
-import { wait } from './misc';
 
 const log = debug('vulcanize:fill');
 
 export const DEFAULT_PREFETCH_BATCH_SIZE = 10;
 
-// TODO: Use from @vulcanize/util (watcher-ts)
+// TODO: Use from @cerc-io/util (watcher-ts)
 
 export const fillBlocks = async (
   jobQueue: JobQueue,
