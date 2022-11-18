@@ -488,7 +488,7 @@ export class Indexer implements IndexerInterface {
 
   // Note: Some event names might be unknown at this point, as earlier events might not yet be processed.
   async saveBlockAndFetchEvents (block: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
-    return this._baseIndexer.saveBlockAndFetchEvents(block, this._saveBlockAndFetchEvents.bind(this));
+    return this._saveBlockAndFetchEvents(block);
   }
 
   async saveBlockProgress (block: DeepPartial<BlockProgress>): Promise<BlockProgress> {
