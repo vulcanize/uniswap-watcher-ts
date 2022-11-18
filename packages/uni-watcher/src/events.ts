@@ -7,10 +7,14 @@ import debug from 'debug';
 import { PubSub } from 'graphql-subscriptions';
 
 import { EthClient } from '@cerc-io/ipld-eth-client';
-import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, UNKNOWN_EVENT_NAME } from '@cerc-io/util';
+import {
+  EventWatcher as BaseEventWatcher,
+  QUEUE_BLOCK_PROCESSING,
+  QUEUE_EVENT_PROCESSING,
+  UNKNOWN_EVENT_NAME
+} from '@cerc-io/util';
 import {
   JobQueue,
-  EventWatcher as BaseEventWatcher,
   EventWatcherInterface,
   UpstreamConfig
 } from '@vulcanize/util';
