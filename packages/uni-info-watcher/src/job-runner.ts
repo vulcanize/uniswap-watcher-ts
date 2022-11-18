@@ -12,18 +12,19 @@ import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { getCache } from '@cerc-io/cache';
 import {
-  getConfig,
-  JobQueue,
-  JobRunner as BaseJobRunner,
-  getCustomProvider
+  Config,
+  JobRunner as BaseJobRunner
 } from '@vulcanize/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import {
+  JobQueue,
   JobQueueConfig,
   startMetricsServer,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  DEFAULT_CONFIG_PATH
+  DEFAULT_CONFIG_PATH,
+  getCustomProvider,
+  getConfig
 } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
@@ -75,7 +76,7 @@ export const main = async (): Promise<any> => {
     })
     .argv;
 
-  const config = await getConfig(argv.f);
+  const config: Config = await getConfig(argv.f);
 
   assert(config.server, 'Missing server config');
 

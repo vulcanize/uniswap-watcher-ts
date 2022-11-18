@@ -23,11 +23,12 @@ import {
   QUEUE_EVENT_PROCESSING,
   UNKNOWN_EVENT_NAME,
   wait,
-  BlockProgressInterface
+  BlockProgressInterface,
+  JobQueue,
+  EventInterface
 } from '@cerc-io/util';
 
-import { JobQueue } from './job-queue';
-import { EventInterface, IndexerInterface } from './types';
+import { IndexerInterface } from './types';
 
 const log = debug('vulcanize:job-runner');
 
@@ -285,10 +286,8 @@ export class JobRunner {
     await this._indexer.processBlock(blockProgress);
     this._blockNumEvents = blockProgress.numEvents;
 
-    // Check if block has unprocessed events.
-    if (blockProgress.numProcessedEvents < blockProgress.numEvents) {
-      await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENTS, blockHash: blockProgress.blockHash, publish: true });
-    }
+    // Push job to event processing queue.
+    await this._jobQueue.pushJob(QUEUE_EVENT_PROCESSING, { kind: JOB_KIND_EVENTS, blockHash: blockProgress.blockHash, publish: true });
 
     const indexBlockDuration = new Date().getTime() - indexBlockStartTime.getTime();
     log(`time:job-runner#_indexBlock: ${indexBlockDuration}ms`);

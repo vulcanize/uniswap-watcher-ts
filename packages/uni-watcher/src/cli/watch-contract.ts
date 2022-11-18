@@ -6,8 +6,8 @@ import assert from 'assert';
 import yargs from 'yargs';
 import 'reflect-metadata';
 
-import { DEFAULT_CONFIG_PATH } from '@cerc-io/util';
-import { Config, getConfig, getResetConfig, JobQueue } from '@vulcanize/util';
+import { DEFAULT_CONFIG_PATH, JobQueue, getConfig, initClients } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 
 import { Database } from '../database';
 import { Indexer } from '../indexer';
@@ -51,7 +51,7 @@ import { Indexer } from '../indexer';
 
   const config: Config = await getConfig(argv.configFile);
   const { database: dbConfig, jobQueue: jobQueueConfig } = config;
-  const { ethClient, ethProvider } = await getResetConfig(config);
+  const { ethClient, ethProvider } = await initClients(config);
 
   assert(dbConfig);
 

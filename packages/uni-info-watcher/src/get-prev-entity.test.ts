@@ -6,9 +6,8 @@ import { expect, assert } from 'chai';
 import 'mocha';
 import _ from 'lodash';
 
-import {
-  getConfig
-} from '@vulcanize/util';
+import { getConfig } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 import { removeEntities } from '@vulcanize/util/test';
 
 import { Database } from './database';
@@ -29,13 +28,13 @@ describe('getPrevEntityVersion', () => {
 
   before(async () => {
     // Get config.
-    const config = await getConfig(CONFIG_FILE);
+    const config: Config = await getConfig(CONFIG_FILE);
 
-    const { database: dbConfig } = config;
+    const { database: dbConfig, server: serverConfig } = config;
     assert(dbConfig, 'Missing dbConfig.');
 
     // Initialize database.
-    db = new Database(dbConfig);
+    db = new Database(dbConfig, serverConfig);
     await db.init();
 
     // Check if database is empty.

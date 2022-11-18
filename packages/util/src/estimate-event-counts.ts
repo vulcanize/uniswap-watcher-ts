@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { createObjectCsvWriter } from 'csv-writer';
 
-import { wait } from './misc';
+import { wait } from '@cerc-io/util';
 
 const CACHE_DIR = 'out/cached-data';
 const RESULTS_DIR = 'out/estimation-results';

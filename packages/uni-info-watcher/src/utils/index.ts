@@ -6,7 +6,7 @@ import { BigNumber, utils } from 'ethers';
 import { QueryRunner } from 'typeorm';
 import assert from 'assert';
 
-import { GraphDecimal } from '@vulcanize/util';
+import { GraphDecimal } from '@cerc-io/util';
 
 import { Transaction as TransactionEntity } from '../entity/Transaction';
 import { Database } from '../database';

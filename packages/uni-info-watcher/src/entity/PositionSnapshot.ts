@@ -3,7 +3,8 @@
 //
 
 import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
-import { graphDecimalTransformer, GraphDecimal, bigintTransformer } from '@vulcanize/util';
+
+import { bigintTransformer, graphDecimalTransformer, GraphDecimal } from '@cerc-io/util';
 
 import { ADDRESS_ZERO } from '../utils/constants';
 

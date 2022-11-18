@@ -3,17 +3,13 @@
 //
 
 import debug from 'debug';
-import { MoreThan } from 'typeorm';
 import assert from 'assert';
 
-import { getConfig, getResetConfig, JobQueue, resetJobs } from '@vulcanize/util';
+import { JobQueue, resetJobs, getConfig, initClients } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 
 import { Database } from '../../database';
 import { Indexer } from '../../indexer';
-import { BlockProgress } from '../../entity/BlockProgress';
-import { Allowance } from '../../entity/Allowance';
-import { Balance } from '../../entity/Balance';
-import { Contract } from '../../entity/Contract';
 
 const log = debug('vulcanize:reset-watcher');
 
@@ -28,13 +24,13 @@ export const builder = {
 };
 
 export const handler = async (argv: any): Promise<void> => {
-  const config = await getConfig(argv.configFile);
+  const config: Config = await getConfig(argv.configFile);
   await resetJobs(config);
   const { jobQueue: jobQueueConfig } = config;
-  const { dbConfig, serverConfig, ethClient, ethProvider } = await getResetConfig(config);
+  const { ethClient, ethProvider } = await initClients(config);
 
   // Initialize database.
-  const db = new Database(dbConfig);
+  const db = new Database(config.database);
   await db.init();
 
   assert(jobQueueConfig, 'Missing job queue config');
@@ -44,7 +40,7 @@ export const handler = async (argv: any): Promise<void> => {
 
   const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
 
-  const indexer = new Indexer(serverConfig, db, ethClient, ethProvider, jobQueue);
+  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
 
   const syncStatus = await indexer.getSyncStatus();
   assert(syncStatus, 'Missing syncStatus');

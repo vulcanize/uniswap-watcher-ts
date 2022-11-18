@@ -13,8 +13,8 @@ import 'graphql-import-node';
 
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { getCache } from '@cerc-io/cache';
-import { createAndStartServer, DEFAULT_CONFIG_PATH } from '@cerc-io/util';
-import { getConfig, getCustomProvider, JobQueue, startGQLMetricsServer } from '@vulcanize/util';
+import { createAndStartServer, DEFAULT_CONFIG_PATH, JobQueue, getCustomProvider, startGQLMetricsServer, getConfig } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 
 import typeDefs from './schema';
 
@@ -37,7 +37,7 @@ export const main = async (): Promise<any> => {
     })
     .argv;
 
-  const config = await getConfig(argv.f);
+  const config: Config = await getConfig(argv.f);
 
   assert(config.server, 'Missing server config');
 

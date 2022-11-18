@@ -7,12 +7,8 @@ import { ethers, Contract, Signer, constants, utils } from 'ethers';
 import 'mocha';
 import _ from 'lodash';
 
-import { OrderDirection } from '@cerc-io/util';
-import {
-  Config,
-  getConfig,
-  wait
-} from '@vulcanize/util';
+import { OrderDirection, wait, getConfig } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 import {
   deployTokens,
   deployUniswapV3Callee,

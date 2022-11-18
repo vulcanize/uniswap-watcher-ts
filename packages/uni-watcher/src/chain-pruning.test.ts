@@ -7,8 +7,8 @@ import { AssertionError } from 'assert';
 import 'mocha';
 import _ from 'lodash';
 
-import { JOB_KIND_PRUNE } from '@cerc-io/util';
-import { getConfig, getCustomProvider, JobQueue, JobRunner } from '@vulcanize/util';
+import { JOB_KIND_PRUNE, JobQueue, getCustomProvider, getConfig } from '@cerc-io/util';
+import { Config, JobRunner } from '@vulcanize/util';
 import { getCache } from '@cerc-io/cache';
 import { insertNDummyBlocks, removeEntities } from '@vulcanize/util/test';
 import { EthClient } from '@cerc-io/ipld-eth-client';
@@ -27,7 +27,7 @@ describe('chain pruning', () => {
 
   before(async () => {
     // Get config.
-    const config = await getConfig(CONFIG_FILE);
+    const config: Config = await getConfig(CONFIG_FILE);
 
     const { upstream, database: dbConfig, jobQueue: jobQueueConfig } = config;
 

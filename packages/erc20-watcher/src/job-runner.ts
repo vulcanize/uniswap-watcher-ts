@@ -14,15 +14,13 @@ import {
   startMetricsServer,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  DEFAULT_CONFIG_PATH
+  DEFAULT_CONFIG_PATH,
+  JobQueue,
+  getCustomProvider,
+  getConfig
 } from '@cerc-io/util';
 import { getCache } from '@cerc-io/cache';
-import {
-  getConfig,
-  JobQueue,
-  JobRunner as BaseJobRunner,
-  getCustomProvider
-} from '@vulcanize/util';
+import { Config, JobRunner as BaseJobRunner } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
@@ -73,7 +71,7 @@ export const main = async (): Promise<any> => {
     })
     .argv;
 
-  const config = await getConfig(argv.f);
+  const config: Config = await getConfig(argv.f);
 
   assert(config.server, 'Missing server config');
 

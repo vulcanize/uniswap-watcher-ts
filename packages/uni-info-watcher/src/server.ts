@@ -13,9 +13,8 @@ import 'graphql-import-node';
 
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { createAndStartServer, DEFAULT_CONFIG_PATH } from '@cerc-io/util';
-
-import { getConfig, getCustomProvider, JobQueue, startGQLMetricsServer } from '@vulcanize/util';
+import { Config } from '@vulcanize/util';
+import { createAndStartServer, DEFAULT_CONFIG_PATH, JobQueue, getCustomProvider, startGQLMetricsServer, getConfig } from '@cerc-io/util';
 import { getCache } from '@cerc-io/cache';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 
@@ -40,7 +39,7 @@ export const main = async (): Promise<any> => {
     })
     .argv;
 
-  const config = await getConfig(argv.f);
+  const config: Config = await getConfig(argv.f);
 
   assert(config.server, 'Missing server config');
 

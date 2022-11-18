@@ -6,11 +6,8 @@ import { expect, assert } from 'chai';
 import { ethers, Contract, ContractTransaction, Signer, constants } from 'ethers';
 import 'mocha';
 
-import {
-  Config,
-  getConfig,
-  JobQueue
-} from '@vulcanize/util';
+import { JobQueue, getConfig } from '@cerc-io/util';
+import { Config } from '@vulcanize/util';
 import {
   deployTokens,
   deployUniswapV3Callee,
