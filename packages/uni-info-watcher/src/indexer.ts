@@ -531,7 +531,7 @@ export class Indexer implements IndexerInterface {
   async resetLatestEntities (blockNumber: number): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
     try {
-      this._db.graphDatabase.resetLatestEntities(dbTx, blockNumber);
+      await this._db.graphDatabase.resetLatestEntities(dbTx, blockNumber);
 
       dbTx.commitTransaction();
     } catch (error) {
@@ -635,6 +635,8 @@ export class Indexer implements IndexerInterface {
   async resetWatcherToBlock (blockNumber: number): Promise<void> {
     const entities = [...ENTITIES, FrothyEntity];
     await this._baseIndexer.resetWatcherToBlock(blockNumber, entities);
+
+    await this.resetLatestEntities(blockNumber);
   }
 
   async _saveBlockAndFetchEvents ({

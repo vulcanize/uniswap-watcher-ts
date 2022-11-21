@@ -2,16 +2,10 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import debug from 'debug';
-import assert from 'assert';
-
-import { JobQueue, resetJobs, getConfig, initClients } from '@cerc-io/util';
-import { Config } from '@vulcanize/util';
+import { ResetWatcherCmd } from '@cerc-io/cli';
 
 import { Database } from '../../database';
 import { Indexer } from '../../indexer';
-
-const log = debug('vulcanize:reset-watcher');
 
 export const command = 'watcher';
 
@@ -24,24 +18,8 @@ export const builder = {
 };
 
 export const handler = async (argv: any): Promise<void> => {
-  const config: Config = await getConfig(argv.configFile);
-  await resetJobs(config);
-  const { jobQueue: jobQueueConfig } = config;
-  const { ethClient, ethProvider } = await initClients(config);
+  const resetWatcherCmd = new ResetWatcherCmd();
+  await resetWatcherCmd.init(argv, Database, Indexer);
 
-  // Initialize database.
-  const db = new Database(config.database);
-  await db.init();
-
-  assert(jobQueueConfig, 'Missing job queue config');
-
-  const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
-  assert(dbConnectionString, 'Missing job queue db connection string');
-
-  const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
-
-  const indexer = new Indexer(config.server, db, { ethClient }, ethProvider, jobQueue);
-
-  await indexer.resetWatcherToBlock(argv.blockNumber);
-  log('Reset watcher successfully');
+  await resetWatcherCmd.exec();
 };
