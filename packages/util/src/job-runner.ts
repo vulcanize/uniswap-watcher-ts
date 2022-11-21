@@ -100,7 +100,6 @@ export class JobRunner {
 
     if (syncStatus) {
       // Resetting to block before latest indexed as all events might not be processed in latest indexed block.
-      // Reprocessing of events in subgraph watchers is not possible as DB transaction is not implemented.
       // TODO: Check updating latestIndexedBlock after blockProgress.isComplete is set to true.
       await this._indexer.resetWatcherToBlock(syncStatus.latestIndexedBlockNumber - 1);
     }
@@ -269,13 +268,15 @@ export class JobRunner {
       if (prefetchedBlock) {
         ({ block: blockProgress } = prefetchedBlock);
       } else {
-        // Delay required to process block.
+        // Delay required to process block after events are available.
         const { jobDelayInMilliSecs = 0 } = this._jobQueueConfig;
         await wait(jobDelayInMilliSecs);
         let events = [];
 
         console.time('time:job-runner#_indexBlock-saveBlockAndFetchEvents');
+        log(`_indexBlock#saveBlockAndFetchEvents: fetching from upstream server ${blockHash}`);
         [blockProgress, events] = await this._indexer.saveBlockAndFetchEvents({ cid, blockHash, blockNumber, parentHash, blockTimestamp });
+        log(`_indexBlock#saveBlockAndFetchEvents: fetched for block: ${blockProgress.blockHash} num events: ${blockProgress.numEvents}`);
         console.timeEnd('time:job-runner#_indexBlock-saveBlockAndFetchEvents');
 
         this._blockAndEventsMap.set(blockHash, { block: blockProgress, events });
@@ -344,14 +345,13 @@ export class JobRunner {
       dbEvents = watchedContractEvents;
     }
 
+    // Process events in loop
     for (const dbEvent of dbEvents) {
       if (dbEvent.index <= block.lastProcessedEventIndex) {
         continue;
       }
-      // Process events in loop
 
       const eventIndex = dbEvent.index;
-      // log(`Processing event ${event.id} index ${eventIndex}`);
 
       if (!subgraphEventsOrder) {
         // Check if previous event in block has been processed exactly before this and abort if not.
