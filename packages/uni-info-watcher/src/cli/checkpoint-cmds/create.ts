@@ -56,7 +56,7 @@ export const handler = async (argv: any): Promise<void> => {
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);
 
-  const indexer = new Indexer(config.server, db, uniClient, erc20Client, ethClient, ethProvider, jobQueue);
+  const indexer = new Indexer(config.server, db, { uniClient, erc20Client, ethClient }, ethProvider, jobQueue);
   await indexer.init();
 
   const blockHash = await indexer.processCLICheckpoint(argv.address, argv.blockHash);

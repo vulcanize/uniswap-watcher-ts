@@ -19,7 +19,9 @@ import {
   Where,
   QueryOptions,
   UNKNOWN_EVENT_NAME,
-  JobQueue
+  JobQueue,
+  DatabaseInterface,
+  Clients
 } from '@cerc-io/util';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
@@ -69,12 +71,12 @@ export class Indexer implements IndexerInterface {
   _contract: ethers.utils.Interface
   _serverMode: string
 
-  constructor (serverConfig: ServerConfig, db: Database, ethClient: EthClient, ethProvider: ethers.providers.BaseProvider, jobQueue: JobQueue) {
+  constructor (serverConfig: ServerConfig, db: DatabaseInterface, clients: Clients, ethProvider: ethers.providers.BaseProvider, jobQueue: JobQueue) {
     assert(db);
-    assert(ethClient);
+    assert(clients.ethClient);
 
-    this._db = db;
-    this._ethClient = ethClient;
+    this._db = db as Database;
+    this._ethClient = clients.ethClient;
     this._ethProvider = ethProvider;
     this._serverConfig = serverConfig;
     this._serverMode = this._serverConfig.mode;
@@ -97,6 +99,10 @@ export class Indexer implements IndexerInterface {
 
   get storageLayoutMap (): Map<string, StorageLayout> {
     return this._storageLayoutMap;
+  }
+
+  async init (): Promise<void> {
+    await this._baseIndexer.fetchContracts();
   }
 
   getResultEvent (event: Event): EventResult {

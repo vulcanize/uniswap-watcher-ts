@@ -9,7 +9,6 @@ import {
   DeepPartial,
   FindConditions,
   FindManyOptions,
-  In,
   LessThanOrEqual,
   QueryRunner,
   Repository,
@@ -122,8 +121,9 @@ export class Database implements DatabaseInterface {
   _graphDatabase: GraphDatabase
   _relationsMap: Map<any, { [key: string]: any }>
 
-  constructor (config: ConnectionOptions, serverConfig: ServerConfig) {
+  constructor (config: ConnectionOptions, serverConfig?: ServerConfig) {
     assert(config);
+    assert(serverConfig);
     const entitiesDir = path.join(__dirname, 'entity/*');
 
     this._config = {

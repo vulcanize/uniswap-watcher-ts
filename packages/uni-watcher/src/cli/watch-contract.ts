@@ -2,76 +2,25 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import assert from 'assert';
-import yargs from 'yargs';
 import 'reflect-metadata';
+import debug from 'debug';
 
-import { DEFAULT_CONFIG_PATH, JobQueue, getConfig, initClients } from '@cerc-io/util';
-import { Config } from '@vulcanize/util';
+import { WatchContractCmd } from '@cerc-io/cli';
 
 import { Database } from '../database';
 import { Indexer } from '../indexer';
 
-(async () => {
-  const argv = await yargs.parserConfiguration({
-    'parse-numbers': false
-  }).options({
-    configFile: {
-      alias: 'f',
-      type: 'string',
-      require: true,
-      demandOption: true,
-      describe: 'configuration file path (toml)',
-      default: DEFAULT_CONFIG_PATH
-    },
-    address: {
-      type: 'string',
-      require: true,
-      demandOption: true,
-      describe: 'Address of the deployed contract'
-    },
-    kind: {
-      type: 'string',
-      require: true,
-      demandOption: true,
-      describe: 'Kind of contract (factory|pool|nfpm)'
-    },
-    checkpoint: {
-      type: 'boolean',
-      require: true,
-      demandOption: true,
-      describe: 'Turn checkpointing on'
-    },
-    startingBlock: {
-      type: 'number',
-      default: 1,
-      describe: 'Starting block'
-    }
-  }).argv;
+const log = debug('vulcanize:watch-contract');
 
-  const config: Config = await getConfig(argv.configFile);
-  const { database: dbConfig, jobQueue: jobQueueConfig } = config;
-  const { ethClient, ethProvider } = await initClients(config);
+const main = async (): Promise<void> => {
+  const watchContractCmd = new WatchContractCmd();
+  await watchContractCmd.init(Database, Indexer);
 
-  assert(dbConfig);
+  await watchContractCmd.exec();
+};
 
-  const db = new Database(dbConfig);
-  await db.init();
-
-  assert(jobQueueConfig, 'Missing job queue config');
-
-  const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
-  assert(dbConnectionString, 'Missing job queue db connection string');
-
-  const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
-  await jobQueue.start();
-
-  const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
-  await indexer.init();
-
-  await indexer.watchContract(argv.address, argv.kind, argv.checkpoint, argv.startingBlock);
-
-  await db.close();
-  await jobQueue.stop();
-  process.exit();
-})();
+main().catch(err => {
+  log(err);
+}).finally(() => {
+  process.exit(0);
+});

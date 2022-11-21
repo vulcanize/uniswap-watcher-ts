@@ -124,7 +124,7 @@ describe('uni-watcher', () => {
     factory = new Contract(factoryContract.address, FACTORY_ABI, signer);
 
     // Verifying with the db.
-    const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
+    const indexer = new Indexer(config.server, db, { ethClient }, ethProvider, jobQueue);
     await indexer.init();
     assert(indexer.isWatchedContract(factory.address), 'Factory contract not added to the database.');
   });
@@ -260,7 +260,7 @@ describe('uni-watcher', () => {
     nfpm = new Contract(nfpmContract.address, NFPM_ABI, signer);
 
     // Verifying with the db.
-    const indexer = new Indexer(config.server, db, ethClient, ethProvider, jobQueue);
+    const indexer = new Indexer(config.server, db, { ethClient }, ethProvider, jobQueue);
     await indexer.init();
     assert(await indexer.isWatchedContract(nfpm.address), 'NFPM contract not added to the database.');
   });
