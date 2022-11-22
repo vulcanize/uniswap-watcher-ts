@@ -354,7 +354,12 @@ export class Indexer implements IndexerInterface {
 
   async processCLICheckpoint (contractAddress: string, blockHash?: string): Promise<string | undefined> {
     // TODO Implement
-    return '';
+    return undefined;
+  }
+
+  async getStateByCID (cid: string): Promise<State | undefined> {
+    // TODO Implement
+    return undefined;
   }
 
   parseEventNameAndArgs (kind: string, logObj: any): any {
