@@ -9,12 +9,10 @@ import { Between } from 'typeorm';
 import { prepareEntityState } from '@cerc-io/graph-node';
 
 import { Indexer } from '../indexer';
-import { Database } from '../database';
+import { Database, ENTITIES } from '../database';
 import { FACTORY_ADDRESS } from '../utils/constants';
 
 const log = debug('vulcanize:fill-state');
-
-const ENTITY_NAMES = ['Bundle', 'Burn', 'Factory', 'Mint', 'Pool', 'PoolDayData', 'PoolHourData', 'Position', 'PositionSnapshot', 'Swap', 'Tick', 'TickDayData', 'Token', 'TokenDayData', 'TokenHourData', 'Transaction', 'UniswapDayData'];
 
 export const fillState = async (
   indexer: Indexer,
@@ -42,10 +40,11 @@ export const fillState = async (
 
   // Map: contractAddress -> entity names
   // Using Factory contract to store state for all entities.
+  const entityNames = [...ENTITIES].map(entity => entity.name);
   const contractEntitiesMap: Map<string, string[]> = new Map([
     [
       FACTORY_ADDRESS,
-      ENTITY_NAMES
+      entityNames
     ]
   ]);
 
