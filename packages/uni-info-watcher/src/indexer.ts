@@ -546,6 +546,10 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.getAncestorAtDepth(blockHash, depth);
   }
 
+  getRelationsMap (): Map<any, { [key: string]: any }> {
+    return this._db.relationsMap;
+  }
+
   async saveBlockAndFetchEvents (block: DeepPartial<BlockProgress>): Promise<[BlockProgress, DeepPartial<Event>[]]> {
     return this._saveBlockAndFetchEvents(block);
   }
