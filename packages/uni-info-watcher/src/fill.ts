@@ -117,7 +117,7 @@ export const main = async (): Promise<any> => {
     return;
   }
 
-  const eventWatcher = new EventWatcher(upstream, ethClient, indexer, pubsub, jobQueue);
+  const eventWatcher = new EventWatcher(ethClient, indexer, pubsub, jobQueue);
 
   await fillBlocks(jobQueue, indexer, eventWatcher, jobQueueConfig.blockDelayInMilliSecs, argv);
 };

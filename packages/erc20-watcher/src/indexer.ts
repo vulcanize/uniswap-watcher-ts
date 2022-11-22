@@ -21,7 +21,8 @@ import {
   UNKNOWN_EVENT_NAME,
   JobQueue,
   DatabaseInterface,
-  Clients
+  Clients,
+  StateKind
 } from '@cerc-io/util';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
@@ -360,6 +361,14 @@ export class Indexer implements IndexerInterface {
   async getStateByCID (cid: string): Promise<State | undefined> {
     // TODO Implement
     return undefined;
+  }
+
+  async saveOrUpdateState (state: State): Promise<State> {
+    return {} as State;
+  }
+
+  async removeStates (blockNumber: number, kind: StateKind): Promise<void> {
+    // TODO Implement
   }
 
   parseEventNameAndArgs (kind: string, logObj: any): any {
