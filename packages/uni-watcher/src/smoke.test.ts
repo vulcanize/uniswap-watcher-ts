@@ -90,9 +90,8 @@ describe('uni-watcher', () => {
       cache
     });
 
-    const endpoint = `http://${host}:${port}/graphql`;
-    const gqlEndpoint = endpoint;
-    const gqlSubscriptionEndpoint = endpoint;
+    const gqlEndpoint = `http://${host}:${port}/graphql`;
+    const gqlSubscriptionEndpoint = `ws://${host}:${port}/graphql`;
     uniClient = new UniClient({
       gqlEndpoint,
       gqlSubscriptionEndpoint

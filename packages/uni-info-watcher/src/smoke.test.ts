@@ -63,7 +63,6 @@ describe('uni-info-watcher', () => {
     config = await getConfig(CONFIG_FILE);
 
     const { upstream, server: { host, port } } = config;
-    const endpoint = `http://${host}:${port}/graphql`;
 
     let { uniWatcher: { gqlEndpoint, gqlSubscriptionEndpoint }, ethServer: { rpcProviderEndpoint } } = upstream;
     uniClient = new UniClient({
@@ -71,8 +70,8 @@ describe('uni-info-watcher', () => {
       gqlSubscriptionEndpoint
     });
 
-    gqlEndpoint = endpoint;
-    gqlSubscriptionEndpoint = endpoint;
+    gqlEndpoint = `http://${host}:${port}/graphql`;
+    gqlSubscriptionEndpoint = `ws://${host}:${port}/graphql`;
     client = new Client({
       gqlEndpoint,
       gqlSubscriptionEndpoint
