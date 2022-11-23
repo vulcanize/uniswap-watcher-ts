@@ -475,6 +475,10 @@ export class Indexer implements IndexerInterface {
   }
 
   async addContracts (): Promise<void> {
+    if (this._serverConfig.mode === 'demo') {
+      return;
+    }
+
     // Watching the contract(s) if not watched already.
     for (const contract of WATCHED_CONTRACTS) {
       const { address, startingBlock, kind } = contract;
