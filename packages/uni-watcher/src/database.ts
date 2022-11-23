@@ -78,6 +78,12 @@ export class Database implements DatabaseInterface {
     await this._baseDatabase.removeStates(repo, blockNumber, kind);
   }
 
+  async removeStatesAfterBlock (dbTx: QueryRunner, blockNumber: number): Promise<void> {
+    const repo = dbTx.manager.getRepository(State);
+
+    await this._baseDatabase.removeStatesAfterBlock(repo, blockNumber);
+  }
+
   async getStateSyncStatus (): Promise<StateSyncStatus | undefined> {
     const repo = this._conn.getRepository(StateSyncStatus);
 

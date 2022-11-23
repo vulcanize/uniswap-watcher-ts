@@ -349,6 +349,16 @@ export class Indexer implements IndexerInterface {
     // TODO Implement
   }
 
+  async processInitialState (contractAddress: string, blockHash: string): Promise<any> {
+    // TODO: Call initial state hook.
+    return undefined;
+  }
+
+  async processStateCheckpoint (contractAddress: string, blockHash: string): Promise<boolean> {
+    // TODO: Call checkpoint hook.
+    return false;
+  }
+
   async processCheckpoint (blockHash: string): Promise<void> {
     // TODO Implement
   }
@@ -461,6 +471,10 @@ export class Indexer implements IndexerInterface {
 
   updateStateStatusMap (address: string, stateStatus: StateStatus): void {
     this._baseIndexer.updateStateStatusMap(address, stateStatus);
+  }
+
+  cacheContract (contract: Contract): void {
+    return this._baseIndexer.cacheContract(contract);
   }
 
   async saveEventEntity (dbEvent: Event): Promise<Event> {
