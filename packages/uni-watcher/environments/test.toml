@@ -1,6 +1,7 @@
 [server]
   host = "127.0.0.1"
   port = 3003
+  kind = "active"
 
 [database]
   type = "postgres"
@@ -28,5 +29,5 @@
   jobDelayInMilliSecs = 100
   eventsInBatch = 50
   blockDelayInMilliSecs = 2000
-  prefetchBlocksInMem = true
+  prefetchBlocksInMem = false
   prefetchBlockCount = 10
