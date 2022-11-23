@@ -4,7 +4,6 @@
 
 import 'reflect-metadata';
 import debug from 'debug';
-import 'graphql-import-node';
 
 import { ServerCmd } from '@cerc-io/cli';
 import { Config } from '@vulcanize/util';

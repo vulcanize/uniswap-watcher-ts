@@ -4,139 +4,41 @@
 
 import assert from 'assert';
 import 'reflect-metadata';
-import yargs from 'yargs';
-import { hideBin } from 'yargs/helpers';
 import debug from 'debug';
 
+import { JobRunnerCmd } from '@cerc-io/cli';
+import { startMetricsServer } from '@cerc-io/util';
+import { Config, WatcherJobRunner as JobRunner } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
-import { getCache } from '@cerc-io/cache';
-import {
-  Config,
-  JobRunner as BaseJobRunner
-} from '@vulcanize/util';
-import { EthClient } from '@cerc-io/ipld-eth-client';
-import {
-  JobQueue,
-  JobQueueConfig,
-  startMetricsServer,
-  QUEUE_BLOCK_PROCESSING,
-  QUEUE_EVENT_PROCESSING,
-  DEFAULT_CONFIG_PATH,
-  getCustomProvider,
-  getConfig
-} from '@cerc-io/util';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
 
 const log = debug('vulcanize:job-runner');
 
-export class JobRunner {
-  _indexer: Indexer
-  _jobQueue: JobQueue
-  _baseJobRunner: BaseJobRunner
-  _jobQueueConfig: JobQueueConfig
-
-  constructor (jobQueueConfig: JobQueueConfig, indexer: Indexer, jobQueue: JobQueue) {
-    this._jobQueueConfig = jobQueueConfig;
-    this._indexer = indexer;
-    this._jobQueue = jobQueue;
-    this._baseJobRunner = new BaseJobRunner(this._jobQueueConfig, this._indexer, this._jobQueue);
-  }
-
-  async start (): Promise<void> {
-    await this._jobQueue.deleteAllJobs();
-    await this._baseJobRunner.resetToPrevIndexedBlock();
-    await this.subscribeBlockProcessingQueue();
-    await this.subscribeEventProcessingQueue();
-  }
-
-  async subscribeBlockProcessingQueue (): Promise<void> {
-    await this._jobQueue.subscribe(QUEUE_BLOCK_PROCESSING, async (job) => {
-      await this._baseJobRunner.processBlock(job);
-    });
-  }
-
-  async subscribeEventProcessingQueue (): Promise<void> {
-    await this._jobQueue.subscribe(QUEUE_EVENT_PROCESSING, async (job) => {
-      await this._baseJobRunner.processEvent(job);
-    });
-  }
-}
-
 export const main = async (): Promise<any> => {
-  const argv = await yargs(hideBin(process.argv))
-    .option('f', {
-      alias: 'config-file',
-      demandOption: true,
-      describe: 'configuration file path (toml)',
-      type: 'string',
-      default: DEFAULT_CONFIG_PATH
-    })
-    .argv;
+  const jobRunnerCmd = new JobRunnerCmd();
 
-  const config: Config = await getConfig(argv.f);
-
-  assert(config.server, 'Missing server config');
-
-  const { upstream, database: dbConfig, jobQueue: jobQueueConfig, server: { mode } } = config;
-
-  assert(dbConfig, 'Missing database config');
-
-  const db = new Database(dbConfig, config.server);
-  await db.init();
-
-  assert(upstream, 'Missing upstream config');
-
+  const config: Config = await jobRunnerCmd.initConfig();
   const {
-    uniWatcher: {
-      gqlEndpoint,
-      gqlSubscriptionEndpoint
-    },
-    tokenWatcher,
-    cache: cacheConfig,
-    ethServer: {
-      gqlApiEndpoint,
-      rpcProviderEndpoint
-    }
-  } = upstream;
+    uniWatcher,
+    tokenWatcher
+  } = config.upstream;
 
-  assert(gqlApiEndpoint, 'Missing upstream ethServer.gqlApiEndpoint');
-  assert(gqlEndpoint, 'Missing upstream uniWatcher.gqlEndpoint');
-  assert(gqlSubscriptionEndpoint, 'Missing upstream uniWatcher.gqlSubscriptionEndpoint');
-
-  const cache = await getCache(cacheConfig);
-
-  const ethClient = new EthClient({
-    gqlEndpoint: gqlApiEndpoint,
-    cache
-  });
-
-  const uniClient = new UniClient({
-    gqlEndpoint,
-    gqlSubscriptionEndpoint
-  });
-
+  const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);
-  const ethProvider = getCustomProvider(rpcProviderEndpoint);
 
-  assert(jobQueueConfig, 'Missing job queue config');
+  await jobRunnerCmd.init(Database, Indexer, { uniClient, erc20Client });
 
-  const { dbConnectionString, maxCompletionLagInSecs } = jobQueueConfig;
-  assert(dbConnectionString, 'Missing job queue db connection string');
+  const jobQueue = jobRunnerCmd.jobQueue;
+  const indexer = jobRunnerCmd.indexer as Indexer;
+  assert(jobQueue);
+  assert(indexer);
 
-  const jobQueue = new JobQueue({ dbConnectionString, maxCompletionLag: maxCompletionLagInSecs });
-  await jobQueue.start();
+  await indexer.addContracts();
 
-  const indexer = new Indexer(config.server, db, { uniClient, erc20Client, ethClient }, ethProvider, jobQueue);
-  await indexer.init();
-
-  if (mode !== 'demo') {
-    await indexer.addContracts();
-  }
-
-  const jobRunner = new JobRunner(jobQueueConfig, indexer, jobQueue);
+  const jobRunner = new JobRunner(config.jobQueue, indexer, jobQueue);
   await jobRunner.start();
 
   await startMetricsServer(config, indexer);
