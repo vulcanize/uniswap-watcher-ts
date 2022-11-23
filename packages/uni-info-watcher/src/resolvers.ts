@@ -8,7 +8,17 @@ import debug from 'debug';
 import { GraphQLResolveInfo, GraphQLScalarType } from 'graphql';
 import JSONbig from 'json-bigint';
 
-import { BlockHeight, OrderDirection, getResultState, setGQLCacheHints, GraphDecimal, gqlQueryCount, gqlTotalQueryCount } from '@cerc-io/util';
+import {
+  BlockHeight,
+  OrderDirection,
+  getResultState,
+  setGQLCacheHints,
+  GraphDecimal,
+  gqlQueryCount,
+  gqlTotalQueryCount,
+  IndexerInterface,
+  EventWatcherInterface
+} from '@cerc-io/util';
 
 import { Indexer } from './indexer';
 import { Burn } from './entity/Burn';
@@ -38,8 +48,9 @@ const log = debug('vulcanize:resolver');
 
 export { BlockHeight };
 
-export const createResolvers = async (indexer: Indexer, eventWatcher: EventWatcher): Promise<any> => {
-  assert(indexer);
+export const createResolvers = async (indexerArg: IndexerInterface, eventWatcherArg: EventWatcherInterface): Promise<any> => {
+  const indexer = indexerArg as Indexer;
+  const eventWatcher = eventWatcherArg as EventWatcher;
 
   const gqlCacheConfig = indexer.serverConfig.gqlCache;
 

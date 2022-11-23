@@ -9,7 +9,8 @@ import {
   EventWatcher as BaseEventWatcher,
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
-  JobQueue
+  JobQueue,
+  IndexerInterface
 } from '@cerc-io/util';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 
@@ -23,12 +24,12 @@ export class EventWatcher {
   _pubsub: PubSub
   _jobQueue: JobQueue
 
-  constructor (ethClient: EthClient, indexer: Indexer, pubsub: PubSub, jobQueue: JobQueue) {
+  constructor (ethClient: EthClient, indexer: IndexerInterface, pubsub: PubSub, jobQueue: JobQueue) {
     assert(ethClient);
     assert(indexer);
 
     this._ethClient = ethClient;
-    this._indexer = indexer;
+    this._indexer = indexer as Indexer;
     this._pubsub = pubsub;
     this._jobQueue = jobQueue;
     this._baseEventWatcher = new BaseEventWatcher(this._ethClient, this._indexer, this._pubsub, this._jobQueue);

@@ -11,7 +11,8 @@ import {
   QUEUE_BLOCK_PROCESSING,
   QUEUE_EVENT_PROCESSING,
   JobQueue,
-  EventWatcherInterface
+  EventWatcherInterface,
+  IndexerInterface
 } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
@@ -24,9 +25,9 @@ export class EventWatcher implements EventWatcherInterface {
   _jobQueue: JobQueue
   _baseEventWatcher: BaseEventWatcher
 
-  constructor (ethClient: EthClient, indexer: Indexer, pubsub: PubSub, jobQueue: JobQueue) {
+  constructor (ethClient: EthClient, indexer: IndexerInterface, pubsub: PubSub, jobQueue: JobQueue) {
     this._ethClient = ethClient;
-    this._indexer = indexer;
+    this._indexer = indexer as Indexer;
     this._pubsub = pubsub;
     this._jobQueue = jobQueue;
     this._baseEventWatcher = new BaseEventWatcher(this._ethClient, this._indexer, this._pubsub, this._jobQueue);
