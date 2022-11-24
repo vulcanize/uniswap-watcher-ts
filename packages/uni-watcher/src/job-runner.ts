@@ -8,7 +8,7 @@ import debug from 'debug';
 
 import { JobRunnerCmd } from '@cerc-io/cli';
 import { startMetricsServer } from '@cerc-io/util';
-import { Config, WatcherJobRunner as JobRunner } from '@vulcanize/util';
+import { Config, JobRunner } from '@vulcanize/util';
 
 import { Indexer } from './indexer';
 import { Database } from './database';
