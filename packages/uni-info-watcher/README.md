@@ -66,9 +66,7 @@ Update `environments/local.toml` with database connection settings for both the 
   $ yarn job-runner -f environments/local.toml
   ```
 
-* Run `yarn server:mock` to run server with mock data.
-
-## Mock Queries
+## Example Queries
 
 ```graphql
 {
@@ -77,7 +75,7 @@ Update `environments/local.toml` with database connection settings for both the 
     ethPriceUSD
   }
 
-	bundles(first: 1, block: { number: 2 }) {
+  bundles(first: 1, block: { number: 2 }) {
     id
     ethPriceUSD
   }
@@ -287,13 +285,13 @@ Queries with ID param
 To run a smoke test:
 
 * Start the server in `packages/erc-20-watcher`.
-  
+
   ```bash
   yarn server
   ```
 
 * Start the server and the job-runner in `packages/uni-watcher` with test config.
-  
+
   ```bash
   yarn job-runner -f environments/test.toml
   ```
