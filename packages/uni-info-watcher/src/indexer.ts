@@ -616,7 +616,14 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
   }
 
-  async dumpEntityState (blockHash: string, isStateFinalized = false): Promise<void> {
+  updateSubgraphState (contractAddress: string, data: any): void {
+    // Update the subgraph state for a given contract.
+    const oldData = this._subgraphStateMap.get(contractAddress);
+    const updatedData = _.merge(oldData, data);
+    this._subgraphStateMap.set(contractAddress, updatedData);
+  }
+
+  async dumpSubgraphState (blockHash: string, isStateFinalized = false): Promise<void> {
     // Create a diff for each contract in the subgraph state map.
     const createDiffPromises = Array.from(this._subgraphStateMap.entries())
       .map(([contractAddress, data]): Promise<void> => {
@@ -631,13 +638,6 @@ export class Indexer implements IndexerInterface {
 
     // Reset the subgraph state map.
     this._subgraphStateMap.clear();
-  }
-
-  updateEntityState (contractAddress: string, data: any): void {
-    // Update the subgraph state for a given contract.
-    const oldData = this._subgraphStateMap.get(contractAddress);
-    const updatedData = _.merge(oldData, data);
-    this._subgraphStateMap.set(contractAddress, updatedData);
   }
 
   async resetWatcherToBlock (blockNumber: number): Promise<void> {
