@@ -129,6 +129,10 @@ export class Indexer implements IndexerInterface {
     );
   }
 
+  async getEntitiesForBlock (blockHash: string, tableName: string): Promise<any[]> {
+    return this._db.getEntitiesForBlock(blockHash, tableName);
+  }
+
   getStateData (state: State): any {
     return this._baseIndexer.getStateData(state);
   }
@@ -376,6 +380,11 @@ export class Indexer implements IndexerInterface {
   async getStateByCID (cid: string): Promise<State | undefined> {
     // TODO Implement
     return undefined;
+  }
+
+  async getStates (where: FindConditions<State>): Promise<State[]> {
+    // TODO Implement
+    return [];
   }
 
   // Method to be used by export-state CLI.

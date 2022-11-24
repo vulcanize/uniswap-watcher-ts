@@ -439,6 +439,10 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
+  async getEntitiesForBlock (blockHash: string, tableName: string): Promise<any[]> {
+    return this._db.getEntitiesForBlock(blockHash, tableName);
+  }
+
   getGQLToDBFilter (where: { [key: string]: any } = {}) {
     return Object.entries(where).reduce((acc: { [key: string]: any }, [fieldWithSuffix, value]) => {
       const [field, ...suffix] = fieldWithSuffix.split('_');
@@ -468,10 +472,6 @@ export class Indexer implements IndexerInterface {
 
       return acc;
     }, {});
-  }
-
-  async getEntitiesForBlock (blockHash: string, tableName: string): Promise<any[]> {
-    return this._db.getEntitiesForBlock(blockHash, tableName);
   }
 
   async addContracts (): Promise<void> {
