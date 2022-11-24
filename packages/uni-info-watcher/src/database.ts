@@ -554,15 +554,7 @@ export class Database implements DatabaseInterface {
   }
 
   async getEntitiesForBlock (blockHash: string, tableName: string): Promise<any[]> {
-    const repo = this._conn.getRepository(tableName);
-
-    const entities = await repo.find({
-      where: {
-        blockHash
-      }
-    });
-
-    return entities;
+    return this._baseDatabase.getEntitiesForBlock(blockHash, tableName);
   }
 
   async getModelEntities<Entity> (

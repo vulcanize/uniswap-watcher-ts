@@ -8,7 +8,6 @@ import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan,
 import JSONbig from 'json-bigint';
 import { providers, utils, BigNumber } from 'ethers';
 import { SelectionNode } from 'graphql';
-import _ from 'lodash';
 
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
@@ -31,6 +30,7 @@ import {
   DatabaseInterface,
   Clients
 } from '@cerc-io/util';
+import { updateSubgraphState, dumpSubgraphState } from '@cerc-io/graph-node';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
@@ -439,6 +439,10 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
+  async getEntitiesForBlock (blockHash: string, tableName: string): Promise<any[]> {
+    return this._db.getEntitiesForBlock(blockHash, tableName);
+  }
+
   getGQLToDBFilter (where: { [key: string]: any } = {}) {
     return Object.entries(where).reduce((acc: { [key: string]: any }, [fieldWithSuffix, value]) => {
       const [field, ...suffix] = fieldWithSuffix.split('_');
@@ -468,10 +472,6 @@ export class Indexer implements IndexerInterface {
 
       return acc;
     }, {});
-  }
-
-  async getEntitiesForBlock (blockHash: string, tableName: string): Promise<any[]> {
-    return this._db.getEntitiesForBlock(blockHash, tableName);
   }
 
   async addContracts (): Promise<void> {
@@ -616,28 +616,12 @@ export class Indexer implements IndexerInterface {
     return this._baseIndexer.updateBlockProgress(block, lastProcessedEventIndex);
   }
 
-  async dumpEntityState (blockHash: string, isStateFinalized = false): Promise<void> {
-    // Create a diff for each contract in the subgraph state map.
-    const createDiffPromises = Array.from(this._subgraphStateMap.entries())
-      .map(([contractAddress, data]): Promise<void> => {
-        if (isStateFinalized) {
-          return this.createDiff(contractAddress, blockHash, data);
-        }
-
-        return this.createDiffStaged(contractAddress, blockHash, data);
-      });
-
-    await Promise.all(createDiffPromises);
-
-    // Reset the subgraph state map.
-    this._subgraphStateMap.clear();
+  updateSubgraphState (contractAddress: string, data: any): void {
+    return updateSubgraphState(this._subgraphStateMap, contractAddress, data);
   }
 
-  updateEntityState (contractAddress: string, data: any): void {
-    // Update the subgraph state for a given contract.
-    const oldData = this._subgraphStateMap.get(contractAddress);
-    const updatedData = _.merge(oldData, data);
-    this._subgraphStateMap.set(contractAddress, updatedData);
+  async dumpSubgraphState (blockHash: string, isStateFinalized = false): Promise<void> {
+    return dumpSubgraphState(this, this._subgraphStateMap, blockHash, isStateFinalized);
   }
 
   async resetWatcherToBlock (blockNumber: number): Promise<void> {
