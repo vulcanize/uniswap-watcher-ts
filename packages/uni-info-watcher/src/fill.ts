@@ -31,10 +31,10 @@ export const main = async (): Promise<any> => {
 
   await fillCmd.init(Database, Indexer, EventWatcher, { uniClient, erc20Client });
 
-  await fillCmd.exec(_getContractEntitiesMap());
+  await fillCmd.exec(getContractEntitiesMap());
 };
 
-const _getContractEntitiesMap = (): Map<string, string[]> => {
+const getContractEntitiesMap = (): Map<string, string[]> => {
   // Map: contractAddress -> entity names
   // Using Factory contract to store state for all entities.
   const entityNames = [...ENTITIES].map(entity => entity.name);

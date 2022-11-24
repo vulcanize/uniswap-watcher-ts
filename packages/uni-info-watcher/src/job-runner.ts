@@ -8,7 +8,7 @@ import debug from 'debug';
 
 import { JobRunnerCmd } from '@cerc-io/cli';
 import { startMetricsServer } from '@cerc-io/util';
-import { Config, WatcherJobRunner as JobRunner } from '@vulcanize/util';
+import { Config, JobRunner } from '@vulcanize/util';
 import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 import { Client as UniClient } from '@vulcanize/uni-watcher';
 

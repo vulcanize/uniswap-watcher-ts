@@ -47,6 +47,25 @@ export class JobRunner {
     this._jobQueue = jobQueue;
   }
 
+  async start (): Promise<void> {
+    await this._jobQueue.deleteAllJobs();
+    await this.resetToPrevIndexedBlock();
+    await this.subscribeBlockProcessingQueue();
+    await this.subscribeEventProcessingQueue();
+  }
+
+  async subscribeBlockProcessingQueue (): Promise<void> {
+    await this._jobQueue.subscribe(QUEUE_BLOCK_PROCESSING, async (job) => {
+      await this.processBlock(job);
+    });
+  }
+
+  async subscribeEventProcessingQueue (): Promise<void> {
+    await this._jobQueue.subscribe(QUEUE_EVENT_PROCESSING, async (job) => {
+      await this.processEvent(job);
+    });
+  }
+
   async processBlock (job: any): Promise<void> {
     const { data: { kind } } = job;
 
@@ -439,38 +458,5 @@ export class JobRunner {
     this._indexer.cacheContract(contract);
 
     this._indexer.updateStateStatusMap(contract.address, {});
-  }
-}
-
-export class WatcherJobRunner {
-  _indexer: IndexerInterface
-  _jobQueue: JobQueue
-  _baseJobRunner: JobRunner
-  _jobQueueConfig: JobQueueConfig
-
-  constructor (jobQueueConfig: JobQueueConfig, indexer: IndexerInterface, jobQueue: JobQueue) {
-    this._jobQueueConfig = jobQueueConfig;
-    this._indexer = indexer;
-    this._jobQueue = jobQueue;
-    this._baseJobRunner = new JobRunner(this._jobQueueConfig, this._indexer, this._jobQueue);
-  }
-
-  async start (): Promise<void> {
-    await this._jobQueue.deleteAllJobs();
-    await this._baseJobRunner.resetToPrevIndexedBlock();
-    await this.subscribeBlockProcessingQueue();
-    await this.subscribeEventProcessingQueue();
-  }
-
-  async subscribeBlockProcessingQueue (): Promise<void> {
-    await this._jobQueue.subscribe(QUEUE_BLOCK_PROCESSING, async (job) => {
-      await this._baseJobRunner.processBlock(job);
-    });
-  }
-
-  async subscribeEventProcessingQueue (): Promise<void> {
-    await this._jobQueue.subscribe(QUEUE_EVENT_PROCESSING, async (job) => {
-      await this._baseJobRunner.processEvent(job);
-    });
   }
 }
