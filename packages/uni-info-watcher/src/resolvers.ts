@@ -17,7 +17,7 @@ import {
   gqlQueryCount,
   gqlTotalQueryCount,
   IndexerInterface,
-  EventWatcherInterface
+  EventWatcher
 } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
@@ -41,16 +41,14 @@ import { TickHourData } from './entity/TickHourData';
 import { Flash } from './entity/Flash';
 import { Collect } from './entity/Collect';
 import { PoolHourData } from './entity/PoolHourData';
-import { EventWatcher } from './events';
 import { FACTORY_ADDRESS, BUNDLE_ID } from './utils/constants';
 
 const log = debug('vulcanize:resolver');
 
 export { BlockHeight };
 
-export const createResolvers = async (indexerArg: IndexerInterface, eventWatcherArg: EventWatcherInterface): Promise<any> => {
+export const createResolvers = async (indexerArg: IndexerInterface, eventWatcher: EventWatcher): Promise<any> => {
   const indexer = indexerArg as Indexer;
-  const eventWatcher = eventWatcherArg as EventWatcher;
 
   const gqlCacheConfig = indexer.serverConfig.gqlCache;
 

@@ -34,5 +34,6 @@ export const handler = async (argv: any): Promise<void> => {
 
   await resetWatcherCmd.init(argv, Database, { uniClient, erc20Client });
   await resetWatcherCmd.initIndexer(Indexer);
+
   await resetWatcherCmd.exec();
 };

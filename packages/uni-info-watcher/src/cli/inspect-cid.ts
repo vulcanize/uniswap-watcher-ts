@@ -29,6 +29,7 @@ const main = async (): Promise<void> => {
 
   await inspectCIDCmd.init(Database, { uniClient, erc20Client });
   await inspectCIDCmd.initIndexer(Indexer);
+
   await inspectCIDCmd.exec();
 };
 

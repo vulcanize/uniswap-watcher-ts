@@ -12,7 +12,6 @@ import { Config } from '@vulcanize/util';
 
 import { Database } from '../database';
 import { Indexer } from '../indexer';
-import { EventWatcher } from '../events';
 import { State } from '../entity/State';
 
 const log = debug('vulcanize:import-state');
@@ -30,7 +29,8 @@ export const main = async (): Promise<any> => {
   const erc20Client = new ERC20Client(tokenWatcher);
 
   await importStateCmd.init(Database, { uniClient, erc20Client });
-  await importStateCmd.initIndexer(Indexer, EventWatcher);
+  await importStateCmd.initIndexer(Indexer);
+
   await importStateCmd.exec(State);
 };
 

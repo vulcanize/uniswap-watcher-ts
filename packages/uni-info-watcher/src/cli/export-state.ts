@@ -29,6 +29,7 @@ const main = async (): Promise<void> => {
 
   await exportStateCmd.init(Database, { uniClient, erc20Client });
   await exportStateCmd.initIndexer(Indexer);
+
   await exportStateCmd.exec();
 };
 

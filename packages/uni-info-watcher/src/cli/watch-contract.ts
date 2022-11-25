@@ -29,6 +29,7 @@ const main = async (): Promise<void> => {
 
   await watchContractCmd.init(Database, { uniClient, erc20Client });
   await watchContractCmd.initIndexer(Indexer);
+
   await watchContractCmd.exec();
 };
 
