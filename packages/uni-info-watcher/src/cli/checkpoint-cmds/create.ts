@@ -38,7 +38,8 @@ export const handler = async (argv: any): Promise<void> => {
 
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);
+  await createCheckpointCmd.init(argv, Database, { uniClient, erc20Client });
 
-  await createCheckpointCmd.init(argv, Database, Indexer, { uniClient, erc20Client });
+  await createCheckpointCmd.initIndexer(Indexer);
   await createCheckpointCmd.exec();
 };

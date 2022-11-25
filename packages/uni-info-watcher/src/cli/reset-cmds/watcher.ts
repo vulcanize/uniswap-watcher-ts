@@ -32,6 +32,7 @@ export const handler = async (argv: any): Promise<void> => {
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);
 
-  await resetWatcherCmd.init(argv, Database, Indexer, { uniClient, erc20Client });
+  await resetWatcherCmd.init(argv, Database, { uniClient, erc20Client });
+  await resetWatcherCmd.initIndexer(Indexer);
   await resetWatcherCmd.exec();
 };

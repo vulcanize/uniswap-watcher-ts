@@ -19,7 +19,8 @@ export const main = async (): Promise<any> => {
   const jobRunnerCmd = new JobRunnerCmd();
 
   const config: Config = await jobRunnerCmd.initConfig();
-  await jobRunnerCmd.init(Database, Indexer);
+  await jobRunnerCmd.init(Database);
+  await jobRunnerCmd.initIndexer(Indexer);
 
   const jobQueue = jobRunnerCmd.jobQueue;
   const indexer = jobRunnerCmd.indexer as Indexer;

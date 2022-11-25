@@ -28,9 +28,10 @@ import {
   JobQueue,
   GraphDecimal,
   DatabaseInterface,
-  Clients
+  Clients,
+  updateSubgraphState,
+  dumpSubgraphState
 } from '@cerc-io/util';
-import { updateSubgraphState, dumpSubgraphState } from '@cerc-io/graph-node';
 import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 

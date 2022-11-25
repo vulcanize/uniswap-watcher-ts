@@ -25,9 +25,10 @@ import {
   BlockHeight,
   QueryOptions,
   Where,
-  ServerConfig
+  ServerConfig,
+  GraphDatabase,
+  ENTITY_QUERY_TYPE
 } from '@cerc-io/util';
-import { Database as GraphDatabase, ENTITY_QUERY_TYPE } from '@cerc-io/graph-node';
 
 import { Factory } from './entity/Factory';
 import { Pool } from './entity/Pool';
