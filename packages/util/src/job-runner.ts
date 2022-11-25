@@ -41,6 +41,9 @@ export class JobRunner {
 
   _blockAndEventsMap: Map<string, PrefetchedBlock> = new Map()
 
+  _shutDown = false
+  _signalCount = 0
+
   constructor (jobQueueConfig: JobQueueConfig, indexer: IndexerInterface, jobQueue: JobQueue) {
     this._jobQueueConfig = jobQueueConfig;
     this._indexer = indexer;
@@ -50,8 +53,11 @@ export class JobRunner {
   async start (): Promise<void> {
     await this._jobQueue.deleteAllJobs();
     await this.resetToPrevIndexedBlock();
+
     await this.subscribeBlockProcessingQueue();
     await this.subscribeEventProcessingQueue();
+
+    this.handleShutdown();
   }
 
   async subscribeBlockProcessingQueue (): Promise<void> {
@@ -121,6 +127,23 @@ export class JobRunner {
       // Resetting to block before latest indexed as all events might not be processed in latest indexed block.
       // TODO: Check updating latestIndexedBlock after blockProgress.isComplete is set to true.
       await this._indexer.resetWatcherToBlock(syncStatus.latestIndexedBlockNumber - 1);
+    }
+  }
+
+  handleShutdown (): void {
+    process.on('SIGINT', this._processShutdown.bind(this));
+    process.on('SIGTERM', this._processShutdown.bind(this));
+  }
+
+  async _processShutdown (): Promise<void> {
+    this._shutDown = true;
+    this._signalCount++;
+
+    if (this._signalCount >= 3 || process.env.YARN_CHILD_PROCESS === 'true') {
+      // Forceful exit on receiving signal for the 3rd time or if job-runner is a child process of yarn.
+      log('Forceful shutdown');
+      this._jobQueue.stop();
+      process.exit(1);
     }
   }
 
@@ -449,6 +472,12 @@ export class JobRunner {
     log('size:job-runner#_processEvents-_blockAndEventsMap:', this._blockAndEventsMap.size);
 
     console.timeEnd('time:job-runner#_processEvents-events');
+
+    if (this._shutDown) {
+      log(`Graceful shutdown after processing block ${block.blockNumber}`);
+      this._jobQueue.stop();
+      process.exit(0);
+    }
   }
 
   _updateWatchedContracts (job: any): void {
