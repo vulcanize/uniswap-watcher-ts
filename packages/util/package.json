@@ -4,6 +4,8 @@
   "main": "dist/index.js",
   "license": "AGPL-3.0",
   "dependencies": {
+    "@cerc-io/ipld-eth-client": "^0.2.16",
+    "@cerc-io/util": "^0.2.16",
     "csv-writer": "^1.6.0",
     "debug": "^4.3.1",
     "decimal.js": "^10.3.1",
