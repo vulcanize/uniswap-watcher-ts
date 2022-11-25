@@ -17,7 +17,8 @@ const log = debug('vulcanize:server');
 
 export const main = async (): Promise<any> => {
   const serverCmd = new ServerCmd();
-  await serverCmd.init(Database, Indexer, EventWatcher);
+  await serverCmd.init(Database);
+  await serverCmd.initIndexer(Indexer, EventWatcher);
 
   return serverCmd.exec(createResolvers, typeDefs);
 };

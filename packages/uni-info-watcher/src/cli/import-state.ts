@@ -29,7 +29,8 @@ export const main = async (): Promise<any> => {
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);
 
-  await importStateCmd.init(Database, Indexer, EventWatcher, { uniClient, erc20Client });
+  await importStateCmd.init(Database, { uniClient, erc20Client });
+  await importStateCmd.initIndexer(Indexer, EventWatcher);
   await importStateCmd.exec(State);
 };
 

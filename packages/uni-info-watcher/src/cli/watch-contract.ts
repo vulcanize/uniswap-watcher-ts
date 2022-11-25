@@ -27,7 +27,8 @@ const main = async (): Promise<void> => {
   const uniClient = new UniClient(uniWatcher);
   const erc20Client = new ERC20Client(tokenWatcher);
 
-  await watchContractCmd.init(Database, Indexer, { uniClient, erc20Client });
+  await watchContractCmd.init(Database, { uniClient, erc20Client });
+  await watchContractCmd.initIndexer(Indexer);
   await watchContractCmd.exec();
 };
 
