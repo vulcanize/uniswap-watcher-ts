@@ -3,7 +3,6 @@
 //
 
 import assert from 'assert';
-import _ from 'lodash';
 
 import { Indexer } from './indexer';
 import { ResultEvent } from './events';

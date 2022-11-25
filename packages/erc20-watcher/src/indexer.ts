@@ -345,65 +345,79 @@ export class Indexer implements IndexerInterface {
     await this.triggerIndexingOnEvent(event);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async processBlock (blockProgress: BlockProgress): Promise<void> {
     // Method for processing on indexing new block.
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async processCanonicalBlock (blockHash: string, blockNumber: number): Promise<void> {
     // TODO Implement
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async processInitialState (contractAddress: string, blockHash: string): Promise<any> {
     // TODO: Call initial state hook.
     return undefined;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async processStateCheckpoint (contractAddress: string, blockHash: string): Promise<boolean> {
     // TODO: Call checkpoint hook.
     return false;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async processCheckpoint (blockHash: string): Promise<void> {
     // TODO Implement
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async processCLICheckpoint (contractAddress: string, blockHash?: string): Promise<string | undefined> {
     // TODO Implement
     return undefined;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getLatestState (contractAddress: string, kind: StateKind | null, blockNumber?: number): Promise<State | undefined> {
     // TODO Implement
     return undefined;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getStateByCID (cid: string): Promise<State | undefined> {
     // TODO Implement
     return undefined;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getStates (where: FindConditions<State>): Promise<State[]> {
     // TODO Implement
     return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async createDiffStaged (contractAddress: string, blockHash: string, data: any): Promise<void> {
     // TODO Implement
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async createDiff (contractAddress: string, blockHash: string, data: any): Promise<void> {
     // TODO Implement
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async createCheckpoint (contractAddress: string, blockHash: string): Promise<string | undefined> {
     // TODO Implement
     return undefined;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async saveOrUpdateState (state: State): Promise<State> {
     return {} as State;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async removeStates (blockNumber: number, kind: StateKind): Promise<void> {
     // TODO Implement
   }
@@ -448,11 +462,13 @@ export class Indexer implements IndexerInterface {
     return this._db.getStateSyncStatus();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async updateStateSyncStatusIndexedBlock (blockNumber: number, force?: boolean): Promise<StateSyncStatus> {
     // TODO Implement
     return {} as StateSyncStatus;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async updateStateSyncStatusCheckpointBlock (blockNumber: number, force?: boolean): Promise<StateSyncStatus> {
     // TODO Implement
     return {} as StateSyncStatus;
