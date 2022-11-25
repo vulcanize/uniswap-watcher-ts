@@ -2,17 +2,6 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import assert from 'assert';
-import debug from 'debug';
-import { PubSub } from 'graphql-subscriptions';
-
-import { EthClient } from '@cerc-io/ipld-eth-client';
-import { QUEUE_BLOCK_PROCESSING, QUEUE_EVENT_PROCESSING, EventWatcher as BaseEventWatcher, JobQueue, EventWatcherInterface, IndexerInterface } from '@cerc-io/util';
-
-import { Indexer } from './indexer';
-
-const log = debug('vulcanize:events');
-
 export interface PoolCreatedEvent {
   __typename: 'PoolCreatedEvent';
   token0: string;
@@ -129,51 +118,5 @@ export interface ResultEvent {
   event: PoolCreatedEvent | InitializeEvent | MintEvent | BurnEvent | SwapEvent | FlashEvent | IncreaseLiquidityEvent | DecreaseLiquidityEvent | CollectEvent | TransferEvent;
   proof: {
     data: string;
-  }
-}
-
-export class EventWatcher implements EventWatcherInterface {
-  _ethClient: EthClient
-  _indexer: Indexer
-  _subscription?: ZenObservable.Subscription
-  _pubsub: PubSub
-  _jobQueue: JobQueue
-  _baseEventWatcher: BaseEventWatcher
-
-  constructor (ethClient: EthClient, indexer: IndexerInterface, pubsub: PubSub, jobQueue: JobQueue) {
-    this._ethClient = ethClient;
-    this._indexer = indexer as Indexer;
-    this._pubsub = pubsub;
-    this._jobQueue = jobQueue;
-    this._baseEventWatcher = new BaseEventWatcher(this._ethClient, this._indexer, this._pubsub, this._jobQueue);
-  }
-
-  getBlockProgressEventIterator (): AsyncIterator<any> {
-    return this._baseEventWatcher.getBlockProgressEventIterator();
-  }
-
-  async start (): Promise<void> {
-    assert(!this._subscription, 'subscription already started');
-    log('Started watching upstream events...');
-
-    await this.initBlockProcessingOnCompleteHandler();
-    await this.initEventProcessingOnCompleteHandler();
-    this._baseEventWatcher.startBlockProcessing();
-  }
-
-  async stop (): Promise<void> {
-    this._baseEventWatcher.stop();
-  }
-
-  async initBlockProcessingOnCompleteHandler (): Promise<void> {
-    this._jobQueue.onComplete(QUEUE_BLOCK_PROCESSING, async (job) => {
-      await this._baseEventWatcher.blockProcessingCompleteHandler(job);
-    });
-  }
-
-  async initEventProcessingOnCompleteHandler (): Promise<void> {
-    await this._jobQueue.onComplete(QUEUE_EVENT_PROCESSING, async (job) => {
-      await this._baseEventWatcher.eventProcessingCompleteHandler(job);
-    });
   }
 }

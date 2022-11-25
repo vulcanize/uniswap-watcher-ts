@@ -11,17 +11,15 @@ import {
   gqlQueryCount,
   ValueResult,
   IndexerInterface,
-  EventWatcherInterface
+  EventWatcher
 } from '@cerc-io/util';
 
 import { Indexer } from './indexer';
-import { EventWatcher } from './events';
 
 const log = debug('vulcanize:resolver');
 
-export const createResolvers = async (indexerArg: IndexerInterface, eventWatcherArg: EventWatcherInterface): Promise<any> => {
+export const createResolvers = async (indexerArg: IndexerInterface, eventWatcher: EventWatcher): Promise<any> => {
   const indexer = indexerArg as Indexer;
-  const eventWatcher = eventWatcherArg as EventWatcher;
 
   return {
     BigInt: new BigInt('bigInt'),

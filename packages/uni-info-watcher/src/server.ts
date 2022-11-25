@@ -14,7 +14,6 @@ import typeDefs from './schema';
 import { createResolvers } from './resolvers';
 import { Indexer } from './indexer';
 import { Database } from './database';
-import { EventWatcher } from './events';
 
 const log = debug('vulcanize:server');
 
@@ -31,7 +30,7 @@ export const main = async (): Promise<any> => {
   const erc20Client = new ERC20Client(tokenWatcher);
 
   await serverCmd.init(Database, { uniClient, erc20Client });
-  await serverCmd.initIndexer(Indexer, EventWatcher);
+  await serverCmd.initIndexer(Indexer);
 
   return serverCmd.exec(createResolvers, typeDefs);
 };

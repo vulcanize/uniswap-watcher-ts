@@ -6,16 +6,14 @@ import assert from 'assert';
 import BigInt from 'apollo-type-bigint';
 import debug from 'debug';
 
-import { gqlTotalQueryCount, gqlQueryCount, ValueResult, IndexerInterface, EventWatcherInterface } from '@cerc-io/util';
+import { gqlTotalQueryCount, gqlQueryCount, ValueResult, IndexerInterface, EventWatcher } from '@cerc-io/util';
 
 import { CONTRACT_KIND, Indexer } from './indexer';
-import { EventWatcher } from './events';
 
 const log = debug('vulcanize:resolver');
 
-export const createResolvers = async (indexerArg: IndexerInterface, eventWatcherArg: EventWatcherInterface): Promise<any> => {
+export const createResolvers = async (indexerArg: IndexerInterface, eventWatcher: EventWatcher): Promise<any> => {
   const indexer = indexerArg as Indexer;
-  const eventWatcher = eventWatcherArg as EventWatcher;
 
   return {
     BigInt: new BigInt('bigInt'),

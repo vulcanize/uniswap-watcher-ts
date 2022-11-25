@@ -41,5 +41,6 @@ export const handler = async (argv: any): Promise<void> => {
   await createCheckpointCmd.init(argv, Database, { uniClient, erc20Client });
 
   await createCheckpointCmd.initIndexer(Indexer);
+
   await createCheckpointCmd.exec();
 };

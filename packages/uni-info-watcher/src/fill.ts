@@ -12,7 +12,6 @@ import { Client as ERC20Client } from '@vulcanize/erc20-watcher';
 
 import { Database, ENTITIES } from './database';
 import { Indexer } from './indexer';
-import { EventWatcher } from './events';
 import { FACTORY_ADDRESS } from './utils/constants';
 
 const log = debug('vulcanize:fill');
@@ -30,7 +29,7 @@ export const main = async (): Promise<any> => {
   const erc20Client = new ERC20Client(tokenWatcher);
 
   await fillCmd.init(Database, { uniClient, erc20Client });
-  await fillCmd.initIndexer(Indexer, EventWatcher);
+  await fillCmd.initIndexer(Indexer);
 
   await fillCmd.exec(getContractEntitiesMap());
 };
