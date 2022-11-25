@@ -155,6 +155,7 @@ export class Indexer implements IndexerInterface {
     return createStateCheckpoint(this, contractAddress, blockHash);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async processCanonicalBlock (blockHash: string, blockNumber: number): Promise<void> {
     // TODO Implement
   }
@@ -444,7 +445,7 @@ export class Indexer implements IndexerInterface {
     return this._db.getEntitiesForBlock(blockHash, tableName);
   }
 
-  getGQLToDBFilter (where: { [key: string]: any } = {}) {
+  getGQLToDBFilter (where: { [key: string]: any } = {}): { [key: string]: any } {
     return Object.entries(where).reduce((acc: { [key: string]: any }, [fieldWithSuffix, value]) => {
       const [field, ...suffix] = fieldWithSuffix.split('_');
 
@@ -1583,6 +1584,7 @@ export class Indexer implements IndexerInterface {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async _handleFlash (block: Block, contractAddress: string, tx: Transaction, flashEvent: FlashEvent): Promise<void> {
     const dbTx = await this._db.createTransactionRunner();
 

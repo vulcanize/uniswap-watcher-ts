@@ -3,7 +3,6 @@
 //
 
 import { EventSubscriber, EntitySubscriberInterface, InsertEvent, UpdateEvent } from 'typeorm';
-import _ from 'lodash';
 
 import { afterEntityInsertOrUpdate } from '@cerc-io/util';
 

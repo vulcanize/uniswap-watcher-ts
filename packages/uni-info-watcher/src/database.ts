@@ -16,7 +16,6 @@ import {
 } from 'typeorm';
 import path from 'path';
 import { SelectionNode } from 'graphql';
-import debug from 'debug';
 
 import {
   StateKind,
@@ -65,8 +64,6 @@ import { LatestTokenDayData } from './entity/LatestTokenDayData';
 import { LatestTokenHourData } from './entity/LatestTokenHourData';
 import { LatestPoolDayData } from './entity/LatestPoolDayData';
 import { LatestTick } from './entity/LatestTick';
-
-const log = debug('vulcanize:database');
 
 export const DEFAULT_LIMIT = 100;
 
@@ -929,12 +926,12 @@ export class Database implements DatabaseInterface {
     this._graphDatabase.updateEntityCacheFrothyBlocks(blockProgress, clearEntitiesCacheInterval);
   }
 
-  clearCachedEntities () {
+  clearCachedEntities (): void {
     this._graphDatabase.cachedEntities.frothyBlocks.clear();
     this._graphDatabase.cachedEntities.latestPrunedEntities.clear();
   }
 
-  pruneEntityCacheFrothyBlocks (canonicalBlockHash: string, canonicalBlockNumber: number) {
+  pruneEntityCacheFrothyBlocks (canonicalBlockHash: string, canonicalBlockNumber: number): void {
     this._graphDatabase.pruneEntityCacheFrothyBlocks(canonicalBlockHash, canonicalBlockNumber);
   }
 
