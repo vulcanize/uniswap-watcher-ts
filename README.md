@@ -23,9 +23,9 @@ This project uses [yarn workspaces](https://classic.yarnpkg.com/en/docs/workspac
 
 This repo uses packages from [@cerc-io/watcher-ts](https://github.com/cerc-io/watcher-ts).
 
-For development with changes in watcher-ts, yarn link the packages:
+For development with changes in `watcher-ts`, yarn link the packages:
 
-- In `@cerc-io/watcher-ts` repo, build and link the packages to use from uniswap-watcher-ts
+- In `@cerc-io/watcher-ts` repo, build and link the packages to use in `uniswap-watcher-ts`:
 
   ```bash
   # Build packages
@@ -52,7 +52,7 @@ For development with changes in watcher-ts, yarn link the packages:
   yarn link "typeorm"
   ```
 
-- Build all packages in uniswap-watcher-ts:
+- Build all packages in `uniswap-watcher-ts`:
 
   ```bash
   yarn build
