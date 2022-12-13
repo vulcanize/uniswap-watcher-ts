@@ -273,10 +273,10 @@
     "@babel/helper-validator-identifier" "^7.14.9"
     to-fast-properties "^2.0.0"
 
-"@cerc-io/cache@^0.2.17":
-  version "0.2.17"
-  resolved "https://git.vdb.to/api/packages/cerc-io/npm/%40cerc-io%2Fcache/-/0.2.17/cache-0.2.17.tgz#158dca80ea080157300c13cfc89ab745341d3a5e"
-  integrity sha512-81DFKM2BDw8kz279PLeUIqz8SSbzzHU3HjdLPgU/PAbRKcPDuQ63QyiiYYYkIzDw//029heBCagmQczdOYG5zA==
+"@cerc-io/cache@^0.2.18":
+  version "0.2.18"
+  resolved "https://git.vdb.to/api/packages/cerc-io/npm/%40cerc-io%2Fcache/-/0.2.18/cache-0.2.18.tgz#c672aa4c6592266c25cdc8f2a17bafd5654e70c3"
+  integrity sha512-lL3Jxv3N6L1hlOE4zbhYQyP7dXCVQOqBcic1NLn8zA3tWUq7v2YzkC0mvUujRQXtk+kHsCVoIjWdKCbNedOM7Q==
   dependencies:
     canonical-json "^0.0.4"
     debug "^4.3.1"
@@ -284,12 +284,12 @@
     fs-extra "^10.0.0"
     level "^7.0.0"
 
-"@cerc-io/cli@^0.2.17":
-  version "0.2.17"
-  resolved "https://git.vdb.to/api/packages/cerc-io/npm/%40cerc-io%2Fcli/-/0.2.17/cli-0.2.17.tgz#384a63eb327db82fb6e76072a07a06652fa51924"
-  integrity sha512-NkmxKO6ycyfLMvr4TOSCetYu3nnTy3a5FeMskkQ+arXpIgUvPitASHPhwcKytlD57L2Y9/224Q8gVND5v+Sa2g==
+"@cerc-io/cli@^0.2.18":
+  version "0.2.18"
+  resolved "https://git.vdb.to/api/packages/cerc-io/npm/%40cerc-io%2Fcli/-/0.2.18/cli-0.2.18.tgz#819edbd0a57572b9c0177dde307ed591b362649d"
+  integrity sha512-ggwTcUERiq9s6VoHfWcrVWsSyS5vfXPfTGQmtWGsQB3wBtICKfUqvyC+spDupi6ToMDe6mbEiY7G20Mmo0P/iQ==
   dependencies:
-    "@cerc-io/util" "^0.2.17"
+    "@cerc-io/util" "^0.2.18"
     "@ethersproject/providers" "^5.4.4"
     "@graphql-tools/utils" "^9.1.1"
     "@ipld/dag-cbor" "^6.0.12"
@@ -301,13 +301,13 @@
     typeorm "^0.2.32"
     yargs "^17.0.1"
 
-"@cerc-io/ipld-eth-client@^0.2.17":
-  version "0.2.17"
-  resolved "https://git.vdb.to/api/packages/cerc-io/npm/%40cerc-io%2Fipld-eth-client/-/0.2.17/ipld-eth-client-0.2.17.tgz#11d6ba6bb016e73df192e1b473003439857da3f4"
-  integrity sha512-S7KnJhycIpynQ2Gaqxh4YD7u5OQUaF0p9yKNN9E1DkkUtWoCNyYBqtIz19y9fo7AdmvFHsmMKKosBnKptVCVBw==
+"@cerc-io/ipld-eth-client@^0.2.18":
+  version "0.2.18"
+  resolved "https://git.vdb.to/api/packages/cerc-io/npm/%40cerc-io%2Fipld-eth-client/-/0.2.18/ipld-eth-client-0.2.18.tgz#d4bbdeb5f8726ec2d3a96b82ae027f2c9617a79a"
+  integrity sha512-xnvy1mctZxLgbzgbk8WyN+SAxGhQizpuxt/RJpj9B93QFsZT/keVsGhEWmrsCo/7d9Jnbjv6iz0iT0j096dNYA==
   dependencies:
     "@apollo/client" "^3.7.1"
-    "@cerc-io/cache" "^0.2.17"
+    "@cerc-io/cache" "^0.2.18"
     cross-fetch "^3.1.4"
     debug "^4.3.1"
     ethers "^5.4.4"
@@ -317,20 +317,20 @@
     ws "^8.11.0"
     zen-observable-ts "^1.1.0"
 
-"@cerc-io/solidity-mapper@^0.2.17":
-  version "0.2.17"
-  resolved "https://git.vdb.to/api/packages/cerc-io/npm/%40cerc-io%2Fsolidity-mapper/-/0.2.17/solidity-mapper-0.2.17.tgz#14bc5dbf44c5b77f1bb69458e2d545d823c9adda"
-  integrity sha512-P6GSukqCQW95GheQUA2VrD0l5XNfwCDbPXjjPINevo2h6/c5/euLMoCOrVLQFgGPUPPzgV43G5RaZYaGUNzaZg==
+"@cerc-io/solidity-mapper@^0.2.18":
+  version "0.2.18"
+  resolved "https://git.vdb.to/api/packages/cerc-io/npm/%40cerc-io%2Fsolidity-mapper/-/0.2.18/solidity-mapper-0.2.18.tgz#cf05698d4f5a61085c6fd1fb6493382f84d656db"
+  integrity sha512-Jzid/RYpxt3KjkuHmYMSEY9bSwKOxsYcULDBtZ5d2nizB5sYqq0tD4GRep7Nz8JlhqQ7TlmAED/y++SlpRYZWw==
   dependencies:
     dotenv "^10.0.0"
 
-"@cerc-io/util@^0.2.17":
-  version "0.2.17"
-  resolved "https://git.vdb.to/api/packages/cerc-io/npm/%40cerc-io%2Futil/-/0.2.17/util-0.2.17.tgz#a72deaaefb6782dfb7e56f5e9f328a2697d50fa7"
-  integrity sha512-cbqZQsKMVkHD4ILXTAqv/WFvAKt/+Y2ra6SnqzOUa+h5TdY6sdZODvxGMzezFCFUeWBxFNc3dSxcJqN9qpSE8A==
+"@cerc-io/util@^0.2.18":
+  version "0.2.18"
+  resolved "https://git.vdb.to/api/packages/cerc-io/npm/%40cerc-io%2Futil/-/0.2.18/util-0.2.18.tgz#049502d804e01cb4a8799d5eb004d304a2a406fe"
+  integrity sha512-qolIr4H1zjqMHR2yV8znGZMCQzbjGaGFplGiMNEPnhrHa+fCe2A2LL1nN97djFoR47jA8th0Ep3VI2PLG7HtDA==
   dependencies:
     "@apollo/utils.keyvaluecache" "^1.0.1"
-    "@cerc-io/solidity-mapper" "^0.2.17"
+    "@cerc-io/solidity-mapper" "^0.2.18"
     "@ethersproject/providers" "^5.4.4"
     "@graphql-tools/schema" "^9.0.10"
     "@graphql-tools/utils" "^9.1.1"
