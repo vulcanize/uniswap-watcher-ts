@@ -77,14 +77,30 @@ export class JobRunner {
 
     switch (kind) {
       case JOB_KIND_INDEX: {
-        const blocksToBeIndexed = await fetchBlocksAtHeight(
-          job,
-          this._indexer,
-          this._jobQueueConfig,
-          this._blockAndEventsMap
-        );
-        const indexBlockPromises = blocksToBeIndexed.map(blockToBeIndexed => this._indexBlock(job, blockToBeIndexed));
-        await Promise.all(indexBlockPromises);
+        const { data: { cid, blockHash, blockNumber, parentHash, timestamp } } = job;
+
+        // Check if blockHash present in job.
+        if (blockHash) {
+          // If blockHash is present it is a job for indexing missing parent block.
+          await this._indexBlock(job, {
+            blockTimestamp: timestamp,
+            cid,
+            blockHash,
+            blockNumber,
+            parentHash
+          });
+        } else {
+          // If blockHash is not present, it is a job to index the next consecutive blockNumber.
+          const blocksToBeIndexed = await fetchBlocksAtHeight(
+            blockNumber,
+            this._indexer,
+            this._jobQueueConfig,
+            this._blockAndEventsMap
+          );
+          const indexBlockPromises = blocksToBeIndexed.map(blockToBeIndexed => this._indexBlock(job, blockToBeIndexed));
+          await Promise.all(indexBlockPromises);
+        }
+
         break;
       }
 
@@ -277,7 +293,8 @@ export class JobRunner {
         const message = `Parent block number ${parentBlockNumber} hash ${parentHash} of block number ${blockNumber} hash ${blockHash} not fetched yet, aborting`;
         log(message);
 
-        throw new Error(message);
+        // Do not throw error and complete the job as block will be processed after parent block processing.
+        return;
       }
 
       if (!parentBlock.isComplete) {
@@ -295,7 +312,8 @@ export class JobRunner {
           priority: newPriority
         }, { priority: newPriority });
 
-        throw new Error(message);
+        // Do not throw error and complete the job as block will be processed after parent block processing.
+        return;
       } else {
         // Remove the unknown events of the parent block if it is marked complete.
         await this._indexer.removeUnknownEvents(parentBlock);
