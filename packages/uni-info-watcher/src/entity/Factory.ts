@@ -12,51 +12,51 @@ import { ADDRESS_ZERO } from '../utils/constants';
 @Index(['id', 'blockNumber'])
 export class Factory {
   @PrimaryColumn('varchar', { length: 42 })
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  poolCount!: bigint;
+    poolCount!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedETH!: GraphDecimal;
+    totalValueLockedETH!: GraphDecimal;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  txCount!: bigint;
+    txCount!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedUSD!: GraphDecimal;
+    totalValueLockedUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalVolumeUSD!: GraphDecimal
+    totalVolumeUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalVolumeETH!: GraphDecimal
+    totalVolumeETH!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalFeesUSD!: GraphDecimal
+    totalFeesUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalFeesETH!: GraphDecimal
+    totalFeesETH!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  untrackedVolumeUSD!: GraphDecimal
+    untrackedVolumeUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedUSDUntracked!: GraphDecimal
+    totalValueLockedUSDUntracked!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedETHUntracked!: GraphDecimal
+    totalValueLockedETHUntracked!: GraphDecimal;
 
   @Column('varchar', { length: 42, default: ADDRESS_ZERO })
-  owner!: string
+    owner!: string;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 }

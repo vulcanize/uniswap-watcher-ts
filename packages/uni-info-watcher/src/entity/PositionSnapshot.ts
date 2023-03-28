@@ -12,61 +12,61 @@ import { ADDRESS_ZERO } from '../utils/constants';
 @Index(['id', 'blockNumber'])
 export class PositionSnapshot {
   @PrimaryColumn('varchar')
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('numeric', { transformer: bigintTransformer })
-  timestamp!: bigint;
+    timestamp!: bigint;
 
   @Column('numeric', { transformer: bigintTransformer })
-  feeGrowthInside0LastX128!: bigint
+    feeGrowthInside0LastX128!: bigint;
 
   @Column('numeric', { transformer: bigintTransformer })
-  feeGrowthInside1LastX128!: bigint
+    feeGrowthInside1LastX128!: bigint;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  liquidity!: bigint
+    liquidity!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  depositedToken0!: GraphDecimal
+    depositedToken0!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  depositedToken1!: GraphDecimal
+    depositedToken1!: GraphDecimal;
 
   @Column('varchar', { length: 42, default: ADDRESS_ZERO })
-  owner!: string
+    owner!: string;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  withdrawnToken0!: GraphDecimal
+    withdrawnToken0!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  withdrawnToken1!: GraphDecimal
+    withdrawnToken1!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  collectedFeesToken0!: GraphDecimal
+    collectedFeesToken0!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  collectedFeesToken1!: GraphDecimal
+    collectedFeesToken1!: GraphDecimal;
 
   @Column('varchar', { length: 42 })
-  pool!: string
+    pool!: string;
 
   @Column('varchar')
-  position!: string
+    position!: string;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
-  _blockNumber!: bigint;
+    _blockNumber!: bigint;
 
   @Column('varchar')
-  transaction!: string
+    transaction!: string;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 }

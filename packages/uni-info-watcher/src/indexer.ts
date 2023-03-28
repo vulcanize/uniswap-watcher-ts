@@ -4,7 +4,7 @@
 
 import assert from 'assert';
 import debug from 'debug';
-import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan, MoreThan, QueryRunner } from 'typeorm';
+import { DeepPartial, FindConditions, FindManyOptions, FindOneOptions, LessThan, MoreThan, ObjectLiteral, QueryRunner } from 'typeorm';
 import JSONbig from 'json-bigint';
 import { providers, utils, BigNumber } from 'ethers';
 import { SelectionNode } from 'graphql';
@@ -68,17 +68,17 @@ const log = debug('vulcanize:indexer');
 export { OrderDirection, BlockHeight };
 
 export class Indexer implements IndexerInterface {
-  _db: Database
-  _uniClient: UniClient
-  _erc20Client: ERC20Client
-  _ethClient: EthClient
-  _ethProvider: providers.BaseProvider
-  _baseIndexer: BaseIndexer
-  _serverConfig: ServerConfig
-  _isDemo: boolean
-  _storageLayoutMap: Map<string, StorageLayout> = new Map()
-  _subgraphStateMap: Map<string, any> = new Map()
-  _fullBlock?: Block
+  _db: Database;
+  _uniClient: UniClient;
+  _erc20Client: ERC20Client;
+  _ethClient: EthClient;
+  _ethProvider: providers.BaseProvider;
+  _baseIndexer: BaseIndexer;
+  _serverConfig: ServerConfig;
+  _isDemo: boolean;
+  _storageLayoutMap: Map<string, StorageLayout> = new Map();
+  _subgraphStateMap: Map<string, any> = new Map();
+  _fullBlock?: Block;
 
   constructor (serverConfig: ServerConfig, db: DatabaseInterface, clients: Clients, ethProvider: providers.BaseProvider, jobQueue: JobQueue) {
     assert(db);
@@ -412,7 +412,7 @@ export class Indexer implements IndexerInterface {
     return res;
   }
 
-  async getEntities<Entity> (
+  async getEntities<Entity extends ObjectLiteral> (
     entity: new () => Entity,
     block: BlockHeight,
     where: { [key: string]: any } = {},

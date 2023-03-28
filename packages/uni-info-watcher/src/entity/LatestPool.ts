@@ -10,20 +10,20 @@ import { graphDecimalTransformer, GraphDecimal } from '@cerc-io/util';
 @Index(['id', 'blockHash'])
 export class LatestPool {
   @PrimaryColumn('varchar', { length: 42 })
-  id!: string;
+    id!: string;
 
   @Column('varchar', { length: 66 })
-  blockHash!: string;
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedUSD!: GraphDecimal
+    totalValueLockedUSD!: GraphDecimal;
 
   @Column('varchar', { length: 42 })
-  token0!: string;
+    token0!: string;
 
   @Column('varchar', { length: 42 })
-  token1!: string;
+    token1!: string;
 }

@@ -8,17 +8,17 @@ import { Entity, PrimaryColumn, Column, Index } from 'typeorm';
 @Index(['id', 'blockHash'])
 export class LatestPoolDayData {
   @PrimaryColumn('varchar')
-  id!: string;
+    id!: string;
 
   @Column('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('integer')
-  date!: number;
+    date!: number;
 
   @Column('varchar', { length: 42 })
-  pool!: string;
+    pool!: string;
 }

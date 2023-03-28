@@ -10,6 +10,7 @@ import {
   FindConditions,
   FindManyOptions,
   LessThanOrEqual,
+  ObjectLiteral,
   QueryRunner,
   Repository,
   UpdateResult
@@ -113,11 +114,11 @@ ENTITY_TO_LATEST_ENTITY_MAP.set(PoolDayData, LatestPoolDayData);
 ENTITY_TO_LATEST_ENTITY_MAP.set(Tick, LatestTick);
 
 export class Database implements DatabaseInterface {
-  _config: ConnectionOptions
-  _conn!: Connection
-  _baseDatabase: BaseDatabase
-  _graphDatabase: GraphDatabase
-  _relationsMap: Map<any, { [key: string]: any }>
+  _config: ConnectionOptions;
+  _conn!: Connection;
+  _baseDatabase: BaseDatabase;
+  _graphDatabase: GraphDatabase;
+  _relationsMap: Map<any, { [key: string]: any }>;
 
   constructor (config: ConnectionOptions, serverConfig?: ServerConfig) {
     assert(config);
@@ -555,7 +556,7 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getEntitiesForBlock(blockHash, tableName);
   }
 
-  async getModelEntities<Entity> (
+  async getModelEntities<Entity extends ObjectLiteral> (
     queryRunner: QueryRunner,
     entity: new () => Entity,
     block: BlockHeight,
@@ -566,7 +567,7 @@ export class Database implements DatabaseInterface {
     return this._graphDatabase.getEntities(queryRunner, entity, this._relationsMap, block, where, queryOptions, selections);
   }
 
-  async getModelEntitiesNoTx<Entity> (
+  async getModelEntitiesNoTx<Entity extends ObjectLiteral> (
     entity: new () => Entity,
     block: BlockHeight,
     where: Where = {},
@@ -586,7 +587,7 @@ export class Database implements DatabaseInterface {
     return res;
   }
 
-  async getModelEntity<Entity> (repo: Repository<Entity>, whereOptions: any): Promise<Entity | undefined> {
+  async getModelEntity<Entity extends ObjectLiteral> (repo: Repository<Entity>, whereOptions: any): Promise<Entity | undefined> {
     return this._graphDatabase.getModelEntity(repo, whereOptions);
   }
 
@@ -918,7 +919,7 @@ export class Database implements DatabaseInterface {
     return this._baseDatabase.getAncestorAtDepth(blockHash, depth);
   }
 
-  cacheUpdatedEntity<Entity> (repo: Repository<Entity>, entity: any): void {
+  cacheUpdatedEntity<Entity extends ObjectLiteral> (repo: Repository<Entity>, entity: any): void {
     this._graphDatabase.cacheUpdatedEntity(repo, entity);
   }
 

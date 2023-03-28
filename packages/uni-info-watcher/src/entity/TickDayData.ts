@@ -10,52 +10,52 @@ import { bigintTransformer, graphDecimalTransformer, GraphDecimal } from '@cerc-
 @Index(['id', 'blockNumber'])
 export class TickDayData {
   @PrimaryColumn('varchar')
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('integer')
-  date!: number
+    date!: number;
 
   @Column('varchar', { length: 42 })
-  pool!: string;
+    pool!: string;
 
   @Column('varchar')
-  tick!: string;
+    tick!: string;
 
   @Column('numeric', { transformer: bigintTransformer })
-  liquidityGross!: bigint;
+    liquidityGross!: bigint;
 
   @Column('numeric', { transformer: bigintTransformer })
-  liquidityNet!: bigint;
+    liquidityNet!: bigint;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: graphDecimalTransformer })
-  volumeToken0!: GraphDecimal
+    volumeToken0!: GraphDecimal;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: graphDecimalTransformer })
-  volumeToken1!: GraphDecimal
+    volumeToken1!: GraphDecimal;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: graphDecimalTransformer })
-  volumeUSD!: GraphDecimal
+    volumeUSD!: GraphDecimal;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: graphDecimalTransformer })
-  feesUSD!: GraphDecimal
+    feesUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: bigintTransformer })
-  feeGrowthOutside0X128!: bigint
+    feeGrowthOutside0X128!: bigint;
 
   @Column('numeric', { default: 0, transformer: bigintTransformer })
-  feeGrowthOutside1X128!: bigint
+    feeGrowthOutside1X128!: bigint;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 }
