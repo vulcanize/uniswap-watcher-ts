@@ -10,17 +10,17 @@ import { bigintTransformer } from '@cerc-io/util';
 @Index(['id', 'blockHash'])
 export class LatestTick {
   @PrimaryColumn('varchar')
-  id!: string;
+    id!: string;
 
   @Column('varchar', { length: 66 })
-  blockHash!: string;
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('numeric', { transformer: bigintTransformer })
-  tickIdx!: bigint;
+    tickIdx!: bigint;
 
   @Column('varchar', { length: 42 })
-  poolAddress!: string
+    poolAddress!: string;
 }

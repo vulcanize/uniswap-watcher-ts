@@ -10,47 +10,47 @@ import { graphDecimalTransformer, bigintTransformer, GraphDecimal } from '@cerc-
 @Index(['id', 'blockNumber'])
 export class Flash {
   @PrimaryColumn('varchar', { length: 42 })
-  id!: string;
+    id!: string;
 
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('varchar')
-  transaction!: string;
+    transaction!: string;
 
   @Column('numeric', { transformer: bigintTransformer })
-  timestamp!: bigint;
+    timestamp!: bigint;
 
   @Column('varchar')
-  pool!: string
+    pool!: string;
 
   @Column('varchar', { length: 42 })
-  sender!: string
+    sender!: string;
 
   @Column('varchar', { length: 42 })
-  recipient!: string
+    recipient!: string;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  amount0!: GraphDecimal
+    amount0!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  amount1!: GraphDecimal
+    amount1!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  amountUSD!: GraphDecimal
+    amountUSD!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  amount0Paid!: GraphDecimal
+    amount0Paid!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  amount1Paid!: GraphDecimal
+    amount1Paid!: GraphDecimal;
 
   @Column('numeric', { transformer: bigintTransformer })
-  logIndex!: bigint
+    logIndex!: bigint;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 }

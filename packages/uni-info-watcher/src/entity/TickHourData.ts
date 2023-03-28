@@ -10,42 +10,42 @@ import { graphDecimalTransformer, bigintTransformer, GraphDecimal } from '@cerc-
 @Index(['id', 'blockNumber'])
 export class TickHourData {
   @PrimaryColumn('varchar')
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('varchar', { length: 42 })
-  pool!: string;
+    pool!: string;
 
   @Column('varchar')
-  tick!: string;
+    tick!: string;
 
   @Column('numeric', { transformer: bigintTransformer })
-  liquidityGross!: bigint;
+    liquidityGross!: bigint;
 
   @Column('numeric', { transformer: bigintTransformer })
-  liquidityNet!: bigint;
+    liquidityNet!: bigint;
 
   @Column('integer')
-  periodStartUnix!: number
+    periodStartUnix!: number;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  volumeToken0!: GraphDecimal
+    volumeToken0!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  volumeToken1!: GraphDecimal
+    volumeToken1!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  volumeUSD!: GraphDecimal
+    volumeUSD!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  feesUSD!: GraphDecimal
+    feesUSD!: GraphDecimal;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 }

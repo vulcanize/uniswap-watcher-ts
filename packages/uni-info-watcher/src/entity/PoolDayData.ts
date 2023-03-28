@@ -11,68 +11,68 @@ import { graphDecimalTransformer, bigintTransformer, GraphDecimal } from '@cerc-
 @Index(['date', 'pool'])
 export class PoolDayData {
   @PrimaryColumn('varchar')
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('integer')
-  date!: number;
+    date!: number;
 
   @Column('varchar', { length: 42 })
-  pool!: string;
+    pool!: string;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  high!: GraphDecimal;
+    high!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  low!: GraphDecimal;
+    low!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  open!: GraphDecimal;
+    open!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  close!: GraphDecimal;
+    close!: GraphDecimal;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  sqrtPrice!: bigint
+    sqrtPrice!: bigint;
 
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
-  tick!: bigint | null
+    tick!: bigint | null;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  liquidity!: bigint
+    liquidity!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  token0Price!: GraphDecimal
+    token0Price!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  token1Price!: GraphDecimal
+    token1Price!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  tvlUSD!: GraphDecimal
+    tvlUSD!: GraphDecimal;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  txCount!: bigint
+    txCount!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volumeToken0!: GraphDecimal
+    volumeToken0!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volumeToken1!: GraphDecimal
+    volumeToken1!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volumeUSD!: GraphDecimal
+    volumeUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  feesUSD!: GraphDecimal
+    feesUSD!: GraphDecimal;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 
   // Skipping fee growth as they are not queried.
   // @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })

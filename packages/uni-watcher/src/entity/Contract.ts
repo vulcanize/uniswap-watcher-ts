@@ -12,17 +12,17 @@ export const KIND_NFPM = 'nfpm';
 @Index(['address'], { unique: true })
 export class Contract {
   @PrimaryGeneratedColumn()
-  id!: number;
+    id!: number;
 
   @Column('varchar', { length: 42 })
-  address!: string;
+    address!: string;
 
   @Column('varchar', { length: 8 })
-  kind!: string;
+    kind!: string;
 
   @Column('boolean', { default: false })
-  checkpoint!: boolean;
+    checkpoint!: boolean;
 
   @Column('integer')
-  startingBlock!: number;
+    startingBlock!: number;
 }

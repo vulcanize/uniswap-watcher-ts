@@ -41,16 +41,16 @@ import poolABI from './artifacts/pool.json';
 const log = debug('vulcanize:indexer');
 
 export class Indexer implements IndexerInterface {
-  _db: Database
-  _ethClient: EthClient
-  _baseIndexer: BaseIndexer
-  _ethProvider: ethers.providers.BaseProvider
-  _serverConfig: ServerConfig
-  _storageLayoutMap: Map<string, StorageLayout> = new Map()
+  _db: Database;
+  _ethClient: EthClient;
+  _baseIndexer: BaseIndexer;
+  _ethProvider: ethers.providers.BaseProvider;
+  _serverConfig: ServerConfig;
+  _storageLayoutMap: Map<string, StorageLayout> = new Map();
 
-  _factoryContract: ethers.utils.Interface
-  _poolContract: ethers.utils.Interface
-  _nfpmContract: ethers.utils.Interface
+  _factoryContract: ethers.utils.Interface;
+  _poolContract: ethers.utils.Interface;
+  _nfpmContract: ethers.utils.Interface;
 
   constructor (serverConfig: ServerConfig, db: DatabaseInterface, clients: Clients, ethProvider: ethers.providers.BaseProvider, jobQueue: JobQueue) {
     assert(db);

@@ -14,38 +14,38 @@ import { BlockProgressInterface } from '@cerc-io/util';
 @Index(['blockTimestamp'])
 export class BlockProgress implements BlockProgressInterface {
   @PrimaryGeneratedColumn()
-  id!: number;
+    id!: number;
 
   @Column('varchar')
-  cid!: string;
+    cid!: string;
 
   @Column('varchar', { length: 66 })
-  blockHash!: string;
+    blockHash!: string;
 
   @Column('varchar', { length: 66, nullable: true })
-  parentHash!: string;
+    parentHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('integer')
-  blockTimestamp!: number;
+    blockTimestamp!: number;
 
   @Column('integer')
-  numEvents!: number;
+    numEvents!: number;
 
   @Column('integer', { default: 0 })
-  numProcessedEvents!: number;
+    numProcessedEvents!: number;
 
   @Column('integer', { default: -1 })
-  lastProcessedEventIndex!: number;
+    lastProcessedEventIndex!: number;
 
   @Column('boolean')
-  isComplete!: boolean
+    isComplete!: boolean;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 
   @CreateDateColumn()
-  createdAt!: Date;
+    createdAt!: Date;
 }

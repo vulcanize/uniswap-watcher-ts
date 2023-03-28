@@ -10,36 +10,36 @@ import { bigintTransformer, graphDecimalTransformer, GraphDecimal } from '@cerc-
 @Index(['id', 'blockNumber'])
 export class UniswapDayData {
   @PrimaryColumn('varchar')
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('integer')
-  date!: number
+    date!: number;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  tvlUSD!: GraphDecimal
+    tvlUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volumeUSD!: GraphDecimal
+    volumeUSD!: GraphDecimal;
 
   @Column('numeric', { transformer: bigintTransformer })
-  txCount!: bigint;
+    txCount!: bigint;
 
   @Column('numeric', { transformer: graphDecimalTransformer, default: 0 })
-  volumeETH!: GraphDecimal
+    volumeETH!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer, default: 0 })
-  feesUSD!: GraphDecimal
+    feesUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volumeUSDUntracked!: GraphDecimal
+    volumeUSDUntracked!: GraphDecimal;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 }

@@ -16,9 +16,9 @@ import { State } from './entity/State';
 import { StateSyncStatus } from './entity/StateSyncStatus';
 
 export class Database implements DatabaseInterface {
-  _config: ConnectionOptions
-  _conn!: Connection
-  _baseDatabase: BaseDatabase
+  _config: ConnectionOptions;
+  _conn!: Connection;
+  _baseDatabase: BaseDatabase;
 
   constructor (config: ConnectionOptions) {
     assert(config);

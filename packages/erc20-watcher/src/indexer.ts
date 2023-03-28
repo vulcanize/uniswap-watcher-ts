@@ -53,24 +53,24 @@ interface EventResult {
     to?: string;
     owner?: string;
     spender?: string;
-    value?: BigInt;
+    value?: bigint;
     __typename: string;
   }
   proof?: string;
 }
 
 export class Indexer implements IndexerInterface {
-  _db: Database
-  _ethClient: EthClient
-  _ethProvider: ethers.providers.BaseProvider
-  _baseIndexer: BaseIndexer
-  _serverConfig: ServerConfig
-  _storageLayoutMap: Map<string, StorageLayout> = new Map()
+  _db: Database;
+  _ethClient: EthClient;
+  _ethProvider: ethers.providers.BaseProvider;
+  _baseIndexer: BaseIndexer;
+  _serverConfig: ServerConfig;
+  _storageLayoutMap: Map<string, StorageLayout> = new Map();
 
-  _abi: JsonFragment[]
-  _storageLayout: StorageLayout
-  _contract: ethers.utils.Interface
-  _serverMode: string
+  _abi: JsonFragment[];
+  _storageLayout: StorageLayout;
+  _contract: ethers.utils.Interface;
+  _serverMode: string;
 
   constructor (serverConfig: ServerConfig, db: DatabaseInterface, clients: Clients, ethProvider: ethers.providers.BaseProvider, jobQueue: JobQueue) {
     assert(db);

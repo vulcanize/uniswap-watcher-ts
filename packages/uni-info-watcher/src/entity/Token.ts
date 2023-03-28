@@ -10,60 +10,60 @@ import { bigintTransformer, graphDecimalTransformer, GraphDecimal } from '@cerc-
 @Index(['id', 'blockNumber'])
 export class Token {
   @PrimaryColumn('varchar', { length: 42 })
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('varchar')
-  symbol!: string;
+    symbol!: string;
 
   @Column('varchar')
-  name!: string;
+    name!: string;
 
   @Column('numeric', { transformer: bigintTransformer })
-  totalSupply!: bigint;
+    totalSupply!: bigint;
 
   @Column('numeric', { transformer: bigintTransformer })
-  decimals!: bigint;
+    decimals!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  derivedETH!: GraphDecimal;
+    derivedETH!: GraphDecimal;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  txCount!: bigint;
+    txCount!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLocked!: GraphDecimal;
+    totalValueLocked!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedUSD!: GraphDecimal;
+    totalValueLockedUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volume!: GraphDecimal;
+    volume!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volumeUSD!: GraphDecimal;
+    volumeUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  untrackedVolumeUSD!: GraphDecimal;
+    untrackedVolumeUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  feesUSD!: GraphDecimal;
+    feesUSD!: GraphDecimal;
 
   @Column('varchar', { length: 42, array: true, default: [] })
-  whitelistPools!: string[];
+    whitelistPools!: string[];
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  poolCount!: bigint
+    poolCount!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedUSDUntracked!: GraphDecimal
+    totalValueLockedUSDUntracked!: GraphDecimal;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 }

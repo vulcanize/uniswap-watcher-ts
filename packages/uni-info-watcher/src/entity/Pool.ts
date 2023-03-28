@@ -10,97 +10,97 @@ import { bigintTransformer, graphDecimalTransformer, GraphDecimal } from '@cerc-
 @Index(['id', 'blockNumber'])
 export class Pool {
   @PrimaryColumn('varchar', { length: 42 })
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('varchar', { length: 42 })
-  token0!: string;
+    token0!: string;
 
   @Column('varchar', { length: 42 })
-  token1!: string;
+    token1!: string;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  token0Price!: GraphDecimal
+    token0Price!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  token1Price!: GraphDecimal
+    token1Price!: GraphDecimal;
 
   @Column('numeric', { transformer: bigintTransformer })
-  feeTier!: bigint
+    feeTier!: bigint;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  sqrtPrice!: bigint
+    sqrtPrice!: bigint;
 
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
-  tick!: bigint | null
+    tick!: bigint | null;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  liquidity!: bigint
+    liquidity!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedUSD!: GraphDecimal
+    totalValueLockedUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedToken0!: GraphDecimal
+    totalValueLockedToken0!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedToken1!: GraphDecimal
+    totalValueLockedToken1!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedETH!: GraphDecimal
+    totalValueLockedETH!: GraphDecimal;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  txCount!: bigint;
+    txCount!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volumeToken0!: GraphDecimal
+    volumeToken0!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volumeToken1!: GraphDecimal
+    volumeToken1!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volumeUSD!: GraphDecimal
+    volumeUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  untrackedVolumeUSD!: GraphDecimal
+    untrackedVolumeUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  feesUSD!: GraphDecimal
+    feesUSD!: GraphDecimal;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
-  createdAtTimestamp!: bigint
+    createdAtTimestamp!: bigint;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
-  createdAtBlockNumber!: bigint
+    createdAtBlockNumber!: bigint;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  observationIndex!: bigint
+    observationIndex!: bigint;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  collectedFeesToken0!: GraphDecimal
+    collectedFeesToken0!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  collectedFeesToken1!: GraphDecimal
+    collectedFeesToken1!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  collectedFeesUSD!: GraphDecimal
+    collectedFeesUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  totalValueLockedUSDUntracked!: GraphDecimal
+    totalValueLockedUSDUntracked!: GraphDecimal;
 
   @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })
-  liquidityProviderCount!: bigint
+    liquidityProviderCount!: bigint;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 
   // Skipping fee growth as they are not queried.
   // @Column('numeric', { default: BigInt(0), transformer: bigintTransformer })

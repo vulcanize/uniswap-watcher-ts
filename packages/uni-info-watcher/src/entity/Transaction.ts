@@ -11,30 +11,30 @@ import { bigintTransformer } from '@cerc-io/util';
 @Index(['timestamp'])
 export class Transaction {
   @PrimaryColumn('varchar')
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('numeric', { transformer: bigintTransformer })
-  timestamp!: bigint;
+    timestamp!: bigint;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
-  _blockNumber!: bigint;
+    _blockNumber!: bigint;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
-  gasUsed!: bigint
+    gasUsed!: bigint;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
-  gasPrice!: bigint
+    gasPrice!: bigint;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 }

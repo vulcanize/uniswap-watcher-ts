@@ -14,61 +14,61 @@ import { graphDecimalTransformer, bigintTransformer, GraphDecimal } from '@cerc-
 @Index(['timestamp'])
 export class Mint {
   @PrimaryColumn('varchar')
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('varchar')
-  transaction!: string;
+    transaction!: string;
 
   @Column('numeric', { transformer: bigintTransformer })
-  timestamp!: bigint;
+    timestamp!: bigint;
 
   @Column('varchar', { length: 42 })
-  pool!: string;
+    pool!: string;
 
   @Column('varchar', { length: 42 })
-  token0!: string
+    token0!: string;
 
   @Column('varchar', { length: 42 })
-  token1!: string
+    token1!: string;
 
   @Column('varchar', { length: 42 })
-  owner!: string
+    owner!: string;
 
   @Column('varchar', { length: 42 })
-  sender!: string
+    sender!: string;
 
   @Column('varchar', { length: 42 })
-  origin!: string
+    origin!: string;
 
   @Column('numeric', { transformer: bigintTransformer })
-  amount!: bigint
+    amount!: bigint;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  amount0!: GraphDecimal
+    amount0!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  amount1!: GraphDecimal
+    amount1!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  amountUSD!: GraphDecimal
+    amountUSD!: GraphDecimal;
 
   @Column('numeric', { transformer: bigintTransformer })
-  tickLower!: bigint
+    tickLower!: bigint;
 
   @Column('numeric', { transformer: bigintTransformer })
-  tickUpper!: bigint
+    tickUpper!: bigint;
 
   // Field is nullable to work with old DB schema.
   @Column('numeric', { nullable: true, transformer: bigintTransformer })
-  logIndex!: bigint
+    logIndex!: bigint;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 }

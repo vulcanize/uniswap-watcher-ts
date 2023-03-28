@@ -11,54 +11,54 @@ import { graphDecimalTransformer, GraphDecimal } from '@cerc-io/util';
 @Index(['date', 'token'])
 export class TokenDayData {
   @PrimaryColumn('varchar')
-  id!: string;
+    id!: string;
 
   // https://typeorm.io/#/entities/primary-columns
   @PrimaryColumn('varchar', { length: 66 })
-  blockHash!: string
+    blockHash!: string;
 
   @Column('integer')
-  blockNumber!: number;
+    blockNumber!: number;
 
   @Column('integer')
-  date!: number
+    date!: number;
 
   @Column('varchar', { length: 42 })
-  token!: string;
+    token!: string;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  high!: GraphDecimal;
+    high!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  low!: GraphDecimal;
+    low!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  open!: GraphDecimal;
+    open!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  close!: GraphDecimal;
+    close!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  priceUSD!: GraphDecimal
+    priceUSD!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  totalValueLocked!: GraphDecimal
+    totalValueLocked!: GraphDecimal;
 
   @Column('numeric', { transformer: graphDecimalTransformer })
-  totalValueLockedUSD!: GraphDecimal
+    totalValueLockedUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volumeUSD!: GraphDecimal
+    volumeUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  volume!: GraphDecimal
+    volume!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  untrackedVolumeUSD!: GraphDecimal
+    untrackedVolumeUSD!: GraphDecimal;
 
   @Column('numeric', { default: 0, transformer: graphDecimalTransformer })
-  feesUSD!: GraphDecimal
+    feesUSD!: GraphDecimal;
 
   @Column('boolean', { default: false })
-  isPruned!: boolean
+    isPruned!: boolean;
 }
