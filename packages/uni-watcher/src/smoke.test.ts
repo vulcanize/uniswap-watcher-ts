@@ -19,7 +19,7 @@ import {
   NFPM_ABI
 } from '@vulcanize/util/test';
 import { getCache } from '@cerc-io/cache';
-import { EthClient } from '@cerc-io/ipld-eth-client';
+import { EthClient } from '@cerc-io/rpc-eth-client';
 import {
   abi as FACTORY_ABI
 } from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
@@ -76,8 +76,7 @@ describe('uni-watcher', () => {
     assert(host, 'Missing host.');
     assert(port, 'Missing port.');
 
-    const { ethServer: { gqlApiEndpoint, rpcProviderEndpoint }, cache: cacheConfig } = upstream;
-    assert(gqlApiEndpoint, 'Missing upstream ethServer.gqlApiEndpoint.');
+    const { ethServer: { rpcProviderEndpoint }, cache: cacheConfig } = upstream;
     assert(rpcProviderEndpoint, 'Missing upstream ethServer.rpcProviderEndpoint.');
     assert(cacheConfig, 'Missing dbConfig.');
 
@@ -86,7 +85,7 @@ describe('uni-watcher', () => {
 
     const cache = await getCache(cacheConfig);
     ethClient = new EthClient({
-      gqlEndpoint: gqlApiEndpoint,
+      rpcEndpoint: rpcProviderEndpoint,
       cache
     });
 

@@ -21,9 +21,9 @@ import {
   JobQueue,
   DatabaseInterface,
   Clients,
-  StateKind
+  StateKind,
+  EthClient
 } from '@cerc-io/util';
-import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { Database } from './database';

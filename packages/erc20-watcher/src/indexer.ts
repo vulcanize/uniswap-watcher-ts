@@ -10,7 +10,6 @@ import JSONbig from 'json-bigint';
 import { ethers } from 'ethers';
 
 import { IndexerInterface } from '@vulcanize/util';
-import { EthClient } from '@cerc-io/ipld-eth-client';
 import {
   Indexer as BaseIndexer,
   ServerConfig,
@@ -22,7 +21,8 @@ import {
   JobQueue,
   DatabaseInterface,
   Clients,
-  StateKind
+  StateKind,
+  EthClient
 } from '@cerc-io/util';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
