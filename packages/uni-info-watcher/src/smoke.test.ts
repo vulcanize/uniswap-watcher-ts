@@ -2,6 +2,7 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
+import assert from 'assert';
 import { expect } from 'chai';
 import { ethers, Contract, Signer, constants, utils } from 'ethers';
 import 'mocha';
@@ -10,15 +11,14 @@ import _ from 'lodash';
 import { OrderDirection, wait, getConfig } from '@cerc-io/util';
 import { Config } from '@vulcanize/util';
 import {
-  deployTokens,
-  deployUniswapV3Callee,
   TESTERC20_ABI,
   createPool,
   initializePool,
   getMinTick,
   getMaxTick,
   approveToken,
-  NFPM_ABI
+  NFPM_ABI,
+  TESTUNISWAPV3CALLEE_ABI
 } from '@vulcanize/util/test';
 import { Client as UniClient, watchEvent } from '@vulcanize/uni-watcher';
 import {
@@ -43,6 +43,7 @@ describe('uni-info-watcher', () => {
   let factory: Contract;
   let pool: Contract;
   let poolCallee: Contract;
+  let poolCalleeAddress: string;
   let token0: Contract;
   let token1: Contract;
   let token0Address: string;
@@ -60,6 +61,16 @@ describe('uni-info-watcher', () => {
   let deadline: number;
 
   before(async () => {
+    assert(process.env.ACCOUNT_PRIVATE_KEY, 'ACCOUNT_PRIVATE_KEY not set');
+    assert(process.env.TOKEN0_ADDRESS, 'TOKEN0_ADDRESS not set');
+    assert(process.env.TOKEN1_ADDRESS, 'TOKEN1_ADDRESS not set');
+    assert(process.env.UNISWAP_CALLEE_ADDRESS, 'UNISWAP_CALLEE_ADDRESS not set');
+
+    const signerKey = process.env.ACCOUNT_PRIVATE_KEY;
+    token0Address = process.env.TOKEN0_ADDRESS;
+    token1Address = process.env.TOKEN1_ADDRESS;
+    poolCalleeAddress = process.env.UNISWAP_CALLEE_ADDRESS;
+
     config = await getConfig(CONFIG_FILE);
 
     const { upstream, server: { host, port } } = config;
@@ -78,7 +89,7 @@ describe('uni-info-watcher', () => {
     });
 
     const provider = new ethers.providers.JsonRpcProvider(rpcProviderEndpoint);
-    signer = provider.getSigner();
+    signer = new ethers.Wallet(signerKey, provider);
     recipient = await signer.getAddress();
 
     // Get the factory contract address.
@@ -108,9 +119,7 @@ describe('uni-info-watcher', () => {
     const fee = 500;
 
     before(async () => {
-      // Deploy 2 tokens.
-      ({ token0Address, token1Address } = await deployTokens(signer));
-      // Convert the addresses to lowercase.
+      // Convert token addresses to lowercase.
       token0Address = utils.hexlify(token0Address);
       token1Address = utils.hexlify(token1Address);
 
@@ -244,8 +253,8 @@ describe('uni-info-watcher', () => {
     let oldPool: any;
 
     before(async () => {
-      // Deploy UniswapV3Callee.
-      poolCallee = await deployUniswapV3Callee(signer);
+      // Attach to a pre-deployed UniswapV3Callee contract.
+      poolCallee = new ethers.Contract(poolCalleeAddress, TESTUNISWAPV3CALLEE_ABI, signer);
 
       const tickSpacing = await pool.tickSpacing();
       // https://github.com/Uniswap/uniswap-v3-core/blob/main/test/UniswapV3Pool.spec.ts#L196

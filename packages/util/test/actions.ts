@@ -33,7 +33,7 @@ import {
   bytecode as WETH9_BYTECODE
 } from '../artifacts/test/contracts/WETH9.sol/WETH9.json';
 
-export { NFPM_ABI, TESTERC20_ABI };
+export { NFPM_ABI, TESTERC20_ABI, TESTUNISWAPV3CALLEE_ABI };
 export const TICK_MIN = -887272;
 export const TICK_MAX = 887272;
 
