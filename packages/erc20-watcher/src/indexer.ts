@@ -139,9 +139,11 @@ export class Indexer implements IndexerInterface {
 
   async totalSupply (blockHash: string, token: string): Promise<ValueResult> {
     let result: ValueResult;
+    const { block: { number: blockNumber } } = await this._ethClient.getBlockByHash(blockHash);
 
     if (this._serverMode === ETH_CALL_MODE) {
-      const value = await fetchTokenTotalSupply(this._ethProvider, blockHash, token);
+      // eth_call doesnt support calling method by blockHash https://eth.wiki/json-rpc/API#the-default-block-parameter
+      const value = await fetchTokenTotalSupply(this._ethProvider, blockNumber, token);
 
       result = { value };
     } else {
@@ -174,7 +176,7 @@ export class Indexer implements IndexerInterface {
       const contract = new ethers.Contract(token, this._abi, this._ethProvider);
 
       // eth_call doesnt support calling method by blockHash https://eth.wiki/json-rpc/API#the-default-block-parameter
-      const value = await contract.balanceOf(owner, { blockTag: blockHash });
+      const value = await contract.balanceOf(owner, { blockTag: blockNumber });
 
       result = {
         value: BigInt(value.toString())
@@ -209,7 +211,8 @@ export class Indexer implements IndexerInterface {
 
     if (this._serverMode === ETH_CALL_MODE) {
       const contract = new ethers.Contract(token, this._abi, this._ethProvider);
-      const value = await contract.allowance(owner, spender, { blockTag: blockHash });
+      // eth_call doesnt support calling method by blockHash https://eth.wiki/json-rpc/API#the-default-block-parameter
+      const value = await contract.allowance(owner, spender, { blockTag: blockNumber });
 
       result = {
         value: BigInt(value.toString())
@@ -243,7 +246,8 @@ export class Indexer implements IndexerInterface {
     const { block: { number: blockNumber } } = await this._ethClient.getBlockByHash(blockHash);
 
     if (this._serverMode === ETH_CALL_MODE) {
-      const value = await fetchTokenName(this._ethProvider, blockHash, token);
+      // eth_call doesnt support calling method by blockHash https://eth.wiki/json-rpc/API#the-default-block-parameter
+      const value = await fetchTokenName(this._ethProvider, blockNumber, token);
 
       result = { value };
     } else {
@@ -272,7 +276,8 @@ export class Indexer implements IndexerInterface {
     const { block: { number: blockNumber } } = await this._ethClient.getBlockByHash(blockHash);
 
     if (this._serverMode === ETH_CALL_MODE) {
-      const value = await fetchTokenSymbol(this._ethProvider, blockHash, token);
+      // eth_call doesnt support calling method by blockHash https://eth.wiki/json-rpc/API#the-default-block-parameter
+      const value = await fetchTokenSymbol(this._ethProvider, blockNumber, token);
 
       result = { value };
     } else {
@@ -301,7 +306,8 @@ export class Indexer implements IndexerInterface {
     const { block: { number: blockNumber } } = await this._ethClient.getBlockByHash(blockHash);
 
     if (this._serverMode === ETH_CALL_MODE) {
-      const value = await fetchTokenDecimals(this._ethProvider, blockHash, token);
+      // eth_call doesnt support calling method by blockHash https://eth.wiki/json-rpc/API#the-default-block-parameter
+      const value = await fetchTokenDecimals(this._ethProvider, blockNumber, token);
 
       result = { value };
     } else {
