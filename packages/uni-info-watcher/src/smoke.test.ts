@@ -613,8 +613,8 @@ describe('uni-info-watcher', () => {
       ]);
       eventValue = values[1];
 
-      // Sleeping for 5 sec for the event to be processed.
-      await wait(5000);
+      // Sleeping for 10 sec for the event to be processed.
+      await wait(10000);
     });
 
     it('should update Token entities', async () => {
