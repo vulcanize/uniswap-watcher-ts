@@ -30,9 +30,9 @@ import {
   DatabaseInterface,
   Clients,
   updateSubgraphState,
-  dumpSubgraphState
+  dumpSubgraphState,
+  EthClient
 } from '@cerc-io/util';
-import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX96ToTokenPrices, WHITELIST_TOKENS } from './utils/pricing';

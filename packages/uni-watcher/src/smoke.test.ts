@@ -2,16 +2,16 @@
 // Copyright 2021 Vulcanize, Inc.
 //
 
-import { expect, assert } from 'chai';
+import assert from 'assert';
+import { expect } from 'chai';
 import { ethers, Contract, ContractTransaction, Signer, constants } from 'ethers';
 import 'mocha';
 
 import { JobQueue, getConfig } from '@cerc-io/util';
 import { Config } from '@vulcanize/util';
 import {
-  deployTokens,
-  deployUniswapV3Callee,
   TESTERC20_ABI,
+  TESTUNISWAPV3CALLEE_ABI,
   TICK_MIN,
   getMinTick,
   getMaxTick,
@@ -19,7 +19,7 @@ import {
   NFPM_ABI
 } from '@vulcanize/util/test';
 import { getCache } from '@cerc-io/cache';
-import { EthClient } from '@cerc-io/ipld-eth-client';
+import { EthClient } from '@cerc-io/rpc-eth-client';
 import {
   abi as FACTORY_ABI
 } from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
@@ -52,6 +52,7 @@ describe('uni-watcher', () => {
   let poolCallee: Contract;
   let token0Address: string;
   let token1Address: string;
+  let poolCalleeAddress: string;
   let nfpm: Contract;
 
   let nfpmTokenId: number;
@@ -68,6 +69,16 @@ describe('uni-watcher', () => {
   let deadline: number;
 
   before(async () => {
+    assert(process.env.ACCOUNT_PRIVATE_KEY, 'ACCOUNT_PRIVATE_KEY not set');
+    assert(process.env.TOKEN0_ADDRESS, 'TOKEN0_ADDRESS not set');
+    assert(process.env.TOKEN1_ADDRESS, 'TOKEN1_ADDRESS not set');
+    assert(process.env.UNISWAP_CALLEE_ADDRESS, 'UNISWAP_CALLEE_ADDRESS not set');
+
+    const signerKey = process.env.ACCOUNT_PRIVATE_KEY;
+    token0Address = process.env.TOKEN0_ADDRESS;
+    token1Address = process.env.TOKEN1_ADDRESS;
+    poolCalleeAddress = process.env.UNISWAP_CALLEE_ADDRESS;
+
     config = await getConfig(CONFIG_FILE);
 
     const { database: dbConfig, upstream, server: { host, port }, jobQueue: jobQueueConfig } = config;
@@ -76,8 +87,7 @@ describe('uni-watcher', () => {
     assert(host, 'Missing host.');
     assert(port, 'Missing port.');
 
-    const { ethServer: { gqlApiEndpoint, rpcProviderEndpoint }, cache: cacheConfig } = upstream;
-    assert(gqlApiEndpoint, 'Missing upstream ethServer.gqlApiEndpoint.');
+    const { ethServer: { rpcProviderEndpoint }, cache: cacheConfig } = upstream;
     assert(rpcProviderEndpoint, 'Missing upstream ethServer.rpcProviderEndpoint.');
     assert(cacheConfig, 'Missing dbConfig.');
 
@@ -86,7 +96,7 @@ describe('uni-watcher', () => {
 
     const cache = await getCache(cacheConfig);
     ethClient = new EthClient({
-      gqlEndpoint: gqlApiEndpoint,
+      rpcEndpoint: rpcProviderEndpoint,
       cache
     });
 
@@ -98,7 +108,7 @@ describe('uni-watcher', () => {
     });
 
     ethProvider = new ethers.providers.JsonRpcProvider(rpcProviderEndpoint);
-    signer = ethProvider.getSigner();
+    signer = new ethers.Wallet(signerKey, ethProvider);
     recipient = await signer.getAddress();
 
     // Deadline set to 2 days from current date.
@@ -126,15 +136,6 @@ describe('uni-watcher', () => {
     const indexer = new Indexer(config.server, db, { ethClient }, ethProvider, jobQueue);
     await indexer.init();
     assert(indexer.isWatchedContract(factory.address), 'Factory contract not added to the database.');
-  });
-
-  it('should deploy 2 tokens', async () => {
-    // Deploy 2 tokens.
-
-    // Not initializing global token contract variables just yet; initialized in `create pool` to maintatin order coherency.
-    ({ token0Address, token1Address } = await deployTokens(signer));
-    expect(token0Address).to.not.be.empty;
-    expect(token1Address).to.not.be.empty;
   });
 
   it('should create pool', async () => {
@@ -166,8 +167,8 @@ describe('uni-watcher', () => {
       const amount = 10;
       const approveAmount = BigInt(1000000000000000000000000);
 
-      // Deploy UniswapV3Callee.
-      poolCallee = await deployUniswapV3Callee(signer);
+      // Attach to a pre-deployed UniswapV3Callee contract.
+      poolCallee = new ethers.Contract(poolCalleeAddress, TESTUNISWAPV3CALLEE_ABI, signer);
 
       await approveToken(token0, poolCallee.address, approveAmount);
       await approveToken(token1, poolCallee.address, approveAmount);

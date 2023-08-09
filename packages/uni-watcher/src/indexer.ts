@@ -21,9 +21,9 @@ import {
   JobQueue,
   DatabaseInterface,
   Clients,
-  StateKind
+  StateKind,
+  EthClient
 } from '@cerc-io/util';
-import { EthClient } from '@cerc-io/ipld-eth-client';
 import { StorageLayout, MappingKey } from '@cerc-io/solidity-mapper';
 
 import { Database } from './database';
@@ -398,9 +398,11 @@ export class Indexer implements IndexerInterface {
 
   async callGetPool (blockHash: string, contractAddress: string, key0: string, key1: string, key2: number): Promise<ValueResult> {
     const contract = new ethers.Contract(contractAddress, factoryABI, this._ethProvider);
+    const block = await this.getBlockProgress(blockHash);
+    const blockNumber = block?.blockNumber;
 
     try {
-      const value = await contract.getPool(key0, key1, key2, { blockTag: blockHash });
+      const value = await contract.getPool(key0, key1, key2, { blockTag: blockNumber });
 
       return { value };
     } catch (error: any) {
@@ -417,9 +419,11 @@ export class Indexer implements IndexerInterface {
 
   async positions (blockHash: string, contractAddress: string, tokenId: string): Promise<ValueResult> {
     const contract = new ethers.Contract(contractAddress, nfpmABI, this._ethProvider);
+    const block = await this.getBlockProgress(blockHash);
+    const blockNumber = block?.blockNumber;
 
     try {
-      const value = await contract.positions(tokenId, { blockTag: blockHash });
+      const value = await contract.positions(tokenId, { blockTag: blockNumber });
 
       return { value };
     } catch (error: any) {
@@ -436,9 +440,11 @@ export class Indexer implements IndexerInterface {
 
   async ticks (blockHash: string, contractAddress: string, tick: number): Promise<ValueResult> {
     const contract = new ethers.Contract(contractAddress, poolABI, this._ethProvider);
+    const block = await this.getBlockProgress(blockHash);
+    const blockNumber = block?.blockNumber;
 
     try {
-      const value = await contract.ticks(tick, { blockTag: blockHash });
+      const value = await contract.ticks(tick, { blockTag: blockNumber });
 
       return { value };
     } catch (error: any) {
@@ -455,9 +461,11 @@ export class Indexer implements IndexerInterface {
 
   async feeGrowthGlobal0X128 (blockHash: string, contractAddress: string): Promise<ValueResult> {
     const contract = new ethers.Contract(contractAddress, poolABI, this._ethProvider);
+    const block = await this.getBlockProgress(blockHash);
+    const blockNumber = block?.blockNumber;
 
     try {
-      const value = await contract.feeGrowthGlobal0X128({ blockTag: blockHash });
+      const value = await contract.feeGrowthGlobal0X128({ blockTag: blockNumber });
 
       return { value };
     } catch (error: any) {
@@ -474,9 +482,11 @@ export class Indexer implements IndexerInterface {
 
   async feeGrowthGlobal1X128 (blockHash: string, contractAddress: string): Promise<ValueResult> {
     const contract = new ethers.Contract(contractAddress, poolABI, this._ethProvider);
+    const block = await this.getBlockProgress(blockHash);
+    const blockNumber = block?.blockNumber;
 
     try {
-      const value = await contract.feeGrowthGlobal1X128({ blockTag: blockHash });
+      const value = await contract.feeGrowthGlobal1X128({ blockTag: blockNumber });
 
       return { value };
     } catch (error: any) {

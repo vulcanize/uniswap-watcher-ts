@@ -36,7 +36,7 @@
     "job-runner": "DEBUG=vulcanize:* YARN_CHILD_PROCESS=true node --enable-source-maps dist/job-runner.js",
     "job-runner:prof": "DEBUG=vulcanize:* YARN_CHILD_PROCESS=true node --require pprof --enable-source-maps dist/job-runner.js",
     "job-runner:dev": "DEBUG=vulcanize:* YARN_CHILD_PROCESS=true ts-node src/job-runner.ts",
-    "smoke-test": "yarn test:init && mocha src/smoke.test.ts",
+    "smoke-test": "mocha src/smoke.test.ts",
     "fill": "DEBUG=vulcanize:* node --enable-source-maps dist/fill.js",
     "fill:prof": "DEBUG=vulcanize:* node --require pprof --enable-source-maps dist/fill.js",
     "fill:dev": "DEBUG=vulcanize:* ts-node src/fill.ts",
